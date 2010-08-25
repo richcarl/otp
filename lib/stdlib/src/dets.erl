@@ -1237,8 +1237,28 @@ req(Proc, R) ->
 	{'DOWN', Ref, process, Proc, _Info} ->
             badarg;
 	{Proc, Reply} ->
+	    fix_bad_object(Reply),
 	    erlang:demonitor(Ref, [flush]),
 	    Reply
+    end.
+
+%% If bad_object mnesia need to be restarted to recover.
+fix_bad_object({error, {What, _File}} = E) when What == bad_object;
+						What == premature_eof ->
+    kdb_sync_recover_mnesia({dets, E});
+fix_bad_object({error, {{What, _Where}, _File}} = E) when What == bad_object ->
+    kdb_sync_recover_mnesia({dets, E});
+fix_bad_object(_Reply) ->
+    ok.
+
+kdb_sync_recover_mnesia(Why) ->
+    case erlang:module_loaded(kdb_sync) of
+	false -> code:ensure_loaded(kdb_sync);
+	true -> ok
+    end,
+    case erlang:function_exported(kdb_sync, recover_mnesia, 1) of
+	true -> kdb_sync:recover_mnesia(Why);
+	false -> ok
     end.
 
 %% Inlined.
