@@ -44,7 +44,7 @@
 
 %%  The layout of the file is :
 %%
-%%   bytes   decsription
+%%   bytes   description
 %%  ---------------------- File header
 %%    4      FreelistsPointer
 %%    4      Cookie
@@ -72,13 +72,13 @@
 %%    128    Reserved for future versions. Initially zeros.
 %%  ---
 %%  ------------------ end of file header
-%%    4*256  SegmentArray Pointers.
+%%    4*256  SegmentArray Part Pointers.
 %%  ------------------ This is BASE.
 %%    4*512  SegmentArray Part 1
 %%    ...    More SegmentArray Parts
 %%    8*256  First segment
 %%    ???    Objects (free and alive)
-%%    4*512  Further SegmentArray Part.
+%%    4*512  Further SegmentArray Parts
 %%    ???    Objects (free and alive)
 %%    8*256  Further segment.
 %%    ???    Objects (free and alive)
@@ -88,15 +88,14 @@
 %%  -----------------------------
 %%    4      File size, in bytes. 
 
-%%  Before we can find an object we must find the slot where the
-%%  object resides. Each slot is a (possibly empty) list (or chain) of
-%%  objects that hash to the same slot. If the value stored in the
-%%  slot is zero, the slot chain is empty. If the slot value is
-%%  non-zero, the value points to a position in the file where the
-%%  collection of objects resides. Each collection has the following
+%%  Before we can find an object we must hash to the slot where the
+%%  object resides. If the size and pointer stored in the slot is zero,
+%%  the slot is empty. Otherwise, it points to a position in the file
+%%  where the bucket resides. Each bucket is a (possibly empty) collection
+%%  of objects that hash to the same slot. A bucket has the following
 %%  layout:
 %%
-%%   bytes  decsription
+%%   bytes  description
 %%  --------------------
 %%    4     Size of the area allocated for the collection (8+Sz)
 %%    4     Status  (FREE or ACTIVE). These two are the Object Header.
@@ -107,7 +106,7 @@
 %%  The binary containing the objects per key of a table of type 'set'
 %%  has the following layout:
 %%
-%%   bytes  decsription
+%%   bytes  description
 %%  --------------------
 %%    4     Size of the object of the first key (4+OSz1)
 %%    OSz1  The object of the first key
@@ -118,7 +117,7 @@
 %%  The binary containing the objects per key of a table of type 'bag'
 %%  or 'duplicate_bag' has the following layout:
 %%
-%%   bytes    decsription
+%%   bytes    description
 %%  ----------------------
 %%    4       Size of the objects of the first key (4 + OSz1_1+...+OSz1_j+...)
 %%    4       Size of the first object of the first key (4+OSz1_1)
@@ -140,7 +139,6 @@
 %%  last.
 %%
 %%
-%%
 %%|---------------|
 %%|      head     |
 %%|       	  |
@@ -157,12 +155,12 @@
 %%                   |              |  |
 %%                   |     ....     |  | segment 1
 %%                   |    (512)     |  V __slot 0 ____|
-%%                                     |   size       |
-%%                                     |   pointer    |--|
+%%                                     |  bucket size |
+%%                                     |  pointer     |--|
 %%                                     |___slot 1 ____|  |
-%%                                     |              |  |
+%%                                     |              |  |  bucket:
 %%                                     |   ....       |  |  objects in slot 0
-%%                                         (256)         V  segment 1
+%%                                         (256)         V  of segment 1
 %%                                                       |___________|
 %%                                                       |  size     |
 %%                                                       |___________|
@@ -172,6 +170,10 @@
 %%                                                       |   object  |
 %%                                                       |   collec. |
 %%                                                       |___________|
+%%
+%%
+%%  The bucket size is stored both in the bucket itself and in the slot that
+%%  points to the bucket. This makes reading a bucket from a slot faster.
 
 %%%
 %%% File header
@@ -229,8 +231,8 @@
 -define(NOT_PROPERLY_CLOSED,0).
 -define(CLOSED_PROPERLY,1).
 
-%% Size of object pointer, in words. SEGSZ = SZOBJP * SEGSZP.
--define(SZOBJP, 2).
+%% Size of object pointer entry, in words. SEGSZ = SZOBJP * SEGSZP.
+-define(SZOBJP, 2).    % size + pointer
 
 -define(OHDSZ, 8).          % The size of the object header, in bytes.
 -define(STATUS_POS, 4).     % Position of the status field.
@@ -310,7 +312,7 @@ prep_table_copy(Fd, Tab, Fname, Type, Kp, Ram, CacheSz, Auto, Parms) ->
     end.
 
 %% -> {ok, head()} | throw(Error)
-%% The File header and the SegmentArray Pointers are written here.
+%% The File header and the SegmentArray Part Pointers are written here.
 %% SegmentArray Parts are also written, but the segments are are not
 %% initialized on file unless DoInitSegments is 'true'. (When
 %% initializing a file by calling init_table, some time is saved by
@@ -365,7 +367,7 @@ init_file(Fd, Tab, Fname, Type, Kp, MinSlots, MaxSlots, Ram, CacheSz,
     FileHeader = file_header(Head0, FreeListsPointer, 
                              ?NOT_PROPERLY_CLOSED, NoColls),
     W0 = {0, [FileHeader |
-              <<0:(4*?SEGARRSZ)/unit:8>>]},  %% SegmentArray Pointers
+              <<0:(4*?SEGARRSZ)/unit:8>>]},  %% SegmentArray Part Pointers
 
     %% Remove cached pointers to segment array parts and segments:
     lists:foreach(fun({I1,I2}) when is_integer(I1), is_integer(I2) -> ok;
