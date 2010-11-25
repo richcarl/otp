@@ -181,28 +181,37 @@
 
 -define(RESERVED, 128).        % Reserved for future use.
 
--define(COLL_CNTRS, (28*4)).     % Counters for the buddy system.
--define(MD5SZ, 16).
+-define(BUDCNT, 28).    % Number of counters for the buddy system
+-define(BUDCNTSZB, 4).  % Size of a buddy system counter, in bytes
+-define(MD5SZB, 16).          % Size of MD5 sum, in bytes
 
--define(HEADSZ, 
-        56+?COLL_CNTRS+?MD5SZ). % The size of the file header, in bytes,
-                                % not including the reserved part.
--define(HEADEND, (?HEADSZ+?RESERVED)). 
-                               % End of header and reserved area.
--define(SEGSZ, 512).           % Size of a segment, in words. SZOBJP*SEGSZP.
--define(SEGSZP, 256).          % Size of a segment, in number of pointers.
--define(SEGSZP_LOG2, 8).
--define(SEGOBJSZ, (4 * ?SZOBJP)).
--define(SEGPARTSZ, 512).       % Size of segment array part, in words.
--define(SEGPARTSZ_LOG2, 9).
--define(SEGARRSZ, 256).        % Maximal number of segment array parts..
--define(SEGARRADDR(PartN), (?HEADEND + (4 * (PartN)))).
--define(SEGPARTADDR(P,SegN), ((P) + (4 * ?REM2(SegN, ?SEGPARTSZ)))).
--define(BASE, ?SEGARRADDR(?SEGARRSZ)).
--define(MAXSLOTS, (?SEGARRSZ * ?SEGPARTSZ * ?SEGSZP)).
+%% Size of the file header, in bytes, not including the reserved part.
+-define(HEADSZB, (56+(?BUDCNT*?BUDCNTSZB)+?MD5SZB)).
 
--define(SLOT2SEG(S), ((S) bsr ?SEGSZP_LOG2)).
--define(SEG2SEGARRPART(S), ((S) bsr ?SEGPARTSZ_LOG2)).
+-define(HEADEND, (?HEADSZB+?RESERVED)). % End of header and reserved area.
+
+%% Segment array parts, segments, slots, and buckets
+
+-define(SLOTSZW, 2).       % Size of slot (bucket size + address), in words
+-define(SLOTSZB, (4 * ?SLOTSZW)).         % Size of slot, in bytes
+
+-define(SEGSZN, 256).          % Size of a segment, in number of entries.
+-define(SEGSZN_LOG2, 8).       % Keep this in sync with SEGSZN!
+-define(SLOT2SEG(S), ((S) bsr ?SEGSZN_LOG2)). % S div ?SEGSZN
+-define(SEGSZW, (?SLOTSZW*?SEGSZN)). % Size of a segment, in words.
+-define(SEGSZB, (?SEGSZW*4)). % Size of a segment, in bytes
+
+-define(ARRPARTSZN, 512).     % Size of segment array part, in words/entries
+-define(ARRPARTSZN_LOG2, 9).  % Keep this in sync with ARRPARTSZN!
+-define(SEG2ARRPART(S), ((S) bsr ?ARRPARTSZN_LOG2)). % S div ?ARRPARTSZN
+-define(SEGMENTP(P,SegN), ((P) + (4 * ?REM2(SegN, ?ARRPARTSZN)))).
+
+-define(ARRPARTS, 256).       % Maximal number of segment array parts.
+-define(ARRPARTP(PartN), (?HEADEND + (4 * (PartN)))). % addr of part pointer
+
+-define(BASE, ?ARRPARTP(?ARRPARTS)). % first byte after array part pointers
+-define(MAXSLOTS, (?ARRPARTS * ?ARRPARTSZN * ?SEGSZN)).
+
 
 -define(PHASH, 0).
 -define(PHASH2, 1).
@@ -230,9 +239,6 @@
 
 -define(NOT_PROPERLY_CLOSED,0).
 -define(CLOSED_PROPERLY,1).
-
-%% Size of object pointer entry, in words. SEGSZ = SZOBJP * SEGSZP.
--define(SZOBJP, 2).    % size + pointer
 
 -define(OHDSZ, 8).          % The size of the object header, in bytes.
 -define(STATUS_POS, 4).     % Position of the status field.
@@ -264,8 +270,6 @@
 	   no_objects,no_keys,
 	   no_colls  % [{LogSz,NoColls}], NoColls >= 0
 	  }).
-
--define(ACTUAL_SEG_SIZE, (?SEGSZ*4)).
 
 -define(MAXBUD, 32).
 
@@ -363,11 +367,11 @@ init_file(Fd, Tab, Fname, Type, Kp, MinSlots, MaxSlots, Ram, CacheSz,
      },
 
     FreeListsPointer = 0,
-    NoColls = <<0:?COLL_CNTRS/unit:8>>, %% Buddy system counters.
+    NoColls = <<0:(?BUDCNT*?BUDCNTSZB)/unit:8>>, %% Buddy system counters.
     FileHeader = file_header(Head0, FreeListsPointer, 
                              ?NOT_PROPERLY_CLOSED, NoColls),
     W0 = {0, [FileHeader |
-              <<0:(4*?SEGARRSZ)/unit:8>>]},  %% SegmentArray Part Pointers
+              <<0:(4*?ARRPARTS)/unit:8>>]},  %% SegmentArray Part Pointers
 
     %% Remove cached pointers to segment array parts and segments:
     lists:foreach(fun({I1,I2}) when is_integer(I1), is_integer(I2) -> ok;
@@ -394,7 +398,7 @@ slots2(NoSlots) when NoSlots >= 256 ->
     ?POW(dets_utils:log2(NoSlots)).
 
 init_parts(Head, PartNo, NoParts, Zero, Ws) when PartNo < NoParts ->
-    PartPos = ?SEGARRADDR(PartNo),
+    PartPos = ?ARRPARTP(PartNo),
     {NewHead, W, _Part} = alloc_part(Head, Zero, PartPos),
     init_parts(NewHead, PartNo+1, NoParts, Zero, [W | Ws]);
 init_parts(Head, _PartNo, _NoParts, _Zero, Ws) ->
@@ -410,7 +414,7 @@ init_segments(Head, _SegNo, _NoSegs, _SegZero, WsP, WsI) ->
 
 %% -> {NewHead, SegInit, [SegPtr | PartStuff]}
 allocate_segment(Head, SegZero, SegNo) ->
-    PartPos = ?SEGARRADDR(SegNo div ?SEGPARTSZ),
+    PartPos = ?ARRPARTP(SegNo div ?ARRPARTSZN),
     case get_arrpart(PartPos) of
 	undefined ->
 	    %% may throw error:
@@ -425,7 +429,7 @@ allocate_segment(Head, SegZero, SegNo) ->
 
 alloc_part(Head, PartZero, PartPos) ->
     %% may throw error:
-    {NewHead, Part, _} = dets_utils:alloc(Head, adjsz(4 * ?SEGPARTSZ)),
+    {NewHead, Part, _} = dets_utils:alloc(Head, adjsz(4 * ?ARRPARTSZN)),
     arrpart_cache(PartPos, Part),
     InitArrPart = {Part, PartZero}, % same size as segment
     ArrPartPointer = {PartPos, <<Part:32>>},
@@ -433,9 +437,9 @@ alloc_part(Head, PartZero, PartPos) ->
 
 alloc_seg(Head, SegZero, SegNo, Part) ->
     %% may throw error:
-    {NewHead, Segment, _} = dets_utils:alloc(Head, adjsz(4 * ?SEGSZ)), 
+    {NewHead, Segment, _} = dets_utils:alloc(Head, adjsz(4 * ?SEGSZW)), 
     InitSegment = {Segment, SegZero},
-    Pos = ?SEGPARTADDR(Part, SegNo),
+    Pos = ?SEGMENTP(Part, SegNo),
     segp_cache(Pos, Segment),
     dets_utils:disk_map_segment(Segment, SegZero),
     SegPointer = {Pos, <<Segment:32>>},
@@ -448,13 +452,13 @@ init_freelist(Head, true) ->
 
 %% -> {ok, Fd, fileheader()} | throw(Error)
 read_file_header(Fd, FileName) ->
-    {ok, Bin} = dets_utils:pread_close(Fd, FileName, 0, ?HEADSZ),
+    {ok, Bin} = dets_utils:pread_close(Fd, FileName, 0, ?HEADSZB),
     <<FreeList:32,   Cookie:32,  CP:32,         Type2:32,
       Version:32,    M:32,       Next:32,       Kp:32,
       NoObjects:32,  NoKeys:32,  MinNoSlots:32, MaxNoSlots:32,
-      HashMethod:32, N:32, NoCollsB:?COLL_CNTRS/binary, 
-      MD5:?MD5SZ/binary>> = Bin,
-    <<_:12/binary,MD5DigestedPart:(?HEADSZ-?MD5SZ-12)/binary,_/binary>> = Bin,
+      HashMethod:32, N:32, NoCollsB:(?BUDCNT*?BUDCNTSZB)/binary, 
+      MD5:?MD5SZB/binary>> = Bin,
+    <<_:12/binary,MD5DigestedPart:(?HEADSZB-?MD5SZB-12)/binary,_/binary>> = Bin,
     {ok, EOF} = dets_utils:position_close(Fd, FileName, eof),
     {ok, <<FileSize:32>>} = dets_utils:pread_close(Fd, FileName, EOF-4, 4),
     {CL, <<>>} = lists:foldl(fun(LSz, {Acc,<<NN:32,R/binary>>}) -> 
@@ -486,7 +490,7 @@ read_file_header(Fd, FileName) ->
 		     no_colls = NoColls,
 		     hash_method = HashMethod,
                      read_md5 = MD5,
-                     has_md5 = <<0:?MD5SZ/unit:8>> =/= MD5,
+                     has_md5 = <<0:?MD5SZB/unit:8>> =/= MD5,
                      md5 = erlang:md5(MD5DigestedPart),
 		     trailer = FileSize,
 		     eof = EOF,
@@ -567,7 +571,7 @@ max_objsize([{I,_} | L], _Max) ->
 
 cache_segps(Fd, FileName, M) ->
     NoParts = no_parts(M),
-    ArrStart = ?SEGARRADDR(0),
+    ArrStart = ?ARRPARTP(0),
     {ok, Bin} = dets_utils:pread_close(Fd, FileName, ArrStart, 4 * NoParts),
     cache_arrparts(Bin, ?HEADEND, Fd, FileName).
 
@@ -575,7 +579,7 @@ cache_arrparts(<<ArrPartPos:32, B/binary>>, Pos, Fd, FileName) ->
     arrpart_cache(Pos, ArrPartPos),
     {ok, ArrPartBin} = dets_utils:pread_close(Fd, FileName, 
                                               ArrPartPos, 
-                                              ?SEGPARTSZ*4),
+                                              ?ARRPARTSZN*4),
     cache_segps1(Fd, ArrPartBin, ArrPartPos),
     cache_arrparts(B, Pos+4, Fd, FileName);
 cache_arrparts(<<>>, _Pos, _Fd, _FileName) ->
@@ -591,10 +595,10 @@ cache_segps1(_Fd, <<>>, _P) ->
     ok.
 
 no_parts(NoSlots) ->
-    ((NoSlots - 1) div (?SEGSZP * ?SEGPARTSZ)) + 1.
+    ((NoSlots - 1) div (?SEGSZN * ?ARRPARTSZN)) + 1.
 
 no_segs(NoSlots) ->
-    ((NoSlots - 1) div ?SEGSZP) + 1.
+    ((NoSlots - 1) div ?SEGSZN) + 1.
 
 %%%
 %%% Repair, conversion and initialization of a dets file.
@@ -698,7 +702,7 @@ output_objs2(E, Acc, OldV, Head, Cache, SizeT, SlotNums, ChunkI) ->
 		     true -> output_slot(Acc, Head, Cache, [], SizeT, 0, 0)
 		 end,
 	    _NCache = write_all_sizes(Cache1, SizeT, Head, no_more),
-	    SegSz = ?ACTUAL_SEG_SIZE,
+	    SegSz = ?SEGSZB,
 	    {_, SegEnd, _} = dets_utils:alloc(Head, adjsz(SegSz)),
 	    [{?COUNTERS,NoObjects,NoKeys}] = ets:lookup(SizeT, ?COUNTERS),
 	    Head1 = Head#head{no_objects = NoObjects, no_keys = NoKeys},
@@ -839,15 +843,15 @@ compact_objs(Head, WHead, SizeT, <<Size:32, St:32, _Sz:32, KO/binary>> = Bin,
     end;
 compact_objs(Head, WHead, SizeT, <<_:32, _St:32, _:32, _/binary>> = Bin, 
 	     L, From, To, SegBs, Cache, ASz)
-              when byte_size(Bin) >= ?ACTUAL_SEG_SIZE -> % , _St =/= ?ACTIVE
-    <<_:?ACTUAL_SEG_SIZE/binary, NewBin/binary>> = Bin,
-    compact_objs(Head, WHead, SizeT, NewBin, L, From + ?ACTUAL_SEG_SIZE,
+              when byte_size(Bin) >= ?SEGSZB -> % , _St =/= ?ACTIVE
+    <<_:?SEGSZB/binary, NewBin/binary>> = Bin,
+    compact_objs(Head, WHead, SizeT, NewBin, L, From + ?SEGSZB,
 		 To, SegBs, Cache, ASz);
 compact_objs(Head, WHead, SizeT, <<_:32, _St:32, _:32, _/binary>> = Bin, 
 	     L, From, To, SegBs, Cache, ASz)
-              when byte_size(Bin) < ?ACTUAL_SEG_SIZE -> % , _St =/= ?ACTIVE
+              when byte_size(Bin) < ?SEGSZB -> % , _St =/= ?ACTIVE
     compact_read(Head, WHead, SizeT, Cache, [[From|To] | L], 
-		 ?ACTUAL_SEG_SIZE, SegBs, ASz);
+		 ?SEGSZB, SegBs, ASz);
 compact_objs(Head, WHead, SizeT, _Bin, L, From, To, SegBs, Cache, ASz) ->
     compact_read(Head, WHead, SizeT, Cache, [[From|To] | L], 0, SegBs, ASz).
 
@@ -923,12 +927,12 @@ bchunks(Head, L, <<Size:32, St:32, _Sz:32, KO/binary>> = Bin, Bs, ASz,
 	    read_bchunks(Head, {From, To, L}, Size2, Bs, ASz)
     end;
 bchunks(Head, L, <<_:32, _St:32, _:32, _/binary>> = Bin, Bs, ASz, From, To)
-                  when byte_size(Bin) >= ?ACTUAL_SEG_SIZE ->
-    <<_:?ACTUAL_SEG_SIZE/binary, NewBin/binary>> = Bin,
-    bchunks(Head, L, NewBin, Bs, ASz, From + ?ACTUAL_SEG_SIZE, To);
+                  when byte_size(Bin) >= ?SEGSZB ->
+    <<_:?SEGSZB/binary, NewBin/binary>> = Bin,
+    bchunks(Head, L, NewBin, Bs, ASz, From + ?SEGSZB, To);
 bchunks(Head, L, <<_:32, _St:32, _:32, _/binary>> = Bin, Bs, ASz, From, To)
-                  when byte_size(Bin) < ?ACTUAL_SEG_SIZE ->
-    read_bchunks(Head, {From, To, L}, ?ACTUAL_SEG_SIZE, Bs, ASz);
+                  when byte_size(Bin) < ?SEGSZB ->
+    read_bchunks(Head, {From, To, L}, ?SEGSZB, Bs, ASz);
 bchunks(Head, L, _Bin, Bs, ASz, From, To) ->
     read_bchunks(Head, {From, To, L}, 0, Bs, ASz).
 
@@ -1091,7 +1095,7 @@ write_segment_file([<<Slot:32,BSize:32,AddrToBe:32,LSize:8>> | Bins],
     %% Should call slot_position/1, but since all segments are
     %% allocated in a sequence, the position of a slot can be
     %% calculated faster.
-    Pos = SS + ?SZOBJP*4 * Slot, % Same as Pos = slot_position(Slot).
+    Pos = SS + ?SLOTSZW*4 * Slot, % Same as Pos = slot_position(Slot).
     write_segment_file(Bins, Bases, Head, Ws, SegAddr, SS, Pos, 
 		       BSize, AddrToBe, LSize);
 write_segment_file([], _Bases, Head, Ws, SegAddr, _SS) ->
@@ -1102,20 +1106,20 @@ write_segment_file(Bins, Bases, Head, Ws, SegAddr, SS, Pos, BSize,
 		   AddrToBe, LSize) when Pos =:= SegAddr ->
     Addr = AddrToBe + element(LSize, Bases),
     NWs = [Ws | <<BSize:32,Addr:32>>],
-    write_segment_file(Bins, Bases, Head, NWs, SegAddr + ?SZOBJP*4, SS);
+    write_segment_file(Bins, Bases, Head, NWs, SegAddr + ?SLOTSZW*4, SS);
 write_segment_file(Bins, Bases, Head, Ws, SegAddr, SS, Pos, BSize, 
 		   AddrToBe, LSize) when Pos - SegAddr < 100 ->
     Addr = AddrToBe + element(LSize, Bases),
     NoZeros = Pos - SegAddr,
     NWs = [Ws | <<0:NoZeros/unit:8,BSize:32,Addr:32>>],
-    NSegAddr = SegAddr + NoZeros + ?SZOBJP*4,
+    NSegAddr = SegAddr + NoZeros + ?SLOTSZW*4,
     write_segment_file(Bins, Bases, Head, NWs, NSegAddr, SS);
 write_segment_file(Bins, Bases, Head, Ws, SegAddr, SS, Pos, BSize, 
 		   AddrToBe, LSize) ->
     Addr = AddrToBe + element(LSize, Bases),
     NoZeros = Pos - SegAddr,
     NWs = [Ws, dets_utils:make_zeros(NoZeros) | <<BSize:32,Addr:32>>],
-    NSegAddr = SegAddr + NoZeros + ?SZOBJP*4,
+    NSegAddr = SegAddr + NoZeros + ?SLOTSZW*4,
     write_segment_file(Bins, Bases, Head, NWs, NSegAddr, SS).
 
 fast_write_all_sizes(Cache, SizeT, Head) ->
@@ -1142,7 +1146,7 @@ fast_write_sizes([[Addr | C] | CL], Sz, SizeT, Head, NCL, PwriteList) ->
     end.
 
 prepare_file_init(NoObjects, NoKeys, NoObjsPerSize, SizeT, Head) ->
-    SegSz = ?ACTUAL_SEG_SIZE,
+    SegSz = ?SEGSZB,
     {_, SegEnd, _} = dets_utils:alloc(Head, adjsz(SegSz)),
     Head1 = Head#head{no_objects = NoObjects, no_keys = NoKeys},
     true = ets:insert(SizeT, {?FSCK_SEGMENT,0,[],0}),
@@ -1194,7 +1198,7 @@ write_loop(Head, BytesToWrite, Bin) ->
 allocate_all_objects(Head, SizeT) ->
     DTL = lists:reverse(lists:keysort(1, ets:tab2list(SizeT))),
     MaxSz = element(1, hd(DTL)),
-    SegSize = ?ACTUAL_SEG_SIZE,
+    SegSize = ?SEGSZB,
     {Head1, HSz, HN, HA} = alloc_hole(MaxSz, Head, SegSize),
     {Head2, NL} = allocate_all(Head1, DTL, []),
     %% Find the position that will be the end of the file by allocating
@@ -1229,7 +1233,7 @@ allocate_all(Head, [{?FSCK_SEGMENT,_,Data,_}], L) ->
     %% initialized on disk.
     NoParts = no_parts(Head#head.next),
     %% All parts first, ensured by init_segments/6.
-    Addr = ?BASE + NoParts * 4 * ?SEGPARTSZ,
+    Addr = ?BASE + NoParts * 4 * ?ARRPARTSZN,
     {Head, [{?FSCK_SEGMENT,Addr,Data,0} | L]};
 allocate_all(Head, [{LSize,_,Data,NoCollections} | DTL], L) ->
     Size = ?POW(LSize-1),
@@ -1431,9 +1435,9 @@ seg_file_item(T, Addr, SS, SizeT, L, Slot, BSize, LSize) ->
     %% Should call slot_position/1, but since all segments are
     %% allocated in a sequence, the position of a slot can be
     %% calculated faster.
-    SlotPos = SS + ?SZOBJP*4 * Slot, % SlotPos = slot_position(Slot)
+    SlotPos = SS + ?SLOTSZW*4 * Slot, % SlotPos = slot_position(Slot)
     NoZeros = SlotPos - Addr,
-    PSize = NoZeros+?SZOBJP*4,
+    PSize = NoZeros+?SLOTSZW*4,
     Inc = ?POW(LSize-1),
     CollP = ets:update_counter(SizeT, LSize, Inc) - Inc,
     PointerBin = if 
@@ -1648,7 +1652,7 @@ file_header(Head, FreeListsPointer, ClosedProperly, NoColls) ->
     DigH = [H2 | NoColls],
     MD5 = case Head#head.has_md5 of 
               true -> erlang:md5(DigH);
-              false -> <<0:?MD5SZ/unit:8>>
+              false -> <<0:?MD5SZB/unit:8>>
           end,
     [H1, DigH, MD5 | <<0:?RESERVED/unit:8>>].
 
@@ -1808,7 +1812,7 @@ table_parameters(Head) ->
 re_hash(Head, SlotStart) ->
     FromSlotPos = slot_position(SlotStart),
     ToSlotPos = slot_position(SlotStart + Head#head.m),
-    RSpec = [{FromSlotPos, 4 * ?SEGSZ}],
+    RSpec = [{FromSlotPos, 4 * ?SEGSZW}],
     {ok, [FromBin]} = dets_utils:pread(RSpec, Head),
     split_bins(FromBin, Head, FromSlotPos, ToSlotPos, [], [], 0).
 
@@ -1820,8 +1824,8 @@ split_bins(FB, Head, Pos1, Pos2, ToRead, L, SoFar) ->
     <<Sz1:32, P1:32, FT/binary>> = FB,
     <<B1:?OHDSZ/binary, _/binary>> = FB,
     NSoFar = SoFar + Sz1,
-    NPos1 = Pos1 + ?SZOBJP*4,
-    NPos2 = Pos2 + ?SZOBJP*4,
+    NPos1 = Pos1 + ?SLOTSZW*4,
+    NPos2 = Pos2 + ?SLOTSZW*4,
     if
 	NSoFar > ?MAXCOLL, ToRead =/= [] ->
 	    {NewHead, ok} = re_hash_write(Head, ToRead, L, Pos1, Pos2),
@@ -1840,8 +1844,8 @@ re_hash_write(Head, ToRead, L, Pos1, Pos2) ->
     {ok, Bins} = dets_utils:pread(ToRead, Head),
     Z = <<0:32, 0:32>>,
     {Head1, BinFS, BinTS, WsB} = re_hash_slots(Bins, L, Head, Z, [],[],[]),
-    WPos1 = Pos1 - ?SZOBJP*4*length(L),
-    WPos2 = Pos2 - ?SZOBJP*4*length(L),
+    WPos1 = Pos1 - ?SLOTSZW*4*length(L),
+    WPos2 = Pos2 - ?SLOTSZW*4*length(L),
     ToWrite = [{WPos1,BinFS}, {WPos2, BinTS} | WsB],
     dets_utils:pwrite(Head1, ToWrite).
 
@@ -1917,7 +1921,7 @@ may_grow(#head{access = read}=Head, _N, _How) ->
 may_grow(Head, _N, _How) when Head#head.next >= Head#head.max_no_slots ->
     {Head, ok};
 may_grow(Head, N, How) ->
-    Extra = erlang:min(2*?SEGSZP, Head#head.no_keys + N - Head#head.next),
+    Extra = erlang:min(2*?SEGSZN, Head#head.no_keys + N - Head#head.next),
     case catch may_grow1(Head, Extra, How) of
 	{error, _Reason} = Error -> % alloc may throw error
 	    dets_utils:corrupt(Head, Error);
@@ -1925,7 +1929,7 @@ may_grow(Head, N, How) ->
 	    {NewHead, Reply}
     end.
 
-may_grow1(Head, Extra, many_times) when Extra > ?SEGSZP ->
+may_grow1(Head, Extra, many_times) when Extra > ?SEGSZN ->
     Reply = grow(Head, 1, undefined),
     self() ! ?DETS_CALL(self(), may_grow),
     Reply;
@@ -1941,7 +1945,7 @@ grow(Head, _Extra, _SegZero) when Head#head.next >= Head#head.max_no_slots ->
     {Head, ok};
 grow(Head, Extra, SegZero) ->
     #head{n = N, next = Next, m = M} = Head,
-    SegNum = Next div ?SEGSZP,    
+    SegNum = Next div ?SEGSZN,    
     {Head0, W, Ws1} = allocate_segment(Head, SegZero, SegNum),
     %% re_hash/2 will overwrite the segment, but initialize it anyway...
     {Head1, ok} = dets_utils:pwrite(Head0, [W | Ws1]),
@@ -1949,19 +1953,19 @@ grow(Head, Extra, SegZero) ->
     {Head2, ok} = re_hash(Head1, N),
     NewHead =
 	if 
-	    N + ?SEGSZP =:= M ->
-		Head2#head{n = 0, next = Next + ?SEGSZP, m = 2 * M, m2 = 4 * M};
+	    N + ?SEGSZN =:= M ->
+		Head2#head{n = 0, next = Next + ?SEGSZN, m = 2 * M, m2 = 4 * M};
 	    true ->
-		Head2#head{n = N + ?SEGSZP, next = Next + ?SEGSZP}
+		Head2#head{n = N + ?SEGSZN, next = Next + ?SEGSZN}
 	end,
     true = hash_invars(NewHead),
-    grow(NewHead, Extra - ?SEGSZP, SegZero).
+    grow(NewHead, Extra - ?SEGSZN, SegZero).
 
 hash_invars(H) ->
     hash_invars(H#head.n, H#head.m, H#head.next, H#head.min_no_slots, 
 		H#head.max_no_slots).
 
--define(M8(X), (((X) band (?SEGSZP - 1)) =:= 0)).
+-define(M8(X), (((X) band (?SEGSZN - 1)) =:= 0)).
 hash_invars(N, M, Next, Min, Max) ->
         ?M8(N) and ?M8(M) and ?M8(Next) and ?M8(Min) and ?M8(Max)
     and (0 =< N) and (N =< M) and (N =< 2*Next) and (M =< Next)
@@ -1969,7 +1973,7 @@ hash_invars(N, M, Next, Min, Max) ->
     and (Min =< M).
 
 seg_zero() ->
-    <<0:(4*?SEGSZ)/unit:8>>.
+    <<0:(4*?SEGSZW)/unit:8>>.
 
 find_object(Head, Object) ->
     Key = element(Head#head.keypos, Object),
@@ -2062,7 +2066,7 @@ tag_with_slot([], _Head, L) ->
     L.
 
 remove_slot_tag([{S,SWLs} | SSWLs], Ls, SPs) ->
-    remove_slot_tag(SSWLs, [SWLs | Ls], [{slot_position(S), ?SEGOBJSZ} | SPs]);
+    remove_slot_tag(SSWLs, [SWLs | Ls], [{slot_position(S), ?SLOTSZB} | SPs]);
 remove_slot_tag([], Ls, SPs) ->
     {Ls, SPs}.
 
@@ -2438,7 +2442,7 @@ update_no_keys(Head, Ws, DeltaObjects, DeltaKeys) ->
 	if 
 	    NewNoKeys > NewHead#head.max_no_slots ->
 		Ws;
-	    NoKeys div ?SEGSZP =:= NewNoKeys div ?SEGSZP ->
+	    NoKeys div ?SEGSZN =:= NewNoKeys div ?SEGSZN ->
 		Ws;
 	    true ->
                 [{0, file_header(NewHead, 0, ?NOT_PROPERLY_CLOSED)} | Ws]
@@ -2446,11 +2450,11 @@ update_no_keys(Head, Ws, DeltaObjects, DeltaKeys) ->
     {NewHead, NWs}.
 
 slot_position(S) ->
-    SegNo = ?SLOT2SEG(S), % S div ?SEGSZP
-    PartPos = ?SEGARRADDR(?SEG2SEGARRPART(SegNo)), % SegNo div ?SEGPARTSZ
+    SegNo = ?SLOT2SEG(S), % S div ?SEGSZN
+    PartPos = ?ARRPARTP(?SEG2ARRPART(SegNo)), % SegNo div ?ARRPARTSZN
     Part = get_arrpart(PartPos),
-    Pos = ?SEGPARTADDR(Part, SegNo),
-    get_segp(Pos) + (?SEGOBJSZ * ?REM2(S, ?SEGSZP)).
+    Pos = ?SEGMENTP(Part, SegNo),
+    get_segp(Pos) + (?SLOTSZB * ?REM2(S, ?SEGSZN)).
 
 check_pread2_arg([{_Pos,Sz}], Head) when Sz > ?MAXCOLL ->
     case check_pread_arg(Sz, Head) of
@@ -2526,7 +2530,7 @@ scan_skip(Bin, From, To, L, Ts, R, Type, Skip) ->
 	    %% Neither ?ACTIVE nor ?FREE is a multiple of ?BUMP and
 	    %% thus cannot be found in segments or segment array
 	    %% parts.
-	    scan_skip(KO, From1+12, To, L, Ts, R, Type, ?ACTUAL_SEG_SIZE-12);
+	    scan_skip(KO, From1+12, To, L, Ts, R, Type, ?SEGSZB-12);
 	<<_:Skip/binary, Size:32, _St:32, Sz:32, KO/binary>>
 	                 when Size-12 =< byte_size(KO) ->
 	    %% St = ?FREE means that the object was deleted after
@@ -2618,16 +2622,16 @@ file_info(FH) ->
 v_segments(#head{}=H) ->
     v_parts(H, 0, 0).
 
-v_parts(_H, ?SEGARRSZ, _SegNo) ->
+v_parts(_H, ?ARRPARTS, _SegNo) ->
     done;
 v_parts(H, PartNo, SegNo) ->
     Fd = H#head.fptr,
-    PartPos = dets_utils:read_4(Fd, ?SEGARRADDR(PartNo)),
+    PartPos = dets_utils:read_4(Fd, ?ARRPARTP(PartNo)),
     if
 	PartPos =:= 0 ->
 	    done;
 	true ->
-	    PartBin = dets_utils:pread_n(Fd, PartPos, ?SEGPARTSZ*4),
+	    PartBin = dets_utils:pread_n(Fd, PartPos, ?ARRPARTSZN*4),
 	    v_segments(H, PartBin, PartNo+1, SegNo)
     end.
 
@@ -2640,11 +2644,11 @@ v_segments(H, <<Seg:32,T/binary>>, PartNo, SegNo) ->
     v_segment(H, SegNo, Seg, 0),
     v_segments(H, T, PartNo, SegNo+1).
 
-v_segment(_H, _, _SegPos, ?SEGSZP) ->
+v_segment(_H, _, _SegPos, ?SEGSZN) ->
     done;
 v_segment(H, SegNo, SegPos, SegSlot) ->
-    Slot = SegSlot + (SegNo * ?SEGSZP),
-    BucketP = SegPos + (4 * ?SZOBJP * SegSlot),
+    Slot = SegSlot + (SegNo * ?SEGSZN),
+    BucketP = SegPos + (4 * ?SLOTSZW * SegSlot),
     case catch read_bucket(H, BucketP, H#head.type) of
 	{'EXIT', Reason} -> 
 	    dets_utils:vformat("** dets: Corrupt or truncated dets file~n", 
