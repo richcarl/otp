@@ -2450,8 +2450,8 @@ update_no_keys(Head, Ws, DeltaObjects, DeltaKeys) ->
     {NewHead, NWs}.
 
 slot_position(S) ->
-    SegNo = ?SLOT2SEG(S), % S div ?SEGSZN
-    PartPos = ?ARRPARTP(?SEG2ARRPART(SegNo)), % SegNo div ?ARRPARTSZN
+    SegNo = ?SLOT2SEG(S),
+    PartPos = ?ARRPARTP(?SEG2ARRPART(SegNo)),
     Part = get_arrpart(PartPos),
     Pos = ?SEGMENTP(Part, SegNo),
     get_segp(Pos) + (?SLOTSZB * ?REM2(S, ?SEGSZN)).
