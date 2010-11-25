@@ -414,7 +414,7 @@ init_segments(Head, _SegNo, _NoSegs, _SegZero, WsP, WsI) ->
 
 %% -> {NewHead, SegInit, [SegPtr | PartStuff]}
 allocate_segment(Head, SegZero, SegNo) ->
-    PartPos = ?ARRPARTP(SegNo div ?ARRPARTSZN),
+    PartPos = ?ARRPARTP(?SEG2ARRPART(SegNo)),
     case get_arrpart(PartPos) of
 	undefined ->
 	    %% may throw error:
@@ -461,7 +461,7 @@ read_file_header(Fd, FileName) ->
     <<_:12/binary,MD5DigestedPart:(?HEADSZB-?MD5SZB-12)/binary,_/binary>> = Bin,
     {ok, EOF} = dets_utils:position_close(Fd, FileName, eof),
     {ok, <<FileSize:32>>} = dets_utils:pread_close(Fd, FileName, EOF-4, 4),
-    {CL, <<>>} = lists:foldl(fun(LSz, {Acc,<<NN:32,R/binary>>}) -> 
+    {CL, <<>>} = lists:foldl(fun(LSz, {Acc,<<NN:(?BUDCNTSZB*8),R/binary>>}) ->
 				     if 
 					 NN =:= 0 -> {Acc, R};
 					 true -> {[{LSz,NN} | Acc], R}
