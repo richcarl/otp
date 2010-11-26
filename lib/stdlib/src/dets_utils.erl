@@ -465,10 +465,6 @@ new_cache({Delay, Size}) ->
 %%% Buddy System
 %%% 
 
-%% Definitions for the buddy allocator.
--define(MAXBUD, 32).             % 2 GB is maximum file size
--define(MAXFREELISTS, 50000000). % Bytes reserved for the free lists (at end).
-
 %%-define(DEBUG(X, Y), io:format(X, Y)).
 -define(DEBUG(X, Y), true).
 

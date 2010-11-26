@@ -175,50 +175,23 @@
 %%  The bucket size is stored both in the bucket itself and in the slot that
 %%  points to the bucket. This makes reading a bucket from a slot faster.
 
-%%%
-%%% File header
-%%%
+%%
+%% File header
+%%
 
 -define(RESERVED, 128).        % Reserved for future use.
 
--define(BUDCNT, 28).    % Number of counters for the buddy system
--define(BUDCNTSZB, 4).  % Size of a buddy system counter, in bytes
--define(MD5SZB, 16).          % Size of MD5 sum, in bytes
+-define(BUDCNTSZB, 4).         % Size of a buddy system counter, in bytes
+
+%% Size of buddy counters array, in bytes
+-define(BUDCNTARRSZB, ((?MAXBUD-?MINBUD)*?BUDCNTSZB)).
+
+-define(MD5SZB, 16).           % Size of MD5 sum, in bytes
 
 %% Size of the file header, in bytes, not including the reserved part.
--define(HEADSZB, (56+(?BUDCNT*?BUDCNTSZB)+?MD5SZB)).
+-define(HEADSZB, (56+?BUDCNTARRSZB+?MD5SZB)).
 
 -define(HEADEND, (?HEADSZB+?RESERVED)). % End of header and reserved area.
-
-%% Segment array parts, segments, slots, and buckets
-
--define(SLOTSZW, 2).       % Size of slot (bucket size + address), in words
--define(SLOTSZB, (4 * ?SLOTSZW)).         % Size of slot, in bytes
-
--define(SEGSZN, 256).          % Size of a segment, in number of entries.
--define(SEGSZN_LOG2, 8).       % Keep this in sync with SEGSZN!
--define(SLOT2SEG(S), ((S) bsr ?SEGSZN_LOG2)). % S div ?SEGSZN
--define(SEGSZW, (?SLOTSZW*?SEGSZN)). % Size of a segment, in words.
--define(SEGSZB, (?SEGSZW*4)). % Size of a segment, in bytes
-
--define(ARRPARTSZN, 512).     % Size of segment array part, in words/entries
--define(ARRPARTSZN_LOG2, 9).  % Keep this in sync with ARRPARTSZN!
--define(SEG2ARRPART(S), ((S) bsr ?ARRPARTSZN_LOG2)). % S div ?ARRPARTSZN
--define(SEGMENTP(P,SegN), ((P) + (4 * ?REM2(SegN, ?ARRPARTSZN)))).
-
--define(ARRPARTS, 256).       % Maximal number of segment array parts.
--define(ARRPARTP(PartN), (?HEADEND + (4 * (PartN)))). % addr of part pointer
-
--define(BASE, ?ARRPARTP(?ARRPARTS)). % first byte after array part pointers
--define(MAXSLOTS, (?ARRPARTS * ?ARRPARTSZN * ?SEGSZN)).
-
-
--define(PHASH, 0).
--define(PHASH2, 1).
-
-%% BIG is used for hashing. BIG must be greater than the maximum
-%% number of slots, currently 32 M (MAXSLOTS).
--define(BIG, 16#3ffffff). % 64 M
 
 %% Hard coded positions into the file header:
 -define(FREELIST_POS, 0).
@@ -244,6 +217,41 @@
 -define(STATUS_POS, 4).     % Position of the status field.
 
 -define(OHDSZ_v8, 12).      % The size of the version 8 object header.
+
+%%
+%% Segment array parts, segments, slots, and buckets
+%%
+
+-define(SLOTSZW, 2).       % Size of slot (bucket size + address), in words
+-define(SLOTSZB, (4 * ?SLOTSZW)).         % Size of slot, in bytes
+
+-define(SEGSZN, 256).          % Size of a segment, in number of entries.
+-define(SEGSZN_LOG2, 8).       % Keep this in sync with SEGSZN!
+-define(SLOT2SEG(S), ((S) bsr ?SEGSZN_LOG2)). % S div ?SEGSZN
+-define(SEGSZW, (?SLOTSZW*?SEGSZN)). % Size of a segment, in words.
+-define(SEGSZB, (?SEGSZW*4)). % Size of a segment, in bytes
+
+-define(ARRPARTSZN, 512).     % Size of segment array part, in words/entries
+-define(ARRPARTSZN_LOG2, 9).  % Keep this in sync with ARRPARTSZN!
+-define(SEG2ARRPART(S), ((S) bsr ?ARRPARTSZN_LOG2)). % S div ?ARRPARTSZN
+-define(SEGMENTP(P,SegN), ((P) + (4 * ?REM2(SegN, ?ARRPARTSZN)))).
+
+-define(ARRPARTS, 256).       % Maximal number of segment array parts.
+-define(ARRPARTP(PartN), (?HEADEND + (4 * (PartN)))). % addr of part pointer
+
+-define(BASE, ?ARRPARTP(?ARRPARTS)). % first byte after array part pointers
+-define(MAXSLOTS, (?ARRPARTS * ?ARRPARTSZN * ?SEGSZN)).
+
+%%
+%% Other definitions
+%%
+
+-define(PHASH, 0).
+-define(PHASH2, 1).
+
+%% BIG is used for hashing. BIG must be greater than the maximum
+%% number of slots, currently 32 M (MAXSLOTS).
+-define(BIG, 16#3ffffff). % 64 M
 
 %% The size of each object is a multiple of 16.
 %% BUMP is used when repairing files.
@@ -271,12 +279,11 @@
 	   no_colls  % [{LogSz,NoColls}], NoColls >= 0
 	  }).
 
--define(MAXBUD, 32).
-
 %%-define(DEBUGF(X,Y), io:format(X, Y)).
 -define(DEBUGF(X,Y), void).
 
-%% {Bump}
+
+%% {Bump, Base} (Bump no longer used by anyone?)
 constants() ->
     {?BUMP, ?BASE}.
 
@@ -367,7 +374,7 @@ init_file(Fd, Tab, Fname, Type, Kp, MinSlots, MaxSlots, Ram, CacheSz,
      },
 
     FreeListsPointer = 0,
-    NoColls = <<0:(?BUDCNT*?BUDCNTSZB)/unit:8>>, %% Buddy system counters.
+    NoColls = <<0:?BUDCNTARRSZB/unit:8>>, %% Buddy system counters.
     FileHeader = file_header(Head0, FreeListsPointer, 
                              ?NOT_PROPERLY_CLOSED, NoColls),
     W0 = {0, [FileHeader |
@@ -456,7 +463,7 @@ read_file_header(Fd, FileName) ->
     <<FreeList:32,   Cookie:32,  CP:32,         Type2:32,
       Version:32,    M:32,       Next:32,       Kp:32,
       NoObjects:32,  NoKeys:32,  MinNoSlots:32, MaxNoSlots:32,
-      HashMethod:32, N:32, NoCollsB:(?BUDCNT*?BUDCNTSZB)/binary, 
+      HashMethod:32, N:32, NoCollsB:?BUDCNTARRSZB/binary, 
       MD5:?MD5SZB/binary>> = Bin,
     <<_:12/binary,MD5DigestedPart:(?HEADSZB-?MD5SZB-12)/binary,_/binary>> = Bin,
     {ok, EOF} = dets_utils:position_close(Fd, FileName, eof),
@@ -466,7 +473,7 @@ read_file_header(Fd, FileName) ->
 					 NN =:= 0 -> {Acc, R};
 					 true -> {[{LSz,NN} | Acc], R}
 				     end
-			     end, {[], NoCollsB}, lists:seq(4, ?MAXBUD-1)),
+			     end, {[], NoCollsB}, lists:seq(?MINBUD,?MAXBUD-1)),
     NoColls = 
 	if 
 	    CL =:= [], NoObjects > 0 -> % Version 9(a)
@@ -1628,7 +1635,7 @@ file_header(Head, FreeListsPointer, ClosedProperly) ->
 	      end,
     L = orddict:merge(fun(_K, V1, V2) -> V1 + V2 end, 
 		      NoColls, 
-		      lists:map(fun(X) -> {X,0} end, lists:seq(4,?MAXBUD-1))),
+		      lists:map(fun(X) -> {X,0} end, lists:seq(?MINBUD,?MAXBUD-1))),
     CW = lists:map(fun({_LSz,N}) -> <<N:32>> end, L),
     file_header(Head, FreeListsPointer, ClosedProperly, CW).
 

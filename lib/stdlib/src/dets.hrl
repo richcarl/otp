@@ -18,9 +18,14 @@
 %%
 
 -define(DEFAULT_MIN_NO_SLOTS, 256).
--define(DEFAULT_MAX_NO_SLOTS, 2*1024*1024).
+-define(DEFAULT_MAX_NO_SLOTS, 2*1024*1024).  % note: v9 can handle much more!
 -define(DEFAULT_AUTOSAVE, 3). % minutes
 -define(DEFAULT_CACHE, {3000, 14000}). % {delay,size} in {milliseconds,bytes}
+
+%% Definitions for the buddy allocator.
+-define(MINBUD, 4).              % The smallest buddy unit (2^4)
+-define(MAXBUD, 32).             % 2 GB is maximum file size
+-define(MAXFREELISTS, 50000000). % Bytes reserved for the free lists (at end).
 
 %% Type.
 -define(SET, 1).
