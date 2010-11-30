@@ -1593,7 +1593,7 @@ do_bchunk_init(Head, Tab) ->
 do_bchunk(Head, State) ->
     Read = case Head#head.version of
                9 -> dets_v9:read_bchunks(Head, State#dets_cont.alloc);
-               _ -> dets_v10:read_bchunks(Head, State#dets_cont.alloc)
+               10 -> dets_v10:read_bchunks(Head, State#dets_cont.alloc)
            end,
     case Read of
 	{error, Reason} ->
@@ -2369,8 +2369,9 @@ fopen_init_file(Tab, OpenArgs) ->
                   UseVersion =:= default ->
                       case os:getenv("DETS_USE_FILE_FORMAT") of
                           "8" -> 8;
-                          "10" -> 10;  % only use v10 on demand, for now
-                          _ -> 9
+                          "9" -> 9;
+                          "10" -> 10;
+                          _ -> ?DEFAULT_VERSION
                       end;
                   true ->
                       UseVersion
@@ -2422,7 +2423,7 @@ version2module(10) -> dets_v10.
 module2version(dets_v8) -> 8;
 module2version(dets_v9) -> 9;
 module2version(dets_v10) -> 10;
-module2version(not_used) -> 10.
+module2version(not_used) -> ?DEFAULT_VERSION.
 
 %% -> ok | throw(Error) 
 %% Not done for version 8
@@ -2432,7 +2433,7 @@ compact(SourceHead) ->
     Tmp = tempfile(Fname),
     TblParms = case Version of
                    9 -> dets_v9:table_parameters(SourceHead);
-                   _ -> dets_v10:table_parameters(SourceHead)
+                   10 -> dets_v10:table_parameters(SourceHead)
                end,
     {ok, Fd} = dets_utils:open(Tmp, open_args(read_write, false)),
     CacheSz = ?DEFAULT_CACHE,
@@ -2444,9 +2445,9 @@ compact(SourceHead) ->
                9 -> catch dets_v9:prep_table_copy(Fd, Tab, Tmp, Type, Kp,
                                                   Ram, CacheSz, Auto,
                                                   TblParms);
-               _ -> catch dets_v10:prep_table_copy(Fd, Tab, Tmp, Type, Kp,
-                                                   Ram, CacheSz, Auto,
-                                                   TblParms)
+               10 -> catch dets_v10:prep_table_copy(Fd, Tab, Tmp, Type, Kp,
+                                                    Ram, CacheSz, Auto,
+                                                    TblParms)
            end,
     Head = case Prep of
 	       {ok, H} ->
@@ -2459,7 +2460,7 @@ compact(SourceHead) ->
 
     Init = case Version of
                9 -> dets_v9:compact_init(SourceHead, Head, TblParms);
-               _ -> dets_v10:compact_init(SourceHead, Head, TblParms)
+               10 -> dets_v10:compact_init(SourceHead, Head, TblParms)
            end,
     case Init of
 	{ok, NewHead} ->

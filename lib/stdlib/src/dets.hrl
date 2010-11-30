@@ -17,6 +17,7 @@
 %% %CopyrightEnd%
 %%
 
+-define(DEFAULT_VERSION, 9). % only use version 10 on demand, for now
 -define(DEFAULT_MIN_NO_SLOTS, 256).
 -define(DEFAULT_MAX_NO_SLOTS, 2*1024*1024).  % note: v9 can handle much more!
 -define(DEFAULT_AUTOSAVE, 3). % minutes
