@@ -19,7 +19,7 @@
 -module(dets_utils).
 
 %% Utility functions common to several dets file formats.
-%% To be used from dets, dets_v8 and dets_v9 only.
+%% To be used from dets, dets_v8, dets_v9, and dets_v10 only.
 
 -export([cmp/2, msort/1, mkeysort/2, mkeysearch/3, family/1]).
 
@@ -853,7 +853,7 @@ adjust_addr(Addr, Pos, Base) ->
 
 %%%-----------------------------------------------------------------
 %%% The Disk Map is used for debugging only.
-%%% Very tightly coupled to the way dets_v9 works.
+%%% Very tightly coupled to the way dets_v9 (and later) works.
 %%%-----------------------------------------------------------------
 
 -define(DM, disk_map).

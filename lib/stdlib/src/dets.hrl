@@ -57,9 +57,9 @@
 	  next,            % next position for growth (segm mgmt only)
 	  fptr,            % the file descriptor
 	  no_objects,      % number of objects in table,
-	  no_keys,         % number of keys (version 9 only)
+	  no_keys,         % number of keys (version 9)
 	  maxobjsize,      % 2-log of the size of the biggest object
-                           % collection (version 9 only)
+                           % collection (version 9)
 	  n,               % split indicator
 	  type,            % set | bag | duplicate_bag
 	  keypos,          % default is 1 as for ets
