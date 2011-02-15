@@ -82,7 +82,7 @@ static Export *is_process_alive_trap;
 static char otp_version[] = ERLANG_OTP_VERSION;
 /* Keep erts_system_version as a global variable for easy access from a core */
 static char erts_system_version[] = ("Erlang/OTP " ERLANG_OTP_RELEASE
-				     "%s"
+				     "%s " ERLANG_PATCHES
 				     " [erts-" ERLANG_VERSION "]"
 #ifndef OTP_RELEASE
 #ifdef ERLANG_GIT_VERSION
