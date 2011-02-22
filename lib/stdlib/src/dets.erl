@@ -108,8 +108,9 @@
 %%% server at all times.
 %%%
 %%% The parts specific for formats up to and including 8(c) are
-%%% implemented in dets_v8.erl, parts specific for format 9 are
-%%% implemented in dets_v9.erl.
+%%% implemented in dets_v8.erl; parts specific for format 9 are
+%%% implemented in dets_v9.erl; parts specific for format 10 are
+%%% implemented in dets_v10.erl.
 
 %%  The method of hashing is the so called linear hashing algorithm
 %%  with segments. 
@@ -653,7 +654,7 @@ verbose(What) ->
 
 %% Where in the (open) table is Object located? 
 %% The address of the first matching object is returned.
-%% Format 9 returns the address of the object collection.
+%% Format 9 and later returns the address of the object collection.
 %% -> {ok, Address} | false
 where(Tab, Object) ->
     badarg(treq(Tab, {where, Object}), [Tab, Object]).
@@ -768,13 +769,13 @@ do_foldl_bins(Bins, MP) ->
     foldl_bins(Bins, MP, []).
 
 foldl_bins([], Terms) ->
-    %% Preserve time order (version 9). 
+    %% Preserve time order (version 9 and later). 
     Terms;
 foldl_bins([Bin | Bins], Terms) ->    
     foldl_bins(Bins, [binary_to_term(Bin) | Terms]).
 
 foldl_bins([], _MP, Terms) ->
-    %% Preserve time order (version 9).
+    %% Preserve time order (version 9 and later).
     Terms;
 foldl_bins([Bin | Bins], MP, Terms) ->
     Term = binary_to_term(Bin),
@@ -822,7 +823,7 @@ defaults(Tab, Args) ->
         8 ->
             Defaults#open_args{max_no_slots = default};
         _ ->
-            is_comp_min_max(Defaults)
+            check_comp_min_max(Defaults)
     end.
 
 to_list(T) when is_atom(T) -> atom_to_list(T);
@@ -852,11 +853,11 @@ repl({file, File}, Defs) ->
 repl({keypos, P}, Defs) when is_integer(P), P > 0 ->
     Defs#open_args{keypos =P};
 repl({max_no_slots, I}, Defs)  ->
-    %% Version 9 only.
-    MaxSlots = is_max_no_slots(I),
+    %% Not in version 8
+    MaxSlots = check_max_no_slots(I),
     Defs#open_args{max_no_slots = MaxSlots};
 repl({min_no_slots, I}, Defs)  ->
-    MinSlots = is_min_no_slots(I),
+    MinSlots = check_min_no_slots(I),
     Defs#open_args{min_no_slots = MinSlots};
 repl({ram_file, Bool}, Defs) ->
     mem(Bool, [true, false]),
@@ -868,7 +869,7 @@ repl({type, T}, Defs) ->
     mem(T, [set, bag, duplicate_bag]),
     Defs#open_args{type =T};
 repl({version, Version}, Defs) ->
-    V = is_version(Version),
+    V = check_version(Version),
     Defs#open_args{version = V};
 repl({debug, Bool}, Defs) ->
     %% Not documented.
@@ -877,14 +878,14 @@ repl({debug, Bool}, Defs) ->
 repl({_, _}, _) ->
     exit(badarg).
 
-is_min_no_slots(default) -> default;
-is_min_no_slots(I) when is_integer(I), I >= ?DEFAULT_MIN_NO_SLOTS -> I;
-is_min_no_slots(I) when is_integer(I), I >= 0 -> ?DEFAULT_MIN_NO_SLOTS.
+check_min_no_slots(default) -> default;
+check_min_no_slots(I) when is_integer(I), I >= ?DEFAULT_MIN_NO_SLOTS -> I;
+check_min_no_slots(I) when is_integer(I), I >= 0 -> ?DEFAULT_MIN_NO_SLOTS.
 
-is_max_no_slots(default) -> default;
-is_max_no_slots(I) when is_integer(I), I > 0, I < 1 bsl 31 -> I.
+check_max_no_slots(default) -> default;
+check_max_no_slots(I) when is_integer(I), I > 0, I < 1 bsl 31 -> I.
 
-is_comp_min_max(Defs) ->
+check_comp_min_max(Defs) ->
     #open_args{max_no_slots = Max, min_no_slots = Min, version = V} = Defs,
     case V of
 	_ when Min =:= default -> Defs;
@@ -892,9 +893,10 @@ is_comp_min_max(Defs) ->
 	_ -> true = Min =< Max, Defs
     end.
 
-is_version(default) -> default;
-is_version(8) -> 8;
-is_version(9) -> 9.
+check_version(default) -> default;
+check_version(8) -> 8;
+check_version(9) -> 9;
+check_version(10) -> 10.
 
 mem(X, L) ->
     case lists:member(X, L) of
@@ -913,7 +915,7 @@ options(Options, [Key | Keys], L) when is_list(Options) ->
                                            Format =:= bchunk ->
 		{ok, Format};
 	    {value, {min_no_slots, I}} ->
-		case catch is_min_no_slots(I) of
+		case catch check_min_no_slots(I) of
 		    {'EXIT', _} -> badarg;
 		    MinNoSlots -> {ok, MinNoSlots}
 		end;
@@ -1357,7 +1359,7 @@ start_auto_save_timer(Head) ->
     Millis = Head#head.auto_save,
     erlang:send_after(Millis, self(), ?DETS_CALL(self(), auto_save)).
 
-%% Version 9: Peek the message queue and try to evaluate several
+%% Version 9 and later: Peek the message queue and try to evaluate several
 %% lookup requests in parallel. Evalute delete_object, delete and
 %% insert as well.
 stream_op(Op, Pid, Pids, Head, N) ->
@@ -1487,10 +1489,12 @@ system_code_change(State, _Module, _OldVsn, _Extra) ->
 constants(FH, FileName) ->
     Version = FH#fileheader.version,
     if 
-        Version =< 8 ->
-            dets_v8:constants();
+        Version =:= 10 ->
+            dets_v10:constants();
         Version =:= 9 ->
             dets_v9:constants();
+        Version =< 8 ->
+            dets_v8:constants();
         true ->
             throw({error, {not_a_dets_file, FileName}})
     end.
@@ -1510,10 +1514,12 @@ read_file_header(FileName, Access, RamFile) ->
     {ok, <<Version:32>>} = 
         dets_utils:pread_close(Fd, FileName, ?FILE_FORMAT_VERSION_POS, 4),
     if 
-        Version =< 8 ->
-            dets_v8:read_file_header(Fd, FileName);
+        Version =:= 10 ->
+            dets_v10:read_file_header(Fd, FileName);
         Version =:= 9 ->
             dets_v9:read_file_header(Fd, FileName);
+        Version =< 8 ->
+            dets_v8:read_file_header(Fd, FileName);
         true ->
             throw({error, {not_a_dets_file, FileName}})
     end.
@@ -1587,7 +1593,11 @@ do_bchunk(Head, #dets_cont{proc = Proc}) when Proc =/= self() ->
 do_bchunk(Head, #dets_cont{bin = eof}) ->
     {Head, '$end_of_table'};
 do_bchunk(Head, State) ->
-    case dets_v9:read_bchunks(Head, State#dets_cont.alloc) of
+    Read = case Head#head.version of
+               9 -> dets_v9:read_bchunks(Head, State#dets_cont.alloc);
+               10 -> dets_v10:read_bchunks(Head, State#dets_cont.alloc)
+           end,
+    case Read of
 	{error, Reason} ->
 	    dets_utils:corrupt_reason(Head, Reason);
 	{finished, Bins} ->
@@ -1830,8 +1840,10 @@ test_bchunk_format(_Head, undefined) ->
     false;
 test_bchunk_format(Head, _Term) when Head#head.version =:= 8 ->
     false;
+test_bchunk_format(Head, Term) when Head#head.version =:= 9 ->
+    dets_v9:try_bchunk_header(Term, Head) =/= not_ok;
 test_bchunk_format(Head, Term) ->
-    dets_v9:try_bchunk_header(Term, Head) =/= not_ok.
+    dets_v10:try_bchunk_header(Term, Head) =/= not_ok.
 
 do_open_file([Fname, Verbose], Parent, Server, Ref) ->
     case catch fopen2(Fname, Ref) of
@@ -2247,14 +2259,14 @@ fopen_existing_file(Tab, OpenArgs) ->
         OpenArgs,
     %% Fd is not always closed upon error, but exit is soon called.
     {ok, Fd, FH} = read_file_header(Fname, Acc, Ram),
-    V9 = (Version =:= 9) or (Version =:= default),
+    NotV8 = (Version =/= 8) or (Version =:= default),
     MinF = (MinSlots =:= default) or (MinSlots =:= FH#fileheader.min_no_slots),
     MaxF = (MaxSlots =:= default) or (MaxSlots =:= FH#fileheader.max_no_slots),
     Do = case (FH#fileheader.mod):check_file_header(FH, Fd) of
 	     {ok, Head, true} when Rep =:= force, Acc =:= read_write,
-				   FH#fileheader.version =:= 9,
+				   FH#fileheader.version =/= 8,
 				   FH#fileheader.no_colls =/= undefined,
-				   MinF, MaxF, V9 ->
+				   MinF, MaxF, NotV8 ->
 		 {compact, Head};
              {ok, _Head, _Extra} when Rep =:= force, Acc =:= read ->
                  throw({error, {access_mode, Fname}});
@@ -2361,7 +2373,9 @@ fopen_init_file(Tab, OpenArgs) ->
                   UseVersion =:= default ->
                       case os:getenv("DETS_USE_FILE_FORMAT") of
                           "8" -> 8;
-                          _ -> 9
+                          "9" -> 9;
+                          "10" -> 10;
+                          _ -> ?DEFAULT_VERSION
                       end;
                   true ->
                       UseVersion
@@ -2385,7 +2399,7 @@ fopen_init_file(Tab, OpenArgs) ->
     end.
 
 %% Debug.
-init_disk_map(9, Name, Debug) ->
+init_disk_map(Version, Name, Debug) when Version >= 9 ->
     case Debug orelse dets_utils:debug_mode() of
         true -> 
             dets_utils:init_disk_map(Name);
@@ -2407,27 +2421,39 @@ open_args(Access, RamFile) ->
     A1 ++ A2 ++ [binary, read].
 
 version2module(V) when V =< 8 -> dets_v8;
-version2module(9) -> dets_v9.
+version2module(9) -> dets_v9;
+version2module(10) -> dets_v10.
 
 module2version(dets_v8) -> 8;
 module2version(dets_v9) -> 9;
-module2version(not_used) -> 9.
+module2version(dets_v10) -> 10;
+module2version(not_used) -> ?DEFAULT_VERSION.
 
 %% -> ok | throw(Error) 
-%% For version 9 tables only.
+%% Not done for version 8
 compact(SourceHead) ->
     #head{name = Tab, filename = Fname, fptr = SFd, type = Type, keypos = Kp,
-	  ram_file = Ram, auto_save = Auto} = SourceHead,
+	  ram_file = Ram, auto_save = Auto, version = Version} = SourceHead,
     Tmp = tempfile(Fname),
-    TblParms = dets_v9:table_parameters(SourceHead),
+    TblParms = case Version of
+                   9 -> dets_v9:table_parameters(SourceHead);
+                   10 -> dets_v10:table_parameters(SourceHead)
+               end,
     {ok, Fd} = dets_utils:open(Tmp, open_args(read_write, false)),
     CacheSz = ?DEFAULT_CACHE,
     %% It is normally not possible to have two open tables in the same
     %% process since the process dictionary is used for caching
     %% segment pointers, but here is works anyway--when reading a file
     %% serially the pointers to not need to be used.
-    Head = case catch dets_v9:prep_table_copy(Fd, Tab, Tmp, Type, Kp, Ram, 
-					      CacheSz, Auto, TblParms) of
+    Prep = case version of
+               9 -> catch dets_v9:prep_table_copy(Fd, Tab, Tmp, Type, Kp,
+                                                  Ram, CacheSz, Auto,
+                                                  TblParms);
+               10 -> catch dets_v10:prep_table_copy(Fd, Tab, Tmp, Type, Kp,
+                                                    Ram, CacheSz, Auto,
+                                                    TblParms)
+           end,
+    Head = case Prep of
 	       {ok, H} ->
 		   H;
 	       Error ->
@@ -2436,7 +2462,11 @@ compact(SourceHead) ->
 		   throw(Error)
 	   end,
 
-    case dets_v9:compact_init(SourceHead, Head, TblParms) of
+    Init = case Version of
+               9 -> dets_v9:compact_init(SourceHead, Head, TblParms);
+               10 -> dets_v10:compact_init(SourceHead, Head, TblParms)
+           end,
+    case Init of
 	{ok, NewHead} ->
 	    R = case fclose(NewHead) of
 		    ok ->
