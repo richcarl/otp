@@ -19,7 +19,7 @@
 -module(dets_utils).
 
 %% Utility functions common to several dets file formats.
-%% To be used from dets, dets_v8 and dets_v9 only.
+%% To be used from dets, dets_v8, dets_v9, and dets_v10 only.
 
 -export([cmp/2, msort/1, mkeysort/2, mkeysearch/3, family/1]).
 
@@ -465,10 +465,6 @@ new_cache({Delay, Size}) ->
 %%% Buddy System
 %%% 
 
-%% Definitions for the buddy allocator.
--define(MAXBUD, 32).             % 2 GB is maximum file size
--define(MAXFREELISTS, 50000000). % Bytes reserved for the free lists (at end).
-
 %%-define(DEBUG(X, Y), io:format(X, Y)).
 -define(DEBUG(X, Y), true).
 
@@ -857,7 +853,7 @@ adjust_addr(Addr, Pos, Base) ->
 
 %%%-----------------------------------------------------------------
 %%% The Disk Map is used for debugging only.
-%%% Very tightly coupled to the way dets_v9 works.
+%%% Very tightly coupled to the way dets_v9 (and later) works.
 %%%-----------------------------------------------------------------
 
 -define(DM, disk_map).

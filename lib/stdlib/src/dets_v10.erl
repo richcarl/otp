@@ -1,7 +1,7 @@
 %%
 %% %CopyrightBegin%
 %% 
-%% Copyright Ericsson AB 2001-2010. All Rights Reserved.
+%% Copyright Ericsson AB 2001-2009. All Rights Reserved.
 %% 
 %% The contents of this file are subject to the Erlang Public License,
 %% Version 1.1, (the "License"); you may not use this file except in
@@ -16,9 +16,9 @@
 %% 
 %% %CopyrightEnd%
 %%
--module(dets_v9).
+-module(dets_v10).
 
-%% Dets files, implementation part. This module handles version 9.
+%% Dets files, implementation part. This module handles version 10 (64-bit).
 %% To be called from dets.erl only.
 
 -export([constants/0, mark_dirty/1, read_file_header/2,
@@ -46,7 +46,7 @@
 %%
 %%   bytes   description
 %%  ---------------------- File header
-%%    4      FreelistsPointer
+%%    4      FreelistsPointer (offset from EOF, starting in v10!)
 %%    4      Cookie
 %%    4      ClosedProperly (pos=8)
 %%    4      Type (pos=12)
@@ -65,28 +65,31 @@
 %%           Version 9(b) has instead:
 %%    112    28 counters for the buddy system sizes 2^4 to 2^31.
 %%    144    Reserved for future versions. Initially zeros.
-%%           Version 9(c) has instead:
+%%           Version 9(c) and v10 have instead:
 %%    112    28 counters for the buddy system sizes (as for 9(b)).
 %%    16     MD5-sum for the 44 plus 112 bytes before the MD5-sum.
 %%           (FreelistsPointer, Cookie and ClosedProperly are not digested.)
 %%    128    Reserved for future versions. Initially zeros.
 %%  ---
 %%  ------------------ end of file header
-%%    4*256  SegmentArray Part Pointers.
+%%    8*128  SegmentArray Part Pointers.
 %%  ------------------ This is BASE.
-%%    4*512  SegmentArray Part 1
+%%    8*1024 SegmentArray Part 1
 %%    ...    More SegmentArray Parts
-%%    8*256  First segment
+%%    12*256  First segment
 %%    ???    Objects (free and alive)
-%%    4*512  Further SegmentArray Parts
+%%    8*512  Further SegmentArray Parts
 %%    ???    Objects (free and alive)
-%%    8*256  Further segment.
+%%    12*256  Further segment.
 %%    ???    Objects (free and alive)
 %%    ... more objects, segment array parts, and segments ...
 %%  -----------------------------
 %%    ???    Free lists
 %%  -----------------------------
-%%    4      File size, in bytes. 
+%%    8      File size, in bytes.
+%%
+%% NOTE: right now, BASE may not move! Its position is hard-coded in
+%% dets_utils for the disk map.
 
 %%  Before we can find an object we must hash to the slot where the
 %%  object resides. If the size and pointer stored in the slot is zero,
@@ -173,30 +176,44 @@
 %%
 %%
 %%  The bucket size is stored both in the bucket itself and in the slot that
-%%  points to the bucket. This makes reading a bucket from a slot faster.
+%%  points to the bucket. This makes reading a bucket from a slot faster. In
+%%  parts of the code, a bucket is called an "object", e.g. as in "object
+%%  header". This is a remnant from dets_v8 where buckets were represented as
+%%  chains of objects, with a single tuple stored per object.
+
+%% Definitions for controlling 64-bit usage in v10
+-define(APTPDOUBLE, 2). % double ArrayPart pointer (1 = 32bit, 2 = 64bit)
+-define(SEGPDOUBLE, 2). % double Segment pointer (1 = 32bit, 2 = 64bit)
+-define(OBJPDOUBLE, 2). % double Object pointer (1 = 32bit, 2 = 64bit)
+-define(FSZDOUBLE, 2).  % double FileSize value (1 = 32bit, 2 = 64bit)
+-define(FLPDOUBLE, 2).  % double Freelist pointer (1 = 32bit, 2 = 64bit)
 
 %%
 %% File header
 %%
 
--define(RESERVED, 128).        % Reserved for future use.
+-define(HWORDSZB, 4).  % Size of a header word, in bytes
 
--define(BUDCNTSZB, 4).         % Size of a buddy system counter, in bytes
+-define(BUDCNTSZB, ?HWORDSZB). % Size of a buddy system counter, in bytes
+-define(BUDCNTS, 28).          % Number of saved buddy counters
 
 %% Size of buddy counters array, in bytes
--define(BUDCNTARRSZB, ((?MAXBUD-?MINBUD)*?BUDCNTSZB)).
+-define(BUDCNTARRSZB, (?BUDCNTS*?BUDCNTSZB)).
 
 -define(MD5SZB, 16).           % Size of MD5 sum, in bytes
 
 %% Size of the file header, in bytes, not including the reserved part.
--define(HEADSZB, (56+?BUDCNTARRSZB+?MD5SZB)).
+-define(HEADSZB, (14*?HWORDSZB+?BUDCNTARRSZB+?MD5SZB)).
+
+-define(RESERVED, (256-?MD5SZB-?BUDCNTS*?BUDCNTSZB)). % Reserved for future use.
 
 -define(HEADEND, (?HEADSZB+?RESERVED)). % End of header and reserved area.
 
 %% Hard coded positions into the file header:
--define(FREELIST_POS, 0).
--define(CLOSED_PROPERLY_POS, 8).
--define(D_POS, 20).
+-define(CLOSED_PROPERLY_POS, (2*?HWORDSZB)).
+
+%% Size in bytes of the file size entry stored last in the file
+-define(FILESIZESZB, (?WORDSZB*?FSZDOUBLE)).
 
 %%% Dets file versions up to 8 are handled in dets_v8. This module
 %%% handles version 9, introduced in R8.
@@ -208,39 +225,62 @@
 %%% table cannot be distinguished from an empty 9(a) table.
 %%% 9(c) has an MD5-sum for the file header.
 
--define(FILE_FORMAT_VERSION, 9).
+-define(FILE_FORMAT_VERSION, 10).
 
--define(NOT_PROPERLY_CLOSED,0).
+-define(NOT_CLOSED_PROPERLY,0).
 -define(CLOSED_PROPERLY,1).
-
--define(OHDSZ, 8).          % The size of the object header, in bytes.
--define(STATUS_POS, 4).     % Position of the status field.
-
--define(OHDSZ_v8, 12).      % The size of the version 8 object header.
 
 %%
 %% Segment array parts, segments, slots, and buckets
 %%
 
--define(SLOTSZW, 2).       % Size of slot (bucket size + address), in words
--define(SLOTSZB, (4 * ?SLOTSZW)).         % Size of slot, in bytes
+%% Note: If the size of array part pointers doubles, we halve the maximal
+%% number of array parts. This ensures that the position of BASE doesn't
+%% change. To compensate, we double the size of each array part.
+
+%% Size of object pointer, in bytes
+-define(OBJPTRSZB, (?WORDSZB*?OBJPDOUBLE)).
+
+%% Size of pointer in freelist, in bytes
+-define(FLPTRSZB, (?WORDSZB*?FLPDOUBLE)).
+
+%% Size of slot (bucket size + address), in bytes
+-define(SLOTSZB, (?WORDSZB+?OBJPTRSZB)).
 
 -define(SEGSZN, 256).          % Size of a segment, in number of entries.
 -define(SEGSZN_LOG2, 8).       % Keep this in sync with SEGSZN!
 -define(SLOT2SEG(S), ((S) bsr ?SEGSZN_LOG2)). % S div ?SEGSZN
--define(SEGSZW, (?SLOTSZW*?SEGSZN)). % Size of a segment, in words.
--define(SEGSZB, (?SEGSZW*4)). % Size of a segment, in bytes
+-define(SEGSZB, (?SEGSZN*?SLOTSZB)). % Size of a segment, in bytes
 
--define(ARRPARTSZN, 512).     % Size of segment array part, in words/entries
+%% Size of segment pointer, in bytes
+-define(SEGPTRSZB, (?WORDSZB*?SEGPDOUBLE)).
+
+-define(ARRPARTSZN, (512*?APTPDOUBLE)). % Size of segment array part, in entries
 -define(ARRPARTSZN_LOG2, 9).  % Keep this in sync with ARRPARTSZN!
 -define(SEG2ARRPART(S), ((S) bsr ?ARRPARTSZN_LOG2)). % S div ?ARRPARTSZN
--define(SEGMENTP(P,SegN), ((P) + (4 * ?REM2(SegN, ?ARRPARTSZN)))).
+-define(SEGMENTP(P,SegN), ((P) + (?SEGPTRSZB * ?REM2(SegN, ?ARRPARTSZN)))).
 
--define(ARRPARTS, 256).       % Maximal number of segment array parts.
--define(ARRPARTP(PartN), (?HEADEND + (4 * (PartN)))). % addr of part pointer
+%% Size of segment array part, in bytes
+-define(ARRPARTSZB, (?ARRPARTSZN*?SEGPTRSZB)).
 
--define(BASE, ?ARRPARTP(?ARRPARTS)). % first byte after array part pointers
--define(MAXSLOTS, (?ARRPARTS * ?ARRPARTSZN * ?SEGSZN)).
+%% Size of an array part pointer, in bytes
+-define(APTPTRSZB, (?WORDSZB*?APTPDOUBLE)).
+
+-define(ARRPARTP(PartN), (?HEADEND + (?APTPTRSZB * (PartN)))).
+
+-define(MAXARRPARTS, (256 div ?APTPDOUBLE)). % Maximal number of segment array parts.
+
+-define(BASE, ?ARRPARTP(?MAXARRPARTS)). % address after array part pointers
+-define(MAXSLOTS, (?MAXARRPARTS * ?ARRPARTSZN * ?SEGSZN)).
+
+%%
+%% Object (bucket) header: (size, status).
+%%
+
+-define(OHDSZ, (2*?WORDSZB)).     % The size of the object header, in bytes.
+-define(STATUS_POS, ?WORDSZB).    % Position of the status field.
+
+-define(OHDSZ_v8, 12).      % The size of the version 8 object header.
 
 %%
 %% Other definitions
@@ -289,10 +329,13 @@ constants() ->
 
 %% -> ok | throw({NewHead,Error})
 mark_dirty(Head) ->
-    Dirty = [{?CLOSED_PROPERLY_POS, <<?NOT_PROPERLY_CLOSED:32>>}],
+    Dirty = [{?CLOSED_PROPERLY_POS, <<?NOT_CLOSED_PROPERLY:?HWORDSZB/unit:8>>}],
     dets_utils:pwrite(Head, Dirty),
     dets_utils:sync(Head),
-    dets_utils:position(Head, Head#head.freelists_p),
+    %% freelists pointer is now an offset from eof
+    {ok,EOF} = dets_utils:position(Head,eof),
+    Pos = EOF - Head#head.freelists_p,
+    dets_utils:position(Head, Pos),
     dets_utils:truncate(Head, cur).
 
 %% -> {ok, head()} | throw(Error) | throw(badarg)
@@ -362,7 +405,6 @@ init_file(Fd, Tab, Fname, Type, Kp, MinSlots, MaxSlots, Ram, CacheSz,
       keypos = Kp,
       min_no_slots = MinSlots,
       max_no_slots = MaxSlots,
-      
       ram_file = Ram, 
       filename = Fname, 
       name = Tab,
@@ -376,9 +418,9 @@ init_file(Fd, Tab, Fname, Type, Kp, MinSlots, MaxSlots, Ram, CacheSz,
     FreeListsPointer = 0,
     NoColls = <<0:?BUDCNTARRSZB/unit:8>>, %% Buddy system counters.
     FileHeader = file_header(Head0, FreeListsPointer, 
-                             ?NOT_PROPERLY_CLOSED, NoColls),
+                             ?NOT_CLOSED_PROPERLY, NoColls),
     W0 = {0, [FileHeader |
-              <<0:(4*?ARRPARTS)/unit:8>>]},  %% SegmentArray Part Pointers
+              <<0:(?MAXARRPARTS*?APTPTRSZB)/unit:8>>]},  %% SegmentArray Part Pointers
 
     %% Remove cached pointers to segment array parts and segments:
     lists:foreach(fun({I1,I2}) when is_integer(I1), is_integer(I2) -> ok;
@@ -436,44 +478,50 @@ allocate_segment(Head, SegZero, SegNo) ->
 
 alloc_part(Head, PartZero, PartPos) ->
     %% may throw error:
-    {NewHead, Part, _} = dets_utils:alloc(Head, adjsz(4 * ?ARRPARTSZN)),
+    {NewHead, Part, _} = dets_utils:alloc(Head, adjsz(?ARRPARTSZB)),
     arrpart_cache(PartPos, Part),
     InitArrPart = {Part, PartZero}, % same size as segment
-    ArrPartPointer = {PartPos, <<Part:32>>},
+    ArrPartPointer = {PartPos, <<Part:?APTPTRSZB/unit:8>>},
     {NewHead, [InitArrPart, ArrPartPointer], Part}.
 
 alloc_seg(Head, SegZero, SegNo, Part) ->
     %% may throw error:
-    {NewHead, Segment, _} = dets_utils:alloc(Head, adjsz(4 * ?SEGSZW)), 
+    {NewHead, Segment, _} = dets_utils:alloc(Head, adjsz(?SEGSZB)),
     InitSegment = {Segment, SegZero},
     Pos = ?SEGMENTP(Part, SegNo),
     segp_cache(Pos, Segment),
     dets_utils:disk_map_segment(Segment, SegZero),
-    SegPointer = {Pos, <<Segment:32>>},
+    SegPointer = {Pos, <<Segment:?SEGPTRSZB/unit:8>>},
     {NewHead, InitSegment, [SegPointer]}.
 
 %% Read free lists (using a Buddy System) from file. 
 init_freelist(Head, true) ->
-    Pos = Head#head.freelists_p,
+    %% freelists pointer is now an offset from eof
+    {ok,EOF} = dets_utils:position(Head,eof),
+    Pos = EOF - Head#head.freelists_p,
     free_lists_from_file(Head, Pos).
 
 %% -> {ok, Fd, fileheader()} | throw(Error)
 read_file_header(Fd, FileName) ->
     {ok, Bin} = dets_utils:pread_close(Fd, FileName, 0, ?HEADSZB),
-    <<FreeList:32,   Cookie:32,  CP:32,         Type2:32,
-      Version:32,    M:32,       Next:32,       Kp:32,
-      NoObjects:32,  NoKeys:32,  MinNoSlots:32, MaxNoSlots:32,
-      HashMethod:32, N:32, NoCollsB:?BUDCNTARRSZB/binary, 
+    <<FreeList:?HWORDSZB/unit:8,   Cookie:?HWORDSZB/unit:8,
+      CP:?HWORDSZB/unit:8,         Type2:?HWORDSZB/unit:8,
+      Version:?HWORDSZB/unit:8,    M:?HWORDSZB/unit:8,
+      Next:?HWORDSZB/unit:8,       Kp:?HWORDSZB/unit:8,
+      NoObjects:?HWORDSZB/unit:8,  NoKeys:?HWORDSZB/unit:8,
+      MinNoSlots:?HWORDSZB/unit:8, MaxNoSlots:?HWORDSZB/unit:8,
+      HashMethod:?HWORDSZB/unit:8, N:?HWORDSZB/unit:8,
+      NoCollsB:?BUDCNTARRSZB/binary, 
       MD5:?MD5SZB/binary>> = Bin,
-    <<_:12/binary,MD5DigestedPart:(?HEADSZB-?MD5SZB-12)/binary,_/binary>> = Bin,
+    <<_:(3*?HWORDSZB)/binary,MD5DigestedPart:(?HEADSZB-?MD5SZB-3*?HWORDSZB)/binary,_/binary>> = Bin,
     {ok, EOF} = dets_utils:position_close(Fd, FileName, eof),
-    {ok, <<FileSize:32>>} = dets_utils:pread_close(Fd, FileName, EOF-4, 4),
-    {CL, <<>>} = lists:foldl(fun(LSz, {Acc,<<NN:(?BUDCNTSZB*8),R/binary>>}) ->
+    {ok, <<FileSize:?FILESIZESZB/unit:8>>} = dets_utils:pread_close(Fd, FileName, EOF-?FILESIZESZB, ?FILESIZESZB),
+    {CL, <<>>} = lists:foldl(fun(LSz, {Acc,<<NN:?BUDCNTSZB/unit:8,R/binary>>}) ->
 				     if 
 					 NN =:= 0 -> {Acc, R};
 					 true -> {[{LSz,NN} | Acc], R}
 				     end
-			     end, {[], NoCollsB}, lists:seq(?MINBUD,?MAXBUD-1)),
+			     end, {[], NoCollsB}, lists:seq(?MAXBUD-?BUDCNTS,?MAXBUD-1)),
     NoColls = 
 	if 
 	    CL =:= [], NoObjects > 0 -> % Version 9(a)
@@ -481,7 +529,7 @@ read_file_header(Fd, FileName) ->
 	    true ->
 		lists:reverse(CL)
 	end,
-			     
+
     FH = #fileheader{freelist = FreeList,
 		     cookie = Cookie,
 		     closed_properly = CP,
@@ -526,7 +574,7 @@ check_file_header(FH, Fd) ->
 		{error, bad_hash_bif};
 	    FH#fileheader.closed_properly =:= ?CLOSED_PROPERLY ->
 		{ok, true};
-	    FH#fileheader.closed_properly =:= ?NOT_PROPERLY_CLOSED ->
+	    FH#fileheader.closed_properly =:= ?NOT_CLOSED_PROPERLY ->
 		{error, not_closed};
 	    true ->
 		{error, not_a_dets_file}
@@ -579,25 +627,25 @@ max_objsize([{I,_} | L], _Max) ->
 cache_segps(Fd, FileName, M) ->
     NoParts = no_parts(M),
     ArrStart = ?ARRPARTP(0),
-    {ok, Bin} = dets_utils:pread_close(Fd, FileName, ArrStart, 4 * NoParts),
+    {ok, Bin} = dets_utils:pread_close(Fd, FileName, ArrStart, ?APTPTRSZB*NoParts),
     cache_arrparts(Bin, ?HEADEND, Fd, FileName).
 
-cache_arrparts(<<ArrPartPos:32, B/binary>>, Pos, Fd, FileName) ->
+cache_arrparts(<<ArrPartPos:?APTPTRSZB/unit:8, B/binary>>, Pos, Fd, FileName) ->
     arrpart_cache(Pos, ArrPartPos),
     {ok, ArrPartBin} = dets_utils:pread_close(Fd, FileName, 
                                               ArrPartPos, 
-                                              ?ARRPARTSZN*4),
+                                              ?ARRPARTSZB),
     cache_segps1(Fd, ArrPartBin, ArrPartPos),
-    cache_arrparts(B, Pos+4, Fd, FileName);
+    cache_arrparts(B, Pos+?APTPTRSZB, Fd, FileName);
 cache_arrparts(<<>>, _Pos, _Fd, _FileName) ->
     ok.
 
-cache_segps1(_Fd, <<0:32,_/binary>>, _P) ->
+cache_segps1(_Fd, <<0:?SEGPTRSZB/unit:8,_/binary>>, _P) ->
     ok;
-cache_segps1(Fd, <<S:32,B/binary>>, P) ->
+cache_segps1(Fd, <<S:?SEGPTRSZB/unit:8,B/binary>>, P) ->
     dets_utils:disk_map_segment_p(Fd, S),
     segp_cache(P, S),
-    cache_segps1(Fd, B, P+4);
+    cache_segps1(Fd, B, P+?SEGPTRSZB);
 cache_segps1(_Fd, <<>>, _P) ->
     ok.
 
@@ -805,7 +853,7 @@ compact_read(Head, WHead, SizeT, Cache, [[From | To] | L], Min, SegBs, ASz) ->
         false ->
             not_ok % try a proper repair
     end.
-    
+
 compact_objs(Head, WHead, SizeT, Bin, L, From, To, SegBs, Cache, ASz) 
                             when From =:= To ->
     case L of
@@ -821,7 +869,7 @@ compact_objs(Head, WHead, SizeT, Bin, L, From, To, SegBs, Cache, ASz)
 		    compact_read(Head, WHead, SizeT, Cache, L, 0, SegBs, ASz)
 	    end
     end;
-compact_objs(Head, WHead, SizeT, <<Size:32, St:32, _Sz:32, KO/binary>> = Bin, 
+compact_objs(Head, WHead, SizeT, <<Size:?WORDSZB/unit:8, St:?WORDSZB/unit:8, _Sz:?WORDSZB/unit:8, KO/binary>> = Bin,
 	     L, From, To, SegBs, Cache, ASz) when St =:= ?ACTIVE ->
     LSize = sz2pos(Size),
     Size2 = ?POW(LSize-1),
@@ -833,7 +881,7 @@ compact_objs(Head, WHead, SizeT, <<Size:32, St:32, _Sz:32, KO/binary>> = Bin,
 		       Head#head.type =:= set ->
 			   binary_to_term(KO);
 		       true ->
-			   <<_KSz:32,B2/binary>> = KO,
+			   <<_KSz:?WORDSZB/unit:8,B2/binary>> = KO,
 			   binary_to_term(B2)
 		   end,
 	    Key = element(Head#head.keypos, Term),
@@ -841,20 +889,20 @@ compact_objs(Head, WHead, SizeT, <<Size:32, St:32, _Sz:32, KO/binary>> = Bin,
 	    From1 = From + Size2,
 	    [Addr | AL] = ?VGET(LSize, Cache),
 	    NCache = ?VSET(LSize, Cache, [Addr + Size2 | [SlotObjs | AL]]),
-	    NSegBs = [<<Slot:32,Size:32,Addr:32,LSize:8>> | SegBs],
+	    NSegBs = [<<Slot:?WORDSZB/unit:8,Size:?WORDSZB/unit:8,Addr:?OBJPTRSZB/unit:8,LSize:8>> | SegBs],
 	    compact_objs(Head, WHead, SizeT, NewBin, L, From1,
 			 To, NSegBs, NCache, NASz);
 	true ->
 	    compact_read(Head, WHead, SizeT, Cache, [[From|To] | L], 
 			 Size2, SegBs, ASz)
     end;
-compact_objs(Head, WHead, SizeT, <<_:32, _St:32, _:32, _/binary>> = Bin, 
+compact_objs(Head, WHead, SizeT, <<_:?WORDSZB/unit:8, _St:?WORDSZB/unit:8, _:?WORDSZB/unit:8, _/binary>> = Bin, 
 	     L, From, To, SegBs, Cache, ASz)
               when byte_size(Bin) >= ?SEGSZB -> % , _St =/= ?ACTIVE
     <<_:?SEGSZB/binary, NewBin/binary>> = Bin,
     compact_objs(Head, WHead, SizeT, NewBin, L, From + ?SEGSZB,
 		 To, SegBs, Cache, ASz);
-compact_objs(Head, WHead, SizeT, <<_:32, _St:32, _:32, _/binary>> = Bin, 
+compact_objs(Head, WHead, SizeT, <<_:?WORDSZB/unit:8, _St:?WORDSZB/unit:8, _:?WORDSZB/unit:8, _/binary>> = Bin, 
 	     L, From, To, SegBs, Cache, ASz)
               when byte_size(Bin) < ?SEGSZB -> % , _St =/= ?ACTIVE
     compact_read(Head, WHead, SizeT, Cache, [[From|To] | L], 
@@ -900,7 +948,7 @@ bchunks(Head, L, Bin, Bs, ASz, From, To) when From =:= To ->
 	L =:= <<>> ->
 	    {finished, lists:reverse(Bs)};
 	true -> 
-	    <<From1:32, To1:32, L1/binary>> = L,
+	    <<From1:?WORDSZB/unit:8, To1:?WORDSZB/unit:8, L1/binary>> = L,
 	    Skip1 = From1 - From,
 	    case Bin of
 		<<_:Skip1/binary,NewBin/binary>> ->
@@ -909,7 +957,7 @@ bchunks(Head, L, Bin, Bs, ASz, From, To) when From =:= To ->
 		    read_bchunks(Head, {From1,To1,L1}, 0, Bs, ASz)
 	    end
     end;
-bchunks(Head, L, <<Size:32, St:32, _Sz:32, KO/binary>> = Bin, Bs, ASz, 
+bchunks(Head, L, <<Size:?WORDSZB/unit:8, St:?WORDSZB/unit:8, _Sz:?WORDSZB/unit:8, KO/binary>> = Bin, Bs, ASz, 
 	  From, To) when St =:= ?ACTIVE; St =:= ?FREE ->
     LSize = sz2pos(Size),
     Size2 = ?POW(LSize-1),
@@ -923,7 +971,7 @@ bchunks(Head, L, <<Size:32, St:32, _Sz:32, KO/binary>> = Bin, Bs, ASz,
 		       Head#head.type =:= set ->
 			   binary_to_term(KO);
 		       true ->
-			   <<_KSz:32,B2/binary>> = KO,
+			   <<_KSz:?WORDSZB/unit:8,B2/binary>> = KO,
 			   binary_to_term(B2)
 		   end,
 	    Key = element(Head#head.keypos, Term),
@@ -933,11 +981,11 @@ bchunks(Head, L, <<Size:32, St:32, _Sz:32, KO/binary>> = Bin, Bs, ASz,
 	true ->
 	    read_bchunks(Head, {From, To, L}, Size2, Bs, ASz)
     end;
-bchunks(Head, L, <<_:32, _St:32, _:32, _/binary>> = Bin, Bs, ASz, From, To)
+bchunks(Head, L, <<_:?WORDSZB/unit:8, _St:?WORDSZB/unit:8, _:?WORDSZB/unit:8, _/binary>> = Bin, Bs, ASz, From, To)
                   when byte_size(Bin) >= ?SEGSZB ->
     <<_:?SEGSZB/binary, NewBin/binary>> = Bin,
     bchunks(Head, L, NewBin, Bs, ASz, From + ?SEGSZB, To);
-bchunks(Head, L, <<_:32, _St:32, _:32, _/binary>> = Bin, Bs, ASz, From, To)
+bchunks(Head, L, <<_:?WORDSZB/unit:8, _St:?WORDSZB/unit:8, _:?WORDSZB/unit:8, _/binary>> = Bin, Bs, ASz, From, To)
                   when byte_size(Bin) < ?SEGSZB ->
     read_bchunks(Head, {From, To, L}, ?SEGSZB, Bs, ASz);
 bchunks(Head, L, _Bin, Bs, ASz, From, To) ->
@@ -1046,19 +1094,19 @@ do_make_slots(L, Cache, SizeT, Head, Ref, ASz, InitFun) ->
 	    {SegBs, F}
     end.
 
-make_slots([{LSize,Slot,<<Size:32, St:32, Sz:32, KO/binary>> = Bin0} | Bins], 
+make_slots([{LSize,Slot,<<Size:?WORDSZB/unit:8, St:?WORDSZB/unit:8, Sz:?WORDSZB/unit:8, KO/binary>> = Bin0} | Bins], 
 	   Cache, SegBs, ASz) ->
     Bin = if 
 	      St =:= ?ACTIVE ->
 		  Bin0;
 	      St =:= ?FREE ->
-		  <<Size:32,?ACTIVE:32,Sz:32,KO/binary>>
+		  <<Size:?WORDSZB/unit:8,?ACTIVE:?WORDSZB/unit:8,Sz:?WORDSZB/unit:8,KO/binary>>
           end,
     BSz = byte_size(Bin0),
     true = (BSz =:= ?POW(LSize-1)),
     NASz = ASz + BSz,
     [Addr | L] = ?VGET(LSize, Cache),
-    NSegBs = [<<Slot:32,Size:32,Addr:32,LSize:8>> | SegBs],
+    NSegBs = [<<Slot:?WORDSZB/unit:8,Size:?WORDSZB/unit:8,Addr:?OBJPTRSZB/unit:8,LSize:8>> | SegBs],
     NCache = ?VSET(LSize, Cache, [Addr + BSz | [Bin | L]]),
     make_slots(Bins, NCache, NSegBs, NASz);
 make_slots([], Cache, SegBs, ASz) ->
@@ -1097,12 +1145,12 @@ fast_output_end(Head, SizeT) ->
     end.
     
 %% Inlined.
-write_segment_file([<<Slot:32,BSize:32,AddrToBe:32,LSize:8>> | Bins], 
+write_segment_file([<<Slot:?WORDSZB/unit:8,BSize:?WORDSZB/unit:8,AddrToBe:?OBJPTRSZB/unit:8,LSize:8>> | Bins],
 		   Bases, Head, Ws, SegAddr, SS) ->
     %% Should call slot_position/1, but since all segments are
     %% allocated in a sequence, the position of a slot can be
     %% calculated faster.
-    Pos = SS + ?SLOTSZW*4 * Slot, % Same as Pos = slot_position(Slot).
+    Pos = SS + ?SLOTSZB * Slot, % Same as Pos = slot_position(Slot).
     write_segment_file(Bins, Bases, Head, Ws, SegAddr, SS, Pos, 
 		       BSize, AddrToBe, LSize);
 write_segment_file([], _Bases, Head, Ws, SegAddr, _SS) ->
@@ -1112,21 +1160,21 @@ write_segment_file([], _Bases, Head, Ws, SegAddr, _SS) ->
 write_segment_file(Bins, Bases, Head, Ws, SegAddr, SS, Pos, BSize, 
 		   AddrToBe, LSize) when Pos =:= SegAddr ->
     Addr = AddrToBe + element(LSize, Bases),
-    NWs = [Ws | <<BSize:32,Addr:32>>],
-    write_segment_file(Bins, Bases, Head, NWs, SegAddr + ?SLOTSZW*4, SS);
+    NWs = [Ws | <<BSize:?WORDSZB/unit:8,Addr:?OBJPTRSZB/unit:8>>],
+    write_segment_file(Bins, Bases, Head, NWs, SegAddr + ?SLOTSZB, SS);
 write_segment_file(Bins, Bases, Head, Ws, SegAddr, SS, Pos, BSize, 
 		   AddrToBe, LSize) when Pos - SegAddr < 100 ->
     Addr = AddrToBe + element(LSize, Bases),
     NoZeros = Pos - SegAddr,
-    NWs = [Ws | <<0:NoZeros/unit:8,BSize:32,Addr:32>>],
-    NSegAddr = SegAddr + NoZeros + ?SLOTSZW*4,
+    NWs = [Ws | <<0:NoZeros/unit:8,BSize:?WORDSZB/unit:8,Addr:?OBJPTRSZB/unit:8>>],
+    NSegAddr = SegAddr + NoZeros + ?SLOTSZB,
     write_segment_file(Bins, Bases, Head, NWs, NSegAddr, SS);
 write_segment_file(Bins, Bases, Head, Ws, SegAddr, SS, Pos, BSize, 
 		   AddrToBe, LSize) ->
     Addr = AddrToBe + element(LSize, Bases),
     NoZeros = Pos - SegAddr,
-    NWs = [Ws, dets_utils:make_zeros(NoZeros) | <<BSize:32,Addr:32>>],
-    NSegAddr = SegAddr + NoZeros + ?SLOTSZW*4,
+    NWs = [Ws, dets_utils:make_zeros(NoZeros) | <<BSize:?WORDSZB/unit:8,Addr:?OBJPTRSZB/unit:8>>],
+    NSegAddr = SegAddr + NoZeros + ?SLOTSZB,
     write_segment_file(Bins, Bases, Head, NWs, NSegAddr, SS).
 
 fast_write_all_sizes(Cache, SizeT, Head) ->
@@ -1240,7 +1288,7 @@ allocate_all(Head, [{?FSCK_SEGMENT,_,Data,_}], L) ->
     %% initialized on disk.
     NoParts = no_parts(Head#head.next),
     %% All parts first, ensured by init_segments/6.
-    Addr = ?BASE + NoParts * 4 * ?ARRPARTSZN,
+    Addr = ?BASE + NoParts * ?ARRPARTSZB,
     {Head, [{?FSCK_SEGMENT,Addr,Data,0} | L]};
 allocate_all(Head, [{LSize,_,Data,NoCollections} | DTL], L) ->
     Size = ?POW(LSize-1),
@@ -1257,14 +1305,14 @@ bin2term(Bin, 9, Kp) ->
 bin2term(Bin, 8, Kp) ->
     bin2term_v8(Bin, Kp, []).
 
-bin2term1([<<Slot:32, Seq:32, BinTerm/binary>> | BTs], Kp, L) ->
+bin2term1([<<Slot:?WORDSZB/unit:8, Seq:?WORDSZB/unit:8, BinTerm/binary>> | BTs], Kp, L) ->
     Term = binary_to_term(BinTerm),
     Key = element(Kp, Term),
     bin2term1(BTs, Kp, [{Slot, Key, Seq, Term, BinTerm} | L]);
 bin2term1([], _Kp, L) ->
     lists:reverse(L).
 
-bin2term_v8([<<Slot:32, BinTerm/binary>> | BTs], Kp, L) ->
+bin2term_v8([<<Slot:?WORDSZB/unit:8, BinTerm/binary>> | BTs], Kp, L) ->
     Term = binary_to_term(BinTerm),
     Key = element(Kp, Term),
     bin2term_v8(BTs, Kp, [{Slot, Key, foo, Term, BinTerm} | L]);
@@ -1344,7 +1392,7 @@ output_slot(Es, Head, Cache, L, SizeT, NoKeys, NoObjs) ->
     LSize = sz2pos(BSize),
     Size2 = ?POW(LSize-1),
     Pad = <<0:(Size2-BSize)/unit:8>>,
-    BinObject = [<<BSize:32, ?ACTIVE:32>>, Bins | Pad],
+    BinObject = [<<BSize:?WORDSZB/unit:8, ?ACTIVE:?WORDSZB/unit:8>>, Bins | Pad],
     Cache1 = 
 	if
 	    LSize > tuple_size(Cache) ->
@@ -1357,7 +1405,7 @@ output_slot(Es, Head, Cache, L, SizeT, NoKeys, NoObjs) ->
 
     %% Then the pointer to the object collection.
     %% Cannot yet determine the absolute pointers; segment_file/4 does that.
-    PBin = <<Slot:32,BSize:32,LSize:8>>,
+    PBin = <<Slot:?WORDSZB/unit:8,BSize:?WORDSZB/unit:8,LSize:8>>,
     PL = ?VGET(?FSCK_SEGMENT, Cache1),
     NCache = ?VSET(?FSCK_SEGMENT, Cache1, [PBin | PL]),
     output_slots(L, Head, NCache, SizeT, NNoKeys, NNoObjs).
@@ -1380,11 +1428,11 @@ prep_set_slot([{_,K,_Seq,_T1,BT1} | L], K, _BT, Sz, NoKeys, NoObjs, Ws) ->
     prep_set_slot(L, K, BT1, Sz, NoKeys, NoObjs, Ws);
 prep_set_slot([{_,K1,_Seq,_T1,BT1} | L], _K, BT, Sz, NoKeys, NoObjs, Ws) ->
     BSize = byte_size(BT) + 4,
-    NWs = [Ws,<<BSize:32>>|BT],
+    NWs = [Ws,<<BSize:?WORDSZB/unit:8>>|BT],
     prep_set_slot(L, K1, BT1, Sz+BSize, NoKeys+1, NoObjs+1, NWs);
 prep_set_slot([], _K, BT, Sz, NoKeys, NoObjs, Ws) ->
     BSize = byte_size(BT) + 4,
-    {[Ws, <<BSize:32>> | BT], Sz + BSize, NoKeys+1, NoObjs+1}.
+    {[Ws, <<BSize:?WORDSZB/unit:8>> | BT], Sz + BSize, NoKeys+1, NoObjs+1}.
 
 segment_file(SizeT, Head, FileData, SegEnd) ->
     I = 2,
@@ -1429,9 +1477,9 @@ seg_file(Addr, SS, In, InFile, Out, OutFile, SizeT, SegEnd) ->
 	    seg_file(NewAddr, SS, In, InFile, Out, OutFile, SizeT, SegEnd)
     end.
 
-seg_file(<<Slot:32,BSize:32,LSize:8,T/binary>>, Addr, SS, SizeT, L) ->
+seg_file(<<Slot:?WORDSZB/unit:8,BSize:?WORDSZB/unit:8,LSize:8,T/binary>>, Addr, SS, SizeT, L) ->
     seg_file_item(T, Addr, SS, SizeT, L, Slot, BSize, LSize);
-seg_file([<<Slot:32,BSize:32,LSize:8>> | T], Addr, SS, SizeT, L) ->
+seg_file([<<Slot:?WORDSZB/unit:8,BSize:?WORDSZB/unit:8,LSize:8>> | T], Addr, SS, SizeT, L) ->
     seg_file_item(T, Addr, SS, SizeT, L, Slot, BSize, LSize);
 seg_file([], Addr, _SS, _SizeT, L) ->
     {Addr, lists:reverse(L)};
@@ -1442,19 +1490,19 @@ seg_file_item(T, Addr, SS, SizeT, L, Slot, BSize, LSize) ->
     %% Should call slot_position/1, but since all segments are
     %% allocated in a sequence, the position of a slot can be
     %% calculated faster.
-    SlotPos = SS + ?SLOTSZW*4 * Slot, % SlotPos = slot_position(Slot)
+    SlotPos = SS + ?SLOTSZB * Slot, % SlotPos = slot_position(Slot)
     NoZeros = SlotPos - Addr,
-    PSize = NoZeros+?SLOTSZW*4,
+    PSize = NoZeros+?SLOTSZB,
     Inc = ?POW(LSize-1),
     CollP = ets:update_counter(SizeT, LSize, Inc) - Inc,
     PointerBin = if 
 		     NoZeros =:= 0 ->
-			 <<BSize:32, CollP:32>>;
+			 <<BSize:?WORDSZB/unit:8, CollP:?WORDSZB/unit:8>>;
 		     NoZeros > 100 ->
 			 [dets_utils:make_zeros(NoZeros) | 
-			  <<BSize:32, CollP:32>>];
+			  <<BSize:?WORDSZB/unit:8, CollP:?WORDSZB/unit:8>>];
 		     true ->
-			 <<0:NoZeros/unit:8, BSize:32, CollP:32>>
+			 <<0:NoZeros/unit:8, BSize:?WORDSZB/unit:8, CollP:?WORDSZB/unit:8>>
                  end,
     seg_file(T, Addr + PSize, SS, SizeT, [PointerBin | L]).
 
@@ -1547,7 +1595,7 @@ read_more_bytes(B, Min, Pos, F, L, Seq) ->
 	    {cont, L, list_to_binary([B, Bin]), NewPos, Seq}
     end.
 
-fsck_objs(Bin = <<Sz:32, Status:32, Tail/binary>>, Kp, Head, L, Seq) ->
+fsck_objs(Bin = <<Sz:?WORDSZB/unit:8, Status:?WORDSZB/unit:8, Tail/binary>>, Kp, Head, L, Seq) ->
     if 
 	Status =:= ?ACTIVE ->
 	    Sz1 = Sz-?OHDSZ,
@@ -1574,7 +1622,7 @@ fsck_objs(Bin, _Kp, _Head, L, Seq) ->
 make_objects([{K,BT}|Os], Seq, Kp, Head, L) when Head#head.version =:= 8 ->
     LogSz = dets_v8:sz2pos(byte_size(BT)+?OHDSZ_v8),
     Slot = dets_v8:db_hash(K, Head),
-    Obj = [LogSz | <<Slot:32, LogSz:8, BT/binary>>],
+    Obj = [LogSz | <<Slot:?WORDSZB/unit:8, LogSz:8, BT/binary>>],
     make_objects(Os, Seq, Kp, Head, [Obj | L]);
 make_objects([{K,BT} | Os], Seq, Kp, Head, L) ->
     Obj = make_object(Head, K, Seq, BT),
@@ -1585,7 +1633,7 @@ make_objects([], Seq, _Kp, _Head, L) ->
 %% Inlined.
 make_object(Head, Key, Seq, BT) ->
     Slot = db_hash(Key, Head),
-    <<Slot:32, Seq:32, BT/binary>>.
+    <<Slot:?WORDSZB/unit:8, Seq:?WORDSZB/unit:8, BT/binary>>.
 
 %% Inlined.
 skip_bytes(Bin, Skip, Kp, Head, L, Seq) ->
@@ -1602,11 +1650,13 @@ skip_bytes(Bin, Skip, Kp, Head, L, Seq) ->
 
 %% -> {NewHead, ok} | throw({Head, Error})
 do_perform_save(H) ->
-    {ok, FreeListsPointer} = dets_utils:position(H, eof),
+    %% freelists pointer is now an offset from eof
+    {ok,EOF} = dets_utils:position(H,eof),
+    {FLW, FLSize} = free_lists_to_file(H),
+    FreeListsPointer = FLSize + ?FILESIZESZB,  % offset from final EOF
+    FileSize = EOF + FreeListsPointer,
     H1 = H#head{freelists_p = FreeListsPointer},
-    {FLW, FLSize} = free_lists_to_file(H1),
-    FileSize = FreeListsPointer + FLSize + 4,
-    ok = dets_utils:write(H1, [FLW | <<FileSize:32>>]),
+    ok = dets_utils:write(H1, [FLW | <<FileSize:?FILESIZESZB/unit:8>>]),
     FileHeader = file_header(H1, FreeListsPointer, ?CLOSED_PROPERLY),
     case dets_utils:debug_mode() of
         true -> 
@@ -1620,7 +1670,7 @@ do_perform_save(H) ->
                     dets_utils:pwrite(H1, [{0, FileHeader}]);
                 _ -> 
                     dets_utils:corrupt_reason(H1, {failed_to_save_free_lists,
-                                                   FreeListsPointer,
+                                                   EOF,
                                                    TmpHead#head.freelists,
                                                    H1#head.freelists})
             end;
@@ -1635,8 +1685,8 @@ file_header(Head, FreeListsPointer, ClosedProperly) ->
 	      end,
     L = orddict:merge(fun(_K, V1, V2) -> V1 + V2 end, 
 		      NoColls, 
-		      lists:map(fun(X) -> {X,0} end, lists:seq(?MINBUD,?MAXBUD-1))),
-    CW = lists:map(fun({_LSz,N}) -> <<N:32>> end, L),
+		      lists:map(fun(X) -> {X,0} end, lists:seq(?MAXBUD-?BUDCNTS,?MAXBUD-1))),
+    CW = lists:map(fun({_LSz,N}) -> <<N:?BUDCNTSZB/unit:8>> end, L),
     file_header(Head, FreeListsPointer, ClosedProperly, CW).
 
 file_header(Head, FreeListsPointer, ClosedProperly, NoColls) ->
@@ -1644,18 +1694,19 @@ file_header(Head, FreeListsPointer, ClosedProperly, NoColls) ->
     TypeCode = dets_utils:type_to_code(Head#head.type),
     Version = ?FILE_FORMAT_VERSION,
     HashMethod = hash_method_to_code(Head#head.hash_bif),
-    H1 = <<FreeListsPointer:32, Cookie:32, ClosedProperly:32>>,
-    H2 = <<TypeCode:32,
-           Version:32,
-           (Head#head.m):32, 
-           (Head#head.next):32, 
-           (Head#head.keypos):32,
-           (Head#head.no_objects):32,
-           (Head#head.no_keys):32,
-           (Head#head.min_no_slots):32,
-           (Head#head.max_no_slots):32,
-           HashMethod:32,
-           (Head#head.n):32>>,
+    H1 = <<FreeListsPointer:?HWORDSZB/unit:8, Cookie:?HWORDSZB/unit:8,
+           ClosedProperly:?HWORDSZB/unit:8>>,
+    H2 = <<TypeCode:?HWORDSZB/unit:8,
+           Version:?HWORDSZB/unit:8,
+           (Head#head.m):?HWORDSZB/unit:8,
+           (Head#head.next):?HWORDSZB/unit:8,
+           (Head#head.keypos):?HWORDSZB/unit:8,
+           (Head#head.no_objects):?HWORDSZB/unit:8,
+           (Head#head.no_keys):?HWORDSZB/unit:8,
+           (Head#head.min_no_slots):?HWORDSZB/unit:8,
+           (Head#head.max_no_slots):?HWORDSZB/unit:8,
+           HashMethod:?HWORDSZB/unit:8,
+           (Head#head.n):?HWORDSZB/unit:8>>,
     DigH = [H2 | NoColls],
     MD5 = case Head#head.has_md5 of 
               true -> erlang:md5(DigH);
@@ -1669,15 +1720,17 @@ file_header(Head, FreeListsPointer, ClosedProperly, NoColls) ->
 
 -define(MAXFREEOBJ, 4096).
 -define(ENDFREE, 12345).
+-define(FLHDSZ, (2*?WORDSZB + ?FLPTRSZB)). % Size of the freelists header
 
 free_lists_to_file(H) ->
     FL = dets_utils:get_freelists(H),
     free_list_to_file(FL, H, 1, tuple_size(FL), [], 0).
 
+
 free_list_to_file(_Ftab, _H, Pos, Sz, Ws, WsSz) when Pos > Sz ->
-    {[Ws | <<(4+?OHDSZ):32, ?FREE:32, ?ENDFREE:32>>], WsSz+4+?OHDSZ};
+    {[Ws | <<?FLHDSZ:?WORDSZB/unit:8, ?FREE:?WORDSZB/unit:8, ?ENDFREE:?FLPTRSZB/unit:8>>], WsSz+?FLHDSZ};
 free_list_to_file(Ftab, H, Pos, Sz, Ws, WsSz) ->
-    Max = (?MAXFREEOBJ - 4 - ?OHDSZ) div 4,
+    Max = (?MAXFREEOBJ - ?FLHDSZ) div ?FLPTRSZB,
     F = fun(N, L, W, S) when N =:= 0 -> {N, L, W, S};
 	   (N, L, W, S) ->
 		{L1, N1, More} =
@@ -1688,8 +1741,8 @@ free_list_to_file(Ftab, H, Pos, Sz, Ws, WsSz) ->
 			true ->
 			    {L, N, no_more}
 		    end,
-                Size = N1*4 + 4 + ?OHDSZ,
-		Header = <<Size:32, ?FREE:32, Pos:32>>,
+                Size = N1*?FLPTRSZB + ?FLHDSZ,
+		Header = <<Size:?WORDSZB/unit:8, ?FREE:?WORDSZB/unit:8, Pos:?FLPTRSZB/unit:8>>,
 		NW = [W, Header | L1],
 		case More of
 		    no_more ->
@@ -1699,7 +1752,7 @@ free_list_to_file(Ftab, H, Pos, Sz, Ws, WsSz) ->
 			{NN, NL, [], S+Size}
 		end
 	end,
-    {NWs,NWsSz} = dets_utils:tree_to_bin(element(Pos, Ftab), F, Max, Ws, WsSz),
+    {NWs,NWsSz} = dets_utils:tree_to_bin(element(Pos, Ftab), F, Max, Ws, WsSz, ?FLPTRSZB),
     free_list_to_file(Ftab, H, Pos+1, Sz, NWs, NWsSz).
 
 free_lists_from_file(H, Pos) ->
@@ -1714,12 +1767,12 @@ free_lists_from_file(H, Pos) ->
 
 bin_to_tree(Bin, H, LastPos, Ftab, A0, L) ->
     case Bin of 
-        <<_Size:32,?FREE:32,?ENDFREE:32,_/binary>> when L =:= [] ->
+        <<_Size:?WORDSZB/unit:8,?FREE:?WORDSZB/unit:8,?ENDFREE:?FLPTRSZB/unit:8,_/binary>> when L =:= [] ->
             Ftab;
-        <<_Size:32,?FREE:32,?ENDFREE:32,_/binary>> ->
+        <<_Size:?WORDSZB/unit:8,?FREE:?WORDSZB/unit:8,?ENDFREE:?FLPTRSZB/unit:8,_/binary>> ->
             setelement(LastPos, Ftab, dets_utils:list_to_tree(L));
-        <<Size:32,?FREE:32,Pos:32,T/binary>> 
-                      when byte_size(T) >= Size-4-?OHDSZ ->
+        <<Size:?WORDSZB/unit:8,?FREE:?WORDSZB/unit:8,Pos:?FLPTRSZB/unit:8,T/binary>> 
+                      when byte_size(T) >= Size-?FLHDSZ ->
 	    {NFtab, L1, A1} = 
 		if
 		    Pos =/= LastPos, LastPos =/= start ->
@@ -1728,18 +1781,20 @@ bin_to_tree(Bin, H, LastPos, Ftab, A0, L) ->
 		    true ->
 			{Ftab, L, A0}
 		    end,
-	    {NL, B2, A2} = bin_to_tree1(T, Size-?OHDSZ-4, A1, L1),
+	    {NL, B2, A2} = bin_to_tree1(T, Size-?FLHDSZ, A1, L1),
 	    bin_to_tree(B2, H, Pos, NFtab, A2, NL);
         _ ->
             Bin2 = dets_utils:read_n(H#head.fptr, ?MAXFREEOBJ),
             bin_to_tree(list_to_binary([Bin | Bin2]), H, LastPos, Ftab, A0, L)
     end.
 
-bin_to_tree1(<<A1:32,A2:32,A3:32,A4:32,T/binary>>, Size, A, L) 
-         when Size >= 16, A < A1, A1 < A2, A2 < A3, A3 < A4 ->
-    bin_to_tree1(T, Size-16, A4, [A4, A3, A2, A1 | L]);
-bin_to_tree1(<<A1:32,T/binary>>, Size, A, L) when Size >= 4, A < A1 ->
-    bin_to_tree1(T, Size - 4, A1, [A1 | L]);
+%% For efficiency, extract 4 at a time if possible
+bin_to_tree1(<<A1:?FLPTRSZB/unit:8,A2:?FLPTRSZB/unit:8,A3:?FLPTRSZB/unit:8,A4:?FLPTRSZB/unit:8,T/binary>>, Size, A, L)
+  when Size >= (4*?FLPTRSZB), A < A1, A1 < A2, A2 < A3, A3 < A4 ->
+    bin_to_tree1(T, Size-(4*?FLPTRSZB), A4, [A4, A3, A2, A1 | L]);
+bin_to_tree1(<<A1:?FLPTRSZB/unit:8,T/binary>>, Size, A, L)
+  when Size >= ?FLPTRSZB, A < A1 ->
+    bin_to_tree1(T, Size-?FLPTRSZB, A1, [A1 | L]);
 bin_to_tree1(B, 0, A, L) ->
     {L, B, A}.
 
@@ -1819,7 +1874,7 @@ table_parameters(Head) ->
 re_hash(Head, SlotStart) ->
     FromSlotPos = slot_position(SlotStart),
     ToSlotPos = slot_position(SlotStart + Head#head.m),
-    RSpec = [{FromSlotPos, 4 * ?SEGSZW}],
+    RSpec = [{FromSlotPos, ?SEGSZB}],
     {ok, [FromBin]} = dets_utils:pread(RSpec, Head),
     split_bins(FromBin, Head, FromSlotPos, ToSlotPos, [], [], 0).
 
@@ -1828,11 +1883,11 @@ split_bins(<<>>, Head, _Pos1, _Pos2, _ToRead, _L, 0) ->
 split_bins(<<>>, Head, Pos1, Pos2, ToRead, L, _SoFar) ->
     re_hash_write(Head, ToRead, L, Pos1, Pos2);
 split_bins(FB, Head, Pos1, Pos2, ToRead, L, SoFar) ->
-    <<Sz1:32, P1:32, FT/binary>> = FB,
-    <<B1:?OHDSZ/binary, _/binary>> = FB,
+    <<Sz1:?WORDSZB/unit:8, P1:?OBJPTRSZB/unit:8, FT/binary>> = FB,
+    <<B1:?SLOTSZB/binary, _/binary>> = FB,
     NSoFar = SoFar + Sz1,
-    NPos1 = Pos1 + ?SLOTSZW*4,
-    NPos2 = Pos2 + ?SLOTSZW*4,
+    NPos1 = Pos1 + ?SLOTSZB,
+    NPos2 = Pos2 + ?SLOTSZB,
     if
 	NSoFar > ?MAXCOLL, ToRead =/= [] ->
 	    {NewHead, ok} = re_hash_write(Head, ToRead, L, Pos1, Pos2),
@@ -1849,10 +1904,10 @@ split_bins(FB, Head, Pos1, Pos2, ToRead, L, SoFar) ->
 re_hash_write(Head, ToRead, L, Pos1, Pos2) ->
     check_pread2_arg(ToRead, Head),
     {ok, Bins} = dets_utils:pread(ToRead, Head),
-    Z = <<0:32, 0:32>>,
+    Z = <<0:?WORDSZB/unit:8, 0:?OBJPTRSZB/unit:8>>,
     {Head1, BinFS, BinTS, WsB} = re_hash_slots(Bins, L, Head, Z, [],[],[]),
-    WPos1 = Pos1 - ?SLOTSZW*4*length(L),
-    WPos2 = Pos2 - ?SLOTSZW*4*length(L),
+    WPos1 = Pos1 - ?SLOTSZB*length(L),
+    WPos2 = Pos2 - ?SLOTSZB*length(L),
     ToWrite = [{WPos1,BinFS}, {WPos2, BinTS} | WsB],
     dets_utils:pwrite(Head1, ToWrite).
 
@@ -1921,9 +1976,6 @@ write_cache(Head) ->
     end.
 
 %% -> {NewHead, ok} | {NewHead, Error}
-may_grow(Head, 0, once) ->
-    %% Do not re-hash if there is a chance that the file is not dirty.
-    {Head, ok};
 may_grow(Head, _N, _How) when Head#head.fixed =/= false ->
     {Head, ok};
 may_grow(#head{access = read}=Head, _N, _How) ->
@@ -1983,7 +2035,7 @@ hash_invars(N, M, Next, Min, Max) ->
     and (Min =< M).
 
 seg_zero() ->
-    <<0:(4*?SEGSZW)/unit:8>>.
+    <<0:(?SEGSZB)/unit:8>>.
 
 find_object(Head, Object) ->
     Key = element(Head#head.keypos, Object),
@@ -2006,8 +2058,8 @@ find_object(H, Obj, Slot) ->
 slot_objects(Head, Slot) ->
     SlotPos = slot_position(Slot),    
     MaxSize = maxobjsize(Head),
-    case dets_utils:ipread(Head, SlotPos, MaxSize) of 
-	{ok, {BucketSz, Pointer, <<BucketSz:32, _St:32, KeysObjs/binary>>}} ->
+    case dets_utils:ipread(Head, SlotPos, MaxSize, ?OBJPTRSZB) of
+	{ok, {BucketSz, Pointer, <<BucketSz:?WORDSZB/unit:8, _St:?WORDSZB/unit:8, KeysObjs/binary>>}} ->
 	    case catch bin2objs(KeysObjs, Head#head.type, []) of
 		{'EXIT', _Error} ->
                     Bad = dets_utils:bad_object(slot_objects, 
@@ -2031,7 +2083,7 @@ slot_objects(Head, Slot) ->
 eval_work_list(Head, [{Key,[{_Seq,{lookup,Pid}}]}]) ->
     SlotPos = slot_position(db_hash(Key, Head)),
     MaxSize = maxobjsize(Head),
-    Objs = case dets_utils:ipread(Head, SlotPos, MaxSize) of 
+    Objs = case dets_utils:ipread(Head, SlotPos, MaxSize, ?OBJPTRSZB) of
 	       {ok, {_BucketSz, _Pointer, Bin}} ->
                    case catch per_key(Head, Bin) of
                        {'EXIT', _Error} ->
@@ -2039,6 +2091,8 @@ eval_work_list(Head, [{Key,[{_Seq,{lookup,Pid}}]}]) ->
                                                        {SlotPos, Bin}),
                            throw(dets_utils:corrupt_reason(Head, Bad));
                        KeyObjs when is_list(KeyObjs) ->
+			   %% KeyObjs is a list of tuples {Key, KeySize,
+			   %% KeyBin, FirstObject, OtherObjects}
                            case dets_utils:mkeysearch(Key, 1, KeyObjs) of
                                false ->
                                    [];
@@ -2080,7 +2134,7 @@ remove_slot_tag([{S,SWLs} | SSWLs], Ls, SPs) ->
 remove_slot_tag([], Ls, SPs) ->
     {Ls, SPs}.
 
-read_buckets([WLs | SPs], [{P1,_8} | Ss], [<<_Zero:32,P2:32>> | Bs], Head,
+read_buckets([WLs | SPs], [{P1,_8} | Ss], [<<_Zero:?WORDSZB/unit:8,P2:?OBJPTRSZB/unit:8>> | Bs], Head,
 	      PWLs, ToRead, LU, Ws, NoObjs, NoKeys, SoFar) when P2 =:= 0 ->
     {NewHead, NLU, NWs, No, KNo} = 
 	eval_bucket_keys(WLs, P1, 0, 0, [], Head, Ws, LU),
@@ -2088,7 +2142,7 @@ read_buckets([WLs | SPs], [{P1,_8} | Ss], [<<_Zero:32,P2:32>> | Bs], Head,
     NewNoKeys = KNo + NoKeys,
     read_buckets(SPs, Ss, Bs, NewHead, PWLs, ToRead, NLU, NWs, 
 		 NewNoObjs, NewNoKeys, SoFar);
-read_buckets([WorkLists| SPs], [{P1,_8} | Ss], [<<Size:32,P2:32>> | Bs], Head,
+read_buckets([WorkLists| SPs], [{P1,_8} | Ss], [<<Size:?WORDSZB/unit:8,P2:?OBJPTRSZB/unit:8>> | Bs], Head,
 	     PWLs, ToRead, LU, Ws, NoObjs, NoKeys, SoFar) 
                                  when SoFar + Size < ?MAXCOLL; ToRead =:= [] ->
     NewToRead = [{P2, Size} | ToRead],
@@ -2150,14 +2204,14 @@ updated(Head, Pos, OldSize, BSize, SlotPos, Bins, Ch, DeltaNoOs, DeltaNoKs) ->
 	Pos =:= 0, BSize > 0 ->
 	    {Head1, NewPos, FPos} = dets_utils:alloc(Head, adjsz(BinsSize)),
             NewHead = one_bucket_added(Head1, FPos-1),
-	    W1 = {NewPos, [<<BinsSize:32, ?ACTIVE:32>> | Bins]},
-	    W2 = {SlotPos, <<BinsSize:32, NewPos:32>>},
+	    W1 = {NewPos, [<<BinsSize:?WORDSZB/unit:8, ?ACTIVE:?WORDSZB/unit:8>> | Bins]},
+	    W2 = {SlotPos, <<BinsSize:?WORDSZB/unit:8, NewPos:?OBJPTRSZB/unit:8>>},
 	    {NewHead, [W2], [W1]};
 	Pos =/= 0, BSize =:= 0 ->
 	    {Head1, FPos} = dets_utils:free(Head, Pos, adjsz(OldSize)),
             NewHead = one_bucket_removed(Head1, FPos-1),
-	    W1 = {Pos+?STATUS_POS, <<?FREE:32>>},
-	    W2 = {SlotPos, <<0:32, 0:32>>},
+	    W1 = {Pos+?STATUS_POS, <<?FREE:?WORDSZB/unit:8>>},
+	    W2 = {SlotPos, <<0:?WORDSZB/unit:8, 0:?OBJPTRSZB/unit:8>>},
 	    {NewHead, [W2], [W1]};
 	Pos =/= 0, BSize > 0, Ch =:= false ->
 	    {Head, [], []};
@@ -2190,9 +2244,9 @@ updated(Head, Pos, OldSize, BSize, SlotPos, Bins, Ch, DeltaNoOs, DeltaNoKs) ->
 		    W1 = {Pos+?OHDSZ, Bins},
 		    {Head, [], [W1]};
 		Overwrite ->
-		    W1 = {Pos, [<<BinsSize:32, ?ACTIVE:32>> | Bins]},
+		    W1 = {Pos, [<<BinsSize:?WORDSZB/unit:8, ?ACTIVE:?WORDSZB/unit:8>> | Bins]},
 		    %% Pos is already there, but return {SlotPos, <8 bytes>}.
-		    W2 = {SlotPos, <<BinsSize:32, Pos:32>>},
+		    W2 = {SlotPos, <<BinsSize:?WORDSZB/unit:8, Pos:?OBJPTRSZB/unit:8>>},
 		    {Head, [W2], [W1]};
 		true ->
 		    {Head1, FPosF} = dets_utils:free(Head, Pos, adjsz(OldSize)),
@@ -2200,12 +2254,12 @@ updated(Head, Pos, OldSize, BSize, SlotPos, Bins, Ch, DeltaNoOs, DeltaNoKs) ->
 			dets_utils:alloc(Head1, adjsz(BinsSize)),
                     Head3 = one_bucket_added(Head2, FPosA-1),
                     NewHead = one_bucket_removed(Head3, FPosF-1),
-		    W0 = {NewPos, [<<BinsSize:32, ?ACTIVE:32>> | Bins]},
-		    W2 = {SlotPos, <<BinsSize:32, NewPos:32>>},
+		    W0 = {NewPos, [<<BinsSize:?WORDSZB/unit:8, ?ACTIVE:?WORDSZB/unit:8>> | Bins]},
+		    W2 = {SlotPos, <<BinsSize:?WORDSZB/unit:8, NewPos:?OBJPTRSZB/unit:8>>},
 		    W1 = if 
 			      Pos =/= NewPos ->
                                   %% W0 first.
-				  [W0, {Pos+?STATUS_POS, <<?FREE:32>>}];
+				  [W0, {Pos+?STATUS_POS, <<?FREE:?WORDSZB/unit:8>>}];
 			      true -> 
 				  [W0]
 			  end,
@@ -2350,7 +2404,7 @@ eval_end(New0, LU, Type, Ws, NewNo, Orig) ->
 		    {LU, [Ws | Ws1], Sz, NewNo};
 		true -> 
 		    NSz = Sz + 4,
-		    {LU, [Ws, <<NSz:32>> | Ws1], NSz, NewNo}
+		    {LU, [Ws, <<NSz:?WORDSZB/unit:8>> | Ws1], NSz, NewNo}
 	    end
     end.
 
@@ -2366,7 +2420,7 @@ make_bins([{_Term,_Seq,B} | L], W, Sz) when is_binary(B) ->
 make_bins([{Term,_Seq,insert} | L], W, Sz) ->
     B = term_to_binary(Term),
     BSize = byte_size(B) + 4,
-    make_bins(L, [W, [<<BSize:32>> | B]], Sz + BSize);
+    make_bins(L, [W, [<<BSize:?WORDSZB/unit:8>> | B]], Sz + BSize);
 make_bins([], W, Sz) ->
     {W, Sz}.
 
@@ -2455,7 +2509,7 @@ update_no_keys(Head, Ws, DeltaObjects, DeltaKeys) ->
 	    NoKeys div ?SEGSZN =:= NewNoKeys div ?SEGSZN ->
 		Ws;
 	    true ->
-                [{0, file_header(NewHead, 0, ?NOT_PROPERLY_CLOSED)} | Ws]
+                [{0, file_header(NewHead, 0, ?NOT_CLOSED_PROPERLY)} | Ws]
 	end,
     {NewHead, NWs}.
 
@@ -2531,22 +2585,22 @@ scan_skip(Bin, From, To, L, Ts, R, Type, Skip) ->
                 From1 > To; L =:= <<>> ->
                     {more, From1, To, L, Ts, R, 0};
 		true ->
-		    <<From2:32, To1:32, L1/binary>> = L,
+		    <<From2:?WORDSZB/unit:8, To1:?WORDSZB/unit:8, L1/binary>> = L,
 		    Skip1 = From2 - From,
 		    scan_skip(Bin, From, To1, L1, Ts, R, Type, Skip1)
 	    end;
-	<<_:Skip/binary, _Size:32, St:32, _Sz:32, KO/binary>> 
+	<<_:Skip/binary, _Size:?WORDSZB/unit:8, St:?WORDSZB/unit:8, _Sz:?WORDSZB/unit:8, KO/binary>> 
 	                 when St =/= ?ACTIVE, St =/= ?FREE ->
 	    %% Neither ?ACTIVE nor ?FREE is a multiple of ?BUMP and
 	    %% thus cannot be found in segments or segment array
 	    %% parts.
 	    scan_skip(KO, From1+12, To, L, Ts, R, Type, ?SEGSZB-12);
-	<<_:Skip/binary, Size:32, _St:32, Sz:32, KO/binary>>
+	<<_:Skip/binary, Size:?WORDSZB/unit:8, _St:?WORDSZB/unit:8, Sz:?WORDSZB/unit:8, KO/binary>>
 	                 when Size-12 =< byte_size(KO) ->
 	    %% St = ?FREE means that the object was deleted after
 	    %% scanning started
 	    bin2bins(KO, From1+12, To, L, Ts, R, Type, Size, Sz);
-	<<_:Skip/binary, Size:32, _St:32, _Sz:32, _KO/binary>> ->
+	<<_:Skip/binary, Size:?WORDSZB/unit:8, _St:?WORDSZB/unit:8, _Sz:?WORDSZB/unit:8, _KO/binary>> ->
 	    {more, From1, To, L, Ts, R, Size};
 	_ when Skip >= 0 ->
 	    {more, From1, To, L, Ts, R, 0}
@@ -2561,11 +2615,11 @@ bin2bins(Bin, From, To, L, Ts, R, Type=set, Size, ObjSz0) ->
 	    slot_end(Bin, From, To, L, [Bin | Ts], R, Type, Size, 1);
 	true ->
 	    ObjSz = ObjSz0-4,
-	    <<_:ObjSz/binary, NObjSz:32, T/binary>> = Bin,
+	    <<_:ObjSz/binary, NObjSz:?WORDSZB/unit:8, T/binary>> = Bin,
 	    bins_set(T, From, To, L, [Bin | Ts], R, Type, Size, 2, 
 		     NObjSz, ObjsSz1-NObjSz, Bin)
     end;
-bin2bins(<<ObjSz:32, Bin/binary>> = KO, From, To, L, Ts, R, Type, Size, Sz) ->
+bin2bins(<<ObjSz:?WORDSZB/unit:8, Bin/binary>> = KO, From, To, L, Ts, R, Type, Size, Sz) ->
     bins_bag(Bin, From, To, L, Ts, R, Type, Size, 1, 
 	     Sz-ObjSz-4, ObjSz-4, Size-Sz, KO).
 
@@ -2573,19 +2627,19 @@ bins_set(Bin, From, To, L, Ts, R, Type, Size, NoObjs, _ObjSz0, ?OHDSZ, KO) ->
     slot_end(KO, From, To, L, [Bin | Ts], R, Type, Size, NoObjs);
 bins_set(Bin, From, To, L, Ts, R, Type, Size, NoObjs, ObjSz0, ObjsSz, KO) ->
     ObjSz = ObjSz0 - 4,
-    <<_:ObjSz/binary, NObjSz:32, T/binary>> = Bin,
+    <<_:ObjSz/binary, NObjSz:?WORDSZB/unit:8, T/binary>> = Bin,
     bins_set(T, From, To, L, [Bin | Ts], R, Type, Size, NoObjs + 1, 
 	     NObjSz, ObjsSz-NObjSz, KO).
 
 bins_bag(Bin, From, To, L, Ts, R, Type, Size, NoObjs, Sz, ObjSz, ObjsSz, KO) 
        when Sz > 0 ->
-    <<_:ObjSz/binary, NObjSz:32, T/binary>> = Bin,
+    <<_:ObjSz/binary, NObjSz:?WORDSZB/unit:8, T/binary>> = Bin,
     bins_bag(T, From, To, L, [Bin | Ts], R, Type, Size, NoObjs + 1, 
 	     Sz-NObjSz, NObjSz-4, ObjsSz, KO);
 bins_bag(Bin, From, To, L, Ts, R, Type, Size, NoObjs, _Z, _ObjSz, ?OHDSZ, KO) ->
     slot_end(KO, From, To, L, [Bin | Ts], R, Type, Size, NoObjs);
 bins_bag(Bin, From, To, L, Ts, R, Type, Size, NoObjs, _Z, ObjSz, ObjsSz, KO) ->
-    <<_:ObjSz/binary, Sz:32, NObjSz:32, T/binary>> = Bin,
+    <<_:ObjSz/binary, Sz:?WORDSZB/unit:8, NObjSz:?WORDSZB/unit:8, T/binary>> = Bin,
     bins_bag(T, From, To, L, [Bin | Ts], R, Type, Size, NoObjs + 1, 
 	     Sz-NObjSz-4, NObjSz-4, ObjsSz-Sz, KO).
 
@@ -2632,24 +2686,24 @@ file_info(FH) ->
 v_segments(#head{}=H) ->
     v_parts(H, 0, 0).
 
-v_parts(_H, ?ARRPARTS, _SegNo) ->
+v_parts(_H, ?MAXARRPARTS, _SegNo) ->
     done;
 v_parts(H, PartNo, SegNo) ->
     Fd = H#head.fptr,
-    PartPos = dets_utils:read_4(Fd, ?ARRPARTP(PartNo)),
+    <<PartPos:?APTPTRSZB/unit:8>> = dets_utils:pread_n(Fd, ?ARRPARTP(PartNo), ?APTPTRSZB),
     if
 	PartPos =:= 0 ->
 	    done;
 	true ->
-	    PartBin = dets_utils:pread_n(Fd, PartPos, ?ARRPARTSZN*4),
+	    PartBin = dets_utils:pread_n(Fd, PartPos, ?ARRPARTSZB),
 	    v_segments(H, PartBin, PartNo+1, SegNo)
     end.
 
 v_segments(H, <<>>, PartNo, SegNo) ->
     v_parts(H, PartNo, SegNo);
-v_segments(_H, <<0:32,_/binary>>, _PartNo, _SegNo) ->
+v_segments(_H, <<0:?SEGPTRSZB/unit:8,_/binary>>, _PartNo, _SegNo) ->
     done;
-v_segments(H, <<Seg:32,T/binary>>, PartNo, SegNo) ->
+v_segments(H, <<Seg:?SEGPTRSZB/unit:8,T/binary>>, PartNo, SegNo) ->
     io:format("<~w>SEGMENT ~w~n", [Seg, SegNo]),
     v_segment(H, SegNo, Seg, 0),
     v_segments(H, T, PartNo, SegNo+1).
@@ -2658,7 +2712,7 @@ v_segment(_H, _, _SegPos, ?SEGSZN) ->
     done;
 v_segment(H, SegNo, SegPos, SegSlot) ->
     Slot = SegSlot + (SegNo * ?SEGSZN),
-    BucketP = SegPos + (4 * ?SLOTSZW * SegSlot),
+    BucketP = SegPos + (?SLOTSZB * SegSlot),
     case catch read_bucket(H, BucketP, H#head.type) of
 	{'EXIT', Reason} -> 
 	    dets_utils:vformat("** dets: Corrupt or truncated dets file~n", 
@@ -2675,8 +2729,8 @@ v_segment(H, SegNo, SegPos, SegSlot) ->
 %% -> [] | {Pointer, [object()]} | throw(EXIT)
 read_bucket(Head, Position, Type) ->
     MaxSize = maxobjsize(Head),
-    case dets_utils:ipread(Head, Position, MaxSize) of
-	{ok, {Size, Pointer, <<Size:32, _Status:32, KeysObjs/binary>>}} ->
+    case dets_utils:ipread(Head, Position, MaxSize, ?OBJPTRSZB) of
+	{ok, {Size, Pointer, <<Size:?WORDSZB/unit:8, _Status:?WORDSZB/unit:8, KeysObjs/binary>>}} ->
 	    Objs = bin2objs(KeysObjs, Type, []),
 	    {Size, Pointer, lists:reverse(Objs)};
 	[] ->
@@ -2688,7 +2742,7 @@ read_bucket(Head, Position, Type) ->
 %% -> [{Key,SizeOfWholeKey,WholeKeyBin,FirstObject,OtherObjects}] |throw(EXIT)
 %% FirstObject = {Term, Seq, Binary}
 %% Seq < 0 (and ascending).
-per_key(Head, <<BinSize:32, ?ACTIVE:32, Bin/binary>> = B) ->
+per_key(Head, <<BinSize:?WORDSZB/unit:8, ?ACTIVE:?WORDSZB/unit:8, Bin/binary>> = B) ->
     true = (byte_size(B) =:= BinSize),
     if 
 	Head#head.type =:= set ->
@@ -2697,7 +2751,7 @@ per_key(Head, <<BinSize:32, ?ACTIVE:32, Bin/binary>> = B) ->
 	    per_bag_key(Bin, Head#head.keypos, [])
     end.
 
-per_set_key(<<Size:32, T/binary>> = B, KeyPos, L) ->
+per_set_key(<<Size:?WORDSZB/unit:8, T/binary>> = B, KeyPos, L) ->
     <<KeyBin:Size/binary, R/binary>> = B,
     Term = binary_to_term(T),
     Key = element(KeyPos, Term),
@@ -2706,12 +2760,12 @@ per_set_key(<<Size:32, T/binary>> = B, KeyPos, L) ->
 per_set_key(<<>>, KeyPos, L) when is_integer(KeyPos) ->
     lists:reverse(L).
 
-per_bag_key(<<Size:32, ObjSz:32, T/binary>> = B, KeyPos, L) ->
+per_bag_key(<<Size:?WORDSZB/unit:8, ObjSz:?WORDSZB/unit:8, T/binary>> = B, KeyPos, L) ->
     <<KeyBin:Size/binary, R/binary>> = B,
     ObjSz1 = ObjSz - 4, 
     Size1 = Size - ObjSz - 4,
     <<_:ObjSz1/binary, KeyObjs:Size1/binary, _/binary>> = T,
-    <<_Size:32, Bin:ObjSz/binary, _/binary>> = B,
+    <<_Size:?WORDSZB/unit:8, Bin:ObjSz/binary, _/binary>> = B,
     Term = binary_to_term(T),
     Key = element(KeyPos, Term),
     Item = {Term, ?SEQSTART, Bin},
@@ -2720,7 +2774,7 @@ per_bag_key(<<>>, KeyPos, L) when is_integer(KeyPos) ->
     lists:reverse(L).
 
 
-binobjs2terms(<<ObjSz:32, T/binary>> = B) ->
+binobjs2terms(<<ObjSz:?WORDSZB/unit:8, T/binary>> = B) ->
     binobjs2terms(B, T, ObjSz, byte_size(B)-ObjSz, ?SEQSTART+1, []);
 binobjs2terms([] = B) ->
     B;
@@ -2731,19 +2785,19 @@ binobjs2terms(Bin, Obj, _ObjSz, _Size=0, N, L) ->
     lists:reverse(L, [{binary_to_term(Obj), N, Bin}]);
 binobjs2terms(Bin, Bin1, ObjSz, Size, N, L) ->
     <<B:ObjSz/binary, T/binary>> = Bin,
-    <<NObjSz:32, T1/binary>> = T,
+    <<NObjSz:?WORDSZB/unit:8, T1/binary>> = T,
     Item = {binary_to_term(Bin1), N, B},
     binobjs2terms(T, T1, NObjSz, Size-NObjSz, N+1, [Item | L]).
 
 
 %% Appends objects in reversed order.
 bin2objs(KeysObjs, set, Ts) ->
-    <<ObjSz:32, T/binary>> = KeysObjs,
+    <<ObjSz:?WORDSZB/unit:8, T/binary>> = KeysObjs,
     bin2objs(T, ObjSz-4, byte_size(KeysObjs)-ObjSz, Ts);
 bin2objs(KeysObjs, _Type, Ts) ->
     bin2objs2(KeysObjs, Ts).
 
-bin2objs2(<<Size:32, ObjSz:32, T/binary>>, Ts) ->
+bin2objs2(<<Size:?WORDSZB/unit:8, ObjSz:?WORDSZB/unit:8, T/binary>>, Ts) ->
     bin2objs(T, ObjSz-4, Size-ObjSz-4, Ts);
 bin2objs2(<<>>, Ts) ->
     Ts.
@@ -2752,17 +2806,17 @@ bin2objs(Bin, ObjSz, _Size=0, Ts) ->
     <<_:ObjSz/binary, T/binary>> = Bin,
     bin2objs2(T, [binary_to_term(Bin) | Ts]);
 bin2objs(Bin, ObjSz, Size, Ts) ->
-    <<_:ObjSz/binary, NObjSz:32, T/binary>> = Bin,
+    <<_:ObjSz/binary, NObjSz:?WORDSZB/unit:8, T/binary>> = Bin,
     bin2objs(T, NObjSz-4, Size-NObjSz, [binary_to_term(Bin) | Ts]).
 
 
 bin2keybins(KeysObjs, Head) when Head#head.type =:= set ->
-    <<ObjSz:32, T/binary>> = KeysObjs,
+    <<ObjSz:?WORDSZB/unit:8, T/binary>> = KeysObjs,
     bin2keybins(T, Head#head.keypos, ObjSz-4, byte_size(KeysObjs)-ObjSz,[]);
 bin2keybins(KeysObjs, Head) ->
     bin2keybins2(KeysObjs, Head#head.keypos, []).
 
-bin2keybins2(<<Size:32, ObjSz:32, T/binary>>, Kp, L) ->
+bin2keybins2(<<Size:?WORDSZB/unit:8, ObjSz:?WORDSZB/unit:8, T/binary>>, Kp, L) ->
     bin2keybins(T, Kp, ObjSz-4, Size-ObjSz-4, L);
 bin2keybins2(<<>>, Kp, L) when is_integer(Kp) ->
     lists:reverse(L).
@@ -2772,6 +2826,6 @@ bin2keybins(Bin, Kp, ObjSz, _Size=0, L) ->
     Term = binary_to_term(Obj),
     bin2keybins2(T, Kp, [{element(Kp, Term),Obj} | L]);
 bin2keybins(Bin, Kp, ObjSz, Size, L) ->
-    <<Obj:ObjSz/binary, NObjSz:32, T/binary>> = Bin,
+    <<Obj:ObjSz/binary, NObjSz:?WORDSZB/unit:8, T/binary>> = Bin,
     Term = binary_to_term(Obj),
     bin2keybins(T, Kp, NObjSz-4, Size-NObjSz, [{element(Kp,Term),Obj} | L]).
