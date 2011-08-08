@@ -45,6 +45,34 @@
 %%-export([get_slot/2,get_bucket/2,on_bucket/3,fold_dict/3,
 %%	 maybe_expand/2,maybe_contract/2]).
 
+%% This module also defines the standard dict behaviour.
+-export([behaviour_info/1]).
+
+-spec behaviour_info(atom()) -> 'undefined' | [{atom(), arity()}].
+
+behaviour_info(callbacks) ->
+    [{new,0},{new,1},{from_orddict,1},{from_orddict,2},
+     {from_list,1},{from_list,2},{to_orddict,1},{to_list,1},
+     {is_empty,1},{size,1},{info,1},{info,2},
+     {keys,1},
+     {values,1},{values,2},% always return lists, possibly empty
+     {get,2},{get,3},% for multimaps, return a list (empty if key not present)
+     {find,2},% for multimaps, return {ok,List}|error, List nonempty
+     {store,3},
+     {replace,3},% (no effect if key not present)
+     {erase,2},
+     {map,2},{map,3},{map,4},% (map all/single entry/default)
+     {increment,3},
+     {filter,2},
+     {fold,3},{foldl,3},{foldr,3},{foldl1,3},{foldr1,3},{foldln,3},{foldrn,3},
+     {foreach,2},
+     {merge,3},
+     {first_key,1},{last_key,1},{next_key,2},{prev_key,2},
+     {take_first,1},{take_last,2},{take,2}
+    ];
+behaviour_info(_Other) ->
+    undefined.
+
 %% Note: mk_seg/1 must be changed too if seg_size is changed.
 -define(seg_size, 16).
 -define(max_seg, 32).
