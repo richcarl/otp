@@ -35,11 +35,22 @@
 
 -module(dict).
 
+-compile({no_auto_import,[size/1]}).
+
 %% Standard interface.
--export([new/0,is_key/2,to_list/1,from_list/1,size/1]).
--export([fetch/2,find/2,fetch_keys/1,erase/2]).
--export([store/3,append/3,append_list/3,update/3,update/4,update_counter/3]).
--export([fold/3,map/2,filter/2,merge/3]).
+-export([new/0,new/1,is_key/2,size/1,is_empty/1,info/1,info/2]).
+-export([to_list/1,to_orddict/1]).
+-export([from_list/1,from_list/2,from_orddict/1,from_orddict/2]).
+-export([get/2,get/3,find/2,keys/1,values/1,values/2,erase/2]).
+-export([store/3,replace/3]).
+-export([append/3,append_list/3,update/3,update/4,increment/3]).
+-export([foreach/2,map/2,map/3,map/4,filter/2,merge/3]).
+-export([foldl/3,foldr/3,foldl1/2,foldr1/2,foldln/3,foldrn/3]).
+-export([first_key/1,last_key/1,next_key/2,prev_key/2]).
+-export([take_first/1,take_last/1,take/2]).
+
+%% Deprecated interface
+-export([fetch/2,fetch_keys/1,update_counter/3,fold/3]).
 
 %% Low-level interface.
 %%-export([get_slot/2,get_bucket/2,on_bucket/3,fold_dict/3,
@@ -64,7 +75,7 @@ behaviour_info(callbacks) ->
      {map,2},{map,3},{map,4},% (map all/single entry/default)
      {increment,3},
      {filter,2},
-     {fold,3},{foldl,3},{foldr,3},{foldl1,3},{foldr1,3},{foldln,3},{foldrn,3},
+     {foldl,3},{foldr,3},{foldl1,2},{foldr1,2},{foldln,3},{foldrn,3},
      {foreach,2},
      {merge,3},
      {first_key,1},{last_key,1},{next_key,2},{prev_key,2},
@@ -108,6 +119,9 @@ new() ->
     Empty = mk_seg(?seg_size),
     #dict{empty=Empty,segs={Empty}}.
 
+new(_Opts) ->
+    new().
+
 -spec is_key(Key, Dict) -> boolean() when
       Key :: term(),
       Dict :: dict().
@@ -128,6 +142,9 @@ find_key(_, []) -> false.
 to_list(D) ->
     fold(fun (Key, Val, List) -> [{Key,Val}|List] end, [], D).
 
+to_orddict(D) ->
+    lists:keysort(1, to_list(D)).
+
 -spec from_list(List) -> Dict when
       List :: [{Key :: term(), Value :: term()}],
       Dict :: dict().
@@ -135,10 +152,31 @@ to_list(D) ->
 from_list(L) ->
     lists:foldl(fun ({K,V}, D) -> store(K, V, D) end, new(), L).
 
+from_list(L, _Opts) ->
+    from_list(L).
+
+from_orddict(L) ->
+    from_list(L).
+
+from_orddict(L, Opts) ->
+    from_orddict(L, Opts).
+
 -spec size(Dict) -> non_neg_integer() when
       Dict :: dict().
 
 size(#dict{size=N}) when is_integer(N), N >= 0 -> N. 
+
+is_empty(Dict) -> size(Dict) =< 0.
+
+info(Dict) ->
+    Items = [],
+    [info(Item, Dict) || Item <- Items].
+
+info(_Item, _Dict) -> throw('FIXME').
+
+values(_Dict) -> throw('FIXME').
+
+values(_Key, _Dict) -> throw('FIXME').
 
 -spec fetch(Key, Dict) -> Value when
       Key :: term(),
@@ -146,16 +184,28 @@ size(#dict{size=N}) when is_integer(N), N >= 0 -> N.
       Value :: term().
 
 fetch(Key, D) ->
+    get(Key, D).
+
+get(Key, D) ->
     Slot = get_slot(D, Key),
     Bkt = get_bucket(D, Slot),
-    try fetch_val(Key, Bkt)
+    try get_val(Key, Bkt)
     catch
 	badarg -> erlang:error(badarg, [Key, D])
     end.
 
-fetch_val(K, [?kv(K,Val)|_]) -> Val;
-fetch_val(K, [_|Bkt]) -> fetch_val(K, Bkt);
-fetch_val(_, []) -> throw(badarg).
+get_val(K, [?kv(K,Val)|_]) -> Val;
+get_val(K, [_|Bkt]) -> get_val(K, Bkt);
+get_val(_, []) -> throw(badarg).
+
+get(Key, Def, D) ->
+    Slot = get_slot(D, Key),
+    Bkt = get_bucket(D, Slot),
+    get_val(Key, Bkt, Def).
+
+get_val(K, [?kv(K,Val)|_], _Def) -> Val;
+get_val(K, [_|Bkt], Def) -> get_val(K, Bkt, Def);
+get_val(_, [], Def) -> Def.
 
 -spec find(Key, Dict) -> {'ok', Value} | 'error' when
       Key :: term(),
@@ -171,12 +221,28 @@ find_val(K, [?kv(K,Val)|_]) -> {ok,Val};
 find_val(K, [_|Bkt]) -> find_val(K, Bkt);
 find_val(_, []) -> error.
 
+keys(Dict) -> fetch_keys(Dict).
+
 -spec fetch_keys(Dict) -> Keys when
       Dict :: dict(),
       Keys :: [term()].
 
 fetch_keys(D) ->
     fold(fun (Key, _Val, Keys) -> [Key|Keys] end, [], D).
+
+first_key(_Dict) -> throw('FIXME').
+
+last_key(_Dict) -> throw('FIXME').
+
+next_key(_Key, _Dict) -> throw('FIXME').
+
+prev_key(_Key, _Dict) -> throw('FIXME').
+
+take_first(_Dict) -> throw('FIXME').
+
+take_last(_Dict) -> throw('FIXME').
+
+take(_Key, _Dict) -> throw('FIXME').
 
 -spec erase(Key, Dict1) -> Dict2 when
       Key :: term(),
@@ -207,6 +273,13 @@ store(Key, Val, D0) ->
     {D1,Ic} = on_bucket(fun (B0) -> store_bkt_val(Key, Val, B0) end,
 			D0, Slot),
     maybe_expand(D1, Ic).
+
+%% no effect if key not present
+replace(Key, Val, Dict) ->
+    case is_key(Key, Dict) of
+        true -> store(Key, Val, Dict);
+        false -> Dict
+    end.
 
 %% store_bkt_val(Key, Val, Bucket) -> {NewBucket,PutCount}.
 
@@ -365,6 +438,9 @@ update_counter(Key, Incr, D0) when is_number(Incr) ->
 			D0, Slot),
     maybe_expand(D1, Ic).
 
+increment(Delta, Key, Dict) ->
+    update_counter(Key, Delta, Dict).
+
 counter_bkt(Key, I, [?kv(Key,Val)|Bkt]) ->
     {[?kv(Key,Val+I)|Bkt],0};
 counter_bkt(Key, I, [Other|Bkt0]) ->
@@ -384,6 +460,62 @@ counter_bkt(Key, I, []) -> {[?kv(Key,I)],1}.
 %%  Fold function Fun over all "bags" in Table and return Accumulator.
 
 fold(F, Acc, D) -> fold_dict(F, Acc, D).
+
+%% fold in default traversal order (not key order unless dict is ordered)
+-spec foldl(Fun, Acc0, Dict) -> Acc1 when
+      Fun :: fun((Key, Value, AccIn) -> AccOut),
+      Key :: term(),
+      Value :: term(),
+      Acc0 :: term(),
+      Acc1 :: term(),
+      AccIn :: term(),
+      AccOut :: term(),
+      Dict :: dict().
+foldl(Fun, Acc, Dict) -> fold_dict(Fun, Acc, Dict).
+
+%% fold in reverse traversal order
+foldr(_Fun, _Acc, _Dict) -> throw('FIXME').
+
+%% uses first element as initial accumulator, fails if list is empty
+-spec foldl1(Fun, Dict) -> Acc when
+      Fun :: fun((Key, Value, AccIn) -> AccOut),
+      Key :: term(),
+      Value :: term(),
+      Acc :: term(),
+      AccIn :: term(),
+      AccOut :: term(),
+      Dict :: dict().
+foldl1(_Fun, _Dict) -> throw('FIXME').
+
+%% uses last element as initial accumulator, fails if list is empty
+foldr1(_Fun, _Dict) -> throw('FIXME').
+
+%% applies InitFun to first element to get initial accumulator
+-spec foldln(Fun, InitFun, Dict) -> Acc when
+      Fun :: fun((Key, Value, AccIn) -> AccOut),
+      InitFun :: fun((Key, Value) -> Acc0),
+      Key :: term(),
+      Value :: term(),
+      Acc :: term(),
+      Acc0 :: term(),
+      AccIn :: term(),
+      AccOut :: term(),
+      Dict :: dict().
+foldln(_Fun, _InitFun, _Dict) -> throw('FIXME').
+
+%% applies InitFun to last element to get initial accumulator
+foldrn(_Fun, _InitFun, _Dict) -> throw('FIXME').
+
+-spec foreach(Fun, Dict) -> ok when
+      Fun :: fun((Key :: term(), Value :: term()) -> term()),
+      Dict :: dict().
+foreach(_Fun, _Dict) -> throw('FIXME').
+
+%% map fun to a particular key only, fail if key not present
+map(_Fun, _Key, _Dict) -> throw('FIXME').
+
+%% map fun to a particular key only, insert default if key not present
+map(_Fun, _Key, _Default, _Dict) -> throw('FIXME').
 
 -spec map(Fun, Dict1) -> Dict2 when
       Fun :: fun((Key :: term(), Value1 :: term()) -> Value2 :: term()),
