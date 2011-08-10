@@ -421,7 +421,7 @@ prev_key(Key, T) ->
     Bkt = case bucket_before_key(Key, B) of
  	      error -> erlang:error(badarg,[Key, T]);
  	      [] -> prev_bucket(T, Slot+1);
- 	      Rest -> Rest
+ 	      Found -> Found
  	  end,
     case Bkt of
  	[] -> error;				%We have reached the end!
@@ -430,6 +430,7 @@ prev_key(Key, T) ->
             {ok,Prev}
     end.
 
+bucket_before_key(Key, [?kv(Key,_Val)|_]) -> []; % key was first in bucket
 bucket_before_key(Key, [KV|Bkt]) ->
     bucket_before_key(Key, Bkt, KV);
 bucket_before_key(_Key, []) -> error. %Key not found!
