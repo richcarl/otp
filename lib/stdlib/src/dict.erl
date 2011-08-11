@@ -295,16 +295,13 @@ find_val(K, [?kv(K,Val)|_]) -> {ok,Val};
 find_val(K, [_|Bkt]) -> find_val(K, Bkt);
 find_val(_, []) -> error.
 
--spec take(Key, Dict0) -> {Value, Dict1} | 'error' when
+-spec take(Key, Dict0) -> {Value, Dict1} when
       Key :: term(),
       Dict0 :: dict(),
       Dict1 :: dict(),
       Value :: term().
 take(Key, Dict) ->
-    case find(Key, Dict) of
-        error -> error;
-        {ok,Val} -> {Val, erase(Key,Dict)}
-    end.
+    {get(Key, Dict), erase(Key,Dict)}.
 
 %% deprecated version of keys/1
 fetch_keys(Dict) -> keys(Dict).
@@ -326,6 +323,7 @@ keys(?gb(_,_)=D) ->
       Dict2 :: dict().
 %%  Erase all elements with key Key.
 
+%% Note: this builds a new data structure even if Key is not present...
 erase(Key, #dict{}=D0) ->
     Slot = get_slot(D0, Key),
     {D1,Dc} = on_bucket(fun (B0) -> erase_key(Key, B0) end,
@@ -442,7 +440,13 @@ next_bucket(T, Slot) ->
     end.
 
 take_first(Dict) ->
-    take(first_key(Dict), Dict).
+    case first_key(Dict) of
+        {ok, Key} ->
+            {Val, Dict1} = take(Key, Dict),
+            {{Key, Val}, Dict1};
+        error ->
+            error
+    end.
 
 %% next_key(Key, Table) -> {ok,NextKey} | error.
 %% Find next key *following* Key in Table (in the order defined by foldl).
@@ -490,7 +494,13 @@ prev_bucket(T, Slot) ->
     end.
 
 take_last(Dict) ->
-    take(last_key(Dict), Dict).
+    case last_key(Dict) of
+        {ok, Key} ->
+            {Val, Dict1} = take(Key, Dict),
+            {{Key, Val}, Dict1};
+        error ->
+            error
+    end.
 
 %% prev_key(Key, Table) -> {ok,PrevKey} | error.
 %% Find next key *before* Key in Table (in the order defined by foldl).
@@ -528,7 +538,7 @@ update(Key, F, D0) ->
     map(F, Key, D0).
 
 %% map fun to a particular key only, fail if key not present
--spec map(Key, Fun, Dict1) -> Dict2 when
+-spec map(Fun, Key, Dict1) -> Dict2 when
       Key :: term(),
       Fun :: fun((Value1 :: term()) -> Value2 :: term()),
       Dict1 :: dict(),
@@ -538,7 +548,7 @@ map(F, Key, #dict{}=D0) ->
     try on_bucket(fun (B0) -> update_bkt(Key, F, B0) end, D0, Slot) of
 	{D1,_Uv} -> D1
     catch
-	badarg -> erlang:error(badarg, [Key, F, D0])
+	badarg -> erlang:error(badarg, [F, Key, D0])
     end;
 map(F, Key, ?gb(_,_)=D0) ->
     gb_trees:map(F, Key, D0).
@@ -557,7 +567,7 @@ update(Key, F, Init, D0) ->
     map(F, Key, Init, D0).
 
 %% map fun to a particular key only, insert default if key not present
--spec map(Key, Fun, Initial, Dict1) -> Dict2 when
+-spec map(Fun, Key, Initial, Dict1) -> Dict2 when
       Key :: term(),
       Initial :: term(),
       Fun :: fun((Value1 :: term()) -> Value2 :: term()),
@@ -580,7 +590,7 @@ update_bkt(Key, F, I, []) when is_function(F, 1) -> {[?kv(Key,I)],1}.
 
 %% deprecated version of increment/3
 update_counter(Key, Incr, D0) ->
-    increment(Incr, Key, D0).
+    increment(Key, Incr, D0).
 
 -spec increment(Key, Increment, Dict1) -> Dict2 when
       Key :: term(),
@@ -588,13 +598,13 @@ update_counter(Key, Incr, D0) ->
       Dict1 :: dict(),
       Dict2 :: dict().
 
-increment(Incr, Key, #dict{}=D0) when is_number(Incr) ->
+increment(Key, Incr, #dict{}=D0) when is_number(Incr) ->
     Slot = get_slot(D0, Key),
     {D1,Ic} = on_bucket(fun (B0) -> counter_bkt(Key, Incr, B0) end,
 			D0, Slot),
     maybe_expand(D1, Ic);
-increment(Incr, Key, ?gb(_,_)=D0) when is_number(Incr) ->
-    gb_trees:increment(Incr, Key, D0).
+increment(Key, Incr, ?gb(_,_)=D0) when is_number(Incr) ->
+    gb_trees:increment(Key, Incr, D0).
 
 counter_bkt(Key, I, [?kv(Key,Val)|Bkt]) ->
     {[?kv(Key,Val+I)|Bkt],0};
@@ -706,11 +716,17 @@ foldr_bucket(F, Acc, []) when is_function(F, 3) -> Acc.
       AccOut :: term(),
       Dict :: dict().
 foldl1(Fun, Dict) ->
-    foldl(Fun, take_first(Dict), Dict).
+    case take_first(Dict) of
+        {{_Key, Val}, Dict1} -> foldl(Fun, Val, Dict1);
+        error -> erlang:error(badarg, [Fun, Dict])
+    end.
 
 %% uses last element as initial accumulator, fails if list is empty
 foldr1(Fun, Dict) ->
-    foldr(Fun, take_last(Dict), Dict).
+    case take_last(Dict) of
+        {{_Key, Val}, Dict1} -> foldr(Fun, Val, Dict1);
+        error -> erlang:error(badarg, [Fun, Dict])
+    end.
 
 %% applies InitFun to first element to get initial accumulator
 -spec foldln(Fun, InitFun, Dict) -> Acc when
@@ -724,11 +740,17 @@ foldr1(Fun, Dict) ->
       AccOut :: term(),
       Dict :: dict().
 foldln(Fun, InitFun, Dict) ->
-    foldl(Fun, InitFun(take_first(Dict)), Dict).
+    case take_first(Dict) of
+        {{_Key, Val}, Dict1} -> foldl(Fun, InitFun(Val), Dict1);
+        error -> erlang:error(badarg, [Fun, InitFun, Dict])
+    end.
 
 %% applies InitFun to last element to get initial accumulator
 foldrn(Fun, InitFun, Dict) ->
-    foldr(Fun, InitFun(take_last(Dict)), Dict).
+    case take_last(Dict) of
+        {{_Key, Val}, Dict1} -> foldr(Fun, InitFun(Val), Dict1);
+        error -> erlang:error(badarg, [Fun, InitFun, Dict])
+    end.
 
 -spec map(Fun, Dict1) -> Dict2 when
       Fun :: fun((Key :: term(), Value1 :: term()) -> Value2 :: term()),

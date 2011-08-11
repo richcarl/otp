@@ -91,17 +91,42 @@
 %%   and V is the value associated with X in T. Assumes that the tree T
 %%   is nonempty.
 %%
+%% - first_key(T): returns {ok, X}, where X is the smallest key in tree T,
+%%   or 'error' if the tree is empty.
+%%
+%% - next_key(K, T): returns {ok, K'} where K' is the smallest key larger
+%%   than K in T, or 'error' if K is the largest key in the tree. K must
+%%   exist in the tree.
+%%
+%% - prev_key(K, T): returns {ok, K'} where K' is the largest key smaller
+%%   than K in T, or 'error' if K is the smallest key in the tree. K must
+%%   exist in the tree.
+%%
 %% - largest(T): returns {X, V}, where X is the largest key in tree T,
 %%   and V is the value associated with X in T. Assumes that the tree T
 %%   is nonempty.
+%%
+%% - last_key(T): returns {ok, X}, where X is the largest key in tree T,
+%%   or 'error' if the tree is empty.
+%%
+%% - take(X, T): returns {V, T1}, where V is the value associated with X in
+%%   T, and T1 is the tree T with key X deleted. Assumes that X exists in T.
 %%
 %% - take_smallest(T): returns {X, V, T1}, where X is the smallest key
 %%   in tree T, V is the value associated with X in T, and T1 is the
 %%   tree T with key X deleted. Assumes that the tree T is nonempty.
 %%
+%% - take_first(T): returns {{X, V}, T1}, where X is the smallest key
+%%   in tree T, V is the value associated with X in T, and T1 is the
+%%   tree T with key X deleted. Returns 'error' if the tree is empty.
+%%
 %% - take_largest(T): returns {X, V, T1}, where X is the largest key
 %%   in tree T, V is the value associated with X in T, and T1 is the
 %%   tree T with key X deleted. Assumes that the tree T is nonempty.
+%%
+%% - take_last(T): returns {{X, V}, T1}, where X is the largest key
+%%   in tree T, V is the value associated with X in T, and T1 is the
+%%   tree T with key X deleted. Returns 'error' if the tree is empty.
 %%
 %% - iterator(T): returns an iterator that can be used for traversing
 %%   the entries of tree T; see `next'. The implementation of this is
@@ -116,9 +141,29 @@
 %%   traversing the remaining entries, or the atom `none' if no entries
 %%   remain.
 %%
+%% - increment(K, N, T): adds the number N to the number stored for K, or
+%%   inserts N as the value for K if K is not already in the tree.
+%%
+%% - map(F, K, T): maps the function F(V) -> V' to the value stored for K.
+%%   Assumes that the key is present in the tree.
+%%
+%% - map(F, K, V, T): maps the function F(V) -> V' to the value stored for
+%%   K, or inserts V as the value for K if K is not already in the tree.
+%%
 %% - map(F, T): maps the function F(K, V) -> V' to all key-value pairs
 %%   of the tree T and returns a new tree T' with the same set of keys
-%%   as T and the new set of values V'.
+%%   as T and the new set of corresponding values V'.
+%%
+%% - filter(F, T): maps the function F(K, V) -> 'true'|'false' to all
+%%   key-value pairs of the tree T and returns a new tree T' containg only
+%%   those pairs in T for which the function returned 'true'.
+%%
+%% - foldl(F, A, T): folds the function F(K, V, A) -> A' over the key-value
+%%   entries of the tree in key order.
+%%
+%% - foldr(F, A, T): folds the function F(K, V, A) -> A' over the key-value
+%%   entries of the tree in reverse key order.
+%%
 
 -module(gb_trees).
 
@@ -126,10 +171,9 @@
 	 update/3, enter/3, delete/2, delete_any/2, balance/1, values/2,
 	 is_defined/2, keys/1, values/1, to_list/1, from_orddict/1,
 	 smallest/1, largest/1, take_smallest/1, take_largest/1,
-	 iterator/1, next/1, map/2, find/2]).
-
-%% FIXME: first/next/last/prev_key, map(F,Key,T), map(F,Key,Init,T)
-%% FIXME: increment/3, foldl, foldr, filter
+         first_key/1, last_key/1, take_first/1, take_last/1,
+	 iterator/1, next/1, map/2, filter/2, foldl/3, foldr/3,
+         next_key/2, prev_key/2, increment/3, find/2]).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Data structure:
@@ -392,6 +436,52 @@ enter(Key, Val, T) ->
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+-spec map(Function, Key, Tree1) -> Tree2 when
+      Function :: fun((V1 :: term()) -> V2 :: term()),
+      Key :: term(),
+      Tree1 :: gb_tree(),
+      Tree2 :: gb_tree().
+
+map(F, Key, {S, T}) when is_function(F, 1) ->
+    {S, map_1(F, Key, T)}.
+
+map_1(F, Key, {Key1, V, Smaller, Bigger}) when Key < Key1 ->
+    {Key1, V, map_1(F, Key, Smaller), Bigger};
+map_1(F, Key, {Key1, V, Smaller, Bigger}) when Key > Key1 ->
+    {Key1, V, Smaller, map_1(F, Key, Bigger)};
+map_1(F, Key, {_, V, Smaller, Bigger}) ->
+    {Key, F(V), Smaller, Bigger}.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+-spec map(Function, Key, Initial, Tree1) -> Tree2 when
+      Function :: fun((V1 :: term()) -> V2 :: term()),
+      Key :: term(),
+      Initial :: number(),
+      Tree1 :: gb_tree(),
+      Tree2 :: gb_tree().
+
+map(F, Key, Initial, T) when is_function(F, 1) ->
+    case is_defined(Key, T) of
+	true ->
+	    map(F, Key, T);
+	none ->
+	    insert(Key, Initial, T)
+    end.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+-spec increment(Key, Delta, Tree1) -> Tree2 when
+      Key :: term(),
+      Delta :: number(),
+      Tree1 :: gb_tree(),
+      Tree2 :: gb_tree().
+
+increment(Key, Delta, Tree) when is_number(Delta) ->
+    map(fun (V) -> V + Delta end, Key, Delta, Tree).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 count({_, _, nil, nil}) ->
     {1, 1};
 count({_, _, Sm, Bi}) ->
@@ -484,6 +574,16 @@ merge(Smaller, Larger) ->
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+-spec take(Key, Dict0) -> {Value, Dict1} when
+      Key :: term(),
+      Dict0 :: dict(),
+      Dict1 :: dict(),
+      Value :: term().
+take(Key, Dict) ->
+    {get(Key, Dict), delete_any(Key, Dict)}.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 -spec take_smallest(Tree1) -> {Key, Val, Tree2} when
       Tree1 :: gb_tree(),
       Tree2 :: gb_tree(),
@@ -500,6 +600,21 @@ take_smallest1({Key, Value, Smaller, Larger}) ->
     {Key1, Value1, Smaller1} = take_smallest1(Smaller),
     {Key1, Value1, {Key, Value, Smaller1, Larger}}.
 
+-spec take_first(Tree1) -> {{Key, Val}, Tree2} | error when
+      Tree1 :: gb_tree(),
+      Tree2 :: gb_tree(),
+      Key :: term(),
+      Val :: term().
+
+take_first(Dict) ->
+    case first_key(Dict) of
+        {ok, Key} ->
+            {Val, Dict1} = take(Key, Dict),
+            {{Key, Val}, Dict1};
+        error ->
+            error
+    end.
+
 -spec smallest(Tree) -> {Key, Val} when
       Tree :: gb_tree(),
       Key :: term(),
@@ -512,6 +627,37 @@ smallest_1({Key, Value, nil, _Larger}) ->
     {Key, Value};
 smallest_1({_Key, _Value, Smaller, _Larger}) ->
     smallest_1(Smaller).
+
+-spec first_key(Tree) -> {ok, Key} | error when
+      Tree :: gb_tree(),
+      Key :: term().
+
+first_key({_, nil}) ->
+    error;
+first_key({_, Tree}) ->
+    first_key_1(Tree).
+
+first_key_1({Key, _Value, nil, _Larger}) ->
+    {ok, Key};
+first_key_1({_Key, _Value, Smaller, _Larger}) ->
+    first_key_1(Smaller).
+
+-spec prev_key(Key, Tree) -> {ok, Key1} | error when
+      Tree :: gb_tree(),
+      Key :: term(),
+      Key1 :: term().
+
+prev_key(Key, {_, Tree}) ->
+    prev_key_1(Key, Tree).
+
+prev_key_1(Key, {Key1, _Value, Smaller, _Larger}) when Key < Key1 ->
+    prev_key_1(Key, Smaller);
+prev_key_1(Key, {Key1, _Value, _Smaller, Larger}) when Key > Key1 ->
+    prev_key_1(Key, Larger);
+prev_key_1(_, {_, _, nil, _Larger}) ->
+    error;
+prev_key_1(_, {_, _, {Key1,_,_,_}, _Larger}) ->
+    {ok, Key1}.
 
 -spec take_largest(Tree1) -> {Key, Val, Tree2} when
       Tree1 :: gb_tree(),
@@ -529,6 +675,21 @@ take_largest1({Key, Value, Smaller, Larger}) ->
     {Key1, Value1, Larger1} = take_largest1(Larger),
     {Key1, Value1, {Key, Value, Smaller, Larger1}}.
 
+-spec take_last(Tree1) -> {{Key, Val}, Tree2} | error when
+      Tree1 :: gb_tree(),
+      Tree2 :: gb_tree(),
+      Key :: term(),
+      Val :: term().
+
+take_last(Dict) ->
+    case last_key(Dict) of
+        {ok, Key} ->
+            {Val, Dict1} = take(Key, Dict),
+            {{Key, Val}, Dict1};
+        error ->
+            error
+    end.
+
 -spec largest(Tree) -> {Key, Val} when
       Tree :: gb_tree(),
       Key :: term(),
@@ -542,13 +703,44 @@ largest_1({Key, Value, _Smaller, nil}) ->
 largest_1({_Key, _Value, _Smaller, Larger}) ->
     largest_1(Larger).
 
+-spec last_key(Tree) -> {ok, Key} | error when
+      Tree :: gb_tree(),
+      Key :: term().
+
+last_key({_, nil}) ->
+    error;
+last_key({_, Tree}) ->
+    last_key_1(Tree).
+
+last_key_1({Key, _Value, _Smaller, nil}) ->
+    {ok, Key};
+last_key_1({_Key, _Value, _Smaller, Larger}) ->
+    last_key_1(Larger).
+
+-spec next_key(Key, Tree) -> {ok, Key1} | error when
+      Tree :: gb_tree(),
+      Key :: term(),
+      Key1 :: term().
+
+next_key(Key, {_, Tree}) ->
+    next_key_1(Key, Tree).
+
+next_key_1(Key, {Key1, _Value, Smaller, _Larger}) when Key < Key1 ->
+    next_key_1(Key, Smaller);
+next_key_1(Key, {Key1, _Value, _Smaller, Larger}) when Key > Key1 ->
+    next_key_1(Key, Larger);
+next_key_1(_, {_, _, _Smaller, nil}) ->
+    error;
+next_key_1(_, {_, _, _Larger, {Key1,_,_,_}}) ->
+    {ok, Key1}.
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 -spec to_list(Tree) -> [{Key, Val}] when
       Tree :: gb_tree(),
       Key :: term(),
       Val :: term().
-			   
+
 to_list({_, T}) ->
     to_list(T, []).
 
@@ -651,3 +843,53 @@ map(F, {Size, Tree}) when is_function(F, 2) ->
 map_1(_, nil) -> nil;
 map_1(F, {K, V, Smaller, Larger}) ->
     {K, F(K, V), map_1(F, Smaller), map_1(F, Larger)}.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+-spec filter(Function, Tree1) -> Tree2 when
+      Function :: fun((K :: term(), V1 :: term()) -> B :: boolean()),
+      Tree1 :: gb_tree(),
+      Tree2 :: gb_tree().
+
+filter(F, {_Size, Tree}) when is_function(F, 2) ->
+    filter_1(F, Tree).
+
+filter_1(_, nil) -> {0, nil};
+filter_1(F, {K, V, Smaller, Larger}) ->
+    {N1, Smaller1} = filter_1(F, Smaller),
+    {N2, Larger1} = filter_1(F, Larger),
+    case F(K, V) of
+        true -> {N1 + N2 + 1, {K, V, Smaller1, Larger1}};
+        false -> {N1 + N2, merge(Smaller1, Larger1)}
+    end.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+-spec foldl(Function, A0, Tree) -> A when
+      Function :: fun((K::term(), V::term(), A1::term()) -> A2::term()),
+      A :: term(),
+      A0 :: term(),
+      Tree :: gb_tree().
+
+foldl(F, A, {_Size, Tree}) when is_function(F, 3) ->
+    foldl_1(F, A, Tree).
+
+foldl_1(_, A, nil) -> A;
+foldl_1(F, A, {K, V, Smaller, Larger}) ->
+    foldl_1(F, F(K, V, foldl_1(F, A, Smaller)), Larger).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+-spec foldr(Function, A0, Tree) -> A when
+      Function :: fun((K::term(), V::term(), A1::term()) -> A2::term()),
+      A :: term(),
+      A0 :: term(),
+      Tree :: gb_tree().
+
+foldr(F, A, {_Size, Tree}) when is_function(F, 3) ->
+    foldr_1(F, A, Tree).
+
+foldr_1(_, A, nil) -> A;
+foldr_1(F, A, {K, V, Smaller, Larger}) ->
+    foldr_1(F, F(K, V, foldr_1(F, A, Larger)), Smaller).
+
