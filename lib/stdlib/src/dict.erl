@@ -141,7 +141,11 @@ opts_1([], Type) ->
 new() -> new([]).
 
 new(Opts) ->
-    new_1(opts(Opts)).
+    try opts(Opts) of
+        R -> new_1(R)
+    catch
+        _:_ -> erlang:error(badarg, [Opts])
+    end.
 
 new_1(#opts{type=hash}) ->
     new_dict();
@@ -190,7 +194,11 @@ to_orddict(?gb(_,_)=D) ->
 from_list(L) -> from_list(L, []).
 
 from_list(L, Opts) ->
-    from_list_1(L, opts(Opts)).
+    try opts(Opts) of
+        R -> from_list_1(L, R)
+    catch
+        _:_ -> erlang:error(badarg, [L, Opts])
+    end.
 
 from_list_1(L, #opts{type=hash}) ->
     lists:foldl(fun ({K,V}, D) -> store_dict(K, V, D) end, new_dict(), L);
@@ -203,7 +211,11 @@ from_list_1(L, #opts{type=ordered}) ->
 from_orddict(L) -> from_orddict(L, []).
 
 from_orddict(L, Opts) ->
-    from_orddict_1(L, opts(Opts)).
+    try opts(Opts) of
+        R -> from_orddict_1(L, R)
+    catch
+        _:_ -> erlang:error(badarg, [L, Opts])
+    end.
 
 from_orddict_1(L, #opts{type=ordered}) ->
     gb_trees:from_orddict(L); % the list *must* be ordered for this!
