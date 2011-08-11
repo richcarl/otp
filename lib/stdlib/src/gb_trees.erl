@@ -39,8 +39,14 @@
 %% - lookup(X, T): looks up key X in tree T; returns {value, V}, or
 %%   `none' if the key is not present.
 %%
+%% - find(X, T): looks up key X in tree T; returns {ok, V}, or `error' if
+%%   the key is not present. For compatibility with the dict module.
+%%
 %% - get(X, T): retreives the value stored with key X in tree T. Assumes
 %%   that the key is present in the tree.
+%%
+%% - get(X, V, T): retreives the value stored with key X in tree T. Returns
+%%   V if the key is not present in the tree.
 %%
 %% - insert(X, V, T): inserts key X with value V into tree T; returns
 %%   the new tree. Assumes that the key is *not* present in the tree.
@@ -71,6 +77,9 @@
 %%
 %% - values(T): returns the list of values for all keys in tree T,
 %%   sorted by their corresponding keys. Duplicates are not removed.
+%%
+%% - values(X, T): looks up key X in tree T; returns [V], or
+%%   [] if the key is not present. (Variant of lookup/2.)
 %%
 %% - to_list(T): returns an ordered list of {Key, Value} pairs for all
 %%   keys in tree T.
@@ -113,12 +122,14 @@
 
 -module(gb_trees).
 
--export([empty/0, is_empty/1, size/1, lookup/2, get/2, insert/3,
-	 update/3, enter/3, delete/2, delete_any/2, balance/1,
+-export([empty/0, is_empty/1, size/1, lookup/2, get/2, get/3, insert/3,
+	 update/3, enter/3, delete/2, delete_any/2, balance/1, values/2,
 	 is_defined/2, keys/1, values/1, to_list/1, from_orddict/1,
 	 smallest/1, largest/1, take_smallest/1, take_largest/1,
-	 iterator/1, next/1, map/2]).
+	 iterator/1, next/1, map/2, find/2]).
 
+%% FIXME: first/next/last/prev_key, map(F,Key,T), map(F,Key,Init,T)
+%% FIXME: increment/3, foldl, foldr, filter
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Data structure:
@@ -209,6 +220,27 @@ lookup_1(_, nil) ->
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+%% This is a variant of `lookup' for compatibility with dict.
+
+-spec find(Key, Tree) -> 'error' | {'ok', Val} when
+      Key :: term(),
+      Val :: term(),
+      Tree :: gb_tree().
+
+find(Key, {_, T}) ->
+    find_1(Key, T).
+
+find_1(Key, {Key1, _, Smaller, _}) when Key < Key1 ->
+    find_1(Key, Smaller);
+find_1(Key, {Key1, _, _, Bigger}) when Key > Key1 ->
+    find_1(Key, Bigger);
+find_1(_, {_, Value, _, _}) ->
+    {ok, Value};
+find_1(_, nil) ->
+    error.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 %% This is a specialized version of `lookup'.
 
 -spec is_defined(Key, Tree) -> boolean() when
@@ -245,6 +277,28 @@ get_1(Key, {Key1, _, _, Bigger}) when Key > Key1 ->
     get_1(Key, Bigger);
 get_1(_, {_, Value, _, _}) ->
     Value.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%% Like get/2, but returns default value if key not found in tree
+
+-spec get(Key, Default, Tree) -> Val when
+      Key :: term(),
+      Default :: term(),
+      Tree :: gb_tree(),
+      Val :: term().
+
+get(Key, Default, {_, T}) ->
+    get_1(Key, Default, T).
+
+get_1(Key, Default, {Key1, _, Smaller, _}) when Key < Key1 ->
+    get_1(Key, Default, Smaller);
+get_1(Key, Default, {Key1, _, _, Bigger}) when Key > Key1 ->
+    get_1(Key, Default, Bigger);
+get_1(_, _Default, {_, Value, _, _}) ->
+    Value;
+get_1(_, Default, _) ->
+    Default.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -524,11 +578,32 @@ keys(nil, L) -> L.
       Val :: term().
 
 values({_, T}) ->
-    values(T, []).
+    all_values(T, []).
 
-values({_Key, Value, Small, Big}, L) ->
-    values(Small, [Value | values(Big, L)]);
-values(nil, L) -> L.
+all_values({_Key, Value, Small, Big}, L) ->
+    all_values(Small, [Value | values(Big, L)]);
+all_values(nil, L) -> L.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%% This is a specialized version of `lookup'.
+
+-spec values(Key, Tree) -> [] | [Val] when
+      Key :: term(),
+      Val :: term(),
+      Tree :: gb_tree().
+
+values(Key, {_, T}) ->
+    key_values(Key, T).
+
+key_values(Key, {Key1, _, Smaller, _}) when Key < Key1 ->
+    key_values(Key, Smaller);
+key_values(Key, {Key1, _, _, Bigger}) when Key > Key1 ->
+    key_values(Key, Bigger);
+key_values(_, {_, Value, _, _}) ->
+    [Value];
+key_values(_, nil) ->
+    [].
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

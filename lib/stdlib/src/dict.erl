@@ -42,12 +42,14 @@
 -export([to_list/1,to_orddict/1]).
 -export([from_list/1,from_list/2,from_orddict/1,from_orddict/2]).
 -export([get/2,get/3,find/2,keys/1,values/1,values/2,erase/2]).
--export([store/3,replace/3]).
--export([append/3,append_list/3,increment/3]).
+-export([store/3,replace/3,increment/3]).
 -export([foreach/2,map/2,map/3,map/4,filter/2,merge/3]).
 -export([foldl/3,foldr/3,foldl1/2,foldr1/2,foldln/3,foldrn/3]).
 -export([first_key/1,last_key/1,next_key/2,prev_key/2]).
 -export([take_first/1,take_last/1,take/2]).
+
+%% Nonstandard interface (not recommended)
+-export([append/3,append_list/3]).
 
 %% Deprecated interface
 -export([fetch/2,fetch_keys/1,update/3,update/4,update_counter/3,fold/3]).
@@ -113,23 +115,53 @@ behaviour_info(_Other) ->
 -define(kv(K,V), [K|V]).			% Key-Value pair format
 %%-define(kv(K,V), {K,V}).			% Key-Value pair format
 
+%% use this pattern to match for gb_trees
+-define(gb(N,T), {N,T}).
+
+%% Note: options are processed in the order they occur in the list, i.e.,
+%% later options have higher precedence.
+
+-record(opts, {type=hash}).
+
+opts(Options) when is_list(Options) -> opts_0(Options);
+opts(Option) -> opts_0([Option]).
+
+opts_0(Options) ->
+    opts_1(Options, #opts{}).
+
+opts_1([hash | Options], _Type) ->
+    opts_1(Options, #opts{type=hash});
+opts_1([ordered | Options], _Type) ->
+    opts_1(Options, #opts{type=ordered});
+opts_1([], Type) ->
+    Type.
+
 -spec new() -> dict().
 
-new() ->
+new() -> new([]).
+
+new(Opts) ->
+    new_1(opts(Opts)).
+
+new_1(#opts{type=hash}) ->
+    new_dict();
+new_1(#opts{type=ordered}) ->
+    gb_trees:empty().
+
+new_dict() ->
     Empty = mk_seg(?seg_size),
     #dict{empty=Empty,segs={Empty}}.
-
-new(_Opts) ->
-    new().
 
 -spec is_key(Key, Dict) -> boolean() when
       Key :: term(),
       Dict :: dict().
 
-is_key(Key, D) ->
+is_key(Key, #dict{}=D) ->
     Slot = get_slot(D, Key),
     Bkt = get_bucket(D, Slot),
-    find_key(Key, Bkt).
+    find_key(Key, Bkt);
+is_key(Key, ?gb(_,_)=D) ->
+    gb_trees:is_defined(Key, D).
 
 find_key(K, [?kv(K,_Val)|_]) -> true;
 find_key(K, [_|Bkt]) -> find_key(K, Bkt);
@@ -139,34 +171,50 @@ find_key(_, []) -> false.
       Dict :: dict(),
       List :: [{Key :: term(), Value :: term()}].
 
-to_list(D) ->
+to_list(#dict{}=D) ->
     %% list in default traversal order, hence foldr, not foldl
-    foldr(fun (Key, Val, List) -> [{Key,Val}|List] end, [], D).
+    foldr(fun (Key, Val, List) -> [{Key,Val}|List] end, [], D);
+to_list(?gb(_,_)=D) ->
+    gb_trees:to_list(D).
 
-to_orddict(D) ->
-    lists:keysort(1, to_list(D)).
+to_orddict(#dict{}=D) ->
+    lists:keysort(1, to_list(D));
+to_orddict(?gb(_,_)=D) ->
+    gb_trees:to_list(D). % always ordered
 
 -spec from_list(List) -> Dict when
       List :: [{Key :: term(), Value :: term()}],
       Dict :: dict().
 
 %% note that for duplicate keys, later entries take precedence here
-from_list(L) ->
-    lists:foldl(fun ({K,V}, D) -> store(K, V, D) end, new(), L).
+from_list(L) -> from_list(L, []).
 
-from_list(L, _Opts) ->
-    from_list(L).
+from_list(L, Opts) ->
+    from_list_1(L, opts(Opts)).
 
-from_orddict(L) ->
-    from_list(L).
+from_list_1(L, #opts{type=hash}) ->
+    lists:foldl(fun ({K,V}, D) -> store_dict(K, V, D) end, new_dict(), L);
+from_list_1(L, #opts{type=ordered}) ->
+    %% NOTE: using from_orddict(lists:ukeysort(1, L)) would be nice, but
+    %% causes earlier entries to take precedence in case of duplicate keys
+    lists:foldl(fun ({K,V}, D) -> gb_trees:enter(K, V, D) end,
+                gb_trees:empty(), L).
+
+from_orddict(L) -> from_orddict(L, []).
 
 from_orddict(L, Opts) ->
-    from_orddict(L, Opts).
+    from_orddict_1(L, opts(Opts)).
+
+from_orddict_1(L, #opts{type=ordered}) ->
+    gb_trees:from_orddict(L); % the list *must* be ordered for this!
+from_orddict_1(L, Opts) ->
+    from_list_1(L, Opts).
 
 -spec size(Dict) -> non_neg_integer() when
       Dict :: dict().
 
-size(#dict{size=N}) when is_integer(N), N >= 0 -> N. 
+size(#dict{size=N}) when is_integer(N), N >= 0 -> N;
+size(?gb(N,_)) when is_integer(N), N >= 0 -> N.
 
 is_empty(Dict) -> size(Dict) =< 0.
 
@@ -186,10 +234,12 @@ values(Dict) ->
       Key :: term(),
       Dict :: dict(),
       Value :: term().
-values(Key, Dict) ->
+values(Key, #dict{}=Dict) ->
     Slot = get_slot(Dict, Key),
     Bkt = get_bucket(Dict, Slot),
-    values_1(Key, Bkt).
+    values_1(Key, Bkt);
+values(Key, ?gb(_,_)=Dict) ->
+    gb_trees:values(Key,Dict).
 
 values_1(K, [?kv(K,Val)|_]) -> [Val];
 values_1(K, [_|Bkt]) -> find_val(K, Bkt);
@@ -204,22 +254,26 @@ values_1(_, []) -> [].
 fetch(Key, D) ->
     get(Key, D).
 
-get(Key, D) ->
+get(Key, #dict{}=D) ->
     Slot = get_slot(D, Key),
     Bkt = get_bucket(D, Slot),
     try get_val(Key, Bkt)
     catch
 	badarg -> erlang:error(badarg, [Key, D])
-    end.
+    end;
+get(Key, ?gb(_,_)=D) ->
+    gb_trees:get(Key, D).
 
 get_val(K, [?kv(K,Val)|_]) -> Val;
 get_val(K, [_|Bkt]) -> get_val(K, Bkt);
 get_val(_, []) -> throw(badarg).
 
-get(Key, Def, D) ->
+get(Key, Def, #dict{}=D) ->
     Slot = get_slot(D, Key),
     Bkt = get_bucket(D, Slot),
-    get_val(Key, Bkt, Def).
+    get_val(Key, Bkt, Def);
+get(Key, Def, ?gb(_,_)=D) ->
+    gb_trees:get(Key, Def, D).
 
 get_val(K, [?kv(K,Val)|_], _Def) -> Val;
 get_val(K, [_|Bkt], Def) -> get_val(K, Bkt, Def);
@@ -230,10 +284,12 @@ get_val(_, [], Def) -> Def.
       Dict :: dict(),
       Value :: term().
 
-find(Key, D) ->
+find(Key, #dict{}=D) ->
     Slot = get_slot(D, Key),
     Bkt = get_bucket(D, Slot),
-    find_val(Key, Bkt).
+    find_val(Key, Bkt);
+find(Key, ?gb(_,_)=D) ->
+    gb_trees:find(Key, D).
 
 find_val(K, [?kv(K,Val)|_]) -> {ok,Val};
 find_val(K, [_|Bkt]) -> find_val(K, Bkt);
@@ -258,9 +314,11 @@ fetch_keys(Dict) -> keys(Dict).
       Keys :: [term()].
 
 %% result is ordered only if dict is ordered
-keys(D) ->
+keys(#dict{}=D) ->
     %% list in default traversal order, hence foldr, not foldl
-    foldr(fun (Key, _Val, Keys) -> [Key|Keys] end, [], D).
+    foldr(fun (Key, _Val, Keys) -> [Key|Keys] end, [], D);
+keys(?gb(_,_)=D) ->
+    gb_trees:keys(D).
 
 -spec erase(Key, Dict1) -> Dict2 when
       Key :: term(),
@@ -268,11 +326,13 @@ keys(D) ->
       Dict2 :: dict().
 %%  Erase all elements with key Key.
 
-erase(Key, D0) -> 
+erase(Key, #dict{}=D0) ->
     Slot = get_slot(D0, Key),
     {D1,Dc} = on_bucket(fun (B0) -> erase_key(Key, B0) end,
 			D0, Slot),
-    maybe_contract(D1, Dc).
+    maybe_contract(D1, Dc);
+erase(Key, ?gb(_,_)=D0) ->
+    gb_trees:delete_any(Key, D0).
 
 erase_key(Key, [?kv(Key,_Val)|Bkt]) -> {Bkt,1};
 erase_key(Key, [E|Bkt0]) ->
@@ -286,18 +346,16 @@ erase_key(_, []) -> {[],0}.
       Dict1 :: dict(),
       Dict2 :: dict().
 
-store(Key, Val, D0) ->
+store(Key, Val, #dict{}=D0) ->
+    store_dict(Key, Val, D0);
+store(Key, Val, ?gb(_,_)=D0) ->
+    gb_trees:enter(Key, Val, D0).
+
+store_dict(Key, Val, D0) ->
     Slot = get_slot(D0, Key),
     {D1,Ic} = on_bucket(fun (B0) -> store_bkt_val(Key, Val, B0) end,
 			D0, Slot),
     maybe_expand(D1, Ic).
-
-%% no effect if key not present
-replace(Key, Val, Dict) ->
-    case is_key(Key, Dict) of
-        true -> store(Key, Val, Dict);
-        false -> Dict
-    end.
 
 %% store_bkt_val(Key, Val, Bucket) -> {NewBucket,PutCount}.
 
@@ -307,17 +365,29 @@ store_bkt_val(Key, New, [Other|Bkt0]) ->
     {[Other|Bkt1],Ic};
 store_bkt_val(Key, New, []) -> {[?kv(Key,New)],1}.
 
+%% no effect if key not present
+replace(Key, Val, Dict) ->
+    case is_key(Key, Dict) of
+        true -> store(Key, Val, Dict);
+        false -> Dict
+    end.
+
 -spec append(Key, Value, Dict1) -> Dict2 when
       Key :: term(),
       Value :: term(),
       Dict1 :: dict(),
       Dict2 :: dict().
 
-append(Key, Val, D0) ->
+append(Key, Val, #dict{}=D0) ->
     Slot = get_slot(D0, Key),
     {D1,Ic} = on_bucket(fun (B0) -> append_bkt(Key, Val, B0) end,
 			D0, Slot),
-    maybe_expand(D1, Ic).
+    maybe_expand(D1, Ic);
+append(Key, Val, ?gb(_,_)=D0) ->
+    case gb_trees:lookup(Key, D0) of
+        {value, Bag} -> gb_trees:update(Key, Bag ++ [Val], D0);
+        none -> gb_trees:insert(Key, [Val], D0)
+    end.
 
 %% append_bkt(Key, Val, Bucket) -> {NewBucket,PutCount}.
 
@@ -333,11 +403,16 @@ append_bkt(Key, Val, []) -> {[?kv(Key,[Val])],1}.
       Dict1 :: dict(),
       Dict2 :: dict().
 
-append_list(Key, L, D0) ->
+append_list(Key, L, #dict{}=D0) ->
     Slot = get_slot(D0, Key),
     {D1,Ic} = on_bucket(fun (B0) -> app_list_bkt(Key, L, B0) end,
 			D0, Slot),
-    maybe_expand(D1, Ic).
+    maybe_expand(D1, Ic);
+append_list(Key, L, ?gb(_,_)=D0) ->
+    case gb_trees:lookup(Key, D0) of
+        {value, Bag} -> gb_trees:update(Key, Bag ++ L, D0);
+        none -> gb_trees:insert(Key, L, D0)
+    end.
 
 %% app_list_bkt(Key, L, Bucket) -> {NewBucket,PutCount}.
 
@@ -350,11 +425,13 @@ app_list_bkt(Key, L, []) -> {[?kv(Key,L)],1}.
 %% first_key(Table) -> {ok,Key} | error.
 %% Find the "first" key in a Table (in the order defined by foldl).
 
-first_key(T) ->
+first_key(#dict{}=T) ->
     case next_bucket(T, T#dict.n) of
  	[?kv(K,_Val)|_Bkt] -> {ok,K};
  	[] -> error				%No elements
-    end.
+    end;
+first_key(?gb(_,_)=T) ->
+    gb_trees:first_key(T).
 
 %% see foldl for details on why this goes from higher bucket numbers to lower
 next_bucket(_T, Slot) when Slot < 1 -> [];
@@ -370,7 +447,7 @@ take_first(Dict) ->
 %% next_key(Key, Table) -> {ok,NextKey} | error.
 %% Find next key *following* Key in Table (in the order defined by foldl).
 
-next_key(Key, T) ->
+next_key(Key, #dict{}=T) ->
     Slot = get_slot(T, Key),
     B = get_bucket(T, Slot),
     %% Find a bucket with something in it.
@@ -382,7 +459,9 @@ next_key(Key, T) ->
     case Bkt of
  	[?kv(Next,_Val)|_] -> {ok,Next};
  	[] -> error				%We have reached the end!
-    end.
+    end;
+next_key(Key, ?gb(_,_)=T) ->
+    gb_trees:next_key(Key, T).
 
 bucket_after_key(Key, [?kv(Key,_Val)|Bkt]) -> Bkt;
 bucket_after_key(Key, [_Other|Bkt]) ->
@@ -392,13 +471,15 @@ bucket_after_key(_Key, []) -> error.		%Key not found!
 %% last_key(Table) -> {ok,Key} | error.
 %% Find the "last" key in a Table (in the order defined by foldl).
 
-last_key(T) ->
+last_key(#dict{}=T) ->
     case prev_bucket(T, 1) of
  	[] -> error;				%No elements
  	Bkt ->
             ?kv(K,_Val) = lists:last(Bkt),
             {ok,K}
-    end.
+    end;
+last_key(?gb(_,_)=T) ->
+    gb_trees:last_key(T).
 
 %% see foldl for details on why this goes from lower bucket numbers to higher
 prev_bucket(T, Slot) when Slot > T#dict.n -> [];
@@ -414,7 +495,7 @@ take_last(Dict) ->
 %% prev_key(Key, Table) -> {ok,PrevKey} | error.
 %% Find next key *before* Key in Table (in the order defined by foldl).
 
-prev_key(Key, T) ->
+prev_key(Key, #dict{}=T) ->
     Slot = get_slot(T, Key),
     B = get_bucket(T, Slot),
     %% Find a bucket with something in it.
@@ -428,7 +509,9 @@ prev_key(Key, T) ->
         Bkt ->
             ?kv(Prev,_Val) = lists:last(Bkt),
             {ok,Prev}
-    end.
+    end;
+prev_key(Key, ?gb(_,_)=T) ->
+    gb_trees:prev_key(Key, T).
 
 bucket_before_key(Key, [?kv(Key,_Val)|_]) -> []; % key was first in bucket
 bucket_before_key(Key, [KV|Bkt]) ->
@@ -450,13 +533,15 @@ update(Key, F, D0) ->
       Fun :: fun((Value1 :: term()) -> Value2 :: term()),
       Dict1 :: dict(),
       Dict2 :: dict().
-map(F, Key, D0) ->
+map(F, Key, #dict{}=D0) ->
     Slot = get_slot(D0, Key),
     try on_bucket(fun (B0) -> update_bkt(Key, F, B0) end, D0, Slot) of
 	{D1,_Uv} -> D1
     catch
 	badarg -> erlang:error(badarg, [Key, F, D0])
-    end.
+    end;
+map(F, Key, ?gb(_,_)=D0) ->
+    gb_trees:map(F, Key, D0).
 
 update_bkt(Key, F, [?kv(Key,Val)|Bkt]) ->
     Upd = F(Val),
@@ -478,11 +563,13 @@ update(Key, F, Init, D0) ->
       Fun :: fun((Value1 :: term()) -> Value2 :: term()),
       Dict1 :: dict(),
       Dict2 :: dict().
-map(F, Key, Init, D0) ->
+map(F, Key, Init, #dict{}=D0) ->
     Slot = get_slot(D0, Key),
     {D1,Ic} = on_bucket(fun (B0) -> update_bkt(Key, F, Init, B0) end,
 			D0, Slot),
-    maybe_expand(D1, Ic).
+    maybe_expand(D1, Ic);
+map(F, Key, Init, ?gb(_,_)=D0) ->
+    gb_trees:map(F, Key, Init, D0).
 
 update_bkt(Key, F, _, [?kv(Key,Val)|Bkt]) ->
     {[?kv(Key,F(Val))|Bkt],0};
@@ -491,21 +578,23 @@ update_bkt(Key, F, I, [Other|Bkt0]) ->
     {[Other|Bkt1],Ic};
 update_bkt(Key, F, I, []) when is_function(F, 1) -> {[?kv(Key,I)],1}.
 
--spec update_counter(Key, Increment, Dict1) -> Dict2 when
+%% deprecated version of increment/3
+update_counter(Key, Incr, D0) ->
+    increment(Incr, Key, D0).
+
+-spec increment(Key, Increment, Dict1) -> Dict2 when
       Key :: term(),
       Increment :: number(),
       Dict1 :: dict(),
       Dict2 :: dict().
 
-%% deprecated version of increment/3
-increment(Incr, Key, D0) when is_number(Incr) ->
+increment(Incr, Key, #dict{}=D0) when is_number(Incr) ->
     Slot = get_slot(D0, Key),
     {D1,Ic} = on_bucket(fun (B0) -> counter_bkt(Key, Incr, B0) end,
 			D0, Slot),
-    maybe_expand(D1, Ic).
-
-update_counter(Key, Incr, D0) ->
-    increment(Incr, Key, D0).
+    maybe_expand(D1, Ic);
+increment(Incr, Key, ?gb(_,_)=D0) when is_number(Incr) ->
+    gb_trees:increment(Incr, Key, D0).
 
 counter_bkt(Key, I, [?kv(Key,Val)|Bkt]) ->
     {[?kv(Key,Val+I)|Bkt],0};
@@ -562,9 +651,11 @@ fold(F, Acc, D) -> foldl(F, Acc, D).
       AccIn :: term(),
       AccOut :: term(),
       Dict :: dict().
-foldl(Fun, Acc, Dict) ->
+foldl(Fun, Acc, #dict{}=Dict) ->
     Segs = Dict#dict.segs,
-    foldl_segs(Fun, Acc, Segs, tuple_size(Segs)).
+    foldl_segs(Fun, Acc, Segs, tuple_size(Segs));
+foldl(Fun, Acc, ?gb(_,_)=Dict) ->
+    gb_trees:foldl(Fun, Acc, Dict).
 
 %% Note that this traversal *defines* what the default order is - even if it
 %% traverses the individual tuples from right to left, it's still "foldl"!
@@ -586,9 +677,11 @@ foldl_bucket(F, Acc, [?kv(Key,Val)|Bkt]) ->
 foldl_bucket(F, Acc, []) when is_function(F, 3) -> Acc.
 
 %% fold in reverse traversal order
-foldr(Fun, Acc, Dict) ->
+foldr(Fun, Acc, #dict{}=Dict) ->
     Segs = Dict#dict.segs,
-    foldr_segs(Fun, Acc, Segs, 1, tuple_size(Segs)).
+    foldr_segs(Fun, Acc, Segs, 1, tuple_size(Segs));
+foldr(Fun, Acc, ?gb(_,_)=Dict) ->
+    gb_trees:foldr(Fun, Acc, Dict).
 
 foldr_segs(F, Acc, Segs, I, N) when I =< N ->
     Seg = element(I, Segs),
@@ -642,10 +735,12 @@ foldrn(Fun, InitFun, Dict) ->
       Dict1 :: dict(),
       Dict2 :: dict().
 
-map(F, D) ->
+map(F, #dict{}=D) ->
     Segs0 = tuple_to_list(D#dict.segs),
     Segs1 = map_seg_list(F, Segs0),
-    D#dict{segs=list_to_tuple(Segs1)}.
+    D#dict{segs=list_to_tuple(Segs1)};
+map(F, ?gb(_,_)=D) ->
+    gb_trees:map(F, D).
 
 map_seg_list(F, [Seg|Segs]) ->
     Bkts0 = tuple_to_list(Seg),
@@ -666,10 +761,12 @@ map_bucket(F, []) when is_function(F, 2) -> [].
       Dict1 :: dict(),
       Dict2 :: dict().
 
-filter(F, D) ->
+filter(F, #dict{}=D) ->
     Segs0 = tuple_to_list(D#dict.segs),
     {Segs1,Fc} = filter_seg_list(F, Segs0, [], 0),
-    maybe_contract(D#dict{segs=list_to_tuple(Segs1)}, Fc).
+    maybe_contract(D#dict{segs=list_to_tuple(Segs1)}, Fc);
+filter(F, ?gb(_,_)=D) ->
+    gb_trees:filter(F, D).
 
 filter_seg_list(F, [Seg|Segs], Fss, Fc0) ->
     Bkts0 = tuple_to_list(Seg),
@@ -704,14 +801,23 @@ foreach(Fun, Dict) ->
       Dict2 :: dict(),
       Dict3 :: dict().
 
-merge(F, D1, D2) when D1#dict.size < D2#dict.size ->
+merge(Fun, Dict1, Dict2) ->
+    case size(Dict1) < size(Dict2) of
+        true ->
+            merge_1(Fun, Dict1, Dict2);
+        false ->
+            merge_2(Fun, Dict1, Dict2)
+    end.
+
+merge_1(Fun, Dict1, Dict2) ->
     foldl(fun (K, V1, D) ->
-                  map(fun (V2) -> F(K, V1, V2) end, K, V1, D)
-          end, D2, D1);
-merge(F, D1, D2) ->
+                  update(K, fun (V2) -> Fun(K, V1, V2) end, V1, D)
+          end, Dict2, Dict1).
+
+merge_2(Fun, Dict1, Dict2) ->
     foldl(fun (K, V2, D) ->
-                  map(fun (V1) -> F(K, V1, V2) end, K, V2, D)
-          end, D1, D2).
+                  update(K, fun (V1) -> Fun(K, V1, V2) end, V2, D)
+          end, Dict1, Dict2).
 
 %% get_bucket_s(Segments, Slot) -> Bucket.
 %% put_bucket_s(Segments, Slot, Bucket) -> NewSegments.
