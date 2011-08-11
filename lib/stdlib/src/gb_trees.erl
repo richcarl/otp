@@ -17,153 +17,18 @@
 %% %CopyrightEnd%
 %%
 %% =====================================================================
-%% General Balanced Trees - highly efficient dictionaries.
-%%
-%% Copyright (C) 1999-2001 Sven-Olof Nyström, Richard Carlsson
+%% @doc General Balanced Trees - highly efficient functional dictionaries.
 %%
 %% An efficient implementation of Prof. Arne Andersson's General
 %% Balanced Trees. These have no storage overhead compared to plain
 %% unbalanced binary trees, and their performance is in general better
 %% than AVL trees.
-%% ---------------------------------------------------------------------
-%% Operations:
 %%
-%% - empty(): returns empty tree.
+%% This module considers two keys as different if and only if they do
+%% not compare arithmetically equal (`=='). I.e., `1' and `1.0' are
+%% considered to be the same, and so are `{1.0, 2}' and `{1, 2.0}'.
 %%
-%% - is_empty(T): returns 'true' if T is an empty tree, and 'false'
-%%   otherwise.
-%%
-%% - size(T): returns the number of nodes in the tree as an integer.
-%%   Returns 0 (zero) if the tree is empty.
-%%
-%% - lookup(X, T): looks up key X in tree T; returns {value, V}, or
-%%   `none' if the key is not present.
-%%
-%% - find(X, T): looks up key X in tree T; returns {ok, V}, or `error' if
-%%   the key is not present. For compatibility with the dict module.
-%%
-%% - get(X, T): retreives the value stored with key X in tree T. Assumes
-%%   that the key is present in the tree.
-%%
-%% - get(X, V, T): retreives the value stored with key X in tree T. Returns
-%%   V if the key is not present in the tree.
-%%
-%% - insert(X, V, T): inserts key X with value V into tree T; returns
-%%   the new tree. Assumes that the key is *not* present in the tree.
-%%
-%% - update(X, V, T): updates key X to value V in tree T; returns the
-%%   new tree. Assumes that the key is present in the tree.
-%%
-%% - enter(X, V, T): inserts key X with value V into tree T if the key
-%%   is not present in the tree, otherwise updates key X to value V in
-%%   T. Returns the new tree.
-%%
-%% - delete(X, T): removes key X from tree T; returns new tree. Assumes
-%%   that the key is present in the tree.
-%%
-%% - delete_any(X, T): removes key X from tree T if the key is present
-%%   in the tree, otherwise does nothing; returns new tree.
-%%
-%% - balance(T): rebalances tree T. Note that this is rarely necessary,
-%%   but may be motivated when a large number of entries have been
-%%   deleted from the tree without further insertions. Rebalancing could
-%%   then be forced in order to minimise lookup times, since deletion
-%%   only does not rebalance the tree.
-%%
-%% - is_defined(X, T): returns `true' if key X is present in tree T, and
-%%   `false' otherwise.
-%%
-%% - keys(T): returns an ordered list of all keys in tree T.
-%%
-%% - values(T): returns the list of values for all keys in tree T,
-%%   sorted by their corresponding keys. Duplicates are not removed.
-%%
-%% - values(X, T): looks up key X in tree T; returns [V], or
-%%   [] if the key is not present. (Variant of lookup/2.)
-%%
-%% - to_list(T): returns an ordered list of {Key, Value} pairs for all
-%%   keys in tree T.
-%%
-%% - from_orddict(L): turns an ordered list L of {Key, Value} pairs into
-%%   a tree. The list must not contain duplicate keys.
-%%
-%% - smallest(T): returns {X, V}, where X is the smallest key in tree T,
-%%   and V is the value associated with X in T. Assumes that the tree T
-%%   is nonempty.
-%%
-%% - first_key(T): returns {ok, X}, where X is the smallest key in tree T,
-%%   or 'error' if the tree is empty.
-%%
-%% - next_key(K, T): returns {ok, K'} where K' is the smallest key larger
-%%   than K in T, or 'error' if K is the largest key in the tree. K must
-%%   exist in the tree.
-%%
-%% - prev_key(K, T): returns {ok, K'} where K' is the largest key smaller
-%%   than K in T, or 'error' if K is the smallest key in the tree. K must
-%%   exist in the tree.
-%%
-%% - largest(T): returns {X, V}, where X is the largest key in tree T,
-%%   and V is the value associated with X in T. Assumes that the tree T
-%%   is nonempty.
-%%
-%% - last_key(T): returns {ok, X}, where X is the largest key in tree T,
-%%   or 'error' if the tree is empty.
-%%
-%% - take(X, T): returns {V, T1}, where V is the value associated with X in
-%%   T, and T1 is the tree T with key X deleted. Assumes that X exists in T.
-%%
-%% - take_smallest(T): returns {X, V, T1}, where X is the smallest key
-%%   in tree T, V is the value associated with X in T, and T1 is the
-%%   tree T with key X deleted. Assumes that the tree T is nonempty.
-%%
-%% - take_first(T): returns {{X, V}, T1}, where X is the smallest key
-%%   in tree T, V is the value associated with X in T, and T1 is the
-%%   tree T with key X deleted. Returns 'error' if the tree is empty.
-%%
-%% - take_largest(T): returns {X, V, T1}, where X is the largest key
-%%   in tree T, V is the value associated with X in T, and T1 is the
-%%   tree T with key X deleted. Assumes that the tree T is nonempty.
-%%
-%% - take_last(T): returns {{X, V}, T1}, where X is the largest key
-%%   in tree T, V is the value associated with X in T, and T1 is the
-%%   tree T with key X deleted. Returns 'error' if the tree is empty.
-%%
-%% - iterator(T): returns an iterator that can be used for traversing
-%%   the entries of tree T; see `next'. The implementation of this is
-%%   very efficient; traversing the whole tree using `next' is only
-%%   slightly slower than getting the list of all elements using
-%%   `to_list' and traversing that. The main advantage of the iterator
-%%   approach is that it does not require the complete list of all
-%%   elements to be built in memory at one time.
-%%
-%% - next(S): returns {X, V, S1} where X is the smallest key referred to
-%%   by the iterator S, and S1 is the new iterator to be used for
-%%   traversing the remaining entries, or the atom `none' if no entries
-%%   remain.
-%%
-%% - increment(K, N, T): adds the number N to the number stored for K, or
-%%   inserts N as the value for K if K is not already in the tree.
-%%
-%% - map(F, K, T): maps the function F(V) -> V' to the value stored for K.
-%%   Assumes that the key is present in the tree.
-%%
-%% - map(F, K, V, T): maps the function F(V) -> V' to the value stored for
-%%   K, or inserts V as the value for K if K is not already in the tree.
-%%
-%% - map(F, T): maps the function F(K, V) -> V' to all key-value pairs
-%%   of the tree T and returns a new tree T' with the same set of keys
-%%   as T and the new set of corresponding values V'.
-%%
-%% - filter(F, T): maps the function F(K, V) -> 'true'|'false' to all
-%%   key-value pairs of the tree T and returns a new tree T' containg only
-%%   those pairs in T for which the function returned 'true'.
-%%
-%% - foldl(F, A, T): folds the function F(K, V, A) -> A' over the key-value
-%%   entries of the tree in key order.
-%%
-%% - foldr(F, A, T): folds the function F(K, V, A) -> A' over the key-value
-%%   entries of the tree in reverse key order.
-%%
+%% @copyright 1999-2001 Sven-Olof Nyström, Richard Carlsson
 
 -module(gb_trees).
 
@@ -174,6 +39,7 @@
          first_key/1, last_key/1, take_first/1, take_last/1,
 	 iterator/1, next/1, map/2, filter/2, foldl/3, foldr/3,
          next_key/2, prev_key/2, increment/3, find/2]).
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Data structure:
@@ -190,8 +56,8 @@
 %%
 %% Performance is comparable to the AVL trees in the Erlang book (and
 %% faster in general due to less overhead); the difference is that
-%% deletion works for my trees, but not for the book's trees. Behaviour
-%% is logaritmic (as it should be).
+%% deletion works for these trees, but not for the book's trees.
+%% Behaviour is logarithmic (as it should be).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Some macros.
@@ -207,23 +73,33 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Some types.
 
+%% not a public type, only internal
 -type gb_tree_node() :: 'nil' | {_, _, _, _}.
+
 -opaque iter() :: [gb_tree_node()].
+%% An iterator for a General Balanced Tree.
 
 %% A declaration equivalent to the following is currently hard-coded
 %% in erl_types.erl
 %%
+%% @type gb_tree(). A General Balanced Tree.
 %% -opaque gb_tree() :: {non_neg_integer(), gb_tree_node()}.
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 -spec empty() -> gb_tree().
+
+%% @doc Return a new empty tree.
 
 empty() ->
     {0, nil}.
 
 -spec is_empty(Tree) -> boolean() when
       Tree :: gb_tree().
+
+%% @doc Test for empty tree. Returns `true' if `Tree' is an empty tree,
+%% and `false' otherwise.
 
 is_empty({0, nil}) ->
     true;
@@ -232,6 +108,9 @@ is_empty(_) ->
 
 -spec size(Tree) -> non_neg_integer() when
       Tree :: gb_tree().
+
+%% @doc Return the number of nodes in a tree. Returns zero if the tree
+%% is empty.
 
 size({Size, _}) when is_integer(Size), Size >= 0 ->
     Size.
@@ -242,6 +121,10 @@ size({Size, _}) when is_integer(Size), Size >= 0 ->
       Key :: term(),
       Val :: term(),
       Tree :: gb_tree().
+
+%% @doc Look up a key in a tree. Returns either `{value, Val}', or
+%% `none' if `Key' is not present in `Tree'.
+%% @obsolete Use {@link find/2} instead.
 
 lookup(Key, {_, T}) ->
     lookup_1(Key, T).
@@ -271,6 +154,9 @@ lookup_1(_, nil) ->
       Val :: term(),
       Tree :: gb_tree().
 
+%% @doc Look up a key in a tree. Returns either `{ok, V}', or `error' if
+%% `Key' is not present in `Tree'.
+
 find(Key, {_, T}) ->
     find_1(Key, T).
 
@@ -290,6 +176,9 @@ find_1(_, nil) ->
 -spec is_defined(Key, Tree) -> boolean() when
       Key :: term(),
       Tree :: gb_tree().
+
+%% @doc Test for membership in a tree. Returns `true' if `Key' is
+%% present in `Tree', and `false' otherwise.
 
 is_defined(Key, {_, T}) ->
     is_defined_1(Key, T).
@@ -312,6 +201,9 @@ is_defined_1(_, nil) ->
       Tree :: gb_tree(),
       Val :: term().
 
+%% @doc Retrieve a stored value. Returns the value stored for `Key' in
+%% `Tree'. Throws an exception if the key is not present in the tree.
+
 get(Key, {_, T}) ->
     get_1(Key, T).
 
@@ -331,6 +223,10 @@ get_1(_, {_, Value, _, _}) ->
       Default :: term(),
       Tree :: gb_tree(),
       Val :: term().
+
+%% @doc Retrieve a stored value or use a default. Returns the value
+%% stored for `Key' in `Tree', or returns `Default' if the key is not
+%% present in the tree.
 
 get(Key, Default, {_, T}) ->
     get_1(Key, Default, T).
@@ -352,6 +248,10 @@ get_1(_, Default, _) ->
       Tree1 :: gb_tree(),
       Tree2 :: gb_tree().
 
+%% @doc Update the value of an entry. Replaces the value stored for
+%% `Key' in `Tree' with `Val' and returns the new tree. Throws an
+%% exception if the key is not present in the tree.
+
 update(Key, Val, {S, T}) ->
     T1 = update_1(Key, Val, T),
     {S, T1}.
@@ -372,6 +272,10 @@ update_1(Key, Value, {_, _, Smaller, Bigger}) ->
       Val :: term(),
       Tree1 :: gb_tree(),
       Tree2 :: gb_tree().
+
+%% @doc Insert a new entry in a tree. Stores `Val' as the value for
+%% `Key' in `Tree' and returns the new tree. Throws an exception if the
+%% key is already present in the tree.
 
 insert(Key, Val, {S, T}) when is_integer(S) ->
     S1 = S+1,
@@ -426,6 +330,11 @@ insert_1(Key, _, _, _) ->
       Tree1 :: gb_tree(),
       Tree2 :: gb_tree().
 
+%% @doc Insert or update an entry in a tree. Stores `Val' as the value
+%% for `Key' in `Tree' and returns the new tree. If the key already
+%% existed in the tree, the entry is updated, otherwise a new entry is
+%% inserted.
+
 enter(Key, Val, T) ->
     case is_defined(Key, T) of
 	true ->
@@ -441,6 +350,9 @@ enter(Key, Val, T) ->
       Key :: term(),
       Tree1 :: gb_tree(),
       Tree2 :: gb_tree().
+
+%% FIXME @doc maps the function F(V) -> V' to the value stored for K.
+%%   Assumes that the key is present in the tree.
 
 map(F, Key, {S, T}) when is_function(F, 1) ->
     {S, map_1(F, Key, T)}.
@@ -461,11 +373,14 @@ map_1(F, Key, {_, V, Smaller, Bigger}) ->
       Tree1 :: gb_tree(),
       Tree2 :: gb_tree().
 
+%% FIXME @doc maps the function F(V) -> V' to the value stored for
+%%   K, or inserts V as the value for K if K is not already in the tree.
+
 map(F, Key, Initial, T) when is_function(F, 1) ->
     case is_defined(Key, T) of
 	true ->
 	    map(F, Key, T);
-	none ->
+	false ->
 	    insert(Key, Initial, T)
     end.
 
@@ -476,6 +391,9 @@ map(F, Key, Initial, T) when is_function(F, 1) ->
       Delta :: number(),
       Tree1 :: gb_tree(),
       Tree2 :: gb_tree().
+
+%% FIXME @doc adds the number N to the number stored for K, or
+%%   inserts N as the value for K if K is not already in the tree.
 
 increment(Key, Delta, Tree) when is_number(Delta) ->
     map(fun (V) -> V + Delta end, Key, Delta, Tree).
@@ -496,6 +414,12 @@ count(nil) ->
 -spec balance(Tree1) -> Tree2 when
       Tree1 :: gb_tree(),
       Tree2 :: gb_tree().
+
+%% FIXME @doc rebalances tree T. Note that this is rarely necessary,
+%%   but may be motivated when a large number of entries have been
+%%   deleted from the tree without further insertions. Rebalancing could
+%%   then be forced in order to minimise lookup times, since deletion
+%%   only does not rebalance the tree.
 
 balance({S, T}) ->
     {S, balance(T, S)}.
@@ -524,6 +448,9 @@ balance_list_1(L, 0) ->
       List :: [{Key :: term(), Val :: term()}],
       Tree :: gb_tree().
 
+%% FIXE @doc turns an ordered list L of {Key, Value} pairs into
+%%   a tree. The list must not contain duplicate keys.
+
 from_orddict(L) ->
     S = length(L),
     {S, balance_list(L, S)}.
@@ -535,6 +462,9 @@ from_orddict(L) ->
       Tree1 :: gb_tree(),
       Tree2 :: gb_tree().
 
+%% FIXME @doc removes key X from tree T if the key is present
+%%   in the tree, otherwise does nothing; returns new tree.
+
 delete_any(Key, T) ->
     case is_defined(Key, T) of
 	true ->
@@ -543,12 +473,14 @@ delete_any(Key, T) ->
 	    T
     end.
 
-%%% delete. Assumes that key is present.
-
 -spec delete(Key, Tree1) -> Tree2 when
       Key :: term(),
       Tree1 :: gb_tree(),
       Tree2 :: gb_tree().
+
+%% @doc Remove an entry from a tree. Deletes the entry for `Key' from
+%% `Tree' and returns the new tree. Throws an exception if the key is
+%% not present in the tree.
 
 delete(Key, {S, T}) when is_integer(S), S >= 0 ->
     {S - 1, delete_1(Key, T)}.
@@ -579,6 +511,10 @@ merge(Smaller, Larger) ->
       Dict0 :: dict(),
       Dict1 :: dict(),
       Value :: term().
+
+%% FIXME @doc Returns {V, T1}, where V is the value associated with X in
+%% T, and T1 is the tree T with key X deleted. Assumes that X exists in T.
+
 take(Key, Dict) ->
     {get(Key, Dict), delete_any(Key, Dict)}.
 
@@ -589,6 +525,10 @@ take(Key, Dict) ->
       Tree2 :: gb_tree(),
       Key :: term(),
       Val :: term().
+
+%% FIXME @doc  Returns {X, V, T1}, where X is the smallest key
+%%   in tree T, V is the value associated with X in T, and T1 is the
+%%   tree T with key X deleted. Assumes that the tree T is nonempty.
 
 take_smallest({Size, Tree}) when is_integer(Size), Size >= 0 ->
     {Key, Value, Larger} = take_smallest1(Tree),
@@ -606,6 +546,10 @@ take_smallest1({Key, Value, Smaller, Larger}) ->
       Key :: term(),
       Val :: term().
 
+%% FIXME @doc  Returns {{X, V}, T1}, where X is the smallest key
+%%   in tree T, V is the value associated with X in T, and T1 is the
+%%   tree T with key X deleted. Returns 'error' if the tree is empty.
+
 take_first(Dict) ->
     case first_key(Dict) of
         {ok, Key} ->
@@ -620,6 +564,10 @@ take_first(Dict) ->
       Key :: term(),
       Val :: term().
 
+%% FIXME @doc returns {X, V}, where X is the smallest key in tree T,
+%%   and V is the value associated with X in T. Assumes that the tree T
+%%   is nonempty.
+
 smallest({_, Tree}) ->
     smallest_1(Tree).
 
@@ -631,6 +579,9 @@ smallest_1({_Key, _Value, Smaller, _Larger}) ->
 -spec first_key(Tree) -> {ok, Key} | error when
       Tree :: gb_tree(),
       Key :: term().
+
+%% FIXME @doc  returns {ok, X}, where X is the smallest key in tree T,
+%%   or 'error' if the tree is empty.
 
 first_key({_, nil}) ->
     error;
@@ -646,6 +597,10 @@ first_key_1({_Key, _Value, Smaller, _Larger}) ->
       Tree :: gb_tree(),
       Key :: term(),
       Key1 :: term().
+
+%% FIXME @doc returns {ok, K'} where K' is the largest key smaller
+%%   than K in T, or 'error' if K is the smallest key in the tree. K must
+%%   exist in the tree.
 
 prev_key(Key, {_, Tree}) ->
     prev_key_1(Key, Tree).
@@ -665,6 +620,10 @@ prev_key_1(_, {_, _, {Key1,_,_,_}, _Larger}) ->
       Key :: term(),
       Val :: term().
 
+%% FIXME @doc returns {X, V, T1}, where X is the largest key
+%%   in tree T, V is the value associated with X in T, and T1 is the
+%%   tree T with key X deleted. Assumes that the tree T is nonempty.
+
 take_largest({Size, Tree}) when is_integer(Size), Size >= 0 ->
     {Key, Value, Smaller} = take_largest1(Tree),
     {Key, Value, {Size - 1, Smaller}}.
@@ -681,6 +640,10 @@ take_largest1({Key, Value, Smaller, Larger}) ->
       Key :: term(),
       Val :: term().
 
+%% FIXME @doc returns {{X, V}, T1}, where X is the largest key
+%%   in tree T, V is the value associated with X in T, and T1 is the
+%%   tree T with key X deleted. Returns 'error' if the tree is empty.
+
 take_last(Dict) ->
     case last_key(Dict) of
         {ok, Key} ->
@@ -695,6 +658,10 @@ take_last(Dict) ->
       Key :: term(),
       Val :: term().
 
+%% FIXME @doc  returns {X, V}, where X is the largest key in tree T,
+%%   and V is the value associated with X in T. Assumes that the tree T
+%%   is nonempty.
+
 largest({_, Tree}) ->
     largest_1(Tree).
 
@@ -706,6 +673,9 @@ largest_1({_Key, _Value, _Smaller, Larger}) ->
 -spec last_key(Tree) -> {ok, Key} | error when
       Tree :: gb_tree(),
       Key :: term().
+
+%% FIXME @doc returns {ok, X}, where X is the largest key in tree T,
+%%   or 'error' if the tree is empty.
 
 last_key({_, nil}) ->
     error;
@@ -721,6 +691,10 @@ last_key_1({_Key, _Value, _Smaller, Larger}) ->
       Tree :: gb_tree(),
       Key :: term(),
       Key1 :: term().
+
+%% FIXME @doc returns {ok, K'} where K' is the smallest key larger
+%%   than K in T, or 'error' if K is the largest key in the tree. K must
+%%   exist in the tree.
 
 next_key(Key, {_, Tree}) ->
     next_key_1(Key, Tree).
@@ -741,6 +715,9 @@ next_key_1(_, {_, _, _Larger, {Key1,_,_,_}}) ->
       Key :: term(),
       Val :: term().
 
+%% FIXME @doc: returns an ordered list of {Key, Value} pairs for all
+%%   keys in tree T.
+
 to_list({_, T}) ->
     to_list(T, []).
 
@@ -756,6 +733,8 @@ to_list(nil, L) -> L.
       Tree :: gb_tree(),
       Key :: term().
 
+%% @doc returns an ordered list of all keys in tree T.
+
 keys({_, T}) ->
     keys(T, []).
 
@@ -768,6 +747,9 @@ keys(nil, L) -> L.
 -spec values(Tree) -> [Val] when
       Tree :: gb_tree(),
       Val :: term().
+
+%% FIXME @doc returns the list of values for all keys in tree T,
+%%   sorted by their corresponding keys. Duplicates are not removed.
 
 values({_, T}) ->
     all_values(T, []).
@@ -784,6 +766,9 @@ all_values(nil, L) -> L.
       Key :: term(),
       Val :: term(),
       Tree :: gb_tree().
+
+%% FIXME @doc looks up key X in tree T; returns [V], or
+%%   [] if the key is not present. (Variant of lookup/2.)
 
 values(Key, {_, T}) ->
     key_values(Key, T).
@@ -802,6 +787,14 @@ key_values(_, nil) ->
 -spec iterator(Tree) -> Iter when
       Tree :: gb_tree(),
       Iter :: iter().
+
+%% FIXME @doc returns an iterator that can be used for traversing
+%%   the entries of tree T; see `next'. The implementation of this is
+%%   very efficient; traversing the whole tree using `next' is only
+%%   slightly slower than getting the list of all elements using
+%%   `to_list' and traversing that. The main advantage of the iterator
+%%   approach is that it does not require the complete list of all
+%%   elements to be built in memory at one time.
 
 iterator({_, T}) ->
     iterator_1(T).
@@ -825,6 +818,11 @@ iterator(nil, As) ->
       Key :: term(),
       Val :: term().
 
+%% FIXME @doc: returns {X, V, S1} where X is the smallest key referred to
+%%   by the iterator S, and S1 is the new iterator to be used for
+%%   traversing the remaining entries, or the atom `none' if no entries
+%%   remain.
+
 next([{X, V, _, T} | As]) ->
     {X, V, iterator(T, As)};
 next([]) ->
@@ -836,6 +834,10 @@ next([]) ->
       Function :: fun((K :: term(), V1 :: term()) -> V2 :: term()),
       Tree1 :: gb_tree(),
       Tree2 :: gb_tree().
+
+%% FIXME @doc maps the function F(K, V) -> V' to all key-value pairs
+%%   of the tree T and returns a new tree T' with the same set of keys
+%%   as T and the new set of corresponding values V'.
 
 map(F, {Size, Tree}) when is_function(F, 2) ->
     {Size, map_1(F, Tree)}.
@@ -850,6 +852,10 @@ map_1(F, {K, V, Smaller, Larger}) ->
       Function :: fun((K :: term(), V1 :: term()) -> B :: boolean()),
       Tree1 :: gb_tree(),
       Tree2 :: gb_tree().
+
+%% FIXME @doc maps the function F(K, V) -> 'true'|'false' to all
+%%   key-value pairs of the tree T and returns a new tree T' containg only
+%%   those pairs in T for which the function returned 'true'.
 
 filter(F, {_Size, Tree}) when is_function(F, 2) ->
     filter_1(F, Tree).
@@ -871,6 +877,9 @@ filter_1(F, {K, V, Smaller, Larger}) ->
       A0 :: term(),
       Tree :: gb_tree().
 
+%% FIXME @doc folds the function F(K, V, A) -> A' over the key-value
+%%   entries of the tree in key order.
+
 foldl(F, A, {_Size, Tree}) when is_function(F, 3) ->
     foldl_1(F, A, Tree).
 
@@ -885,6 +894,9 @@ foldl_1(F, A, {K, V, Smaller, Larger}) ->
       A :: term(),
       A0 :: term(),
       Tree :: gb_tree().
+
+%% FIXME @doc folds the function F(K, V, A) -> A' over the key-value
+%%   entries of the tree in reverse key order.
 
 foldr(F, A, {_Size, Tree}) when is_function(F, 3) ->
     foldr_1(F, A, Tree).
