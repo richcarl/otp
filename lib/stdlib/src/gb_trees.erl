@@ -351,8 +351,10 @@ enter(Key, Val, T) ->
       Tree1 :: gb_tree(),
       Tree2 :: gb_tree().
 
-%% FIXME @doc maps the function F(V) -> V' to the value stored for K.
-%%   Assumes that the key is present in the tree.
+%% @doc Apply a function to a single entry. Applies `Function' to the
+%% current value for `Key', replacing the value with the result of the
+%% function and returning the new tree. Throws an exception if the key
+%% is not present in the tree.
 
 map(F, Key, {S, T}) when is_function(F, 1) ->
     {S, map_1(F, Key, T)}.
@@ -373,8 +375,11 @@ map_1(F, Key, {_, V, Smaller, Bigger}) ->
       Tree1 :: gb_tree(),
       Tree2 :: gb_tree().
 
-%% FIXME @doc maps the function F(V) -> V' to the value stored for
-%%   K, or inserts V as the value for K if K is not already in the tree.
+%% @doc Apply a function to a single entry or use a default value.
+%% Applies `Function' to the current value for `Key', if that key exists
+%% in the tree, replacing the value with the result of the function and
+%% returning the new tree. If the key is not present in the tree, a new
+%% entry is created for `Key' with `Initial' as value.
 
 map(F, Key, Initial, T) when is_function(F, 1) ->
     case is_defined(Key, T) of
@@ -392,8 +397,11 @@ map(F, Key, Initial, T) when is_function(F, 1) ->
       Tree1 :: gb_tree(),
       Tree2 :: gb_tree().
 
-%% FIXME @doc adds the number N to the number stored for K, or
-%%   inserts N as the value for K if K is not already in the tree.
+%% @doc Add a number to the value of an entry. Adds `Delta' to the
+%% current value for `Key', if that key exists in the tree, and returns
+%% the new tree. If the key is not present in the tree, a new entry is
+%% created for `Key' with `Delta' as value, as if the key had existed
+%% with the value 0.
 
 increment(Key, Delta, Tree) when is_number(Delta) ->
     map(fun (V) -> V + Delta end, Key, Delta, Tree).
@@ -415,11 +423,15 @@ count(nil) ->
       Tree1 :: gb_tree(),
       Tree2 :: gb_tree().
 
-%% FIXME @doc rebalances tree T. Note that this is rarely necessary,
-%%   but may be motivated when a large number of entries have been
-%%   deleted from the tree without further insertions. Rebalancing could
-%%   then be forced in order to minimise lookup times, since deletion
-%%   only does not rebalance the tree.
+%% @doc Rebalance a tree. Rebuilds the tree uniformly so that all leaf
+%% nodes are at approximately the same depth, returning the new tree.
+%%
+%% Note that this is rarely needed, because trees usually balance
+%% themselves automatically. Rebalancing may be useful to do if a large
+%% number of entries have been deleted from the tree, without any
+%% subsequent insertions. A forced rebalancing could then be done in
+%% order to minimise lookup times, since deletions in themselves never
+%% rebalance the tree.
 
 balance({S, T}) ->
     {S, balance(T, S)}.
@@ -448,8 +460,9 @@ balance_list_1(L, 0) ->
       List :: [{Key :: term(), Val :: term()}],
       Tree :: gb_tree().
 
-%% FIXE @doc turns an ordered list L of {Key, Value} pairs into
-%%   a tree. The list must not contain duplicate keys.
+%% @doc Make a tree from an orddict. Turns an ordered list of key/value
+%% pairs into a tree. The list must not contain duplicate keys, and must
+%% be sorted on the first element of the pairs.
 
 from_orddict(L) ->
     S = length(L),
@@ -462,8 +475,9 @@ from_orddict(L) ->
       Tree1 :: gb_tree(),
       Tree2 :: gb_tree().
 
-%% FIXME @doc removes key X from tree T if the key is present
-%%   in the tree, otherwise does nothing; returns new tree.
+%% @doc Remove an entry from a tree, if it exists. Removes the entry for
+%% `Key' from `Tree' if the key is present in the tree, returning the new
+%% tree, or otherwise returns `Tree' unchanged.
 
 delete_any(Key, T) ->
     case is_defined(Key, T) of
@@ -478,8 +492,8 @@ delete_any(Key, T) ->
       Tree1 :: gb_tree(),
       Tree2 :: gb_tree().
 
-%% @doc Remove an entry from a tree. Deletes the entry for `Key' from
-%% `Tree' and returns the new tree. Throws an exception if the key is
+%% @doc Remove an existing entry from a tree. Deletes the entry for `Key'
+%% from `Tree' and returns the new tree. Throws an exception if the key is
 %% not present in the tree.
 
 delete(Key, {S, T}) when is_integer(S), S >= 0 ->
@@ -512,8 +526,9 @@ merge(Smaller, Larger) ->
       Dict1 :: dict(),
       Value :: term().
 
-%% FIXME @doc Returns {V, T1}, where V is the value associated with X in
-%% T, and T1 is the tree T with key X deleted. Assumes that X exists in T.
+%% @doc Extract an entry from a tree. Returns a tuple with the value for
+%% `Key' in `Tree' and a new tree with the entry for the key deleted. Throws
+%% an exception if the key is not present in the tree.
 
 take(Key, Dict) ->
     {get(Key, Dict), delete_any(Key, Dict)}.
@@ -526,9 +541,10 @@ take(Key, Dict) ->
       Key :: term(),
       Val :: term().
 
-%% FIXME @doc  Returns {X, V, T1}, where X is the smallest key
-%%   in tree T, V is the value associated with X in T, and T1 is the
-%%   tree T with key X deleted. Assumes that the tree T is nonempty.
+%% @doc Extract the first entry in the tree. Returns the key and value for
+%% the smallest key in `Tree' and a new tree with the entry for the key
+%% deleted. Throws an exception if the tree is empty.
+%% @deprecated Use {@link take_first/1} instead.
 
 take_smallest({Size, Tree}) when is_integer(Size), Size >= 0 ->
     {Key, Value, Larger} = take_smallest1(Tree),
@@ -546,9 +562,9 @@ take_smallest1({Key, Value, Smaller, Larger}) ->
       Key :: term(),
       Val :: term().
 
-%% FIXME @doc  Returns {{X, V}, T1}, where X is the smallest key
-%%   in tree T, V is the value associated with X in T, and T1 is the
-%%   tree T with key X deleted. Returns 'error' if the tree is empty.
+%% @doc Extract the first entry in the tree. Returns the key-value pair for
+%% the smallest key in `Tree' and a new tree with the entry for the key
+%% deleted, or returns `error' if the tree is empty.
 
 take_first(Dict) ->
     case first_key(Dict) of
@@ -564,9 +580,8 @@ take_first(Dict) ->
       Key :: term(),
       Val :: term().
 
-%% FIXME @doc returns {X, V}, where X is the smallest key in tree T,
-%%   and V is the value associated with X in T. Assumes that the tree T
-%%   is nonempty.
+%% @doc Get the first key-value pair in the tree. Returns the key-value pair
+%% for the smallest key in `Tree'. Throws an exception if the tree is empty.
 
 smallest({_, Tree}) ->
     smallest_1(Tree).
@@ -580,8 +595,8 @@ smallest_1({_Key, _Value, Smaller, _Larger}) ->
       Tree :: gb_tree(),
       Key :: term().
 
-%% FIXME @doc  returns {ok, X}, where X is the smallest key in tree T,
-%%   or 'error' if the tree is empty.
+%% @doc Get the first key in the tree. Returns `{ok, Key}' where `Key' is
+%% the smallest key in `Tree', or returns 'error' if the tree is empty.
 
 first_key({_, nil}) ->
     error;
@@ -598,9 +613,10 @@ first_key_1({_Key, _Value, Smaller, _Larger}) ->
       Key :: term(),
       Key1 :: term().
 
-%% FIXME @doc returns {ok, K'} where K' is the largest key smaller
-%%   than K in T, or 'error' if K is the smallest key in the tree. K must
-%%   exist in the tree.
+%% @doc Get the next smaller key in the tree. Returns `{ok, Smaller}' where
+%% `Smaller' is the largest key in `Tree' smaller than the given `Key', or
+%% returns 'error' if the tree is empty. Throws an exception if `Key' does
+%% not exist in the tree.
 
 prev_key(Key, {_, Tree}) ->
     prev_key_1(Key, Tree).
@@ -620,9 +636,10 @@ prev_key_1(_, {_, _, {Key1,_,_,_}, _Larger}) ->
       Key :: term(),
       Val :: term().
 
-%% FIXME @doc returns {X, V, T1}, where X is the largest key
-%%   in tree T, V is the value associated with X in T, and T1 is the
-%%   tree T with key X deleted. Assumes that the tree T is nonempty.
+%% @doc Extract the last entry in the tree. Returns the key and value for
+%% the largest key in `Tree' and a new tree with the entry for the key
+%% deleted. Throws an exception if the tree is empty.
+%% @deprecated Use {@link take_last/1} instead.
 
 take_largest({Size, Tree}) when is_integer(Size), Size >= 0 ->
     {Key, Value, Smaller} = take_largest1(Tree),
@@ -640,9 +657,9 @@ take_largest1({Key, Value, Smaller, Larger}) ->
       Key :: term(),
       Val :: term().
 
-%% FIXME @doc returns {{X, V}, T1}, where X is the largest key
-%%   in tree T, V is the value associated with X in T, and T1 is the
-%%   tree T with key X deleted. Returns 'error' if the tree is empty.
+%% @doc Extract the last entry in the tree. Returns the key-value pair for
+%% the largest key in `Tree' and a new tree with the entry for the key
+%% deleted, or returns `error' if the tree is empty.
 
 take_last(Dict) ->
     case last_key(Dict) of
@@ -658,9 +675,8 @@ take_last(Dict) ->
       Key :: term(),
       Val :: term().
 
-%% FIXME @doc  returns {X, V}, where X is the largest key in tree T,
-%%   and V is the value associated with X in T. Assumes that the tree T
-%%   is nonempty.
+%% @doc Get the last key-value pair in the tree. Returns the key-value pair
+%% for the largest key in `Tree'. Throws an exception if the tree is empty.
 
 largest({_, Tree}) ->
     largest_1(Tree).
@@ -674,8 +690,8 @@ largest_1({_Key, _Value, _Smaller, Larger}) ->
       Tree :: gb_tree(),
       Key :: term().
 
-%% FIXME @doc returns {ok, X}, where X is the largest key in tree T,
-%%   or 'error' if the tree is empty.
+%% @doc Get the last key in the tree. Returns `{ok, Key}' where `Key' is
+%% the largest key in `Tree', or returns 'error' if the tree is empty.
 
 last_key({_, nil}) ->
     error;
@@ -692,9 +708,10 @@ last_key_1({_Key, _Value, _Smaller, Larger}) ->
       Key :: term(),
       Key1 :: term().
 
-%% FIXME @doc returns {ok, K'} where K' is the smallest key larger
-%%   than K in T, or 'error' if K is the largest key in the tree. K must
-%%   exist in the tree.
+%% @doc Get the next larger key in the tree. Returns `{ok, Larger}' where
+%% `Larger' is the smallest key in `Tree' larger than the given `Key', or
+%% returns 'error' if the tree is empty. Throws an exception if `Key' does
+%% not exist in the tree.
 
 next_key(Key, {_, Tree}) ->
     next_key_1(Key, Tree).
