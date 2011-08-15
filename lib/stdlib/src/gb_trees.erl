@@ -122,8 +122,9 @@ size({Size, _}) when is_integer(Size), Size >= 0 ->
       Val :: term(),
       Tree :: gb_tree().
 
-%% @doc Look up a key in a tree. Returns either `{value, Val}', or
-%% `none' if `Key' is not present in `Tree'.
+%% @doc Look up a key in a tree. Returns either `{value, Val}', where `Val'
+%% is the value stored for `Key' in `Tree', or `none' if the key is not
+%% present in the tree.
 %% @obsolete Use {@link find/2} instead.
 
 lookup(Key, {_, T}) ->
@@ -154,8 +155,11 @@ lookup_1(_, nil) ->
       Val :: term(),
       Tree :: gb_tree().
 
-%% @doc Look up a key in a tree. Returns either `{ok, V}', or `error' if
-%% `Key' is not present in `Tree'.
+%% @doc Look up a key in a tree. Returns either `{value, Val}', where `Val'
+%% is the value stored for `Key' in `Tree', or `none' if the key is not
+%% present in the tree.
+%% @see values/2
+%% @see lookup/2
 
 find(Key, {_, T}) ->
     find_1(Key, T).
@@ -562,7 +566,7 @@ take_smallest1({Key, Value, Smaller, Larger}) ->
       Key :: term(),
       Val :: term().
 
-%% @doc Extract the first entry in the tree. Returns the key-value pair for
+%% @doc Extract the first entry in the tree. Returns the key/value pair for
 %% the smallest key in `Tree' and a new tree with the entry for the key
 %% deleted, or returns `error' if the tree is empty.
 
@@ -580,8 +584,8 @@ take_first(Dict) ->
       Key :: term(),
       Val :: term().
 
-%% @doc Get the first key-value pair in the tree. Returns the key-value pair
-%% for the smallest key in `Tree'. Throws an exception if the tree is empty.
+%% @doc Get the first entry in the tree. Returns the key/value pair for the
+%% smallest key in `Tree'. Throws an exception if the tree is empty.
 
 smallest({_, Tree}) ->
     smallest_1(Tree).
@@ -657,7 +661,7 @@ take_largest1({Key, Value, Smaller, Larger}) ->
       Key :: term(),
       Val :: term().
 
-%% @doc Extract the last entry in the tree. Returns the key-value pair for
+%% @doc Extract the last entry in the tree. Returns the key/value pair for
 %% the largest key in `Tree' and a new tree with the entry for the key
 %% deleted, or returns `error' if the tree is empty.
 
@@ -675,8 +679,8 @@ take_last(Dict) ->
       Key :: term(),
       Val :: term().
 
-%% @doc Get the last key-value pair in the tree. Returns the key-value pair
-%% for the largest key in `Tree'. Throws an exception if the tree is empty.
+%% @doc Get the last entry in the tree. Returns the key/value pair for the
+%% largest key in `Tree'. Throws an exception if the tree is empty.
 
 largest({_, Tree}) ->
     largest_1(Tree).
@@ -732,8 +736,8 @@ next_key_1(_, {_, _, _Larger, {Key1,_,_,_}}) ->
       Key :: term(),
       Val :: term().
 
-%% FIXME @doc: returns an ordered list of {Key, Value} pairs for all
-%%   keys in tree T.
+%% @doc: Convert a tree into an ordered list. Returns a list of pairs `{Key,
+%% Val}' for all keys in `Tree', ordered by key.
 
 to_list({_, T}) ->
     to_list(T, []).
@@ -750,7 +754,8 @@ to_list(nil, L) -> L.
       Tree :: gb_tree(),
       Key :: term().
 
-%% @doc returns an ordered list of all keys in tree T.
+% @doc Get all keys in a tree. Returns the keys in `Tree' as an ordered
+% list.
 
 keys({_, T}) ->
     keys(T, []).
@@ -765,8 +770,8 @@ keys(nil, L) -> L.
       Tree :: gb_tree(),
       Val :: term().
 
-%% FIXME @doc returns the list of values for all keys in tree T,
-%%   sorted by their corresponding keys. Duplicates are not removed.
+%% @doc Get all values in a tree. Returns the values in `Tree' as an ordered
+%% list, sorted by their corresponding keys. Duplicates are not removed.
 
 values({_, T}) ->
     all_values(T, []).
@@ -777,15 +782,17 @@ all_values(nil, L) -> L.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%% This is a specialized version of `lookup'.
+%% This is a variant of `lookup' for compatibility with dict.
 
 -spec values(Key, Tree) -> [] | [Val] when
       Key :: term(),
       Val :: term(),
       Tree :: gb_tree().
 
-%% FIXME @doc looks up key X in tree T; returns [V], or
-%%   [] if the key is not present. (Variant of lookup/2.)
+%% @doc List the values (if any) stored for a key. Returns either `[Val]',
+%% where `Val' is the value stored for `Key' in `Tree', or `[]' if the key
+%% is not present in the tree.
+%% @see find/2
 
 values(Key, {_, T}) ->
     key_values(Key, T).
@@ -805,13 +812,14 @@ key_values(_, nil) ->
       Tree :: gb_tree(),
       Iter :: iter().
 
-%% FIXME @doc returns an iterator that can be used for traversing
-%%   the entries of tree T; see `next'. The implementation of this is
-%%   very efficient; traversing the whole tree using `next' is only
-%%   slightly slower than getting the list of all elements using
-%%   `to_list' and traversing that. The main advantage of the iterator
-%%   approach is that it does not require the complete list of all
-%%   elements to be built in memory at one time.
+%% @doc Get an iterator for a tree. Returns an iterator object that can be
+%% used for traversing the entries of `Tree'; see {@link next/1}.
+%%
+%% The iterator implementation is very efficient; traversing the whole tree
+%% using {@link next/1} is only slightly slower than using {@link to_list/1}
+%% to get the list of all elements and traverse it. The main advantage of
+%% the iterator approach is that it does not require the complete list of
+%% all elements to be built in memory at one time, if the tree is large.
 
 iterator({_, T}) ->
     iterator_1(T).
@@ -835,10 +843,10 @@ iterator(nil, As) ->
       Key :: term(),
       Val :: term().
 
-%% FIXME @doc: returns {X, V, S1} where X is the smallest key referred to
-%%   by the iterator S, and S1 is the new iterator to be used for
-%%   traversing the remaining entries, or the atom `none' if no entries
-%%   remain.
+%% @doc Traverse a tree with an iterator. Returns `{Key, Val, Iter2}' where
+%% `Key' is the smallest remaining key in `Iter1', and `Iter2' is either a
+%% new iterator to be used for traversing the remaining entries, or the atom
+%% `none' if no entries remain.
 
 next([{X, V, _, T} | As]) ->
     {X, V, iterator(T, As)};
@@ -852,9 +860,9 @@ next([]) ->
       Tree1 :: gb_tree(),
       Tree2 :: gb_tree().
 
-%% FIXME @doc maps the function F(K, V) -> V' to all key-value pairs
-%%   of the tree T and returns a new tree T' with the same set of keys
-%%   as T and the new set of corresponding values V'.
+%% @doc Apply a function to each entry of the tree. Applies `Function' to
+%% every key/value pair of `Tree', replacing the value of each entry with
+%% the result from the function, and returning the new tree.
 
 map(F, {Size, Tree}) when is_function(F, 2) ->
     {Size, map_1(F, Tree)}.
@@ -870,9 +878,8 @@ map_1(F, {K, V, Smaller, Larger}) ->
       Tree1 :: gb_tree(),
       Tree2 :: gb_tree().
 
-%% FIXME @doc maps the function F(K, V) -> 'true'|'false' to all
-%%   key-value pairs of the tree T and returns a new tree T' containg only
-%%   those pairs in T for which the function returned 'true'.
+%% @doc Filter the entries of a tree. Returns a new tree containing only
+%% those entries in `Tree' for which `Function' returns `true'.
 
 filter(F, {_Size, Tree}) when is_function(F, 2) ->
     filter_1(F, Tree).
@@ -894,8 +901,11 @@ filter_1(F, {K, V, Smaller, Larger}) ->
       A0 :: term(),
       Tree :: gb_tree().
 
-%% FIXME @doc folds the function F(K, V, A) -> A' over the key-value
-%%   entries of the tree in key order.
+%% @doc Fold a function over a tree in key order. Calls `Function' on the
+%% entries of the tree in ascending (left-to-right) key order, propagating
+%% the output accumulator `A2' from each call into the next call as the
+%% input accumulator `A1'. The initial accumulator value `A0' is used as
+%% input to the first call.
 
 foldl(F, A, {_Size, Tree}) when is_function(F, 3) ->
     foldl_1(F, A, Tree).
@@ -912,8 +922,11 @@ foldl_1(F, A, {K, V, Smaller, Larger}) ->
       A0 :: term(),
       Tree :: gb_tree().
 
-%% FIXME @doc folds the function F(K, V, A) -> A' over the key-value
-%%   entries of the tree in reverse key order.
+%% @doc Fold a function over a tree in reverse key order. Calls `Function'
+%% on the entries of the tree in descending (right-to-left) key order,
+%% propagating the output accumulator `A2' from each call into the next call
+%% as the input accumulator `A1'. The initial accumulator value `A0' is used
+%% as input to the first call.
 
 foldr(F, A, {_Size, Tree}) when is_function(F, 3) ->
     foldr_1(F, A, Tree).
