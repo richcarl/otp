@@ -49,7 +49,6 @@ ORIG_XML_REF3_FILES = \
 	c.xml \
 	calendar.xml \
 	dets.xml \
-	dict.xml \
 	digraph.xml \
 	digraph_utils.xml \
 	epp.xml \
@@ -103,6 +102,7 @@ ORIG_XML_REF3_FILES = \
 
 EDOC_XML_REF3_FILES =  \
 	array.xml \
+	dict.xml \
 	gb_trees.xml
 
 XML_REF3_FILES = $(ORIG_XML_REF3_FILES) $(EDOC_XML_REF3_FILES)

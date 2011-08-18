@@ -17,25 +17,22 @@
 %% %CopyrightEnd%
 %%
 
-%% We use the dynamic hashing techniques by Per-Åke Larsson as
-%% described in "The Design and Implementation of Dynamic Hashing for
-%% Sets and Tables in Icon" by Griswold and Townsend.  Much of the
-%% terminology comes from that paper as well.
+%% @author Robert Virding
+
+%% @doc Key-Value Dictionary. The `dict' module implements a Key-Value
+%% dictionary. The representation of a dictionary is not defined. This
+%% module provides exactly the same interface as the module {@link orddict}.
+%% One difference is that while this module considers two keys as different
+%% if they are not exactly equal (`=/='), `orddict' considers two keys as
+%% different if and only if they are not arithmetically equal (`/=').
 %%
-%% The segments are all of the same fixed size and we just keep
-%% increasing the size of the top tuple as the table grows.  At the
-%% end of the segments tuple we keep an empty segment which we use
-%% when we expand the segments.  The segments are expanded by doubling
-%% every time n reaches maxn instead of increasing the tuple one
-%% element at a time.  It is easier and does not seem detrimental to
-%% speed.  The same applies when contracting the segments.
-%%
-%% Note that as the order of the keys is undefined we may freely
-%% reorder keys within a bucket.
+%% @see orddict
+%% @see gb_trees
 
 -module(dict).
 
 -compile({no_auto_import,[size/1]}).
+
 
 %% Standard interface.
 -export([new/0,new/1,is_key/2,size/1,is_empty/1,info/1,info/2]).
@@ -58,11 +55,13 @@
 %%-export([get_slot/2,get_bucket/2,on_bucket/3,foldl/3,
 %%	 maybe_expand/2,maybe_contract/2]).
 
-%% This module also defines the standard dict behaviour.
+
+%% This module also defines the standard dict behaviour:
 -export([behaviour_info/1]).
 
 -spec behaviour_info(atom()) -> 'undefined' | [{atom(), arity()}].
 
+%% @private
 behaviour_info(callbacks) ->
     [{new,0},{new,1},{from_orddict,1},{from_orddict,2},
      {from_list,1},{from_list,2},{to_orddict,1},{to_list,1},
@@ -85,6 +84,23 @@ behaviour_info(callbacks) ->
     ];
 behaviour_info(_Other) ->
     undefined.
+
+
+%% We use the dynamic hashing techniques by Per-Åke Larsson as
+%% described in "The Design and Implementation of Dynamic Hashing for
+%% Sets and Tables in Icon" by Griswold and Townsend.  Much of the
+%% terminology comes from that paper as well.
+%%
+%% The segments are all of the same fixed size and we just keep
+%% increasing the size of the top tuple as the table grows.  At the
+%% end of the segments tuple we keep an empty segment which we use
+%% when we expand the segments.  The segments are expanded by doubling
+%% every time n reaches maxn instead of increasing the tuple one
+%% element at a time.  It is easier and does not seem detrimental to
+%% speed.  The same applies when contracting the segments.
+%%
+%% Note that as the order of the keys is undefined we may freely
+%% reorder keys within a bucket.
 
 %% Note: mk_seg/1 must be changed too if seg_size is changed.
 -define(seg_size, 16).
@@ -138,7 +154,24 @@ opts_1([], Type) ->
 
 -spec new() -> dict().
 
+%% @doc Create a dictionary. This function creates a new dictionary of the
+%% default type, i.e., hash-based (unordered).
+
 new() -> new([]).
+
+-spec new(Opts :: [Option]) -> Dict when
+      Option :: 'hash' | 'ordered',
+      Dict :: dict().
+
+%% @doc Create a dictionary. This function creates a new dictionary of the
+%% type specified by the options. The default type is `hash', which means
+%% that hashing is used and the entries are not kept in a predictable order.
+%% The `ordered' type uses a tree structure (see {@link gb_trees}) and keeps
+%% the keys in increasing term order, just like the {@link orddict} module
+%% (although a tree is much more efficient, for larger dictionaries).
+%%
+%% Note that options toward the end of the options list take precedence over
+%% earlier ones.
 
 new(Opts) ->
     try opts(Opts) of
@@ -160,6 +193,9 @@ new_dict() ->
       Key :: term(),
       Dict :: dict().
 
+%% @doc Test if a key is in a dictionary. This function tests if `Key' is
+%% contained in the dictionary `Dict'.
+
 is_key(Key, #dict{}=D) ->
     Slot = get_slot(D, Key),
     Bkt = get_bucket(D, Slot),
@@ -175,14 +211,20 @@ find_key(_, []) -> false.
       Dict :: dict(),
       List :: [{Key :: term(), Value :: term()}].
 
+%% @doc Convert a dictionary to a list of pairs. This function converts the
+%% dictionary to a list representation. The result is an ordered list (an
+%% `orddict') only if `Dict' is of type `ordered' (see {@link new/1}).
+
 to_list(#dict{}=D) ->
     %% list in default traversal order, hence foldr, not foldl
     foldr(fun (Key, Val, List) -> [{Key,Val}|List] end, [], D);
 to_list(?gb(_,_)=D) ->
-    gb_trees:to_list(D).
+    gb_trees:to_list(D). % always ordered
+
+%% @doc Convert a dictionary to an orddict.
 
 to_orddict(#dict{}=D) ->
-    lists:keysort(1, to_list(D));
+    orddict:from_list(to_list(D));
 to_orddict(?gb(_,_)=D) ->
     gb_trees:to_list(D). % always ordered
 
@@ -190,8 +232,20 @@ to_orddict(?gb(_,_)=D) ->
       List :: [{Key :: term(), Value :: term()}],
       Dict :: dict().
 
-%% note that for duplicate keys, later entries take precedence here
+%% @doc Convert a list of pairs to a dictionary. This function converts the
+%% `Key'-`Value' list `List' to a dictionary. In case of duplicate keys in
+%% the list, later entries take precedence.
+
 from_list(L) -> from_list(L, []).
+
+-spec from_list(List, Opts :: [Option]) -> Dict when
+      List :: [{Key :: term(), Value :: term()}],
+      Option :: 'hash' | 'ordered',
+      Dict :: dict().
+
+%% @doc Convert a list of pairs to a dictionary. Like {@link from_list/1},
+%% but takes an option list just like {@link new/1} to specify the type of
+%% the new dictionary. The default type is `hash'.
 
 from_list(L, Opts) ->
     try opts(Opts) of
@@ -208,7 +262,25 @@ from_list_1(L, #opts{type=ordered}) ->
     lists:foldl(fun ({K,V}, D) -> gb_trees:enter(K, V, D) end,
                 gb_trees:empty(), L).
 
+-spec from_orddict(List) -> Dict when
+      List :: [{Key :: term(), Value :: term()}],
+      Dict :: dict().
+
+%% @doc Convert an ordered list of pairs to a dictionary. Like {@link
+%% from_list/1}, but relies on the fact that the `List' is already ordered
+%% by its keys for better efficiency. Note that if `List' is not ordered or
+%% contains duplicates, this function might throw an exception.
+
 from_orddict(L) -> from_orddict(L, []).
+
+-spec from_orddict(List, Opts :: [Option]) -> Dict when
+      List :: [{Key :: term(), Value :: term()}],
+      Option :: 'hash' | 'ordered',
+      Dict :: dict().
+
+%% @doc Convert an ordered list of pairs to a dictionary. Like {@link
+%% from_orddict/1}, but takes an option list just like {@link new/1} to
+%% specify the type of the new dictionary. The default type is `hash'.
 
 from_orddict(L, Opts) ->
     try opts(Opts) of
@@ -225,27 +297,66 @@ from_orddict_1(L, Opts) ->
 -spec size(Dict) -> non_neg_integer() when
       Dict :: dict().
 
+%% @doc Return the number of elements in a dictionary. Returns the number of
+%% elements in `Dict'. This is a constant time operation.
+
 size(#dict{size=N}) when is_integer(N), N >= 0 -> N;
 size(?gb(N,_)) when is_integer(N), N >= 0 -> N.
 
+-spec is_empty(Dict) -> boolean() when
+      Dict :: dict().
+
+%% @doc Test for empty dictionary. Returns `true' if `Dict' is empty,
+%% and `false' otherwise.
+
 is_empty(Dict) -> size(Dict) =< 0.
 
+-spec info(Dict) -> [InfoTuple] when
+      Dict :: dict(),
+      InfoTuple :: {InfoTag, Value},
+      InfoTag :: 'size' | 'type',
+      Value :: term().
+
+%% @doc Get information about a dictionary. Returns a list of tagged tuples
+%% corresponding to individual calls to {@link info/2} for all allowed tags.
+
 info(Dict) ->
-    Items = [size],
+    Items = [size,type],
     [info(Item, Dict) || Item <- Items].
 
-info(size, Dict) -> size(Dict).
+-spec info(InfoTag, Dict) -> Value when
+      Dict :: dict(),
+      InfoTag :: 'size' | 'type',
+      Value :: term().
 
-%% result is ordered (by keys) only if dict is ordered
+%% @doc Get information about a dictionary.
+
+info(size, Dict) -> size(Dict);
+info(type, #dict{}) -> hash;
+info(type, ?gb(_,_)) -> ordered.
+
+-spec values(Dict) -> [Val] when
+      Dict :: dict(),
+      Val :: term().
+
+%% @doc Get all values in a dictionary. Returns the values in `Dict' as a
+%% list. Duplicates are not removed. The result is an ordered list only if
+%% `Dict' is of type `ordered' (see {@link new/1}).
+
 values(Dict) ->
     %% list in default traversal order, hence foldr, not foldl
     foldr(fun (_Key, Val, Acc) -> [Val|Acc] end, [], Dict).
 
-%% a variant of find/2 that returns a list of values, possibly empty
 -spec values(Key, Dict) -> [Value] | [] when
       Key :: term(),
       Dict :: dict(),
       Value :: term().
+
+%% @doc List the values (if any) stored for a key. Returns either `[Val]',
+%% where `Val' is the value stored for `Key' in `Dict', or `[]' if the key
+%% is not present in the dictionary.
+%% @see find/2
+
 values(Key, #dict{}=Dict) ->
     Slot = get_slot(Dict, Key),
     Bkt = get_bucket(Dict, Slot),
@@ -262,9 +373,22 @@ values_1(_, []) -> [].
       Dict :: dict(),
       Value :: term().
 
-%% deprecated version of get/2
+%% @doc Get a value from a dictionary.
+%% @deprecated This is an old name for {@link get/2}
+%% @see get/2
+
 fetch(Key, D) ->
     get(Key, D).
+
+-spec get(Key, Dict) -> Value when
+      Key :: term(),
+      Dict :: dict(),
+      Value :: term().
+
+%% @doc Get a value from a dictionary. This function returns the value
+%% associated with `Key' in the dictionary `Dict'. `get' assumes that `Key'
+%% is present in the dictionary; if `Key' is not present, an exception is
+%% generated instead.
 
 get(Key, #dict{}=D) ->
     Slot = get_slot(D, Key),
@@ -279,6 +403,16 @@ get(Key, ?gb(_,_)=D) ->
 get_val(K, [?kv(K,Val)|_]) -> Val;
 get_val(K, [_|Bkt]) -> get_val(K, Bkt);
 get_val(_, []) -> throw(badarg).
+
+-spec get(Key, Default, Dict) -> Value when
+      Key :: term(),
+      Default :: term(),
+      Dict :: dict(),
+      Value :: term().
+
+%% @doc Get a value from a dictionary, or use a default. Returns the value
+%% associated with `Key' in the dictionary `Dict', or returns `Default' if
+%% the key is not present in `Dict'.
 
 get(Key, Def, #dict{}=D) ->
     Slot = get_slot(D, Key),
@@ -296,6 +430,11 @@ get_val(_, [], Def) -> Def.
       Dict :: dict(),
       Value :: term().
 
+%% @doc Search for a key in a dictionary. This function searches for a key
+%% in a dictionary. Returns `{ok, Value}' where `Value' is the value
+%% associated with `Key', or `error' if the key is not present in the
+%% dictionary.
+
 find(Key, #dict{}=D) ->
     Slot = get_slot(D, Key),
     Bkt = get_bucket(D, Slot),
@@ -312,17 +451,32 @@ find_val(_, []) -> error.
       Dict0 :: dict(),
       Dict1 :: dict(),
       Value :: term().
+
+%% @doc Extract an entry from a dictionary. Returns a tuple with the value
+%% for `Key' in `Dict0' and a new dictionary with the entry for the key
+%% deleted. Throws an exception if the key is not present in `Dict0'.
+
 take(Key, Dict) ->
     {get(Key, Dict), erase(Key,Dict)}.
 
-%% deprecated version of keys/1
+-spec fetch_keys(Dict) -> Keys when
+      Dict :: dict(),
+      Keys :: [term()].
+
+%% @doc Return all keys in a dictionary.
+%% @deprecated This is an old name for {@link keys/1}.
+%% @see keys/1
+
 fetch_keys(Dict) -> keys(Dict).
 
 -spec keys(Dict) -> Keys when
       Dict :: dict(),
       Keys :: [term()].
 
-%% result is ordered only if dict is ordered
+%% @doc Return all keys in a dictionary. This function returns a list of all
+%% keys in `Dict'. The result is an ordered list only if `Dict' is of type
+%% `ordered' (see {@link new/1}).
+
 keys(#dict{}=D) ->
     %% list in default traversal order, hence foldr, not foldl
     foldr(fun (Key, _Val, Keys) -> [Key|Keys] end, [], D);
@@ -333,7 +487,9 @@ keys(?gb(_,_)=D) ->
       Key :: term(),
       Dict1 :: dict(),
       Dict2 :: dict().
-%%  Erase all elements with key Key.
+
+%% @doc Erase a key from a dictionary. This function erases all items with a
+%% given key from a dictionary.
 
 %% Note: this builds a new data structure even if Key is not present...
 erase(Key, #dict{}=D0) ->
@@ -356,6 +512,10 @@ erase_key(_, []) -> {[],0}.
       Dict1 :: dict(),
       Dict2 :: dict().
 
+%% @doc Store a value in a dictionary. This function stores a `Key'-`Value'
+%% pair in a dictionary. If `Key' already exists in `Dict1', the associated
+%% value is replaced by `Value'.
+
 store(Key, Val, #dict{}=D0) ->
     store_dict(Key, Val, D0);
 store(Key, Val, ?gb(_,_)=D0) ->
@@ -375,7 +535,16 @@ store_bkt_val(Key, New, [Other|Bkt0]) ->
     {[Other|Bkt1],Ic};
 store_bkt_val(Key, New, []) -> {[?kv(Key,New)],1}.
 
-%% no effect if key not present
+-spec replace(Key, Value, Dict1) -> Dict2 when
+      Key :: term(),
+      Value :: term(),
+      Dict1 :: dict(),
+      Dict2 :: dict().
+
+%% @doc Replace the value for a key in a dictionary. This function replaces
+%% the current value for `Key' in `Dict1' with `Value'. If `Key' does not
+%% exist in `Dict1', the dictionary is returned unchanged.
+
 replace(Key, Val, Dict) ->
     case is_key(Key, Dict) of
         true -> store(Key, Val, Dict);
@@ -387,6 +556,11 @@ replace(Key, Val, Dict) ->
       Value :: term(),
       Dict1 :: dict(),
       Dict2 :: dict().
+
+%% @doc Append a value to keys in a dictionary. This function appends a new
+%% `Value' to the current list of values associated with `Key'. Note that it
+%% is generally a bad idea to accumulate a set of values by appending to a
+%% list, if there may be more than just a few elements per key.
 
 append(Key, Val, #dict{}=D0) ->
     Slot = get_slot(D0, Key),
@@ -413,6 +587,13 @@ append_bkt(Key, Val, []) -> {[?kv(Key,[Val])],1}.
       Dict1 :: dict(),
       Dict2 :: dict().
 
+%% @doc Append new values to keys in a dictionary. This function appends a
+%% list of values `ValList' to the current list of values associated with
+%% `Key'. An exception is generated if the initial value associated with
+%% `Key' is not a list of values. Note that it is generally a bad idea to
+%% accumulate a set of values by appending to a list, if there may be more
+%% than just a few elements per key.
+
 append_list(Key, L, #dict{}=D0) ->
     Slot = get_slot(D0, Key),
     {D1,Ic} = on_bucket(fun (B0) -> app_list_bkt(Key, L, B0) end,
@@ -432,8 +613,12 @@ app_list_bkt(Key, L, [Other|Bkt0]) ->
     {[Other|Bkt1],Ic};
 app_list_bkt(Key, L, []) -> {[?kv(Key,L)],1}.
 
-%% first_key(Table) -> {ok,Key} | error.
-%% Find the "first" key in a Table (in the order defined by foldl).
+-spec first_key(Dict) -> {ok, Key} | error when
+      Dict :: gb_tree(),
+      Key :: term().
+
+%% @doc Get the first key in the dictionary. Returns `{ok, Key}' where `Key'
+%% is the smallest key in `Dict', or returns 'error' if `Dict' is empty.
 
 first_key(#dict{}=T) ->
     case next_bucket(T, T#dict.n) of
@@ -451,6 +636,16 @@ next_bucket(T, Slot) ->
  	B -> B
     end.
 
+-spec take_first(Dict1) -> {{Key, Val}, Dict2} | error when
+      Dict1 :: dict(),
+      Dict2 :: dict(),
+      Key :: term(),
+      Val :: term().
+
+%% @doc Extract the first entry in the dictionary. Returns the key/value
+%% pair for the smallest key in `Dict1' and a new dictionary with the entry
+%% for the key deleted, or returns `error' if `Dict1' is empty.
+
 take_first(Dict) ->
     case first_key(Dict) of
         {ok, Key} ->
@@ -460,8 +655,15 @@ take_first(Dict) ->
             error
     end.
 
-%% next_key(Key, Table) -> {ok,NextKey} | error.
-%% Find next key *following* Key in Table (in the order defined by foldl).
+-spec next_key(Key, Dict) -> {ok, Key1} | error when
+      Dict :: dict(),
+      Key :: term(),
+      Key1 :: term().
+
+%% @doc Get the next larger key in the dictionary. Returns `{ok, Larger}'
+%% where `Larger' is the smallest key in `Dict' larger than the given `Key',
+%% or returns 'error' if `Dict' is empty. Throws an exception if `Key' does
+%% not exist in `Dict'.
 
 next_key(Key, #dict{}=T) ->
     Slot = get_slot(T, Key),
@@ -484,8 +686,12 @@ bucket_after_key(Key, [_Other|Bkt]) ->
     bucket_after_key(Key, Bkt);
 bucket_after_key(_Key, []) -> error.		%Key not found!
 
-%% last_key(Table) -> {ok,Key} | error.
-%% Find the "last" key in a Table (in the order defined by foldl).
+-spec last_key(Dict) -> {ok, Key} | error when
+      Dict :: gb_tree(),
+      Key :: term().
+
+%% @doc Get the last key in the dictionary. Returns `{ok, Key}' where `Key'
+%% is the largest key in `Dict', or returns 'error' if `Dict' is empty.
 
 last_key(#dict{}=T) ->
     case prev_bucket(T, 1) of
@@ -505,6 +711,16 @@ prev_bucket(T, Slot) ->
  	B -> B
     end.
 
+-spec take_last(Dict1) -> {{Key, Val}, Dict2} | error when
+      Dict1 :: dict(),
+      Dict2 :: dict(),
+      Key :: term(),
+      Val :: term().
+
+%% @doc Extract the last entry in the dictionary. Returns the key/value pair
+%% for the largest key in `Dict1' and a new dictionary with the entry for
+%% the key deleted, or returns `error' if `Dict1' is empty.
+
 take_last(Dict) ->
     case last_key(Dict) of
         {ok, Key} ->
@@ -514,8 +730,15 @@ take_last(Dict) ->
             error
     end.
 
-%% prev_key(Key, Table) -> {ok,PrevKey} | error.
-%% Find next key *before* Key in Table (in the order defined by foldl).
+-spec prev_key(Key, Dict) -> {ok, Key1} | error when
+      Dict :: dict(),
+      Key :: term(),
+      Key1 :: term().
+
+%% @doc Get the next smaller key in the dictionary. Returns `{ok, Smaller}'
+%% where `Smaller' is the largest key in `Dict' smaller than the given
+%% `Key', or returns 'error' if `Dict' is empty. Throws an exception if
+%% `Key' does not exist in `Dict'.
 
 prev_key(Key, #dict{}=T) ->
     Slot = get_slot(T, Key),
@@ -545,21 +768,30 @@ bucket_before_key(Key, [KV|Bkt],_PrevKV) ->
     bucket_before_key(Key, Bkt, KV);
 bucket_before_key(_Key, [], _PrevKV) -> error. %Key not found!
 
-%% deprecated version of map/3
 -spec update(Fun, Key, Dict1) -> Dict2 when
       Key :: term(),
       Fun :: fun((Value1 :: term()) -> Value2 :: term()),
       Dict1 :: dict(),
       Dict2 :: dict().
+
+%% @doc Update a value in a dictionary.
+%% @deprecated This is an old variant of {@link map/3}. Note that the
+%% argument order differs.
+%% @see map/3
+
 update(Key, F, D0) ->
     map(F, Key, D0).
 
-%% map fun to a particular key only, fail if key not present
 -spec map(Fun, Key, Dict1) -> Dict2 when
       Key :: term(),
       Fun :: fun((Value1 :: term()) -> Value2 :: term()),
       Dict1 :: dict(),
       Dict2 :: dict().
+
+%% @doc Update a value in a dictionary. Update a value in a dictionary by
+%% calling `Fun' on the value to get a new value. An exception is generated
+%% if `Key' is not present in the dictionary.
+
 map(F, Key, #dict{}=D0) ->
     Slot = get_slot(D0, Key),
     try on_bucket(fun (B0) -> update_bkt(Key, F, B0) end, D0, Slot) of
@@ -579,23 +811,37 @@ update_bkt(Key, F, [Other|Bkt0]) ->
 update_bkt(_Key, _F, []) ->
     throw(badarg).
 
-%% deprecated version of map/4
 -spec update(Fun, Key, Initial, Dict1) -> Dict2 when
       Key :: term(),
       Initial :: term(),
       Fun :: fun((Value1 :: term()) -> Value2 :: term()),
       Dict1 :: dict(),
       Dict2 :: dict().
+
+%% @doc Update a value in a dictionary or insert a default.
+%% @deprecated This is an old variant of {@link map/4}. Note that the
+%% argument order differs.
+%% @see map/4
+
 update(Key, F, Init, D0) ->
     map(F, Key, Init, D0).
 
-%% map fun to a particular key only, insert default if key not present
 -spec map(Fun, Key, Initial, Dict1) -> Dict2 when
       Key :: term(),
       Initial :: term(),
       Fun :: fun((Value1 :: term()) -> Value2 :: term()),
       Dict1 :: dict(),
       Dict2 :: dict().
+
+%% @doc Update a value in a dictionary or insert a default. Update a value
+%% in a dictionary by calling `Fun' on the value to get a new value. If
+%% `Key' is not present in the dictionary then `Initial' will be stored as
+%% the first value.
+%%
+%% For example, {@link append/3} can be defined as:
+%% ```append(Key, Val, D) ->
+%%        map(fun (Old) -> Old ++ [Val] end, [Val], Key, D).'''
+
 map(F, Key, Init, #dict{}=D0) ->
     Slot = get_slot(D0, Key),
     {D1,Ic} = on_bucket(fun (B0) -> update_bkt(Key, F, Init, B0) end,
@@ -611,12 +857,16 @@ update_bkt(Key, F, I, [Other|Bkt0]) ->
     {[Other|Bkt1],Ic};
 update_bkt(Key, F, I, []) when is_function(F, 1) -> {[?kv(Key,I)],1}.
 
-%% deprecated version of increment/3
 -spec update_counter(Key, Increment, Dict1) -> Dict2 when
       Key :: term(),
       Increment :: number(),
       Dict1 :: dict(),
       Dict2 :: dict().
+
+%% @doc Map a function over a dictionary.
+%% @deprecated This is an old name for {@link increment/3}.
+%% @see increment/3
+
 update_counter(Key, Incr, D0) ->
     increment(Key, Incr, D0).
 
@@ -625,6 +875,14 @@ update_counter(Key, Incr, D0) ->
       Increment :: number(),
       Dict1 :: dict(),
       Dict2 :: dict().
+
+%% @doc Increment a value in a dictionary. Add `Increment' to the value
+%% associated with `Key' and store this value. If `Key' is not present in
+%% the dictionary then `Increment' will be stored as the first value.
+%%
+%% This could be defined as:
+%% ```increment(Key, Incr, D) ->
+%%        map(fun (Old) -> Old + Incr end, Key, Incr, D).'''
 
 increment(Key, Incr, #dict{}=D0) when is_number(Incr) ->
     Slot = get_slot(D0, Key),
@@ -676,7 +934,6 @@ on_bucket(F, T, Slot) ->
 
 %%  Fold function Fun over all "bags" in Table and return Accumulator.
 
-%% deprecated version of foldl
 -spec fold(Fun, Acc0, Dict) -> Acc1 when
       Fun :: fun((Key, Value, AccIn) -> AccOut),
       Key :: term(),
@@ -686,9 +943,13 @@ on_bucket(F, T, Slot) ->
       AccIn :: term(),
       AccOut :: term(),
       Dict :: dict().
+
+%% @doc Fold a function over a dictionary.
+%% @deprecated This is an old name for {@link foldl/3}.
+%% @see foldl/3
+
 fold(Fun, Acc0, Dict) -> foldl(Fun, Acc0, Dict).
 
-%% fold in default traversal order (not key order unless dict is ordered)
 -spec foldl(Fun, Acc0, Dict) -> Acc1 when
       Fun :: fun((Key, Value, AccIn) -> AccOut),
       Key :: term(),
@@ -698,6 +959,13 @@ fold(Fun, Acc0, Dict) -> foldl(Fun, Acc0, Dict).
       AccIn :: term(),
       AccOut :: term(),
       Dict :: dict().
+
+%% @doc Fold a function over a dictionary. Calls `Fun' on successive keys
+%% and values of `Dict' together with an extra argument `Acc' (short for
+%% accumulator). `Fun' must return a new accumulator which is passed to the
+%% next call. `Acc0' is returned if the list is empty. For an ordered
+%% dictionary, the evaluation order is from lower keys towards higher.
+
 foldl(Fun, Acc, #dict{}=Dict) ->
     Segs = Dict#dict.segs,
     foldl_segs(Fun, Acc, Segs, tuple_size(Segs));
@@ -723,7 +991,19 @@ foldl_bucket(F, Acc, [?kv(Key,Val)|Bkt]) ->
     foldl_bucket(F, F(Key, Val, Acc), Bkt);
 foldl_bucket(F, Acc, []) when is_function(F, 3) -> Acc.
 
-%% fold in reverse traversal order
+-spec foldr(Fun, Acc0, Dict) -> Acc1 when
+      Fun :: fun((Key, Value, AccIn) -> AccOut),
+      Key :: term(),
+      Value :: term(),
+      Acc0 :: term(),
+      Acc1 :: term(),
+      AccIn :: term(),
+      AccOut :: term(),
+      Dict :: dict().
+
+%% @doc Fold a function over a dictionary in reverse order. Like {@link
+%% foldl/3}, but traverses the keys in the opposite direction.
+
 foldr(Fun, Acc, #dict{}=Dict) ->
     Segs = Dict#dict.segs,
     foldr_segs(Fun, Acc, Segs, 1, tuple_size(Segs));
@@ -743,7 +1023,6 @@ foldr_bucket(F, Acc, [?kv(Key,Val)|Bkt]) ->
     F(Key, Val, foldr_bucket(F, Acc, Bkt));
 foldr_bucket(F, Acc, []) when is_function(F, 3) -> Acc.
 
-%% uses first element as initial accumulator, fails if list is empty
 -spec foldl1(Fun, Dict) -> Acc when
       Fun :: fun((Key, Value, AccIn) -> AccOut),
       Key :: term(),
@@ -752,20 +1031,37 @@ foldr_bucket(F, Acc, []) when is_function(F, 3) -> Acc.
       AccIn :: term(),
       AccOut :: term(),
       Dict :: dict().
+
+%% @doc Fold a function over a dictionary. This is variant of {@link
+%% foldl/3} that takes the first element of `Dict' to use as the initial
+%% accumulator. If `Dict' has no elements, an exception is generated.
+
 foldl1(Fun, Dict) ->
     case take_first(Dict) of
         {{_Key, Val}, Dict1} -> foldl(Fun, Val, Dict1);
         error -> erlang:error(badarg, [Fun, Dict])
     end.
 
-%% uses last element as initial accumulator, fails if list is empty
+-spec foldr1(Fun, Dict) -> Acc when
+      Fun :: fun((Key, Value, AccIn) -> AccOut),
+      Key :: term(),
+      Value :: term(),
+      Acc :: term(),
+      AccIn :: term(),
+      AccOut :: term(),
+      Dict :: dict().
+
+%% @doc Fold a function over a dictionary. This is variant of {@link
+%% foldl/3} that takes the <em>last</em> element of `Dict' to use as the
+%% initial accumulator. If `Dict' has no elements, an exception is
+%% generated.
+
 foldr1(Fun, Dict) ->
     case take_last(Dict) of
         {{_Key, Val}, Dict1} -> foldr(Fun, Val, Dict1);
         error -> erlang:error(badarg, [Fun, Dict])
     end.
 
-%% applies InitFun to first element to get initial accumulator
 -spec foldln(Fun, InitFun, Dict) -> Acc when
       Fun :: fun((Key, Value, AccIn) -> AccOut),
       InitFun :: fun((Key, Value) -> Acc0),
@@ -776,13 +1072,34 @@ foldr1(Fun, Dict) ->
       AccIn :: term(),
       AccOut :: term(),
       Dict :: dict().
+
+%% @doc Fold a function over a dictionary. This is variant of {@link
+%% foldl/3} that applies `InitFun' to the first element of `Dict' to produce
+%% the initial accumulator. If `Dict' has no elements, an exception is
+%% generated.
+
 foldln(Fun, InitFun, Dict) ->
     case take_first(Dict) of
         {{_Key, Val}, Dict1} -> foldl(Fun, InitFun(Val), Dict1);
         error -> erlang:error(badarg, [Fun, InitFun, Dict])
     end.
 
-%% applies InitFun to last element to get initial accumulator
+-spec foldrn(Fun, InitFun, Dict) -> Acc when
+      Fun :: fun((Key, Value, AccIn) -> AccOut),
+      InitFun :: fun((Key, Value) -> Acc0),
+      Key :: term(),
+      Value :: term(),
+      Acc :: term(),
+      Acc0 :: term(),
+      AccIn :: term(),
+      AccOut :: term(),
+      Dict :: dict().
+
+%% @doc Fold a function over a dictionary. This is variant of {@link
+%% foldr/3} that applies `InitFun' to the <em>last</em> element of `Dict' to
+%% produce the initial accumulator. If `Dict' has no elements, an exception
+%% is generated.
+
 foldrn(Fun, InitFun, Dict) ->
     case take_last(Dict) of
         {{_Key, Val}, Dict1} -> foldr(Fun, InitFun(Val), Dict1);
@@ -793,6 +1110,10 @@ foldrn(Fun, InitFun, Dict) ->
       Fun :: fun((Key :: term(), Value1 :: term()) -> Value2 :: term()),
       Dict1 :: dict(),
       Dict2 :: dict().
+
+%% @doc Map a function over a dictionary. `map' calls `Fun' on successive
+%% keys and values of `Dict1' to return a new value for each key. The
+%% evaluation order is undefined.
 
 map(F, #dict{}=D) ->
     Segs0 = tuple_to_list(D#dict.segs),
@@ -819,6 +1140,9 @@ map_bucket(F, []) when is_function(F, 2) -> [].
       Pred :: fun((Key :: term(), Value :: term()) -> boolean()),
       Dict1 :: dict(),
       Dict2 :: dict().
+
+%% @doc Choose elements which satisfy a predicate. `Dict2' is a dictionary
+%% of all keys and values in `Dict1' for which `Pred(Key, Value)' is `true'.
 
 filter(F, #dict{}=D) ->
     Segs0 = tuple_to_list(D#dict.segs),
@@ -851,6 +1175,12 @@ filter_bucket(F, [], Fb, Fc) when is_function(F, 2) ->
 -spec foreach(Fun, Dict) -> ok when
       Fun :: fun((Key :: term(), Value :: term()) -> term()),
       Dict :: dict().
+
+%% @doc Call a function for each element in a dictionary. `map' calls `Fun'
+%% on successive keys and values of `Dict1'. The values returned from `Fun'
+%% are ignored. The elements are visited in the same order as in {@link
+%% foldl/3}.
+
 foreach(Fun, Dict) ->
     foldl(fun (Key, Val, _Acc) -> Fun(Key, Val), ok end, ok, Dict).
 
@@ -859,6 +1189,18 @@ foreach(Fun, Dict) ->
       Dict1 :: dict(),
       Dict2 :: dict(),
       Dict3 :: dict().
+
+%% @doc Merge two dictionaries. `merge' merges two dictionaries, `Dict1' and
+%% `Dict2', to create a new dictionary. All the `Key'-`Value' pairs from
+%% both dictionaries are included in the new dictionary. If a key occurs in
+%% both dictionaries then `Fun' is called with the key and both values to
+%% return a new value.
+%%
+%% This could be defined as:
+%% ```merge(Fun, D1, D2) ->
+%%        fold(fun (K, V1, D) ->
+%%                 map(fun (V2) -> Fun(K, V1, V2) end, K, V1, D)
+%%             end, D2, D1).'''
 
 merge(Fun, Dict1, Dict2) ->
     case size(Dict1) < size(Dict2) of
@@ -870,12 +1212,12 @@ merge(Fun, Dict1, Dict2) ->
 
 merge_1(Fun, Dict1, Dict2) ->
     foldl(fun (K, V1, D) ->
-                  update(K, fun (V2) -> Fun(K, V1, V2) end, V1, D)
+                  map(fun (V2) -> Fun(K, V1, V2) end, K, V1, D)
           end, Dict2, Dict1).
 
 merge_2(Fun, Dict1, Dict2) ->
     foldl(fun (K, V2, D) ->
-                  update(K, fun (V1) -> Fun(K, V1, V2) end, V2, D)
+                  map(fun (V1) -> Fun(K, V1, V2) end, K, V2, D)
           end, Dict1, Dict2).
 
 %% get_bucket_s(Segments, Slot) -> Bucket.
