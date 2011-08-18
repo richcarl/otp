@@ -166,7 +166,7 @@
 -type array_opt()  :: {'fixed', boolean()} | 'fixed'
                     | {'default', Value :: term()}
                     | {'size', N :: non_neg_integer()}
-                    | (N :: non_neg_integer()).
+                    | non_neg_integer().
 -type array_opts() :: array_opt() | [array_opt()].
 
 -type indx_pair()  :: {Index :: array_indx(), Value :: term()}.

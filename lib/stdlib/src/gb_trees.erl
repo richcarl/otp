@@ -19,14 +19,20 @@
 %% =====================================================================
 %% @doc General Balanced Trees - highly efficient functional dictionaries.
 %%
-%% An efficient implementation of Prof. Arne Andersson's General
-%% Balanced Trees. These have no storage overhead compared to plain
-%% unbalanced binary trees, and their performance is in general better
-%% than AVL trees.
+%% NOTE: The {@link dict} module now supports using General Balanced Trees
+%% as the underlying representation, and a tree can be created by calling
+%% {@link dict:new/1. dict:new([ordered])}. <b>It is no longer recommended
+%% to use the `gb_trees' module directly unless you need to use some of its
+%% more unusual features.</b>
 %%
-%% This module considers two keys as different if and only if they do
-%% not compare arithmetically equal (`=='). I.e., `1' and `1.0' are
-%% considered to be the same, and so are `{1.0, 2}' and `{1, 2.0}'.
+%% This module is an efficient purely functional implementation of Prof.
+%% Arne Andersson's General Balanced Trees. These have no storage overhead
+%% compared to plain unbalanced binary trees, and their performance is in
+%% general better than AVL trees.
+%%
+%% This module considers two keys as different if and only if they do not
+%% compare arithmetically equal (`=='). I.e., `1' and `1.0' are considered
+%% to be the same, and so are `{1.0, 2}' and `{1, 2.0}'.
 %%
 %% @copyright 1999-2001 Sven-Olof Nyström, Richard Carlsson
 
@@ -125,7 +131,7 @@ size({Size, _}) when is_integer(Size), Size >= 0 ->
 %% @doc Look up a key in a tree. Returns either `{value, Val}', where `Val'
 %% is the value stored for `Key' in `Tree', or `none' if the key is not
 %% present in the tree.
-%% @obsolete Use {@link find/2} instead.
+%% @deprecated Use {@link find/2} instead.
 
 lookup(Key, {_, T}) ->
     lookup_1(Key, T).

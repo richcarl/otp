@@ -32,12 +32,17 @@ APPLICATION=stdlib
 RELSYSDIR = $(RELEASE_PATH)/lib/$(APPLICATION)-$(VSN)
 
 # ----------------------------------------------------
+# Man page source directory (with .erl files)
+# ----------------------------------------------------
+SRC_DIR = $(ERL_TOP)/lib/$(APPLICATION)/src
+INC_DIR = $(ERL_TOP)/lib/$(APPLICATION)/include
+
+# ----------------------------------------------------
 # Target Specs
 # ----------------------------------------------------
 XML_APPLICATION_FILES = ref_man.xml
 
-XML_REF3_FILES = \
-	array.xml \
+ORIG_XML_REF3_FILES = \
 	base64.xml \
 	beam_lib.xml \
 	binary.xml \
@@ -62,7 +67,6 @@ XML_REF3_FILES = \
 	filelib.xml \
 	filename.xml \
 	gb_sets.xml \
-	gb_trees.xml \
 	gen_event.xml \
 	gen_fsm.xml \
 	gen_server.xml \
@@ -97,6 +101,12 @@ XML_REF3_FILES = \
 	win32reg.xml \
 	zip.xml
 
+EDOC_XML_REF3_FILES =  \
+	array.xml \
+	gb_trees.xml
+
+XML_REF3_FILES = $(ORIG_XML_REF3_FILES) $(EDOC_XML_REF3_FILES)
+
 XML_REF6_FILES = stdlib_app.xml
 
 XML_PART_FILES = part.xml part_notes.xml part_notes_history.xml
@@ -124,7 +134,7 @@ HTML_REF_MAN_FILE = $(HTMLDIR)/index.html
 
 TOP_PDF_FILE = $(PDFDIR)/$(APPLICATION)-$(VSN).pdf
 
-SPECS_FILES = $(XML_REF3_FILES:%.xml=$(SPECDIR)/specs_%.xml)
+SPECS_FILES = $(SRC_XML_REF3_FILES:%.xml=$(SPECDIR)/specs_%.xml)
 
 TOP_SPECS_FILE = specs.xml
 
@@ -150,6 +160,12 @@ pdf: $(TOP_PDF_FILE)
 html: gifs $(HTML_REF_MAN_FILE)
 
 man: $(MAN3_FILES) $(MAN6_FILES)
+
+$(EDOC_XML_REF3_FILES): $(EDOC_XML_REF3_FILES:%.xml=$(SRC_DIR)/%.erl)
+	escript $(DOCGEN)/priv/bin/xml_from_edoc.escript -def vsn $(VSN) -i $(ERL_TOP)/lib/$(APPLICATION)/include $(SRC_DIR)/$(@:%.xml=%.erl)
+
+$(EDOC_XML_CHAPTER_FILES): ../overview.edoc
+	escript $(DOCGEN)/priv/bin/xml_from_edoc.escript -def vsn $(VSN) -chapter ../overview.edoc
 
 gifs: $(GIF_FILES:%=$(HTMLDIR)/%)
 

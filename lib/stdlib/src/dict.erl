@@ -546,6 +546,11 @@ bucket_before_key(Key, [KV|Bkt],_PrevKV) ->
 bucket_before_key(_Key, [], _PrevKV) -> error. %Key not found!
 
 %% deprecated version of map/3
+-spec update(Fun, Key, Dict1) -> Dict2 when
+      Key :: term(),
+      Fun :: fun((Value1 :: term()) -> Value2 :: term()),
+      Dict1 :: dict(),
+      Dict2 :: dict().
 update(Key, F, D0) ->
     map(F, Key, D0).
 
@@ -575,6 +580,12 @@ update_bkt(_Key, _F, []) ->
     throw(badarg).
 
 %% deprecated version of map/4
+-spec update(Fun, Key, Initial, Dict1) -> Dict2 when
+      Key :: term(),
+      Initial :: term(),
+      Fun :: fun((Value1 :: term()) -> Value2 :: term()),
+      Dict1 :: dict(),
+      Dict2 :: dict().
 update(Key, F, Init, D0) ->
     map(F, Key, Init, D0).
 
@@ -601,6 +612,11 @@ update_bkt(Key, F, I, [Other|Bkt0]) ->
 update_bkt(Key, F, I, []) when is_function(F, 1) -> {[?kv(Key,I)],1}.
 
 %% deprecated version of increment/3
+-spec update_counter(Key, Increment, Dict1) -> Dict2 when
+      Key :: term(),
+      Increment :: number(),
+      Dict1 :: dict(),
+      Dict2 :: dict().
 update_counter(Key, Incr, D0) ->
     increment(Key, Incr, D0).
 
@@ -661,7 +677,16 @@ on_bucket(F, T, Slot) ->
 %%  Fold function Fun over all "bags" in Table and return Accumulator.
 
 %% deprecated version of foldl
-fold(F, Acc, D) -> foldl(F, Acc, D).
+-spec fold(Fun, Acc0, Dict) -> Acc1 when
+      Fun :: fun((Key, Value, AccIn) -> AccOut),
+      Key :: term(),
+      Value :: term(),
+      Acc0 :: term(),
+      Acc1 :: term(),
+      AccIn :: term(),
+      AccOut :: term(),
+      Dict :: dict().
+fold(Fun, Acc0, Dict) -> foldl(Fun, Acc0, Dict).
 
 %% fold in default traversal order (not key order unless dict is ordered)
 -spec foldl(Fun, Acc0, Dict) -> Acc1 when
