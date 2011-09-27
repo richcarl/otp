@@ -31,9 +31,6 @@
 
 -module(dict).
 
--compile({no_auto_import,[size/1]}).
-
-
 %% Standard interface.
 -export([new/0,new/1,is_key/2,size/1,is_empty/1,info/1,info/2]).
 -export([to_list/1,to_orddict/1]).
@@ -54,6 +51,8 @@
 %% Low-level interface.
 %%-export([get_slot/2,get_bucket/2,on_bucket/3,foldl/3,
 %%	 maybe_expand/2,maybe_contract/2]).
+
+-compile({no_auto_import,[size/1]}).
 
 
 %% This module also defines the standard dict behaviour:
@@ -213,7 +212,8 @@ find_key(_, []) -> false.
 
 %% @doc Convert a dictionary to a list of pairs. This function converts the
 %% dictionary to a list representation. The result is an ordered list (an
-%% `orddict') only if `Dict' is of type `ordered' (see {@link new/1}).
+%% `orddict') if `Dict' is of type `ordered' (see {@link new/1}), and
+%% otherwise in the order defined by {@link foldl/3}.
 
 to_list(#dict{}=D) ->
     %% list in default traversal order, hence foldr, not foldl
@@ -221,7 +221,13 @@ to_list(#dict{}=D) ->
 to_list(?gb(_,_)=D) ->
     gb_trees:to_list(D). % always ordered
 
-%% @doc Convert a dictionary to an orddict.
+-spec to_orddict(Dict) -> List when
+      Dict :: dict(),
+      List :: [{Key :: term(), Value :: term()}].
+
+%% @doc Convert a dictionary to an {@link orddict}. This differs from
+%% `to_list' in that the result is always an ordered list, even if `Dict' is
+%% of type `hash'.
 
 to_orddict(#dict{}=D) ->
     orddict:from_list(to_list(D));
@@ -307,7 +313,7 @@ size(?gb(N,_)) when is_integer(N), N >= 0 -> N.
       Dict :: dict().
 
 %% @doc Test for empty dictionary. Returns `true' if `Dict' is empty,
-%% and `false' otherwise.
+%% and `false' otherwise. This is a constant time operation.
 
 is_empty(Dict) -> size(Dict) =< 0.
 
@@ -319,6 +325,7 @@ is_empty(Dict) -> size(Dict) =< 0.
 
 %% @doc Get information about a dictionary. Returns a list of tagged tuples
 %% corresponding to individual calls to {@link info/2} for all allowed tags.
+%% This is a constant time operation.
 
 info(Dict) ->
     Items = [size,type],
@@ -326,22 +333,24 @@ info(Dict) ->
 
 -spec info(InfoTag, Dict) -> Value when
       Dict :: dict(),
-      InfoTag :: 'size' | 'type',
+      InfoTag :: 'size' | 'type' | atom(),
       Value :: term().
 
-%% @doc Get information about a dictionary.
+%% @doc Get information about a dictionary. This is a constant time
+%% operation.
 
 info(size, Dict) -> size(Dict);
 info(type, #dict{}) -> hash;
-info(type, ?gb(_,_)) -> ordered.
+info(type, ?gb(_,_)) -> ordered;
+info(_, _) -> undefined.
 
 -spec values(Dict) -> [Val] when
       Dict :: dict(),
       Val :: term().
 
 %% @doc Get all values in a dictionary. Returns the values in `Dict' as a
-%% list. Duplicates are not removed. The result is an ordered list only if
-%% `Dict' is of type `ordered' (see {@link new/1}).
+%% list, in the order defined by the {@link foldl/3} traversal order.
+%% Duplicates are not removed.
 
 values(Dict) ->
     %% list in default traversal order, hence foldr, not foldl
@@ -352,9 +361,9 @@ values(Dict) ->
       Dict :: dict(),
       Value :: term().
 
-%% @doc List the values (if any) stored for a key. Returns either `[Val]',
-%% where `Val' is the value stored for `Key' in `Dict', or `[]' if the key
-%% is not present in the dictionary.
+%% @doc List the values (if any) stored for a key. Returns either a list
+%% `[Value]' of length 1, where `Value' is the value stored for `Key' in
+%% `Dict', or `[]' if the key is not present in the dictionary.
 %% @see find/2
 
 values(Key, #dict{}=Dict) ->
@@ -491,7 +500,7 @@ keys(?gb(_,_)=D) ->
 %% @doc Erase a key from a dictionary. This function erases all items with a
 %% given key from a dictionary.
 
-%% Note: this builds a new data structure even if Key is not present...
+%% (note that this builds a new data structure even if Key is not present)
 erase(Key, #dict{}=D0) ->
     Slot = get_slot(D0, Key),
     {D1,Dc} = on_bucket(fun (B0) -> erase_key(Key, B0) end,
@@ -614,7 +623,7 @@ app_list_bkt(Key, L, [Other|Bkt0]) ->
 app_list_bkt(Key, L, []) -> {[?kv(Key,L)],1}.
 
 -spec first_key(Dict) -> {ok, Key} | error when
-      Dict :: gb_tree(),
+      Dict :: dict(),
       Key :: term().
 
 %% @doc Get the first key in the dictionary. Returns `{ok, Key}' where `Key'
@@ -662,8 +671,8 @@ take_first(Dict) ->
 
 %% @doc Get the next larger key in the dictionary. Returns `{ok, Larger}'
 %% where `Larger' is the smallest key in `Dict' larger than the given `Key',
-%% or returns 'error' if `Dict' is empty. Throws an exception if `Key' does
-%% not exist in `Dict'.
+%% or returns 'error' if `Key' is the last key in `Dict'. Throws an
+%% exception if `Key' does not exist in `Dict'.
 
 next_key(Key, #dict{}=T) ->
     Slot = get_slot(T, Key),
@@ -687,7 +696,7 @@ bucket_after_key(Key, [_Other|Bkt]) ->
 bucket_after_key(_Key, []) -> error.		%Key not found!
 
 -spec last_key(Dict) -> {ok, Key} | error when
-      Dict :: gb_tree(),
+      Dict :: dict(),
       Key :: term().
 
 %% @doc Get the last key in the dictionary. Returns `{ok, Key}' where `Key'
@@ -737,8 +746,8 @@ take_last(Dict) ->
 
 %% @doc Get the next smaller key in the dictionary. Returns `{ok, Smaller}'
 %% where `Smaller' is the largest key in `Dict' smaller than the given
-%% `Key', or returns 'error' if `Dict' is empty. Throws an exception if
-%% `Key' does not exist in `Dict'.
+%% `Key', or returns 'error' if `Key' is the smallest key in `Dict'. Throws
+%% an exception if `Key' does not exist in `Dict'.
 
 prev_key(Key, #dict{}=T) ->
     Slot = get_slot(T, Key),

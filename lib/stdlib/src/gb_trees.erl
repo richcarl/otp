@@ -625,8 +625,8 @@ first_key_1({_Key, _Value, Smaller, _Larger}) ->
 
 %% @doc Get the next smaller key in the tree. Returns `{ok, Smaller}' where
 %% `Smaller' is the largest key in `Tree' smaller than the given `Key', or
-%% returns 'error' if the tree is empty. Throws an exception if `Key' does
-%% not exist in the tree.
+%% returns 'error' if `Key' is the smallest key in the tree. Throws an
+%% exception if `Key' does not exist in the tree.
 
 prev_key(Key, {_, Tree}) ->
     prev_key_1(Key, Tree).
@@ -720,8 +720,8 @@ last_key_1({_Key, _Value, _Smaller, Larger}) ->
 
 %% @doc Get the next larger key in the tree. Returns `{ok, Larger}' where
 %% `Larger' is the smallest key in `Tree' larger than the given `Key', or
-%% returns 'error' if the tree is empty. Throws an exception if `Key' does
-%% not exist in the tree.
+%% returns 'error' if `Key' is the largest key in the tree. Throws an
+%% exception if `Key' does not exist in the tree.
 
 next_key(Key, {_, Tree}) ->
     next_key_1(Key, Tree).
