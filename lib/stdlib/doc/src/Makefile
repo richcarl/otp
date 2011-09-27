@@ -76,7 +76,6 @@ ORIG_XML_REF3_FILES = \
 	log_mf_h.xml \
 	math.xml \
 	ms_transform.xml \
-	orddict.xml \
 	ordsets.xml \
 	pg.xml \
 	pool.xml \
@@ -103,7 +102,8 @@ ORIG_XML_REF3_FILES = \
 EDOC_XML_REF3_FILES =  \
 	array.xml \
 	dict.xml \
-	gb_trees.xml
+	gb_trees.xml \
+	orddict.xml
 
 XML_REF3_FILES = $(ORIG_XML_REF3_FILES) $(EDOC_XML_REF3_FILES)
 
