@@ -186,7 +186,7 @@ info(size, Dict) -> size(Dict);
 info(_, _) -> undefined.
 
 -spec values(Orddict) -> [Val] when
-      Orddict :: dict(),
+      Orddict :: orddict(),
       Val :: term().
 
 %% @doc Get all values in a dictionary. Returns the values in `Orddict' as a
@@ -198,7 +198,7 @@ values(Dict) ->
 
 -spec values(Key, Orddict) -> [Value] | [] when
       Key :: term(),
-      Orddict :: dict(),
+      Orddict :: orddict(),
       Value :: term().
 
 %% @doc List the values (if any) stored for a key. Returns either a list
@@ -272,8 +272,8 @@ find(_, []) -> error.
       Value :: term().
 
 %% @doc Extract an entry from a dictionary. Returns a tuple with the value
-%% for `Key' in `Dict0' and a new dictionary with the entry for the key
-%% deleted. Throws an exception if the key is not present in `Dict0'.
+%% for `Key' in `Orddict0' and a new dictionary with the entry for the key
+%% deleted. Throws an exception if the key is not present in `Orddict0'.
 
 take(Key, Dict) ->
     {get(Key, Dict), erase(Key,Dict)}.
@@ -293,7 +293,7 @@ fetch_keys(Dict) -> keys(Dict).
       Keys :: [term()].
 
 %% @doc Return all keys in a dictionary. This function returns a list of all
-%% keys in `Dict'. The result is also an ordered list.
+%% keys in `Orddict'. The result is also an ordered list.
 
 keys([{Key,_}|Dict]) ->
     [Key|keys(Dict)];
@@ -460,7 +460,7 @@ last_key([]) -> error.
 %%
 %% Note that this takes time proportional to the size of `Orddict'.
 
-take_last([]) -> error.
+take_last([]) -> error;
 take_last(Dict) -> foldrn(fun (E, {Last,Es}) -> {Last,[E|Es]} end,
                           fun (Last) -> {Last,[]} end, Dict).
 
@@ -470,9 +470,12 @@ take_last(Dict) -> foldrn(fun (E, {Last,Es}) -> {Last,[E|Es]} end,
       Key1 :: term().
 
 %% @doc Get the next smaller key in the dictionary. Returns `{ok, Smaller}'
-%% where `Smaller' is the largest key in `Dict' smaller than the given
-%% `Key', or returns 'error' if `Key' is the smallest key in `Dict'. Throws
-%% an exception if `Key' does not exist in `Dict'.
+%% where `Smaller' is the largest key in `Orddict' smaller than the given
+%% `Key', or returns 'error' if `Key' is the smallest key in `Orddict'.
+%% Throws an exception if `Key' does not exist in `Orddict'.
+%%
+%% Note that this takes time proportional to the position of `Key' in
+%% `Orddict'.
 
 prev_key(Key, [E|Es]=Dict) -> prev_key(Key, Es, E, Dict);
 prev_key(Key, []) -> erlang:error(badarg,[Key, []]).
@@ -492,9 +495,27 @@ prev_key(Key, [], _E0, D0) ->
       Orddict1 :: orddict(),
       Orddict2 :: orddict().
 
-update(Key, Fun, [{K,_}=E|Dict]) when Key > K ->
-    [E|update(Key, Fun, Dict)];
-update(Key, Fun, [{K,Val}|Dict]) when Key == K ->
+%% @doc Update a value in a dictionary.
+%% @deprecated This is an old variant of {@link map/3}. Note that the
+%% argument order differs.
+%% @see map/3
+
+update(Key, F, D0) ->
+    map(F, Key, D0).
+
+-spec map(Key, Fun, Orddict1) -> Orddict2 when
+      Key :: term(),
+      Fun :: fun((Value1 :: term()) -> Value2 :: term()),
+      Orddict1 :: orddict(),
+      Orddict2 :: orddict().
+
+%% @doc Update a value in a dictionary. Update a value in a dictionary by
+%% calling `Fun' on the value to get a new value. An exception is generated
+%% if `Key' is not present in the dictionary.
+
+map(Key, Fun, [{K,_}=E|Dict]) when Key > K ->
+    [E|map(Key, Fun, Dict)];
+map(Key, Fun, [{K,Val}|Dict]) when Key == K ->
     [{Key,Fun(Val)}|Dict].
 
 -spec update(Key, Fun, Initial, Orddict1) -> Orddict2 when
@@ -504,13 +525,37 @@ update(Key, Fun, [{K,Val}|Dict]) when Key == K ->
       Orddict1 :: orddict(),
       Orddict2 :: orddict().
 
-update(Key, _, Init, [{K,_}=E|Dict]) when Key < K ->
+%% @doc Update a value in a dictionary or insert a default.
+%% @deprecated This is an old variant of {@link map/4}. Note that the
+%% argument order differs.
+%% @see map/4
+
+update(Key, F, Init, D0) ->
+    map(F, Key, Init, D0).
+
+-spec map(Key, Fun, Initial, Orddict1) -> Orddict2 when
+      Key :: term(),
+      Initial :: term(),
+      Fun :: fun((Value1 :: term()) -> Value2 :: term()),
+      Orddict1 :: orddict(),
+      Orddict2 :: orddict().
+
+%% @doc Update a value in a dictionary or insert a default. Update a value
+%% in a dictionary by calling `Fun' on the value to get a new value. If
+%% `Key' is not present in the dictionary then `Initial' will be stored as
+%% the first value.
+%%
+%% For example, {@link append/3} can be defined as:
+%% ```append(Key, Val, D) ->
+%%        map(fun (Old) -> Old ++ [Val] end, [Val], Key, D).'''
+
+map(Key, _, Init, [{K,_}=E|Dict]) when Key < K ->
     [{Key,Init},E|Dict];
-update(Key, Fun, Init, [{K,_}=E|Dict]) when Key > K ->
-    [E|update(Key, Fun, Init, Dict)];
-update(Key, Fun, _Init, [{_K,Val}|Dict]) ->		%Key == K
+map(Key, Fun, Init, [{K,_}=E|Dict]) when Key > K ->
+    [E|map(Key, Fun, Init, Dict)];
+map(Key, Fun, _Init, [{_K,Val}|Dict]) ->		%Key == K
     [{Key,Fun(Val)}|Dict];
-update(Key, _, Init, []) -> [{Key,Init}].
+map(Key, _, Init, []) -> [{Key,Init}].
 
 -spec update_counter(Key, Increment, Orddict1) -> Orddict2 when
       Key :: term(),
@@ -518,28 +563,168 @@ update(Key, _, Init, []) -> [{Key,Init}].
       Orddict1 :: orddict(),
       Orddict2 :: orddict().
 
-update_counter(Key, Incr, [{K,_}=E|Dict]) when Key < K ->
+%% @doc Map a function over a dictionary.
+%% @deprecated This is an old name for {@link increment/3}.
+%% @see increment/3
+
+update_counter(Key, Incr, D0) ->
+    increment(Key, Incr, D0).
+
+-spec increment(Key, Increment, Orddict1) -> Orddict2 when
+      Key :: term(),
+      Increment :: number(),
+      Orddict1 :: orddict(),
+      Orddict2 :: orddict().
+
+%% @doc Increment a value in a dictionary. Add `Increment' to the value
+%% associated with `Key' and store this value. If `Key' is not present in
+%% the dictionary then `Increment' will be stored as the first value.
+%%
+%% This could be defined as:
+%% ```increment(Key, Incr, D) ->
+%%        map(fun (Old) -> Old + Incr end, Key, Incr, D).'''
+
+increment(Key, Incr, [{K,_}=E|Dict]) when Key < K ->
     [{Key,Incr},E|Dict];
-update_counter(Key, Incr, [{K,_}=E|Dict]) when Key > K ->
-    [E|update_counter(Key, Incr, Dict)];
-update_counter(Key, Incr, [{_K,Val}|Dict]) ->		%Key == K
+increment(Key, Incr, [{K,_}=E|Dict]) when Key > K ->
+    [E|increment(Key, Incr, Dict)];
+increment(Key, Incr, [{_K,Val}|Dict]) ->		%Key == K
     [{Key,Val+Incr}|Dict];
-update_counter(Key, Incr, []) -> [{Key,Incr}].
+increment(Key, Incr, []) -> [{Key,Incr}].
 
 -spec fold(Fun, Acc0, Orddict) -> Acc1 when
-      Fun :: fun((Key :: term(), Value :: term(), AccIn :: term()) -> AccOut :: term()),
+      Fun :: fun((Key, Value, AccIn) -> AccOut),
+      Key :: term(),
+      Value :: term(),
       Acc0 :: term(),
       Acc1 :: term(),
+      AccIn :: term(),
+      AccOut :: term(),
       Orddict :: orddict().
 
-fold(F, Acc, [{Key,Val}|D]) ->
-    fold(F, F(Key, Val, Acc), D);
-fold(F, Acc, []) when is_function(F, 3) -> Acc.
+%% @doc Fold a function over a dictionary.
+%% @deprecated This is an old name for {@link foldl/3}.
+%% @see foldl/3
+
+fold(Fun, Acc0, Dict) -> foldl(Fun, Acc0, Dict).
+
+-spec foldl(Fun, Acc0, Orddict) -> Acc1 when
+      Fun :: fun((Key, Value, AccIn) -> AccOut),
+      Key :: term(),
+      Value :: term(),
+      Acc0 :: term(),
+      Acc1 :: term(),
+      AccIn :: term(),
+      AccOut :: term(),
+      Orddict :: orddict().
+
+%% @doc Fold a function over a dictionary. Calls `Fun' on successive keys
+%% and values of `Orddict' together with an extra argument `Acc' (short for
+%% accumulator). `Fun' must return a new accumulator which is passed to the
+%% next call. `Acc0' is returned if the list is empty.
+
+foldl(F, Acc, [{Key,Val}|D]) ->
+    foldl(F, F(Key, Val, Acc), D);
+foldl(F, Acc, []) when is_function(F, 3) -> Acc.
+
+-spec foldr(Fun, Acc0, Orddict) -> Acc1 when
+      Fun :: fun((Key, Value, AccIn) -> AccOut),
+      Key :: term(),
+      Value :: term(),
+      Acc0 :: term(),
+      Acc1 :: term(),
+      AccIn :: term(),
+      AccOut :: term(),
+      Orddict :: orddict().
+
+%% @doc Fold a function over a dictionary in reverse order. Like {@link
+%% foldl/3}, but traverses the keys in the opposite direction.
+
+foldr(F, Acc, [{Key,Val}|D]) ->
+    F(Key, Val, foldr(F, Acc, D));
+foldr(F, Acc, []) when is_function(F, 3) -> Acc.
+
+-spec foldl1(Fun, Orddict) -> Acc when
+      Fun :: fun((Key, Value, AccIn) -> AccOut),
+      Key :: term(),
+      Value :: term(),
+      Acc :: term(),
+      AccIn :: term(),
+      AccOut :: term(),
+      Orddict :: orddict().
+
+%% @doc Fold a function over a dictionary. This is variant of {@link
+%% foldl/3} that takes the first element of `Orddict' to use as the initial
+%% accumulator. If `Orddict' has no elements, an exception is generated.
+
+foldl1(F, [{_Key,Val}|Dict]) ->
+    foldl(F, Val, Dict).
+
+-spec foldr1(Fun, Orddict) -> Acc when
+      Fun :: fun((Key, Value, AccIn) -> AccOut),
+      Key :: term(),
+      Value :: term(),
+      Acc :: term(),
+      AccIn :: term(),
+      AccOut :: term(),
+      Orddict :: orddict().
+
+%% @doc Fold a function over a dictionary. This is variant of {@link
+%% foldl/3} that takes the <em>last</em> element of `Orddict' to use as the
+%% initial accumulator. If `Orddict' has no elements, an exception is
+%% generated.
+
+foldr1(F, [{_Key,Val}]) when is_function(F, 3) -> Val;
+foldr1(F, [{Key,Val}|D]) -> F(Key, Val, foldr1(F, D)).
+
+-spec foldln(Fun, InitFun, Orddict) -> Acc when
+      Fun :: fun((Key, Value, AccIn) -> AccOut),
+      InitFun :: fun((Key, Value) -> Acc0),
+      Key :: term(),
+      Value :: term(),
+      Acc :: term(),
+      Acc0 :: term(),
+      AccIn :: term(),
+      AccOut :: term(),
+      Orddict :: orddict().
+
+%% @doc Fold a function over a dictionary. This is variant of {@link
+%% foldl/3} that applies `InitFun' to the first element of `Orddict' to
+%% produce the initial accumulator. If `Orddict' has no elements, an
+%% exception is generated.
+
+foldln(Fun, InitFun, [{Key,Val}|Dict]) when is_function(InitFun, 2) ->
+    foldl(Fun, InitFun(Key, Val), Dict).
+
+-spec foldrn(Fun, InitFun, Orddict) -> Acc when
+      Fun :: fun((Key, Value, AccIn) -> AccOut),
+      InitFun :: fun((Key, Value) -> Acc0),
+      Key :: term(),
+      Value :: term(),
+      Acc :: term(),
+      Acc0 :: term(),
+      AccIn :: term(),
+      AccOut :: term(),
+      Orddict :: orddict().
+
+%% @doc Fold a function over a dictionary. This is variant of {@link
+%% foldr/3} that applies `InitFun' to the <em>last</em> element of `Orddict'
+%% to produce the initial accumulator. If `Orddict' has no elements, an
+%% exception is generated.
+
+foldrn(Fun, InitFun, [{Key,Val}])
+  when is_function(InitFun, 2), is_function(Fun, 3) -> InitFun(Key, Val);
+foldrn(Fun, InitFun, [{Key,Val}|D]) ->
+    Fun(Key, Val, foldrn(Fun, InitFun, D)).
 
 -spec map(Fun, Orddict1) -> Orddict2 when
       Fun :: fun((Key :: term(), Value1 :: term()) -> Value2 :: term()),
       Orddict1 :: orddict(),
       Orddict2 :: orddict().
+
+%% @doc Map a function over a dictionary. `map' calls `Fun' on successive
+%% keys and values of `Orddict1' to return a new value for each key. The
+%% evaluation order is undefined.
 
 map(F, [{Key,Val}|D]) ->
     [{Key,F(Key, Val)}|map(F, D)];
@@ -550,6 +735,10 @@ map(F, []) when is_function(F, 2) -> [].
       Orddict1 :: orddict(),
       Orddict2 :: orddict().
 
+%% @doc Choose elements which satisfy a predicate. `Orddict2' is a
+%% dictionary of all keys and values in `Orddict1' for which `Pred(Key,
+%% Value)' is `true'.
+
 filter(F, [{Key,Val}=E|D]) ->
     case F(Key, Val) of
 	true -> [E|filter(F, D)]; 
@@ -557,11 +746,36 @@ filter(F, [{Key,Val}=E|D]) ->
     end;
 filter(F, []) when is_function(F, 2) -> [].
 
+-spec foreach(Fun, Orddict) -> ok when
+      Fun :: fun((Key :: term(), Value :: term()) -> term()),
+      Orddict :: orddict().
+
+%% @doc Call a function for each element in a dictionary. `map' calls `Fun'
+%% on successive keys and values of `Orddict'. The values returned from
+%% `Fun' are ignored. The elements are visited in the same order as in
+%% {@link foldl/3}.
+
+foreach(F, [{Key,Val}|D]) ->
+    F(Key, Val), foreach(F, D);
+foreach(F, []) when is_function(F, 3) -> ok.
+
 -spec merge(Fun, Orddict1, Orddict2) -> Orddict3 when
       Fun :: fun((Key :: term(), Value1 :: term(), Value2 :: term()) -> Value :: term()),
       Orddict1 :: orddict(),
       Orddict2 :: orddict(),
       Orddict3 :: orddict().
+
+%% @doc Merge two dictionaries. `merge' merges two dictionaries, `Dict1' and
+%% `Dict2', to create a new dictionary. All the `Key'-`Value' pairs from
+%% both dictionaries are included in the new dictionary. If a key occurs in
+%% both dictionaries then `Fun' is called with the key and both values to
+%% return a new value.
+%%
+%% This could be defined as:
+%% ```merge(Fun, D1, D2) ->
+%%        fold(fun (K, V1, D) ->
+%%                 map(fun (V2) -> Fun(K, V1, V2) end, K, V1, D)
+%%             end, D2, D1).'''
 
 merge(F, [{K1,_}=E1|D1], [{K2,_}=E2|D2]) when K1 < K2 ->
     [E1|merge(F, D1, [E2|D2])];
