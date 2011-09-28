@@ -79,7 +79,7 @@ behaviour_info(callbacks) ->
      {foreach,2},
      {merge,3},
      {first_key,1},{last_key,1},{next_key,2},{prev_key,2},
-     {take_first,1},{take_last,2},{take,2}
+     {take_first,1},{take_last,1},{take,2}
     ];
 behaviour_info(_Other) ->
     undefined.
@@ -1186,7 +1186,7 @@ filter_bucket(F, [], Fb, Fc) when is_function(F, 2) ->
       Dict :: dict().
 
 %% @doc Call a function for each element in a dictionary. `map' calls `Fun'
-%% on successive keys and values of `Dict1'. The values returned from `Fun'
+%% on successive keys and values of `Dict'. The values returned from `Fun'
 %% are ignored. The elements are visited in the same order as in {@link
 %% foldl/3}.
 
