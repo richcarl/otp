@@ -1089,7 +1089,7 @@ foldr1(Fun, Dict) ->
 
 foldln(Fun, InitFun, Dict) ->
     case take_first(Dict) of
-        {{_Key, Val}, Dict1} -> foldl(Fun, InitFun(Val), Dict1);
+        {{Key, Val}, Dict1} -> foldl(Fun, InitFun(Key, Val), Dict1);
         error -> erlang:error(badarg, [Fun, InitFun, Dict])
     end.
 
@@ -1111,7 +1111,7 @@ foldln(Fun, InitFun, Dict) ->
 
 foldrn(Fun, InitFun, Dict) ->
     case take_last(Dict) of
-        {{_Key, Val}, Dict1} -> foldr(Fun, InitFun(Val), Dict1);
+        {{Key, Val}, Dict1} -> foldr(Fun, InitFun(Key, Val), Dict1);
         error -> erlang:error(badarg, [Fun, InitFun, Dict])
     end.
 
