@@ -21,10 +21,25 @@
 %% Interface to the Term store BIF's
 %% ets == Erlang Term Store
 
+-behaviour(dict).
+
+%% Standard dict interface.
+-export([new/0,new/1,is_key/2,size/1,is_empty/1]).
+%% (info/1,info/2 are C functions in ETS)
+-export([to_list/1,to_orddict/1]).
+-export([from_list/1,from_list/2,from_orddict/1,from_orddict/2]).
+-export([get/2,get/3,find/2,keys/1,values/1,values/2,erase/2]).
+-export([store/3,replace/3,increment/3]).
+-export([foreach/2,map/2,map/3,map/4,filter/2,merge/3]).
+-export([foldl/3,foldr/3,foldl1/2,foldr1/2,foldln/3,foldrn/3]).
+-export([first_key/1,last_key/1,next_key/2,prev_key/2]).
+-export([take_first/1,take_last/1,take/2]).
+
+-compile({no_auto_import,[size/1]}).
+
 -export([file2tab/1,
 	 file2tab/2,
 	 filter/3,
-	 foldl/3, foldr/3,
 	 match_delete/2,
 	 tab2file/2,
 	 tab2file/3,
@@ -445,6 +460,32 @@ update_element(_, _, _) ->
 
 %%% End of BIFs
 
+-spec new() -> tab().
+
+%% @equiv new([])
+
+new() ->
+    new([]).
+
+-spec new(Opts :: [Option :: term()]) -> tab().
+
+%% @equiv new(ets, Options)
+
+new(Options) ->
+    Name = proplists:get_value(name, Options, ets),
+    ets:new(Name, proplists:delete(name, Options)).
+
+-spec is_key(Key :: term(), tab()) -> boolean().
+
+%% @doc Test if a key is in the table. Works like {@link lookup/2}, but does
+%% not return the objects. The function returns `true' if one or more
+%% elements in the table has the key `Key', `false' otherwise. This function
+%% exists for compatibility with the standard {@link dict} interface.
+%% @equiv member(Tab, Key)
+
+is_key(Key, Tab) ->
+    ets:member(Tab, Key).
+
 -opaque comp_match_spec() :: any().  %% this one is REALLY opaque
 
 -spec match_spec_run(List, CompiledMatchSpec) -> list() when
@@ -517,13 +558,16 @@ fun2ms(ShellFun) when is_function(ShellFun) ->
     end.
 
 -spec foldl(Function, Acc0, Tab) -> Acc1 when
-      Function :: fun((Element :: term(), AccIn) -> AccOut),
+      Function :: fun((Element :: tuple(), AccIn) -> AccOut)
+                | fun((Key :: term(), Value :: term(), AccIn) -> AccOut),
       Tab :: tab(),
       Acc0 :: term(),
       Acc1 :: term(),
       AccIn :: term(),
       AccOut :: term().
 
+foldl(F, Accu, T) when is_function(F, 3) ->
+    foldl(fun ({K, V}, A) -> F(K, V, A) end, Accu, T);
 foldl(F, Accu, T) ->
     ets:safe_fixtable(T, true),
     First = ets:first(T),
@@ -544,13 +588,16 @@ do_foldl(F, Accu0, Key, T) ->
     end.
 
 -spec foldr(Function, Acc0, Tab) -> Acc1 when
-      Function :: fun((Element :: term(), AccIn) -> AccOut),
+      Function :: fun((Element :: tuple(), AccIn) -> AccOut)
+                | fun((Key :: term(), Value :: term(), AccIn) -> AccOut),
       Tab :: tab(),
       Acc0 :: term(),
       Acc1 :: term(),
       AccIn :: term(),
       AccOut :: term().
 
+foldr(F, Accu, T) when is_function(F, 3) ->
+    foldr(fun ({K, V}, A) -> F(K, V, A) end, Accu, T);
 foldr(F, Accu, T) ->
     ets:safe_fixtable(T, true),
     Last = ets:last(T),
@@ -1677,3 +1724,300 @@ re_match([H|T], Re) ->
 	nomatch ->
 	    re_match(T, Re)
     end.
+
+%% list in default traversal order (not key order unless dict is ordered)
+to_list(Dict) ->
+    foldr(fun (Key, Val, List) -> [{Key,Val}|List] end, [], Dict).
+
+%% possibly optimized variant of sorting to_list(Dict) by key
+to_orddict(Dict) -> lists:keysort(1,to_list(Dict)).
+
+%% for duplicate keys in the list, later entries take precedence
+from_list(List) ->
+    lists:foldl(fun ({K,V}, D) -> store(K, V, D) end, new(), List).
+
+%% equivalent to from_list(List) if the dict takes no options
+from_list(List, _Opts) -> from_list(List).
+
+%% possibly optimized variant of from_list/1
+from_orddict(List) -> from_list(List).
+
+%% possibly optimized variant of from_list/2
+from_orddict(List, Opts) -> from_list(List, Opts).
+
+is_empty(Dict) -> size(Dict) =< 0.
+
+size(Tab) -> ets:info(Tab, size).
+
+keys(Dict) ->
+    foldr(fun (Key, _Val, Keys) -> [Key|Keys] end, [], Dict).
+
+values(Dict) ->
+    foldr(fun (_Key, Val, Acc) -> [Val|Acc] end, [], Dict).
+
+-spec values(Key :: term(), Tab :: tab()) -> [Value :: term()] | [].
+%% @doc List the values (if any) stored for a key. Returns a list of the
+%% values associated with `Key' in `Tab'. This function exists for
+%% compatibility with the standard {@link dict} interface.
+%% @equiv lookup(Tab, Key)
+%% @see find/2
+values(Key, Tab) -> ets:lookup(Tab, Key).
+
+%% fails with badarg if the key is not present
+get(Key, Dict) ->
+    case find(Key, Dict) of
+        {ok,Val} -> Val;
+        error -> erlang:error(badarg, [Key, Dict])
+    end.
+
+%% returns Default if the key is not present
+get(Key, Default, Dict) ->
+    case find(Key, Dict) of
+        {ok, Val} -> Val;
+        error -> Default
+    end.
+
+-spec find(Key, Tab) -> {'ok', Value} | 'error' when
+      Key :: term(),
+      Tab :: tab(),
+      Value :: term().
+%% @doc This function searches for a key in a table. Returns `{ok, Value}'
+%% where `Value' is the value associated with `Key', or `error' if the key
+%% is not present in the table.
+
+%% throws an exception if the entry is not {Key, Value}, or if Key has
+%% multiple entries (for a bag)
+find(Key, Tab) ->
+    case ets:lookup(Tab, Key) of
+        [{Key,Val}] -> {ok, Val};
+        [] -> error
+    end.
+
+-spec store(Key, Value, Tab) -> Tab when
+      Key :: term(),
+      Value :: term(),
+      Tab :: tab().
+%% @doc Store a value in a table. This function stores the pair
+%% {`Key',`Value'} in table `Tab'. If `Key' already exists in the table, the
+%% previous entry is replaced. This function exists for compatibility with
+%% the standard {@link dict} interface. Almost equivalent to `insert(Tab,
+%% {Key, Value})', except that this function returns the given `Tab', not
+%% `true'.
+
+%% overwrite existing entry or insert new
+store(Key, Val, Tab) ->
+    ets:insert(Tab, {Key, Val}), Tab.
+
+%% like store, but no effect if key not present
+replace(Key, Val, Dict) ->
+    case is_key(Key, Dict) of
+        true -> store(Key, Val, Dict);
+        false -> Dict
+    end.
+
+%% does not fail if the key is not present
+-spec erase(Key :: term(), Tab :: tab()) -> Tab :: tab().
+
+%% @doc Deletes all objects with the key `Key' from the table `Tab'. This
+%% function exists for compatibility with the standard {@link dict}
+%% interface. Almost equivalent to `delete(Tab, Key)', except that this
+%% function returns the given `Tab', not `true'.
+%% @see delete/2
+
+erase(Key, Tab) -> ets:delete(Tab, Key), Tab.
+
+-spec map(Fun, Dict1) -> Dict2 when
+      Fun :: fun((Key :: term(), Value1 :: term()) -> Value2 :: term()),
+      Dict1 :: dict(),
+      Dict2 :: dict().
+map(Fun, Dict) ->
+    foldl(fun (Key, Val, Acc) -> store(Key, Fun(Key, Val), Acc) end,
+          Dict, Dict).
+
+%% map fun to a particular key only, fails with badarg if key not present
+-spec map(Key, Fun, Dict1) -> Dict2 when
+      Key :: term(),
+      Fun :: fun((Value1 :: term()) -> Value2 :: term()),
+      Dict1 :: dict(),
+      Dict2 :: dict().
+map(Fun, Key, Dict) ->
+    case find(Key, Dict) of
+        {ok, Val} -> store(Key, Fun(Val), Dict);
+        error -> erlang:error(badarg, [Fun, Key, Dict])
+    end.
+
+%% map fun to a particular key only, insert Default if key not present
+-spec map(Key, Fun, Initial, Dict1) -> Dict2 when
+      Key :: term(),
+      Initial :: term(),
+      Fun :: fun((Value1 :: term()) -> Value2 :: term()),
+      Dict1 :: dict(),
+      Dict2 :: dict().
+map(Fun, Key, Default, Dict) ->
+    case find(Key, Dict) of
+        {ok, Val} -> store(Key, Fun(Val), Dict);
+        error -> store(Key, Default, Dict)
+    end.
+
+%% add delta to entry or initialize to 0+Delta (as if entry was zero)
+increment(Delta, Key, Dict) ->
+    map(fun (N) -> N + Delta end, Delta, Key, Dict).
+
+-spec filter(Pred, Dict1) -> Dict2 when
+      Pred :: fun((Key :: term(), Value :: term()) -> boolean()),
+      Dict1 :: dict(),
+      Dict2 :: dict().
+filter(Fun, Dict) ->
+    foldl(fun (Key, Val, Acc) ->
+                  case Fun(Key, Val) of
+                      true -> Acc;
+                      false -> erase(Key, Acc)
+                  end
+          end, Dict, Dict).
+
+-spec foreach(Fun, Dict) -> ok when
+      Fun :: fun((Key :: term(), Value :: term()) -> term()),
+      Dict :: dict().
+foreach(Fun, Dict) ->
+    foldl(fun (Key, Val, _Acc) -> Fun(Key, Val), ok end, ok, Dict).
+
+%% uses first element as initial accumulator, fails if list is empty
+-spec foldl1(Fun, Dict) -> Acc when
+      Fun :: fun((Key, Value, AccIn) -> AccOut),
+      Key :: term(),
+      Value :: term(),
+      Acc :: term(),
+      AccIn :: term(),
+      AccOut :: term(),
+      Dict :: dict().
+foldl1(Fun, Dict) ->
+    case take_first(Dict) of
+        {{_Key, Val}, Dict1} -> foldl(Fun, Val, Dict1);
+        error -> erlang:error(badarg, [Fun, Dict])
+    end.
+
+%% uses last element as initial accumulator, fails if list is empty
+foldr1(Fun, Dict) ->
+    case take_last(Dict) of
+        {{_Key, Val}, Dict1} -> foldr(Fun, Val, Dict1);
+        error -> erlang:error(badarg, [Fun, Dict])
+    end.
+
+%% applies InitFun to first element to get initial accumulator
+-spec foldln(Fun, InitFun, Dict) -> Acc when
+      Fun :: fun((Key, Value, AccIn) -> AccOut),
+      InitFun :: fun((Key, Value) -> Acc0),
+      Key :: term(),
+      Value :: term(),
+      Acc :: term(),
+      Acc0 :: term(),
+      AccIn :: term(),
+      AccOut :: term(),
+      Dict :: dict().
+foldln(Fun, InitFun, Dict) ->
+    case take_first(Dict) of
+        {{_Key, Val}, Dict1} -> foldl(Fun, InitFun(Val), Dict1);
+        error -> erlang:error(badarg, [Fun, InitFun, Dict])
+    end.
+
+%% applies InitFun to last element to get initial accumulator
+foldrn(Fun, InitFun, Dict) ->
+    case take_last(Dict) of
+        {{_Key, Val}, Dict1} -> foldr(Fun, InitFun(Val), Dict1);
+        error -> erlang:error(badarg, [Fun, InitFun, Dict])
+    end.
+
+-spec merge(Fun, Dict1, Dict2) -> Dict3 when
+      Fun :: fun((Key :: term(), Value1 :: term(), Value2 :: term()) -> Value :: term()),
+      Dict1 :: dict(),
+      Dict2 :: dict(),
+      Dict3 :: dict().
+merge(Fun, Dict1, Dict2) ->
+    case size(Dict1) < size(Dict2) of
+        true ->
+            merge_1(Fun, Dict1, Dict2);
+        false ->
+            merge_2(Fun, Dict1, Dict2)
+    end.
+
+merge_1(Fun, Dict1, Dict2) ->
+    foldl(fun (K, V1, D) ->
+                  map(K, fun (V2) -> Fun(K, V1, V2) end, V1, D)
+          end, Dict2, Dict1).
+
+merge_2(Fun, Dict1, Dict2) ->
+    foldl(fun (K, V2, D) ->
+                  map(K, fun (V1) -> Fun(K, V1, V2) end, V2, D)
+          end, Dict1, Dict2).
+
+%% @doc Get the first key in the dictionary. Returns `{ok, Key}' where `Key'
+%% is the smallest key in `Dict', or returns 'error' if `Dict' is empty. This
+%% function exists for compatibility with the standard {@link dict}
+%% interface.
+%% @equiv first(Tab)
+
+%% NOTE: first_key/last_key/next_key/prev_key must match the foldl-order!
+first_key(Tab) ->
+    case ets:first(Tab) of
+        '$end_of_table' -> error;
+        Key -> {ok, Key}
+    end.
+
+%% It sucks that ets:{first,last}/1 and ets:{next,prev}/2 on an unordered
+%% table traverse the table in the same order (and probably ets:foldr/3 as
+%% well), but maybe that can be changed in the future. Hence, we don't try
+%% to do anything fancy with last_key/next_key here.
+last_key(Tab) ->
+    case ets:last(Tab) of
+        '$end_of_table' -> error;
+        Key -> {ok, Key}
+    end.
+
+-spec next_key(Key, Tab) -> {ok, Key1} | error when
+      Tab :: tab(),
+      Key :: term(),
+      Key1 :: term().
+
+%% @doc Get the next larger key in the table. Returns `{ok, Larger}' where
+%% `Larger' is the smallest key in `Tab' larger than the given `Key', or
+%% returns 'error' if `Key' is the last key in `Tab'. Throws an exception if
+%% `Key' does not exist in `Tab'.
+
+next_key(Key, Tab) ->
+    case ets:next(Tab, Key) of
+        '$end_of_table' -> error;
+        Key -> {ok, Key}
+    end.
+
+prev_key(Key, Tab) ->
+    case ets:prev(Tab, Key) of
+        '$end_of_table' -> error;
+        Key -> {ok, Key}
+    end.
+
+take_first(Dict) ->
+    case first_key(Dict) of
+        {ok, Key} ->
+            {Val, Dict1} = take(Key, Dict),
+            {{Key, Val}, Dict1};
+        error ->
+            error
+    end.
+
+%% might be less efficient than take_first/1
+take_last(Dict) ->
+    case last_key(Dict) of
+        {ok, Key} ->
+            {Val, Dict1} = take(Key, Dict),
+            {{Key, Val}, Dict1};
+        error ->
+            error
+    end.
+
+-spec take(Key, Dict0) -> {Value, Dict1} when
+      Key :: term(),
+      Dict0 :: dict(),
+      Dict1 :: dict(),
+      Value :: term().
+take(Key, Dict) ->
+    {get(Key, Dict), erase(Key,Dict)}.
