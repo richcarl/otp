@@ -136,7 +136,7 @@ behaviour_info(_Other) ->
 %% Note: options are processed in the order they occur in the list, i.e.,
 %% later options have higher precedence.
 
--record(opts, {type=hash}).
+-record(opts, {type=set}).
 
 opts(Options) when is_list(Options) -> opts_0(Options);
 opts(Option) -> opts_0([Option]).
@@ -144,28 +144,28 @@ opts(Option) -> opts_0([Option]).
 opts_0(Options) ->
     opts_1(Options, #opts{}).
 
-opts_1([hash | Options], _Type) ->
-    opts_1(Options, #opts{type=hash});
-opts_1([ordered | Options], _Type) ->
-    opts_1(Options, #opts{type=ordered});
+opts_1([set | Options], _Type) ->
+    opts_1(Options, #opts{type=set});
+opts_1([ordered_set | Options], _Type) ->
+    opts_1(Options, #opts{type=ordered_set});
 opts_1([], Type) ->
     Type.
 
 -spec new() -> dict().
 
 %% @doc Create a dictionary. This function creates a new dictionary of the
-%% default type, i.e., hash-based (unordered).
+%% default type, i.e., unordered (hash-based).
 
 new() -> new([]).
 
 -spec new(Opts :: [Option]) -> Dict when
-      Option :: 'hash' | 'ordered',
+      Option :: 'set' | 'ordered_set',
       Dict :: dict().
 
 %% @doc Create a dictionary. This function creates a new dictionary of the
-%% type specified by the options. The default type is `hash', which means
-%% that hashing is used and the entries are not kept in a predictable order.
-%% The `ordered' type uses a tree structure (see {@link gb_trees}) and keeps
+%% type specified by the options. The default type is `set', which means
+%% that the entries are not kept in a predictable order (using hashing). The
+%% `ordered_set' type uses a tree structure (see {@link gb_trees}) and keeps
 %% the keys in increasing term order, just like the {@link orddict} module
 %% (although a tree is much more efficient, for larger dictionaries).
 %%
@@ -179,9 +179,9 @@ new(Opts) ->
         _:_ -> erlang:error(badarg, [Opts])
     end.
 
-new_1(#opts{type=hash}) ->
+new_1(#opts{type=set}) ->
     new_dict();
-new_1(#opts{type=ordered}) ->
+new_1(#opts{type=ordered_set}) ->
     gb_trees:empty().
 
 new_dict() ->
@@ -212,7 +212,7 @@ find_key(_, []) -> false.
 
 %% @doc Convert a dictionary to a list of pairs. This function converts the
 %% dictionary to a list representation. The result is an ordered list (an
-%% `orddict') if `Dict' is of type `ordered' (see {@link new/1}), and
+%% `orddict') if `Dict' is of type `ordered_set' (see {@link new/1}), and
 %% otherwise in the order defined by {@link foldl/3}.
 
 to_list(#dict{}=D) ->
@@ -227,7 +227,7 @@ to_list(?gb(_,_)=D) ->
 
 %% @doc Convert a dictionary to an {@link orddict}. This differs from
 %% `to_list' in that the result is always an ordered list, even if `Dict' is
-%% of type `hash'.
+%% of type `set'.
 
 to_orddict(#dict{}=D) ->
     orddict:from_list(to_list(D));
@@ -246,12 +246,12 @@ from_list(L) -> from_list(L, []).
 
 -spec from_list(List, Opts :: [Option]) -> Dict when
       List :: [{Key :: term(), Value :: term()}],
-      Option :: 'hash' | 'ordered',
+      Option :: 'set' | 'ordered_set',
       Dict :: dict().
 
 %% @doc Convert a list of pairs to a dictionary. Like {@link from_list/1},
 %% but takes an option list just like {@link new/1} to specify the type of
-%% the new dictionary. The default type is `hash'.
+%% the new dictionary. The default type is `set'.
 
 from_list(L, Opts) ->
     try opts(Opts) of
@@ -260,9 +260,9 @@ from_list(L, Opts) ->
         _:_ -> erlang:error(badarg, [L, Opts])
     end.
 
-from_list_1(L, #opts{type=hash}) ->
+from_list_1(L, #opts{type=set}) ->
     lists:foldl(fun ({K,V}, D) -> store_dict(K, V, D) end, new_dict(), L);
-from_list_1(L, #opts{type=ordered}) ->
+from_list_1(L, #opts{type=ordered_set}) ->
     %% NOTE: using from_orddict(lists:ukeysort(1, L)) would be nice, but
     %% causes earlier entries to take precedence in case of duplicate keys
     lists:foldl(fun ({K,V}, D) -> gb_trees:enter(K, V, D) end,
@@ -281,12 +281,12 @@ from_orddict(L) -> from_orddict(L, []).
 
 -spec from_orddict(List, Opts :: [Option]) -> Dict when
       List :: [{Key :: term(), Value :: term()}],
-      Option :: 'hash' | 'ordered',
+      Option :: 'set' | 'ordered_set',
       Dict :: dict().
 
 %% @doc Convert an ordered list of pairs to a dictionary. Like {@link
 %% from_orddict/1}, but takes an option list just like {@link new/1} to
-%% specify the type of the new dictionary. The default type is `hash'.
+%% specify the type of the new dictionary. The default type is `set'.
 
 from_orddict(L, Opts) ->
     try opts(Opts) of
@@ -295,7 +295,7 @@ from_orddict(L, Opts) ->
         _:_ -> erlang:error(badarg, [L, Opts])
     end.
 
-from_orddict_1(L, #opts{type=ordered}) ->
+from_orddict_1(L, #opts{type=ordered_set}) ->
     gb_trees:from_orddict(L); % the list *must* be ordered for this!
 from_orddict_1(L, Opts) ->
     from_list_1(L, Opts).
@@ -340,8 +340,8 @@ info(Dict) ->
 %% operation.
 
 info(size, Dict) -> size(Dict);
-info(type, #dict{}) -> hash;
-info(type, ?gb(_,_)) -> ordered;
+info(type, #dict{}) -> set;
+info(type, ?gb(_,_)) -> ordered_set;
 info(_, _) -> undefined.
 
 -spec values(Dict) -> [Val] when
@@ -484,7 +484,7 @@ fetch_keys(Dict) -> keys(Dict).
 
 %% @doc Return all keys in a dictionary. This function returns a list of all
 %% keys in `Dict'. The result is an ordered list only if `Dict' is of type
-%% `ordered' (see {@link new/1}).
+%% `ordered_set' (see {@link new/1}).
 
 keys(#dict{}=D) ->
     %% list in default traversal order, hence foldr, not foldl

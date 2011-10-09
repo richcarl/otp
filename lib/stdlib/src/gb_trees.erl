@@ -21,9 +21,9 @@
 %%
 %% NOTE: The {@link dict} module now supports using General Balanced Trees
 %% as the underlying representation, and a tree can be created by calling
-%% {@link dict:new/1. dict:new([ordered])}. <b>It is no longer recommended
-%% to use the `gb_trees' module directly unless you need to use some of its
-%% more unusual features.</b>
+%% {@link dict:new/1. dict:new([ordered_set])}. <b>It is no longer
+%% recommended to use the `gb_trees' module directly unless you need to use
+%% some of its more unusual features.</b>
 %%
 %% This module is an efficient purely functional implementation of Prof.
 %% Arne Andersson's General Balanced Trees. These have no storage overhead
