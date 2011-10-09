@@ -44,8 +44,9 @@
 	 smallest/1, largest/1, take_smallest/1, take_largest/1,
          first_key/1, last_key/1, take_first/1, take_last/1,
 	 iterator/1, next/1, map/2, filter/2, foldl/3, foldr/3,
-         next_key/2, prev_key/2, increment/3, find/2]).
+         next_key/2, prev_key/2, increment/3, find/2, table/1]).
 
+-compile({no_auto_import,[size/1]}).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Data structure:
@@ -941,3 +942,60 @@ foldr_1(_, A, nil) -> A;
 foldr_1(F, A, {K, V, Smaller, Larger}) ->
     foldr_1(F, F(K, V, foldr_1(F, A, Larger)), Smaller).
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%% QLC table
+
+table(T) ->
+    TF = fun() -> qlc_next(next(iterator(T))) end,
+    InfoFun = fun(num_of_objects) -> size(T);
+                 (keypos) -> 1;
+                 (is_sorted_key) -> true;
+                 (is_unique_objects) -> true;
+                 (_) -> undefined
+              end,
+    LookupFun =
+        fun(1, Ks) ->
+                lists:flatmap(fun(K) ->
+                                      case lookup(K, T) of
+                                          {value, V} -> [{K,V}];
+                                          none -> []
+                                      end
+                              end, Ks)
+        end,
+    FormatFun =
+        fun({all, NElements, ElementFun}) ->
+                ValsS = io_lib:format("gb_trees:from_orddict(~w)",
+                                      [qlc_nodes(T, NElements, ElementFun)]),
+                io_lib:format("gb_table:table(~s)", [ValsS]);
+           ({lookup, 1, KeyValues, _NElements, ElementFun}) ->
+                ValsS = io_lib:format("gb_trees:from_orddict(~w)",
+                                      [qlc_nodes(T, infinity, ElementFun)]),
+                io_lib:format("lists:flatmap(fun(K) -> "
+                              "case gb_trees:lookup(K, ~s) of "
+                              "{value, V} -> [{K,V}];none -> [] end "
+                              "end, ~w)",
+                              [ValsS, [ElementFun(KV) || KV <- KeyValues]])
+        end,
+    qlc:table(TF, [{info_fun, InfoFun}, {format_fun, FormatFun},
+                   {lookup_fun, LookupFun},{key_equality,'=='}]).
+
+qlc_next({X, V, S}) ->
+    [{X,V} | fun() -> qlc_next(next(S)) end];
+qlc_next(none) ->
+    [].
+
+qlc_nodes(T, infinity, ElementFun) ->
+    qlc_nodes(T, -1, ElementFun);
+qlc_nodes(T, NElements, ElementFun) ->
+    qlc_iter(iterator(T), NElements, ElementFun).
+
+qlc_iter(_I, 0, _EFun) ->
+    '...';
+qlc_iter(I0, N, EFun) ->
+    case next(I0) of
+        {X, V, I} ->
+            [EFun({X,V}) | qlc_iter(I, N-1, EFun)];
+        none ->
+            []
+    end.
