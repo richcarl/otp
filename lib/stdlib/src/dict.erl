@@ -329,19 +329,19 @@ is_empty(Dict) -> size(Dict) =< 0.
 
 info(Dict) ->
     Items = [size,type],
-    [info(Item, Dict) || Item <- Items].
+    [info(Dict, Item) || Item <- Items].
 
--spec info(InfoTag, Dict) -> Value when
+-spec info(Dict, InfoTag) -> Value when
+      InfoTag :: 'size' | 'type',
       Dict :: dict(),
-      InfoTag :: 'size' | 'type' | atom(),
       Value :: term().
 
 %% @doc Get information about a dictionary. This is a constant time
 %% operation.
 
-info(size, Dict) -> size(Dict);
-info(type, #dict{}) -> set;
-info(type, ?gb(_,_)) -> ordered_set;
+info(Dict, size) -> size(Dict);
+info(#dict{}, type) -> set;
+info(?gb(_,_), type) -> ordered_set;
 info(_, _) -> undefined.
 
 -spec values(Dict) -> [Val] when

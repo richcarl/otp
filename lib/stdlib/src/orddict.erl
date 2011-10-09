@@ -163,7 +163,7 @@ is_empty(Dict) -> Dict =:= [].
 -spec info(Orddict) -> [InfoTuple] when
       Orddict :: orddict(),
       InfoTuple :: {InfoTag, Value},
-      InfoTag :: 'size' | 'type',
+      InfoTag :: 'size',
       Value :: term().
 
 %% @doc Get information about a dictionary. Returns a list of tagged tuples
@@ -171,18 +171,18 @@ is_empty(Dict) -> Dict =:= [].
 %% Note that this takes time proportional to the number of elements.
 
 info(Dict) ->
-    Items = [size,type],
-    [info(Item, Dict) || Item <- Items].
+    Items = [size],
+    [info(Dict, Item) || Item <- Items].
 
--spec info(InfoTag, Orddict) -> Value when
+-spec info(Orddict, InfoTag) -> Value when
+      InfoTag :: 'size',
       Orddict :: orddict(),
-      InfoTag :: 'size' | atom(),
       Value :: term().
 
 %% @doc Get information about a dictionary. Note that getting the size of an
 %% orddict takes time proportional to the number of elements.
 
-info(size, Dict) -> size(Dict);
+info(Dict, size) -> size(Dict);
 info(_, _) -> undefined.
 
 -spec values(Orddict) -> [Val] when
