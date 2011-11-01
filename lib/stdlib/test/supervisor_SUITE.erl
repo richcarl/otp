@@ -957,6 +957,38 @@ multiple_restarts(Config) when is_list(Config) ->
 
 
 %%-------------------------------------------------------------------------
+%% Test restarting a process multiple times with incremental restart delay.
+multiple_restarts(Config) when is_list(Config) ->
+    process_flag(trap_exit, true),
+    Child1 = #{id => child1,
+	       start => {supervisor_1, start_child, []},
+	       restart => permanent,
+	       shutdown => brutal_kill,
+	       type => worker,
+	       modules => []},
+    SupFlags = #{strategy => one_for_one,
+		 intensity => 1,
+		 period => 1},
+    {ok, SupPid} = start_link({ok, {SupFlags, []}}),
+    {ok, CPid1} = supervisor:start_child(sup_test, Child1),
+
+    %% Terminate the process several times, but being careful
+    %% not to exceed the maximum restart intensity.
+    terminate(SupPid, CPid1, child1, abnormal),
+    _ = [begin
+	     receive after 2100 -> ok end,
+	     [{_, Pid, _, _}|_] = supervisor:which_children(sup_test),
+	     terminate(SupPid, Pid, child1, abnormal)
+	 end || _ <- [1,2,3]],
+
+    %% Verify that the supervisor is still alive and clean up.
+    ok = supervisor:terminate_child(SupPid, child1),
+    ok = supervisor:delete_child(SupPid, child1),
+    exit(SupPid, kill),
+    ok.
+
+
+%%-------------------------------------------------------------------------
 %% Test the one_for_one base case.
 one_for_one(Config) when is_list(Config) ->
     process_flag(trap_exit, true),

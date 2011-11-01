@@ -84,7 +84,10 @@
 %% Defaults
 -define(default_flags, #{strategy  => one_for_one,
 			 intensity => 1,
-			 period    => 5}).
+			 period    => 5000, % milliseconds internally
+                         min_delay => 1,   % 1 ms delay is often all you need
+                         max_delay => 250  % cap at four per second
+                        }).
 -define(default_child_spec, #{restart  => permanent,
 			      type     => worker}).
 %% Default 'shutdown' is 5000 for workers and infinity for supervisors.
@@ -117,7 +120,9 @@
                                         | 'undefined',
 		intensity              :: non_neg_integer() | 'undefined',
 		period                 :: pos_integer() | 'undefined',
-		restarts = [],
+		restarts = {0,[],[]},
+                min_delay              :: non_neg_integer(),
+                max_delay              :: non_neg_integer(),
 		dynamic_restarts = 0   :: non_neg_integer(),
 	        module,
 	        args}).
@@ -627,6 +632,15 @@ handle_info({'EXIT', Pid, Reason}, State) ->
 	    {stop, shutdown, State1}
     end;
 
+handle_info({restart_child, Info, Time, Child}, State) ->
+    report_error(got_delayed_restart, Info, Child, State#state.name),
+    case do_restart(Child, Time, State) of
+        {ok, State1} ->
+            {noreply, State1};
+        {shutdown, State1} ->
+            {stop, shutdown, State1}
+    end;
+
 handle_info(Msg, State) ->
     error_logger:error_msg("Supervisor received unexpected message: ~p~n", 
 			   [Msg]),
@@ -742,48 +756,62 @@ handle_start_child(Child, State) ->
 %%% Returns: {ok, state()} | {shutdown, state()}
 %%% ---------------------------------------------------
 
-restart_child(Pid, Reason, #state{children = [Child]} = State) when ?is_simple(State) ->
-    RestartType = Child#child.restart_type,
-    case dynamic_child_args(Pid, RestartType, State#state.dynamics) of
-	{ok, Args} ->
-	    {M, F, _} = Child#child.mfargs,
-	    NChild = Child#child{pid = Pid, mfargs = {M, F, Args}},
-	    do_restart(RestartType, Reason, NChild, State);
-	error ->
-            {ok, State}
-    end;
-
 restart_child(Pid, Reason, State) ->
-    Children = State#state.children,
-    case lists:keyfind(Pid, #child.pid, Children) of
+    case find_child(Pid, State) of
 	#child{restart_type = RestartType} = Child ->
-	    do_restart(RestartType, Reason, Child, State);
+            report_crash(RestartType, Reason, Child, State),
+            case should_restart(RestartType, Reason) of
+                true ->
+                    restart(Child, State);
+                false ->
+                    {ok, state_del_child(Child, State)}
+            end;
 	false ->
 	    {ok, State}
     end.
 
-do_restart(permanent, Reason, Child, State) ->
-    report_error(child_terminated, Reason, Child, State#state.name),
-    restart(Child, State);
-do_restart(_, normal, Child, State) ->
-    NState = state_del_child(Child, State),
-    {ok, NState};
-do_restart(_, shutdown, Child, State) ->
-    NState = state_del_child(Child, State),
-    {ok, NState};
-do_restart(_, {shutdown, _Term}, Child, State) ->
-    NState = state_del_child(Child, State),
-    {ok, NState};
-do_restart(transient, Reason, Child, State) ->
-    report_error(child_terminated, Reason, Child, State#state.name),
-    restart(Child, State);
-do_restart(temporary, Reason, Child, State) ->
-    report_error(child_terminated, Reason, Child, State#state.name),
-    NState = state_del_child(Child, State),
-    {ok, NState}.
+find_child(Pid, #state{children = [Child]} = State) when ?is_simple(State) ->
+    RestartType = Child#child.restart_type,
+    case dynamic_child_args(Pid, RestartType, State#state.dynamics) of
+	{ok, Args} ->
+	    {M, F, _} = Child#child.mfargs,
+	    Child#child{pid = Pid, mfargs = {M, F, Args}};
+	error ->
+            false
+    end;
+find_child(Pid, State) ->
+    lists:keyfind(Pid, #child.pid, State#state.children).
+
+report_crash(Type, normal, _Child, _State) when Type =/= permanent ->
+    ok;
+report_crash(Type, shutdown, _Child, _State) when Type =/= permanent ->
+    ok;
+report_crash(_, Reason, Child, State) ->
+    report_error(child_terminated, Reason, Child, State#state.name).
+
+should_restart(permanent, _) -> true;
+should_restart(_, normal)    -> false;
+should_restart(_, shutdown)  -> false;
+should_restart(_, {shutdown, _Term})  -> false;
+should_restart(transient, _) -> true;
+should_restart(temporary, _) -> false.
 
 restart(Child, State) ->
-    case add_restart(State) of
+    Now = erlang:monotonic_time(milli_seconds),
+    case restart_delay(Now, State) of
+        0 ->
+            do_restart(Child, Now, State);
+        D ->
+            %% delay the child restart
+            Info = {D,Now,last_restart(State)},
+            report_error(delaying_restart, Info, Child, State#state.name),
+            timer:send_after(D, self(), {restart_child, Info, Now, Child}),
+            {ok, State}
+    end.
+
+do_restart(Child, Time, State) ->
+    report_error(adding_restart, Time, Child, State#state.name),
+    case add_restart(Time, State) of
 	{ok, NState} ->
 	    case restart(NState#state.strategy, Child, NState) of
 		{try_again,NState2} ->
@@ -1235,17 +1263,21 @@ remove_child(Child, State) ->
 %% Purpose: Check that Type is of correct type (!)
 %% Returns: {ok, state()} | Error
 %%-----------------------------------------------------------------
-init_state(SupName, Type, Mod, Args) ->
-    set_flags(Type, #state{name = supname(SupName,Mod),
-			   module = Mod,
-			   args = Args}).
+init_state(SupName, SupFlags, Mod, Args) ->
+    set_flags(SupFlags, #state{name = supname(SupName,Mod),
+                               module = Mod,
+                               args = Args}).
 
 set_flags(Flags, State) ->
     try check_flags(Flags) of
-	#{strategy := Strategy, intensity := MaxIntensity, period := Period} ->
+	#{strategy := Strategy, intensity := MaxIntensity, period := Period,
+          min_delay := MinDelay, max_delay := MaxDelay} ->
 	    {ok, State#state{strategy = Strategy,
 			     intensity = MaxIntensity,
-			     period = Period}}
+			     period = Period * 1000,  % milliseconds internally
+                             min_delay = max(MinDelay, 1), % never zero
+                             max_delay = MaxDelay  % can be zero
+                            }}
     catch
 	Thrown -> Thrown
     end.
@@ -1261,10 +1293,15 @@ check_flags(What) ->
 
 do_check_flags(#{strategy := Strategy,
 		 intensity := MaxIntensity,
-		 period := Period} = Flags) ->
+		 period := Period,
+                 min_delay := MinDelay,
+                 max_delay := MaxDelay
+                } = Flags) ->
     validStrategy(Strategy),
     validIntensity(MaxIntensity),
     validPeriod(Period),
+    validDelay(MinDelay),
+    validDelay(MaxDelay),
     Flags.
 
 validStrategy(simple_one_for_one) -> true;
@@ -1280,6 +1317,10 @@ validIntensity(What)               -> throw({invalid_intensity, What}).
 validPeriod(Period) when is_integer(Period),
                          Period > 0 -> true;
 validPeriod(What)                   -> throw({invalid_period, What}).
+
+validDelay(Delay) when is_integer(Delay),
+                       Delay >= 0 -> true;
+validDelay(What)                  -> throw({invalid_delay, What}).
 
 supname(self, Mod) -> {self(), Mod};
 supname(N, _)      -> N.
@@ -1396,37 +1437,70 @@ child_to_spec(#child{name = Name,
 %%% Add a new restart and calculate if the max restart
 %%% intensity has been reached (in that case the supervisor
 %%% shall terminate).
-%%% All restarts accured inside the period amount of seconds
-%%% are kept in the #state.restarts list.
+%%% All restarts accured inside the period amount of milliseconds
+%%% are kept in the #state.restarts queue.
 %%% Returns: {ok, State'} | {terminate, State'}
 %%% ------------------------------------------------------
 
-add_restart(State) ->  
+add_restart(Now, State) ->
     I = State#state.intensity,
     P = State#state.period,
     R = State#state.restarts,
-    Now = erlang:monotonic_time(1),
-    R1 = add_restart([Now|R], Now, P),
+    R1 = push_restart(Now, pop_restarts(R, Now, P)),
     State1 = State#state{restarts = R1},
-    case length(R1) of
+    case restart_count(R1) of
 	CurI when CurI  =< I ->
 	    {ok, State1};
 	_ ->
 	    {terminate, State1}
     end.
 
-add_restart([R|Restarts], Now, Period) ->
-    case inPeriod(R, Now, Period) of
-	true ->
-	    [R|add_restart(Restarts, Now, Period)];
-	_ ->
-	    []
-    end;
-add_restart([], _, _) ->
-    [].
+restart_count({N,_,_}) -> N.
 
-inPeriod(Then, Now, Period) ->
+
+in_period(Then, Now, Period) ->
     Now =< Then + Period.
+
+push_restart(Now, {N,In,Out}) ->
+    {N+1,[Now|In],Out}.
+
+pop_restarts({N, In, Out}, Now, Period) ->
+    pop_restarts(N, In, Out, Now, Period).
+
+%% note that the latest added element must never be moved to the Out-list
+%% in order for the restart_delay function to work in constant time
+pop_restarts(_, [], [], _Now, _Period) ->
+    {0, [], []};
+pop_restarts(_, [Time]=In, [], Now, Period) ->
+    case in_period(Time, Now, Period) of
+        true  -> {1, In, []};
+        false -> {0, [], []}
+    end;
+pop_restarts(N, [Time|In], [], Now, Period) ->
+    pop_restarts(N, [Time], lists:reverse(In), Now, Period);
+pop_restarts(N, In, [Time|Out1]=Out, Now, Period) ->
+    case in_period(Time, Now, Period) of
+	true ->
+            {N, In, Out};
+	false ->
+            pop_restarts(N-1, In, Out1, Now, Period)
+    end.
+
+%% compute the desired restart delay in milliseconds (0 for no delay) based
+%% on the latest restart stored in the queue
+last_restart(#state{restarts={_, [Time|_], _}}) -> Time.
+
+restart_delay(Now, #state{restarts={_, [Time|_], _},
+                          min_delay = MinD, max_delay = MaxD}) ->
+    D = Now - Time,
+    if D > 2*MaxD ->
+            0;  % too long ago to consider related - immediate restart
+       true ->
+            %% note: setting max_delay to zero disables delayed restart
+            min(MaxD, max(MinD, 2*D))
+    end;
+restart_delay(_Now, _State) ->
+    0.  % queue empty - immediate restart
 
 %%% ------------------------------------------------------
 %%% Error and progress reporting.
