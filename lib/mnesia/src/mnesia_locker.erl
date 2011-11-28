@@ -265,10 +265,12 @@ try_lock(Tid, Op, SimpleOp, Lock, Pid, Oid) ->
 	    Reply = grant_lock(Tid, SimpleOp, Lock, Oid),
 	    reply(Pid, Reply);
 	{no, Lucky} ->
+            report_conflicting_lock(rejected, Lock, Pid, Oid, Lucky),
 	    C = #cyclic{op = SimpleOp, lock = Lock, oid = Oid, lucky = Lucky},
 	    ?dbg("Rejected ~p ~p ~p ~p ~n", [Tid, Oid, Lock, Lucky]),
 	    reply(Pid, {not_granted, C});
 	{queue, Lucky} ->
+            report_conflicting_lock(queued, Lock, Pid, Oid, Lucky),
 	    ?dbg("Queued ~p ~p ~p ~p ~n", [Tid, Oid, Lock, Lucky]),
 	    %% Append to queue: Nice place for trace output
 	    ?ets_insert(mnesia_lock_queue, 
@@ -276,6 +278,14 @@ try_lock(Tid, Op, SimpleOp, Lock, Pid, Oid) ->
 			       pid = Pid, lucky = Lucky}),
 	    ?ets_insert(mnesia_tid_locks, {Tid, Oid, {queued, Op}})
     end.
+
+report_conflicting_lock(Action, LockType, Pid, Oid, Lucky) ->
+  case mnesia_monitor:get_env(report_conflicting_locks) of
+    true ->
+      Event = {conflicting_lock, {Action, LockType, Pid, Lucky, Oid}},
+      mnesia_lib:report_system_event(Event);
+    false -> ok
+  end.
 
 grant_lock(Tid, read, Lock, Oid = {Tab, Key})
   when Key /= ?ALL, Tab /= ?GLOBAL ->
@@ -460,10 +470,12 @@ set_read_lock_on_all_keys(Tid, From, Tab, IxKey, Pos) ->
 	    Reply = grant_lock(Tid, Op, Lock, Oid),
 	    reply(From, Reply);
 	{no, Lucky} ->
+	    report_conflicting_lock(rejected, Lock, From, Oid, Lucky),
 	    C = #cyclic{op = Op, lock = Lock, oid = Oid, lucky = Lucky},
 	    ?dbg("Rejected ~p ~p ~p ~p ~n", [Tid, Oid, Lock, Lucky]),
 	    reply(From, {not_granted, C});
     	{queue, Lucky} ->
+	    report_conflicting_lock(queued, Lock, From, Oid, Lucky),
 	    ?dbg("Queued ~p ~p ~p ~p ~n", [Tid, Oid, Lock, Lucky]),
 	    %% Append to queue: Nice place for trace output
 	    ?ets_insert(mnesia_lock_queue, 
@@ -600,10 +612,12 @@ try_waiter(Oid, Op, SimpleOp, Lock, ReplyTo, Tid) ->
 	    Reply = grant_lock(Tid, SimpleOp, Lock, Oid),	    
 	    reply(ReplyTo,Reply),
 	    locked;
-	{queue, _Why} ->
+	{queue, Why} ->
+	    report_conflicting_lock(queued, Lock, ReplyTo, Oid, Why),
 	    ?dbg("Keep ~p ~p ~p ~p~n", [Tid, Oid, Lock, _Why]),
 	    queued; % Keep waiter in queue	
 	{no, Lucky} ->
+	    report_conflicting_lock(rejected, Lock, ReplyTo, Oid, Lucky),
 	    C = #cyclic{op = SimpleOp, lock = Lock, oid = Oid, lucky = Lucky},
 	    verbose("** WARNING ** Restarted transaction, possible deadlock in lock queue ~w: cyclic = ~w~n",
 		    [Tid, C]),

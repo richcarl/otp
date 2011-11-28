@@ -156,6 +156,10 @@ handle_system_event({mnesia_overload, Details}, State) ->
     report_warning("Mnesia is overloaded: ~p~n", [Details]),
     {ok, State}; 
 
+handle_system_event({conflicting_lock, Details}, State) ->
+    report_info("Mnesia detected conflicting lock: ~p~n", [Details]),
+    {ok, State};
+
 handle_system_event({mnesia_info, Format, Args}, State) ->
     report_info(Format, Args),
     {ok, State}; 

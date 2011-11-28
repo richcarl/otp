@@ -682,7 +682,8 @@ env() ->
      pid_sort_order,
      no_table_loaders,
      dc_dump_limit,
-     send_compressed
+     send_compressed,
+     report_conflicting_locks
     ].
 
 default_env(access_module) ->
@@ -727,7 +728,9 @@ default_env(no_table_loaders) ->
 default_env(dc_dump_limit) ->
     4;
 default_env(send_compressed) ->
-    0.
+    0;
+default_env(report_conflicting_locks) ->
+    false.
 
 check_type(Env, Val) ->
     case catch do_check_type(Env, Val) of
@@ -774,7 +777,8 @@ do_check_type(pid_sort_order, "standard") -> standard;
 do_check_type(pid_sort_order, _) -> false;
 do_check_type(no_table_loaders, N) when is_integer(N), N > 0 -> N;
 do_check_type(dc_dump_limit,N) when is_number(N), N > 0 -> N;
-do_check_type(send_compressed, L) when is_integer(L), L >= 0, L =< 9 -> L.
+do_check_type(send_compressed, L) when is_integer(L), L >= 0, L =< 9 -> L;
+do_check_type(report_conflicting_locks, L) when is_boolean(L) -> L.
 
 bool(true) -> true;
 bool(false) -> false.
