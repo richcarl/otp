@@ -1185,7 +1185,7 @@ filter_bucket(F, [], Fb, Fc) when is_function(F, 2) ->
       Fun :: fun((Key :: term(), Value :: term()) -> term()),
       Dict :: dict().
 
-%% @doc Call a function for each element in a dictionary. `map' calls `Fun'
+%% @doc Call a function for each element in a dictionary. Calls `Fun'
 %% on successive keys and values of `Dict'. The values returned from `Fun'
 %% are ignored. The elements are visited in the same order as in {@link
 %% foldl/3}.
