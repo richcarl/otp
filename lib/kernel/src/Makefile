@@ -62,6 +62,7 @@ MODULES = \
 	code_server \
 	disk_log \
 	disk_log_1 \
+	disk_log_h \
 	disk_log_server \
 	disk_log_sup \
 	dist_ac \
