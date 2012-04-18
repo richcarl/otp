@@ -288,6 +288,7 @@ init([Parent]) ->
 	    mnesia_lib:create_counter(trans_log_writes_prev),
 	    mnesia_lib:create_counter(trans_restarts),
 	    mnesia_lib:create_counter(trans_failures),
+	    mnesia_lib:create_counter(event_conflicting_lock),
 	    set(checkpoints, []),
 	    set(pending_checkpoints, []),
 	    set(pending_checkpoint_pids, []),
@@ -691,6 +692,7 @@ env() ->
      no_table_loaders,
      dc_dump_limit,
      send_compressed,
+     report_conflicting_locks,
      schema
     ].
 
@@ -741,6 +743,8 @@ default_env(dc_dump_limit) ->
     4;
 default_env(send_compressed) ->
     0;
+default_env(report_conflicting_locks) ->
+    false;
 default_env(schema) ->
     [].
 
@@ -790,6 +794,7 @@ do_check_type(pid_sort_order, _) -> false;
 do_check_type(no_table_loaders, N) when is_integer(N), N > 0 -> N;
 do_check_type(dc_dump_limit,N) when is_number(N), N > 0 -> N;
 do_check_type(send_compressed, L) when is_integer(L), L >= 0, L =< 9 -> L;
+do_check_type(report_conflicting_locks, L) when is_boolean(L) -> L;
 do_check_type(schema, L) when is_list(L) -> L.
 
 bool(true) -> true;

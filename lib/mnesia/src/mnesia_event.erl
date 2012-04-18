@@ -158,6 +158,10 @@ handle_system_event({mnesia_overload, Details}, State) ->
     report_warning("Mnesia is overloaded: ~tw~n", [Details]),
     {ok, State}; 
 
+handle_system_event({conflicting_lock, _Details}, State) ->
+    mnesia_lib:incr_counter(event_conflicting_lock),
+    {ok, State};
+
 handle_system_event({mnesia_info, Format, Args}, State) ->
     report_info(Format, Args),
     {ok, State}; 
