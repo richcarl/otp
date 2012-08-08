@@ -487,7 +487,10 @@ to_list(nil, L) -> L.
       Tree :: gb_tree(),
       Key :: term(),
       Val :: term().
-         
+
+%% TODO: is this the correct interface? closed/open?, all higher/lower?
+%% TODO: documentation
+
 range({From, To}=R, {_, T}) when From =< To ->
     range(R, T, []).
 
@@ -541,7 +544,8 @@ iterator({_, T}) ->
 
 iterator(Key, {_, T}) ->
     iterator1(T, {Key, []}).
-    
+
+%% TODO: better implementation of iterator/2; no need to keep Key in structure
 
 %% The iterator structure is really just a list corresponding to
 %% the call stack of an in-order traversal. This is quite fast.
