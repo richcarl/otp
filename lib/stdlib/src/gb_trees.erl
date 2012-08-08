@@ -115,7 +115,7 @@
 	 update/3, enter/3, delete/2, delete_any/2, balance/1,
 	 is_defined/2, keys/1, values/1, to_list/1, range/2, from_orddict/1,
 	 smallest/1, largest/1, take_smallest/1, take_largest/1,
-	 iterator/1, iterator_from/2, next/1, map/2, foldl/3, foldr/3]).
+	 iterator/1, iterator_from/2, next/1, map/2]).
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -604,33 +604,3 @@ map(F, {Size, Tree}) when is_function(F, 2) ->
 map_1(_, nil) -> nil;
 map_1(F, {K, V, Smaller, Larger}) ->
     {K, F(K, V), map_1(F, Smaller), map_1(F, Larger)}.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
--spec foldl(Function, Acc, Tree1) -> Tree2 when
-      Function :: fun((K :: term(), V1 :: term(), Acc) -> V2 :: term()),
-      Acc   :: term(),
-      Tree1 :: gb_tree(),
-      Tree2 :: gb_tree().
-
-foldl(F, Acc, {_, Tree}) when is_function(F, 3) ->
-    foldl_1(F, Acc, Tree).
-
-foldl_1(_, Acc, nil) -> Acc;
-foldl_1(F, Acc, {K, V, Smaller, Larger}) ->
-    foldl_1(F, F(K, V, foldl_1(F, Acc, Smaller)), Larger).
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
--spec foldr(Function, Acc, Tree1) -> Tree2 when
-      Function :: fun((K :: term(), V1 :: term(), Acc) -> V2 :: term()),
-      Acc   :: term(),
-      Tree1 :: gb_tree(),
-      Tree2 :: gb_tree().
-
-foldr(F, Acc, {_, Tree}) when is_function(F, 3) ->
-    foldr_1(F, Acc, Tree).
-
-foldr_1(_, Acc, nil) -> Acc;
-foldr_1(F, Acc, {K, V, Smaller, Larger}) ->
-    foldr_1(F, F(K, V, foldr_1(F, Acc, Larger)), Smaller).
