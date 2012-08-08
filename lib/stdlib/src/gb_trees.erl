@@ -113,9 +113,9 @@
 
 -export([empty/0, is_empty/1, size/1, lookup/2, get/2, insert/3,
 	 update/3, enter/3, delete/2, delete_any/2, balance/1,
-	 is_defined/2, keys/1, values/1, to_list/1, from_orddict/1,
+	 is_defined/2, keys/1, values/1, to_list/1, range/2, from_orddict/1,
 	 smallest/1, largest/1, take_smallest/1, take_largest/1,
-	 iterator/1, iterator_from/2, next/1, map/2]).
+	 iterator/1, iterator_from/2, next/1, map/2, foldl/3, foldr/3]).
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -482,6 +482,27 @@ to_list(nil, L) -> L.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+-spec range(Range, Tree) -> [{Key, Val}] when
+      Range:: {term(), term()},
+      Tree :: gb_tree(),
+      Key :: term(),
+      Val :: term().
+         
+range({From, To}=R, {_, T}) when From =< To ->
+    range(R, T, []).
+
+range({From, To}=R, {Key, Value, Small, Big}, L) ->
+    if
+      Key >= From, Key =< To -> 
+         range(R, Small, [{Key, Value} | range(R, Big, L)]);
+      true ->
+         range(R, Small, range(R, Big, L))
+    end;
+range(_, nil, L) -> L.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 -spec keys(Tree) -> [Key] when
       Tree :: tree(Key, Value :: term()).
 
@@ -511,19 +532,31 @@ values(nil, L) -> L.
       Iter :: iter(Key, Value).
 
 iterator({_, T}) ->
-    iterator_1(T).
+    iterator1(T, {nil, []}).
 
-iterator_1(T) ->
-    iterator(T, []).
+-spec iterator(Key, Tree) -> Iter when
+      Key  :: term(), 
+      Tree :: gb_tree(),
+      Iter :: iter().
+
+iterator(Key, {_, T}) ->
+    iterator1(T, {Key, []}).
+    
 
 %% The iterator structure is really just a list corresponding to
 %% the call stack of an in-order traversal. This is quite fast.
+%% iterator is a tuple {Key, List}, 
 
-iterator({_, _, nil, _} = T, As) ->
-    [T | As];
-iterator({_, _, L, _} = T, As) ->
-    iterator(L, [T | As]);
-iterator(nil, As) ->
+iterator1({_, _, nil, _} = T, {nil, As}) ->
+    {nil, [T | As]};
+iterator1({_, _, L, _} = T, {nil, As}) ->
+    iterator1(L, {nil, [T | As]});
+iterator1({K, _, L, R} = T, {Key, As}) ->
+    if 
+      K >= Key -> iterator1(L, {Key, [T | As]});
+      true     -> iterator1(R, {Key, As})
+    end;
+iterator1(nil, As) ->
     As.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -553,9 +586,9 @@ iterator_from(_, nil, As) ->
       Iter1 :: iter(Key, Value),
       Iter2 :: iter(Key, Value).
 
-next([{X, V, _, T} | As]) ->
-    {X, V, iterator(T, As)};
-next([]) ->
+next({Key, [{X, V, _, T} | As]}) ->
+    {X, V, iterator1(T, {Key, As})};
+next({_, []}) ->
     none.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -571,3 +604,33 @@ map(F, {Size, Tree}) when is_function(F, 2) ->
 map_1(_, nil) -> nil;
 map_1(F, {K, V, Smaller, Larger}) ->
     {K, F(K, V), map_1(F, Smaller), map_1(F, Larger)}.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+-spec foldl(Function, Acc, Tree1) -> Tree2 when
+      Function :: fun((K :: term(), V1 :: term(), Acc) -> V2 :: term()),
+      Acc   :: term(),
+      Tree1 :: gb_tree(),
+      Tree2 :: gb_tree().
+
+foldl(F, Acc, {_, Tree}) when is_function(F, 3) ->
+    foldl_1(F, Acc, Tree).
+
+foldl_1(_, Acc, nil) -> Acc;
+foldl_1(F, Acc, {K, V, Smaller, Larger}) ->
+    foldl_1(F, F(K, V, foldl_1(F, Acc, Smaller)), Larger).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+-spec foldr(Function, Acc, Tree1) -> Tree2 when
+      Function :: fun((K :: term(), V1 :: term(), Acc) -> V2 :: term()),
+      Acc   :: term(),
+      Tree1 :: gb_tree(),
+      Tree2 :: gb_tree().
+
+foldr(F, Acc, {_, Tree}) when is_function(F, 3) ->
+    foldr_1(F, Acc, Tree).
+
+foldr_1(_, Acc, nil) -> Acc;
+foldr_1(F, Acc, {K, V, Smaller, Larger}) ->
+    foldr_1(F, F(K, V, foldr_1(F, Acc, Larger)), Smaller).
