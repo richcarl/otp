@@ -921,7 +921,9 @@ ets2dcd(Tab, Ftype) ->
     ok   = ets2dcd(mnesia_lib:db_init_chunk(ram_copies, Tab, 1000), Tab, Log),
     mnesia_lib:db_fixtable(ram_copies, Tab, false),
     close_log(Log),
-    ok = file:rename(TmpF, Fname),
+    %% This is a potentially heavy operation.
+    %% Avoid blocking the file server by using prim_file.
+    ok = prim_file:rename(TmpF, Fname),
     %% Remove old log data which is now in the new dcd.
     %% No one else should be accessing this file!
     file:delete(mnesia_lib:tab2dcl(Tab)),
