@@ -518,7 +518,7 @@ my_info_1(Class, Reason) ->
      get_process_info(self(), registered_name),         
      {error_info, {Class,Reason,erlang:get_stacktrace()}}, 
      get_ancestors(self()),        
-     get_process_info(self(), messages),
+     get_process_messages(self()),
      get_process_info(self(), links),
      get_cleaned_dictionary(self()),
      get_process_info(self(), trap_exit),
@@ -527,6 +527,10 @@ my_info_1(Class, Reason) ->
      get_process_info(self(), stack_size),
      get_process_info(self(), reductions)
     ].
+
+get_process_messages(Pid) ->
+    {messages, L} = get_process_info(self(), messages),
+    {messages, lists:sublist(L, 8)}.
 
 -spec get_ancestors(pid()) -> {'ancestors', [pid()]}.
 
