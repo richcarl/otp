@@ -535,6 +535,29 @@ kill_old_erlang(void){
     }
 }
 #else
+static void gdb_dump_old_erlang(void)
+{
+    char cmd[256];
+
+#if 0	/* XXX: disable for now, needs kred.in update */
+    if (!is_env_set("HEART_GDB_DUMP"))
+	return;
+#endif
+
+    snprintf(cmd,
+	     sizeof cmd,
+	     "/bin/echo -e 'set interactive-mode off\\n"
+	     "set height 100000\\n"
+	     "thread apply all info reg\\n"
+	     "thread apply all bt\\n"
+	     "quit' | gdb --pid %lu"
+	     " >> /tmp/beam-gdb-dump.%lu &",
+	     heart_beat_kill_pid,
+	     heart_beat_kill_pid);
+    system(cmd);
+    sleep(10);
+}
+
 static void 
 kill_old_erlang(void){
     pid_t pid;
@@ -553,6 +576,7 @@ kill_old_erlang(void){
     }
 
     if(heart_beat_kill_pid != 0){
+	gdb_dump_old_erlang();
 	pid = (pid_t) heart_beat_kill_pid;
 	res = kill(pid,sig);
 	for(i=0; i < 5 && res == 0; ++i){
