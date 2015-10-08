@@ -53,7 +53,7 @@ defined $architecture or die "No architecture specified";
 $architecture =~ s&^.*[/\\]&&;	# Remove directory part if any
 
 my $patches = "Klarna";
-my $git_hash = `git log -n 1 --pretty=%h`;
+my $git_hash = `git log -n 1 --pretty=%h || cat ../../.githash`;
 if ( $? == 0 ) {
   chomp($git_hash);
   $patches .= "-g" . $git_hash;
