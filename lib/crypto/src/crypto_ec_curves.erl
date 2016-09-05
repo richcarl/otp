@@ -11,18 +11,20 @@ curves() ->
     prime_curves(HasEC, FIPSMode) ++ characteristic_two_curves(HasGF2m, FIPSMode).
 
 
+%%% On CentOS, they have disabled all curves below 256, so we (Klarna) have
+%%% to remove all of those from this list to avoid failed connections.
 prime_curves(true, true) ->
-    [secp160k1,secp160r1,secp160r2,
-     secp192r1,secp192k1,secp224k1,secp224r1,secp256k1,secp256r1,secp384r1,
-     secp521r1,prime192v1,prime192v2,prime192v3,prime239v1,prime239v2,prime239v3,
-     prime256v1,wtls7,wtls9,wtls12,
-     brainpoolP160r1,brainpoolP160t1,brainpoolP192r1,brainpoolP192t1,
-     brainpoolP224r1,brainpoolP224t1,brainpoolP256r1,brainpoolP256t1,
+    [secp256k1,secp256r1,secp384r1,
+     secp521r1,
+     prime256v1,
+     brainpoolP256r1,brainpoolP256t1,
      brainpoolP320r1,brainpoolP320t1,brainpoolP384r1,brainpoolP384t1,
      brainpoolP512r1,brainpoolP512t1];
 prime_curves(true, false) ->
-    [secp112r1,secp112r2,secp128r1,secp128r2,wtls6,wtls8]
-	++ prime_curves(true, true);
+%%% In this case, the prepended list becomes empty. We leave the rest of
+%%% the code unchanged for clarity.
+    []
+        ++ prime_curves(true, true);
 prime_curves(_, _) ->
     [].
 
@@ -38,149 +40,6 @@ characteristic_two_curves(true, _) ->
         ++ characteristic_two_curves(true, true);
 characteristic_two_curves(_, _) ->
     [].
-
-curve(secp112r1) ->
-    {
-     {prime_field, <<16#DB7C2ABF62E35E668076BEAD208B:112>>},                                        %% Prime
-     {<<16#DB7C2ABF62E35E668076BEAD2088:112>>,                                                      %% A
-      <<16#659EF8BA043916EEDE8911702B22:112>>,                                                      %% B
-      <<16#00F50B028E4D696E676875615175290472783FB1:160>>},                                         %% Seed
-      <<16#04:8,
-        16#09487239995A5EE76B55F9C2F098:112,                                                        %% X(p0)
-        16#A89CE5AF8724C0A23E0E0FF77500:112>>,                                                      %% Y(p0)
-      <<16#DB7C2ABF62E35E7628DFAC6561C5:112>>,                                                      %% Order
-      <<16#01:8>>                                                                                   %% CoFactor
-    };
-
-curve(secp112r2) ->
-    {
-     {prime_field, <<16#DB7C2ABF62E35E668076BEAD208B:112>>},                                        %% Prime
-     {<<16#6127C24C05F38A0AAAF65C0EF02C:112>>,                                                      %% A
-      <<16#51DEF1815DB5ED74FCC34C85D709:112>>,                                                      %% B
-      <<16#002757A1114D696E6768756151755316C05E0BD4:160>>},                                         %% Seed
-      <<16#04:8,
-        16#4BA30AB5E892B4E1649DD0928643:112,                                                        %% X(p0)
-        16#ADCD46F5882E3747DEF36E956E97:112>>,                                                      %% Y(p0)
-      <<16#36DF0AAFD8B8D7597CA10520D04B:112>>,                                                      %% Order
-      <<16#04:8>>                                                                                   %% CoFactor
-    };
-
-curve(secp128r1) ->
-    {
-     {prime_field, <<16#FFFFFFFDFFFFFFFFFFFFFFFFFFFFFFFF:128>>},                                    %% Prime
-     {<<16#FFFFFFFDFFFFFFFFFFFFFFFFFFFFFFFC:128>>,                                                  %% A
-      <<16#E87579C11079F43DD824993C2CEE5ED3:128>>,                                                  %% B
-      <<16#000E0D4D696E6768756151750CC03A4473D03679:160>>},                                         %% Seed
-      <<16#04:8,
-        16#161FF7528B899B2D0C28607CA52C5B86:128,                                                    %% X(p0)
-        16#CF5AC8395BAFEB13C02DA292DDED7A83:128>>,                                                  %% Y(p0)
-      <<16#FFFFFFFE0000000075A30D1B9038A115:128>>,                                                  %% Order
-      <<16#01:8>>                                                                                   %% CoFactor
-    };
-
-curve(secp128r2) ->
-    {
-     {prime_field, <<16#FFFFFFFDFFFFFFFFFFFFFFFFFFFFFFFF:128>>},                                    %% Prime
-     {<<16#D6031998D1B3BBFEBF59CC9BBFF9AEE1:128>>,                                                  %% A
-      <<16#5EEEFCA380D02919DC2C6558BB6D8A5D:128>>,                                                  %% B
-      <<16#004D696E67687561517512D8F03431FCE63B88F4:160>>},                                         %% Seed
-      <<16#04:8,
-        16#7B6AA5D85E572983E6FB32A7CDEBC140:128,                                                    %% X(p0)
-        16#27B6916A894D3AEE7106FE805FC34B44:128>>,                                                  %% Y(p0)
-      <<16#3FFFFFFF7FFFFFFFBE0024720613B5A3:128>>,                                                  %% Order
-      <<16#04:8>>                                                                                   %% CoFactor
-    };
-
-curve(secp160k1) ->
-    {
-     {prime_field, <<16#FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFAC73:160>>},                            %% Prime
-     {<<16#00:8>>,                                                                                  %% A
-      <<16#07:8>>,                                                                                  %% B
-      none},                                                                                        %% Seed
-      <<16#04:8,
-        16#3B4C382CE37AA192A4019E763036F4F5DD4D7EBB:160,                                            %% X(p0)
-        16#938CF935318FDCED6BC28286531733C3F03C4FEE:160>>,                                          %% Y(p0)
-      <<16#0100000000000000000001B8FA16DFAB9ACA16B6B3:168>>,                                        %% Order
-      <<16#01:8>>                                                                                   %% CoFactor
-    };
-
-curve(secp160r1) ->
-    {
-     {prime_field, <<16#FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF7FFFFFFF:160>>},                            %% Prime
-     {<<16#FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF7FFFFFFC:160>>,                                          %% A
-      <<16#1C97BEFC54BD7A8B65ACF89F81D4D4ADC565FA45:160>>,                                          %% B
-      <<16#1053CDE42C14D696E67687561517533BF3F83345:160>>},                                         %% Seed
-      <<16#04:8,
-        16#4A96B5688EF573284664698968C38BB913CBFC82:160,                                            %% X(p0)
-        16#23A628553168947D59DCC912042351377AC5FB32:160>>,                                          %% Y(p0)
-      <<16#0100000000000000000001F4C8F927AED3CA752257:168>>,                                        %% Order
-      <<16#01:8>>                                                                                   %% CoFactor
-    };
-
-curve(secp160r2) ->
-    {
-     {prime_field, <<16#FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFAC73:160>>},                            %% Prime
-     {<<16#FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFAC70:160>>,                                          %% A
-      <<16#B4E134D3FB59EB8BAB57274904664D5AF50388BA:160>>,                                          %% B
-      <<16#B99B99B099B323E02709A4D696E6768756151751:160>>},                                         %% Seed
-      <<16#04:8,
-        16#52DCB034293A117E1F4FF11B30F7199D3144CE6D:160,                                            %% X(p0)
-        16#FEAFFEF2E331F296E071FA0DF9982CFEA7D43F2E:160>>,                                          %% Y(p0)
-      <<16#0100000000000000000000351EE786A818F3A1A16B:168>>,                                        %% Order
-      <<16#01:8>>                                                                                   %% CoFactor
-    };
-
-curve(secp192r1) ->
-    {
-     {prime_field, <<16#FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFFFFFFFFFFFF:192>>},                    %% Prime
-     {<<16#FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFFFFFFFFFFFC:192>>,                                  %% A
-      <<16#64210519E59C80E70FA7E9AB72243049FEB8DEECC146B9B1:192>>,                                  %% B
-      <<16#3045AE6FC8422F64ED579528D38120EAE12196D5:160>>},                                         %% Seed
-      <<16#04:8,
-        16#188DA80EB03090F67CBF20EB43A18800F4FF0AFD82FF1012:192,                                    %% X(p0)
-        16#07192B95FFC8DA78631011ED6B24CDD573F977A11E794811:192>>,                                  %% Y(p0)
-      <<16#FFFFFFFFFFFFFFFFFFFFFFFF99DEF836146BC9B1B4D22831:192>>,                                  %% Order
-      <<16#01:8>>                                                                                   %% CoFactor
-    };
-
-curve(secp192k1) ->
-    {
-     {prime_field, <<16#FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFEE37:192>>},                    %% Prime
-     {<<16#00:8>>,                                                                                  %% A
-      <<16#03:8>>,                                                                                  %% B
-      none},                                                                                        %% Seed
-      <<16#04:8,
-        16#DB4FF10EC057E9AE26B07D0280B7F4341DA5D1B1EAE06C7D:192,                                    %% X(p0)
-        16#9B2F2F6D9C5628A7844163D015BE86344082AA88D95E2F9D:192>>,                                  %% Y(p0)
-      <<16#FFFFFFFFFFFFFFFFFFFFFFFE26F2FC170F69466A74DEFD8D:192>>,                                  %% Order
-      <<16#01:8>>                                                                                   %% CoFactor
-    };
-
-curve(secp224k1) ->
-    {
-     {prime_field, <<16#FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFE56D:224>>},            %% Prime
-     {<<16#00:8>>,                                                                                  %% A
-      <<16#05:8>>,                                                                                  %% B
-      none},                                                                                        %% Seed
-      <<16#04:8,
-        16#A1455B334DF099DF30FC28A169A467E9E47075A90F7E650EB6B7A45C:224,                            %% X(p0)
-        16#7E089FED7FBA344282CAFBD6F7E319F7C0B0BD59E2CA4BDB556D61A5:224>>,                          %% Y(p0)
-      <<16#010000000000000000000000000001DCE8D2EC6184CAF0A971769FB1F7:232>>,                        %% Order
-      <<16#01:8>>                                                                                   %% CoFactor
-    };
-
-curve(secp224r1) ->
-    {
-     {prime_field, <<16#FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF000000000000000000000001:224>>},            %% Prime
-     {<<16#FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFFFFFFFFFFFFFFFFFFFE:224>>,                          %% A
-      <<16#B4050A850C04B3ABF54132565044B0B7D7BFD8BA270B39432355FFB4:224>>,                          %% B
-      <<16#BD71344799D5C7FCDC45B59FA3B9AB8F6A948BC5:160>>},                                         %% Seed
-      <<16#04:8,
-        16#B70E0CBD6BB4BF7F321390B94A03C1D356C21122343280D6115C1D21:224,                            %% X(p0)
-        16#BD376388B5F723FB4C22DFE6CD4375A05A07476444D5819985007E34:224>>,                          %% Y(p0)
-      <<16#FFFFFFFFFFFFFFFFFFFFFFFFFFFF16A2E0B8F03E13DD29455C5C2A3D:224>>,                          %% Order
-      <<16#01:8>>                                                                                   %% CoFactor
-    };
 
 curve(secp256k1) ->
     {
@@ -249,84 +108,6 @@ curve(secp521r1) ->
       <<16#01FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:256,                    %% Order
         16#FFFA51868783BF2F966B7FCC0148F709A5D03BB5C9B8899C47AEBB6FB71E9138:256,
         16#6409:16>>,
-      <<16#01:8>>                                                                                   %% CoFactor
-    };
-
-curve(prime192v1) ->
-    {
-     {prime_field, <<16#FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFFFFFFFFFFFF:192>>},                    %% Prime
-     {<<16#FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFFFFFFFFFFFC:192>>,                                  %% A
-      <<16#64210519E59C80E70FA7E9AB72243049FEB8DEECC146B9B1:192>>,                                  %% B
-      <<16#3045AE6FC8422F64ED579528D38120EAE12196D5:160>>},                                         %% Seed
-      <<16#04:8,
-        16#188DA80EB03090F67CBF20EB43A18800F4FF0AFD82FF1012:192,                                    %% X(p0)
-        16#07192B95FFC8DA78631011ED6B24CDD573F977A11E794811:192>>,                                  %% Y(p0)
-      <<16#FFFFFFFFFFFFFFFFFFFFFFFF99DEF836146BC9B1B4D22831:192>>,                                  %% Order
-      <<16#01:8>>                                                                                   %% CoFactor
-    };
-
-curve(prime192v2) ->
-    {
-     {prime_field, <<16#FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFFFFFFFFFFFF:192>>},                    %% Prime
-     {<<16#FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFFFFFFFFFFFC:192>>,                                  %% A
-      <<16#CC22D6DFB95C6B25E49C0D6364A4E5980C393AA21668D953:192>>,                                  %% B
-      <<16#31A92EE2029FD10D901B113E990710F0D21AC6B6:160>>},                                         %% Seed
-      <<16#04:8,
-        16#EEA2BAE7E1497842F2DE7769CFE9C989C072AD696F48034A:192,                                    %% X(p0)
-        16#6574D11D69B6EC7A672BB82A083DF2F2B0847DE970B2DE15:192>>,                                  %% Y(p0)
-      <<16#FFFFFFFFFFFFFFFFFFFFFFFE5FB1A724DC80418648D8DD31:192>>,                                  %% Order
-      <<16#01:8>>                                                                                   %% CoFactor
-    };
-
-curve(prime192v3) ->
-    {
-     {prime_field, <<16#FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFFFFFFFFFFFF:192>>},                    %% Prime
-     {<<16#FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFFFFFFFFFFFC:192>>,                                  %% A
-      <<16#22123DC2395A05CAA7423DAECCC94760A7D462256BD56916:192>>,                                  %% B
-      <<16#C469684435DEB378C4B65CA9591E2A5763059A2E:160>>},                                         %% Seed
-      <<16#04:8,
-        16#7D29778100C65A1DA1783716588DCE2B8B4AEE8E228F1896:192,                                    %% X(p0)
-        16#38A90F22637337334B49DCB66A6DC8F9978ACA7648A943B0:192>>,                                  %% Y(p0)
-      <<16#FFFFFFFFFFFFFFFFFFFFFFFF7A62D031C83F4294F640EC13:192>>,                                  %% Order
-      <<16#01:8>>                                                                                   %% CoFactor
-    };
-
-curve(prime239v1) ->
-    {
-     {prime_field, <<16#7FFFFFFFFFFFFFFFFFFFFFFF7FFFFFFFFFFF8000000000007FFFFFFFFFFF:240>>},        %% Prime
-     {<<16#7FFFFFFFFFFFFFFFFFFFFFFF7FFFFFFFFFFF8000000000007FFFFFFFFFFC:240>>,                      %% A
-      <<16#6B016C3BDCF18941D0D654921475CA71A9DB2FB27D1D37796185C2942C0A:240>>,                      %% B
-      <<16#E43BB460F0B80CC0C0B075798E948060F8321B7D:160>>},                                         %% Seed
-      <<16#04:8,
-        16#0FFA963CDCA8816CCC33B8642BEDF905C3D358573D3F27FBBD3B3CB9AAAF:240,                        %% X(p0)
-        16#7DEBE8E4E90A5DAE6E4054CA530BA04654B36818CE226B39FCCB7B02F1AE:240>>,                      %% Y(p0)
-      <<16#7FFFFFFFFFFFFFFFFFFFFFFF7FFFFF9E5E9A9F5D9071FBD1522688909D0B:240>>,                      %% Order
-      <<16#01:8>>                                                                                   %% CoFactor
-    };
-
-curve(prime239v2) ->
-    {
-     {prime_field, <<16#7FFFFFFFFFFFFFFFFFFFFFFF7FFFFFFFFFFF8000000000007FFFFFFFFFFF:240>>},        %% Prime
-     {<<16#7FFFFFFFFFFFFFFFFFFFFFFF7FFFFFFFFFFF8000000000007FFFFFFFFFFC:240>>,                      %% A
-      <<16#617FAB6832576CBBFED50D99F0249C3FEE58B94BA0038C7AE84C8C832F2C:240>>,                      %% B
-      <<16#E8B4011604095303CA3B8099982BE09FCB9AE616:160>>},                                         %% Seed
-      <<16#04:8,
-        16#38AF09D98727705120C921BB5E9E26296A3CDCF2F35757A0EAFD87B830E7:240,                        %% X(p0)
-        16#5B0125E4DBEA0EC7206DA0FC01D9B081329FB555DE6EF460237DFF8BE4BA:240>>,                      %% Y(p0)
-      <<16#7FFFFFFFFFFFFFFFFFFFFFFF800000CFA7E8594377D414C03821BC582063:240>>,                      %% Order
-      <<16#01:8>>                                                                                   %% CoFactor
-    };
-
-curve(prime239v3) ->
-    {
-     {prime_field, <<16#7FFFFFFFFFFFFFFFFFFFFFFF7FFFFFFFFFFF8000000000007FFFFFFFFFFF:240>>},        %% Prime
-     {<<16#7FFFFFFFFFFFFFFFFFFFFFFF7FFFFFFFFFFF8000000000007FFFFFFFFFFC:240>>,                      %% A
-      <<16#255705FA2A306654B1F4CB03D6A750A30C250102D4988717D9BA15AB6D3E:240>>,                      %% B
-      <<16#7D7374168FFE3471B60A857686A19475D3BFA2FF:160>>},                                         %% Seed
-      <<16#04:8,
-        16#6768AE8E18BB92CFCF005C949AA2C6D94853D0E660BBF854B1C9505FE95A:240,                        %% X(p0)
-        16#1607E6898F390C06BC1D552BAD226F3B6FCFE48B6E818499AF18E3ED6CF3:240>>,                      %% Y(p0)
-      <<16#7FFFFFFFFFFFFFFFFFFFFFFF7FFFFF975DEB41B3A6057C3C432146526551:240>>,                      %% Order
       <<16#01:8>>                                                                                   %% CoFactor
     };
 
@@ -890,58 +671,6 @@ curve(wtls5) ->
       <<16#02:8>>                                                                                   %% CoFactor
     };
 
-curve(wtls6) ->
-    {
-     {prime_field, <<16#DB7C2ABF62E35E668076BEAD208B:112>>},                                        %% Prime
-     {<<16#DB7C2ABF62E35E668076BEAD2088:112>>,                                                      %% A
-      <<16#659EF8BA043916EEDE8911702B22:112>>,                                                      %% B
-      <<16#00F50B028E4D696E676875615175290472783FB1:160>>},                                         %% Seed
-      <<16#04:8,
-        16#09487239995A5EE76B55F9C2F098:112,                                                        %% X(p0)
-        16#A89CE5AF8724C0A23E0E0FF77500:112>>,                                                      %% Y(p0)
-      <<16#DB7C2ABF62E35E7628DFAC6561C5:112>>,                                                      %% Order
-      <<16#01:8>>                                                                                   %% CoFactor
-    };
-
-curve(wtls7) ->
-    {
-     {prime_field, <<16#FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFAC73:160>>},                            %% Prime
-     {<<16#FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFAC70:160>>,                                          %% A
-      <<16#B4E134D3FB59EB8BAB57274904664D5AF50388BA:160>>,                                          %% B
-      <<16#B99B99B099B323E02709A4D696E6768756151751:160>>},                                         %% Seed
-      <<16#04:8,
-        16#52DCB034293A117E1F4FF11B30F7199D3144CE6D:160,                                            %% X(p0)
-        16#FEAFFEF2E331F296E071FA0DF9982CFEA7D43F2E:160>>,                                          %% Y(p0)
-      <<16#0100000000000000000000351EE786A818F3A1A16B:168>>,                                        %% Order
-      <<16#01:8>>                                                                                   %% CoFactor
-    };
-
-curve(wtls8) ->
-    {
-     {prime_field, <<16#FFFFFFFFFFFFFFFFFFFFFFFFFDE7:112>>},                                        %% Prime
-     {<<16#00:8>>,                                                                                  %% A
-      <<16#03:8>>,                                                                                  %% B
-      none},                                                                                        %% Seed
-      <<16#04:8,
-        16#0000000000000000000000000001:112,                                                        %% X(p0)
-        16#0000000000000000000000000002:112>>,                                                      %% Y(p0)
-      <<16#0100000000000001ECEA551AD837E9:120>>,                                                    %% Order
-      <<16#01:8>>                                                                                   %% CoFactor
-    };
-
-curve(wtls9) ->
-    {
-     {prime_field, <<16#FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFC808F:160>>},                            %% Prime
-     {<<16#00:8>>,                                                                                  %% A
-      <<16#03:8>>,                                                                                  %% B
-      none},                                                                                        %% Seed
-      <<16#04:8,
-        16#0000000000000000000000000000000000000001:160,                                            %% X(p0)
-        16#0000000000000000000000000000000000000002:160>>,                                          %% Y(p0)
-      <<16#0100000000000000000001CDC98AE0E2DE574ABF33:168>>,                                        %% Order
-      <<16#01:8>>                                                                                   %% CoFactor
-    };
-
 curve(wtls10) ->
     {
      {characteristic_two_field, 233, {tpbasis,74}},
@@ -968,19 +697,6 @@ curve(wtls11) ->
       <<16#02:8>>                                                                                   %% CoFactor
     };
 
-curve(wtls12) ->
-    {
-     {prime_field, <<16#FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF000000000000000000000001:224>>},            %% Prime
-     {<<16#FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFFFFFFFFFFFFFFFFFFFE:224>>,                          %% A
-      <<16#B4050A850C04B3ABF54132565044B0B7D7BFD8BA270B39432355FFB4:224>>,                          %% B
-      none},                                                                                        %% Seed
-      <<16#04:8,
-        16#B70E0CBD6BB4BF7F321390B94A03C1D356C21122343280D6115C1D21:224,                            %% X(p0)
-        16#BD376388B5F723FB4C22DFE6CD4375A05A07476444D5819985007E34:224>>,                          %% Y(p0)
-      <<16#FFFFFFFFFFFFFFFFFFFFFFFFFFFF16A2E0B8F03E13DD29455C5C2A3D:224>>,                          %% Order
-      <<16#01:8>>                                                                                   %% CoFactor
-    };
-
 curve(ipsec3) ->
     {
      {characteristic_two_field, 155, {tpbasis,62}},
@@ -1005,84 +721,6 @@ curve(ipsec4) ->
         16#00000000000000000000000000000000000000000000000D:192>>,                                  %% Y(p0)
       <<16#FFFFFFFFFFFFFFFFFFFFFFEDF97C44DB9F2420BAFCA75E:184>>,                                    %% Order
       <<16#02:8>>                                                                                   %% CoFactor
-    };
-
-curve(brainpoolP160r1) ->
-    {
-     {prime_field, <<16#E95E4A5F737059DC60DFC7AD95B3D8139515620F:160>>},                            %% Prime
-     {<<16#340E7BE2A280EB74E2BE61BADA745D97E8F7C300:160>>,                                          %% A
-      <<16#1E589A8595423412134FAA2DBDEC95C8D8675E58:160>>,                                          %% B
-      none},                                                                                        %% Seed
-      <<16#04:8,
-        16#BED5AF16EA3F6A4F62938C4631EB5AF7BDBCDBC3:160,                                            %% X(p0)
-        16#1667CB477A1A8EC338F94741669C976316DA6321:160>>,                                          %% Y(p0)
-      <<16#E95E4A5F737059DC60DF5991D45029409E60FC09:160>>,                                          %% Order
-      <<16#01:8>>                                                                                   %% CoFactor
-    };
-
-curve(brainpoolP160t1) ->
-    {
-     {prime_field, <<16#E95E4A5F737059DC60DFC7AD95B3D8139515620F:160>>},                            %% Prime
-     {<<16#E95E4A5F737059DC60DFC7AD95B3D8139515620C:160>>,                                          %% A
-      <<16#7A556B6DAE535B7B51ED2C4D7DAA7A0B5C55F380:160>>,                                          %% B
-      none},                                                                                        %% Seed
-      <<16#04:8,
-        16#B199B13B9B34EFC1397E64BAEB05ACC265FF2378:160,                                            %% X(p0)
-        16#ADD6718B7C7C1961F0991B842443772152C9E0AD:160>>,                                          %% Y(p0)
-      <<16#E95E4A5F737059DC60DF5991D45029409E60FC09:160>>,                                          %% Order
-      <<16#01:8>>                                                                                   %% CoFactor
-    };
-
-curve(brainpoolP192r1) ->
-    {
-     {prime_field, <<16#C302F41D932A36CDA7A3463093D18DB78FCE476DE1A86297:192>>},                    %% Prime
-     {<<16#6A91174076B1E0E19C39C031FE8685C1CAE040E5C69A28EF:192>>,                                  %% A
-      <<16#469A28EF7C28CCA3DC721D044F4496BCCA7EF4146FBF25C9:192>>,                                  %% B
-      none},                                                                                        %% Seed
-      <<16#04:8,
-        16#C0A0647EAAB6A48753B033C56CB0F0900A2F5C4853375FD6:192,                                    %% X(p0)
-        16#14B690866ABD5BB88B5F4828C1490002E6773FA2FA299B8F:192>>,                                  %% Y(p0)
-      <<16#C302F41D932A36CDA7A3462F9E9E916B5BE8F1029AC4ACC1:192>>,                                  %% Order
-      <<16#01:8>>                                                                                   %% CoFactor
-    };
-
-curve(brainpoolP192t1) ->
-    {
-     {prime_field, <<16#C302F41D932A36CDA7A3463093D18DB78FCE476DE1A86297:192>>},                    %% Prime
-     {<<16#C302F41D932A36CDA7A3463093D18DB78FCE476DE1A86294:192>>,                                  %% A
-      <<16#13D56FFAEC78681E68F9DEB43B35BEC2FB68542E27897B79:192>>,                                  %% B
-      none},                                                                                        %% Seed
-      <<16#04:8,
-        16#3AE9E58C82F63C30282E1FE7BBF43FA72C446AF6F4618129:192,                                    %% X(p0)
-        16#097E2C5667C2223A902AB5CA449D0084B7E5B3DE7CCC01C9:192>>,                                  %% Y(p0)
-      <<16#C302F41D932A36CDA7A3462F9E9E916B5BE8F1029AC4ACC1:192>>,                                  %% Order
-      <<16#01:8>>                                                                                   %% CoFactor
-    };
-
-curve(brainpoolP224r1) ->
-    {
-     {prime_field, <<16#D7C134AA264366862A18302575D1D787B09F075797DA89F57EC8C0FF:224>>},            %% Prime
-     {<<16#68A5E62CA9CE6C1C299803A6C1530B514E182AD8B0042A59CAD29F43:224>>,                          %% A
-      <<16#2580F63CCFE44138870713B1A92369E33E2135D266DBB372386C400B:224>>,                          %% B
-      none},                                                                                        %% Seed
-      <<16#04:8,
-        16#0D9029AD2C7E5CF4340823B2A87DC68C9E4CE3174C1E6EFDEE12C07D:224,                            %% X(p0)
-        16#58AA56F772C0726F24C6B89E4ECDAC24354B9E99CAA3F6D3761402CD:224>>,                          %% Y(p0)
-      <<16#D7C134AA264366862A18302575D0FB98D116BC4B6DDEBCA3A5A7939F:224>>,                          %% Order
-      <<16#01:8>>                                                                                   %% CoFactor
-    };
-
-curve(brainpoolP224t1) ->
-    {
-     {prime_field, <<16#D7C134AA264366862A18302575D1D787B09F075797DA89F57EC8C0FF:224>>},            %% Prime
-     {<<16#D7C134AA264366862A18302575D1D787B09F075797DA89F57EC8C0FC:224>>,                          %% A
-      <<16#4B337D934104CD7BEF271BF60CED1ED20DA14C08B3BB64F18A60888D:224>>,                          %% B
-      none},                                                                                        %% Seed
-      <<16#04:8,
-        16#6AB1E344CE25FF3896424E7FFE14762ECB49F8928AC0C76029B4D580:224,                            %% X(p0)
-        16#0374E9F5143E568CD23F3F4D7C0D4B1E41C8CC0D1C6ABD5F1A46DB4C:224>>,                          %% Y(p0)
-      <<16#D7C134AA264366862A18302575D0FB98D116BC4B6DDEBCA3A5A7939F:224>>,                          %% Order
-      <<16#01:8>>                                                                                   %% CoFactor
     };
 
 curve(brainpoolP256r1) ->
