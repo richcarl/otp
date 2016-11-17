@@ -659,8 +659,8 @@ db_erase({disc_copies, Tab}, Key) ->
     true = ?ets_delete(Tab, Key);
 db_erase({disc_only_copies, Tab}, Key) ->
     ok = dets:delete(Tab, Key);
-db_erase({{external_copies, Mod}, Tab}, Key) ->
-    ok = Mod:delete(Tab, Key).
+db_erase({{ext, Alias, Mod}, Tab}, Key) ->
+    ok = Mod:delete(Alias, Tab, Key).
 
 db_match_erase({ram_copies, Tab} , Pat) ->
     true = ?ets_match_delete(Tab, Pat);
@@ -668,12 +668,12 @@ db_match_erase({disc_copies, Tab} , Pat) ->
     true = ?ets_match_delete(Tab, Pat);
 db_match_erase({disc_only_copies, Tab}, Pat) ->
     ok = dets:match_delete(Tab, Pat);
-db_match_erase({{external_copies, Mod}, Tab}, Pat) ->
+db_match_erase({{ext, Alias, Mod}, Tab}, Pat) ->
     % "ets style" is to return true
     % "dets style" is to return N | { error, Reason }
     %   or sometimes ok (?)
     % be nice and accept both
-    case Mod:match_delete(Tab, Pat) of
+    case Mod:match_delete(Alias, Tab, Pat) of
       N when is_integer (N) -> ok;
       true -> ok;
       ok -> ok
