@@ -1160,6 +1160,7 @@ db_match_object(Storage, Tab, Pat) ->
     try
 	case Storage of
 	    disc_only_copies -> dets:match_object(Tab, Pat);
+	    {ext, Alias, Mod} -> Mod:select(Alias, Tab, [{Pat, [], ['$_']}]);
 	    _ -> ets:match_object(Tab, Pat)
 	end
     after
@@ -1197,6 +1198,7 @@ db_select(Storage, Tab, Pat) ->
     try
 	case Storage of
 	    disc_only_copies -> dets:select(Tab, Pat);
+	    {ext, Alias, Mod} -> Mod:select(Alias, Tab, Pat);
 	    _ -> ets:select(Tab, Pat)
 	end
     after
