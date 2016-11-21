@@ -1,3 +1,10 @@
+%% TODO: FIXME: Should make sure to truncate all unbounded values, not just
+%% message queue, to some sensible default limit (and make the limit
+%% configurable, including setting it to 'infinity'). For example: process
+%% dictionary contents, list of linked processes, neighbours, etc. ALso,
+%% fetching raw_initial_call by reading the whole dictionary is potentially
+%% very expensive!
+
 %%
 %% %CopyrightBegin%
 %%
@@ -452,6 +459,7 @@ translate_initial_call(DictOrPid) ->
 raw_initial_call({X,Y,Z}) when is_integer(X), is_integer(Y), is_integer(Z) ->
     raw_initial_call(c:pid(X,Y,Z));
 raw_initial_call(Pid) when is_pid(Pid) ->
+    %% HORROR
     case get_process_info(Pid, dictionary) of
 	{dictionary,Dict} ->
 	    raw_init_call(Dict);
@@ -543,6 +551,7 @@ get_ancestors(Pid) ->
     end.
 
 get_cleaned_dictionary(Pid) ->
+    %% HORROR
     case get_process_info(Pid,dictionary) of
 	{dictionary,Dict} -> {dictionary,clean_dict(Dict)};
 	_                 -> {dictionary,[]}
@@ -558,6 +567,7 @@ clean_dict([]) ->
     [].
 
 get_dictionary(Pid,Tag) ->
+    %% HORROR
     case get_process_info(Pid,dictionary) of
 	{dictionary,Dict} ->
 	    case lists:keysearch(Tag,1,Dict) of
@@ -784,6 +794,28 @@ format_tag(Tag, Data, {_Enc,Depth}) ->
 modifier(latin1) -> "";
 modifier(_) -> "t".
 
+-define(DEFAULT_TERM_SIZE, 10).
+
+get_term_limit() ->
+    case application:get_env(stdlib, proc_lib_term_size) of
+        {ok, Size} -> Size;
+        undefined -> ?DEFAULT_TERM_SIZE
+    end.
+
+truncate(Term, Depth) when Depth =< 0 ->
+    '...';
+truncate([H | T], Depth) ->
+    D1 = Depth-1,
+    [truncate(H, D1) | truncate(H, D1)];
+truncate(Term, Depth) when is_tuple(Term) ->
+    list_to_tuple(truncate_tuple_elements(Term, Depth-1, 1, tuple_size(Term)));
+truncate(Term, _Depth) ->
+    Term.
+
+truncate_tuple_elements(T, D, N, M) when N > M ->
+    [];
+truncate_tuple_elements(T, D, N, M) ->
+    [truncate(element(N, T), D) | truncate_tuple_elements(T, D, N+1, M)].
 
 %%% -----------------------------------------------------------
 %%% Stop a process and wait for it to terminate
