@@ -746,8 +746,8 @@ permanent_shutdown(Config) when is_list(Config) ->
 
     terminate(SupPid, CPid1, child1, shutdown),
 
-    [{child1, CPid2 ,worker,[]}] = supervisor:which_children(sup_test),
-    case is_pid(CPid2) of
+    CPid2 = wait_restart(sup_test, child1, worker, CPid1),
+    case is_pid(CPid2) andalso (CPid2 =/= CPid1) of
 	true ->
 	    ok;
 	false ->
@@ -757,7 +757,7 @@ permanent_shutdown(Config) when is_list(Config) ->
 
     terminate(SupPid, CPid2, child1, {shutdown, some_info}),
 
-    [{child1, CPid3 ,worker,[]}] = supervisor:which_children(sup_test),
+    CPid3 = wait_restart(sup_test, child1, worker, CPid2),
     case is_pid(CPid3) of
 	true ->
 	    ok;
@@ -766,6 +766,17 @@ permanent_shutdown(Config) when is_list(Config) ->
     end,
 
     [1,1,0,1] = get_child_counts(sup_test).
+
+wait_restart(Sup, Child, Type, OldPid) ->
+    case lists:keyfind(Child, 1, supervisor:which_children(sup_test)) of
+        {Child, OldPid, Type, _} ->
+            timer:sleep(1),
+            wait_restart(Sup, Child, Type, OldPid);
+        {Child, Pid, Type, _} ->
+            Pid;
+        _ ->
+            undefined
+    end.
 
 %%-------------------------------------------------------------------------
 %% A transient child should not be restarted if it exits with reason
@@ -957,18 +968,19 @@ multiple_restarts(Config) when is_list(Config) ->
 
 
 %%-------------------------------------------------------------------------
-%% Test restarting a process multiple times with incremental restart delay.
-multiple_restarts(Config) when is_list(Config) ->
+%% Test restarting a process with incremental restart delay
+delayed_restarts(Config) when is_list(Config) ->
     process_flag(trap_exit, true),
     Child1 = #{id => child1,
-	       start => {supervisor_1, start_child, []},
+	       start => {supervisor_1, start_registered_child, []},
 	       restart => permanent,
 	       shutdown => brutal_kill,
 	       type => worker,
 	       modules => []},
     SupFlags = #{strategy => one_for_one,
 		 intensity => 1,
-		 period => 1},
+		 period => 1,
+                 min_delay => 10},
     {ok, SupPid} = start_link({ok, {SupFlags, []}}),
     {ok, CPid1} = supervisor:start_child(sup_test, Child1),
 
