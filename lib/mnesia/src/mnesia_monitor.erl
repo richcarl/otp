@@ -288,6 +288,7 @@ init([Parent]) ->
 	    mnesia_lib:create_counter(trans_log_writes_prev),
 	    mnesia_lib:create_counter(trans_restarts),
 	    mnesia_lib:create_counter(trans_failures),
+	    mnesia_lib:create_counter(event_overload),
 	    mnesia_lib:create_counter(event_conflicting_lock),
 	    set(checkpoints, []),
 	    set(pending_checkpoints, []),

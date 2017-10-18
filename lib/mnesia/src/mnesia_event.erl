@@ -154,8 +154,8 @@ handle_system_event({mnesia_down, Node}, State) ->
 	    {ok, State#state{nodes = Nodes}}
     end;
 
-handle_system_event({mnesia_overload, Details}, State) ->
-    report_warning("Mnesia is overloaded: ~tw~n", [Details]),
+handle_system_event({mnesia_overload, _Details}, State) ->
+    mnesia_lib:incr_counter(event_overload),
     {ok, State}; 
 
 handle_system_event({conflicting_lock, _Details}, State) ->
