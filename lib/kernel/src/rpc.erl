@@ -114,7 +114,7 @@ handle_call({block_call, Mod, Fun, Args, Gleader}, _To, S) ->
     MyGL = group_leader(),
     set_group_leader(Gleader),
     Reply = 
-	case catch apply(Mod,Fun,Args) of
+	case catch dispatch(Mod,Fun,Args) of
 	    {'EXIT', _} = Exit ->
 		{badrpc, Exit};
 	    Other ->
@@ -132,7 +132,7 @@ handle_call(_, _To, S) ->
 handle_cast({cast, Mod, Fun, Args, Gleader}, S) ->
     spawn(fun() ->
 		  set_group_leader(Gleader),
-		  apply(Mod, Fun, Args)
+		  dispatch(Mod, Fun, Args)
 	  end),
     {noreply, S};
 handle_cast(_, S) ->
@@ -194,7 +194,7 @@ handle_call_call(Mod, Fun, Args, Gleader, To, S) ->
 		  Reply = 
 		      %% in case some sucker rex'es 
 		      %% something that throws
-		      case catch apply(Mod, Fun, Args) of
+		      case catch dispatch(Mod, Fun, Args) of
 			  {'EXIT', _} = Exit ->
 			      {badrpc, Exit};
 			  Result ->
@@ -318,10 +318,15 @@ block_call(N,M,F,A,Timeout) when is_integer(Timeout), Timeout >= 0 ->
     do_call(N, {block_call,M,F,A,group_leader()}, Timeout).
 
 local_call(M, F, A) when is_atom(M), is_atom(F), is_list(A) ->
-    case catch apply(M, F, A) of
+    case catch dispatch(M, F, A) of
 	{'EXIT',_}=V -> {badrpc, V};
 	Other -> Other
     end.
+
+%% Single function for doing the actual call on the callee node
+dispatch(Mod, Fun, Args) ->
+    erlang:display({rpc, Mod, Fun, Args}),
+    apply(Mod, Fun, Args).
 
 do_call(Node, Request, infinity) ->
     rpc_check(catch gen_server:call({?NAME,Node}, Request, infinity));
