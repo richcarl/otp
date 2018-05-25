@@ -22,7 +22,7 @@
 -include("erl_compile.hrl").
 -include("file.hrl").
 
--export([compile_cmdline/0]).
+-export([compile_cmdline/0, compile/2]).
 
 -export_type([cmd_line_arg/0]).
 
@@ -65,10 +65,12 @@ my_halt(Reason) ->
     erlang:halt(Reason).
 
 %% Run the the compiler in a separate process, trapping EXITs.
-
 compile(List) ->
+    {ok, Cwd} = file:get_cwd(),
+    compile(List, Cwd).
+compile(List, Cwd) ->
     process_flag(trap_exit, true),
-    Pid = spawn_link(compiler_runner(List)),
+    Pid = spawn_link(compiler_runner(List, Cwd)),
     receive
 	{'EXIT', Pid, {compiler_result, Result}} ->
 	    Result;
@@ -81,22 +83,17 @@ compile(List) ->
 	    error
     end.
 
--spec compiler_runner([cmd_line_arg()]) -> fun(() -> no_return()).
+-spec compiler_runner([cmd_line_arg()], file:filename()) -> fun(() -> no_return()).
 
-compiler_runner(List) ->
+compiler_runner(List, Cwd) ->
     fun() ->
             %% We don't want the current directory in the code path.
             %% Remove it.
             Path = [D || D <- code:get_path(), D =/= "."],
             true = code:set_path(Path),
-            exit({compiler_result, compile1(List)})
+            exit({compiler_result, 
+                  compile1(List, #options{outdir=Cwd,cwd=Cwd})})
     end.
-
-%% Parses the first part of the option list.
-
-compile1(Args) ->
-    {ok, Cwd} = file:get_cwd(),
-    compile1(Args, #options{outdir=Cwd,cwd=Cwd}).
 
 %% Parses all options.
 
