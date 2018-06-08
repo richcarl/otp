@@ -303,7 +303,13 @@ compile_file(Ext, Input, Output, Options) ->
 	{M, F} ->
 	    case catch M:F(Input, Output, Options) of
 		ok -> ok;
+                {ok, Mod, Warnings} ->
+                    {ok, Mod, Warnings};
 		error -> error;
+                {error, Errors} ->
+                    {error, Errors};
+                {error, Errors, Warnings} ->
+                    {error, Errors, Warnings};
 		{'EXIT',Reason} ->
 		    io:format(?STDERR,
 			      "Compiler function ~w:~w/3 failed:\n~p~n",
