@@ -355,6 +355,9 @@ split_even(Rs) -> split_even(Rs, [], []).
 %%                    exit BIF will raise an exception
 %%    used - Reg is used
 
+check_liveness({fr,_}, _, St) ->
+    %% Conservatively always consider the floating point register used.
+    {used,St};
 check_liveness(R, [{block,Blk}|Is], St0) ->
     case check_liveness_block(R, Blk, St0) of
 	{transparent,St1} ->
@@ -1105,8 +1108,12 @@ defs([{bif,_,{f,Fail},_Src,Dst}=I|Is], Regs0, D) ->
 defs([{block,Block0}|Is], Regs0, D0) ->
     {Block,Regs,D} = defs_list(Block0, Regs0, D0),
     [{block,[make_anno({def,Regs0})|Block]}|defs(Is, Regs, D)];
-defs([{bs_init,{f,L},_,_,_,Dst}=I|Is], Regs0, D) ->
-    Regs = def_regs([Dst], Regs0),
+defs([{bs_init,{f,L},_,Live,_,Dst}=I|Is], Regs0, D) ->
+    Regs1 = case Live of
+                none -> Regs0;
+                _ -> init_def_regs(Live)
+            end,
+    Regs = def_regs([Dst], Regs1),
     [I|defs(Is, Regs, update_regs(L, Regs, D))];
 defs([{bs_put,{f,L},_,_}=I|Is], Regs, D) ->
     [I|defs(Is, Regs, update_regs(L, Regs, D))];

@@ -31,6 +31,129 @@
   </header>
   <p>This document describes the changes made to the ERTS application.</p>
 
+<section><title>Erts 10.0.5</title>
+
+    <section><title>Fixed Bugs and Malfunctions</title>
+      <list>
+        <item>
+          <p>
+	    Fixed a bug which caused an emulator crash when
+	    <c>enif_send()</c> was called by a NIF that executed on a
+	    dirty scheduler. The bug was either triggered when the
+	    NIF called <c>enif_send()</c> without a message
+	    environment, or when the process executing the NIF was
+	    <c>send</c> traced.</p>
+          <p>
+	    Own Id: OTP-15223</p>
+        </item>
+        <item>
+          <p>
+	    Fixed a bug causing some Erlang references to be
+	    inconsistently ordered. This could for example cause
+	    failure to look up certain elements with references as
+	    keys in search data structures. This bug was introduced
+	    in R13B02.</p>
+          <p>
+	    Thanks to Simon Cornish for finding the bug and supplying
+	    a fix.</p>
+          <p>
+	    *** POTENTIAL INCOMPATIBILITY ***</p>
+          <p>
+	    Own Id: OTP-15225</p>
+        </item>
+      </list>
+    </section>
+
+</section>
+
+<section><title>Erts 10.0.4</title>
+
+    <section><title>Fixed Bugs and Malfunctions</title>
+      <list>
+        <item>
+	    <p>Fixed a bug that prevented the <c>noshell</c> option
+	    from working correctly on Mac OS X and BSD.</p>
+          <p>
+	    Own Id: OTP-15169</p>
+        </item>
+        <item>
+	    <p>Fixed a crash when matching directly against a literal
+	    map using a single key that had been saved on the
+	    stack.</p>
+          <p>
+	    Own Id: OTP-15184</p>
+        </item>
+        <item>
+	    <p>Fix node crash when passing a bad time option to
+	    <c>file:read_file_info/2</c>.</p>
+          <p>
+	    Own Id: OTP-15196</p>
+        </item>
+      </list>
+    </section>
+
+</section>
+
+<section><title>Erts 10.0.3</title>
+
+    <section><title>Fixed Bugs and Malfunctions</title>
+      <list>
+        <item>
+	    <p>Fixed a scheduler bug that caused normal schedulers to
+	    run dirty code.</p>
+          <p>
+	    Own Id: OTP-15154</p>
+        </item>
+        <item>
+          <p>
+	    Fixed a bug in <c>erlang:trace_info/2</c> which caused
+	    the emulator to crash when a bad argument was passed. The
+	    bug was introduced in ERTS version 10.0.</p>
+          <p>
+	    Own Id: OTP-15183 Aux Id: ERL-670 </p>
+        </item>
+      </list>
+    </section>
+
+</section>
+
+<section><title>Erts 10.0.2</title>
+
+    <section><title>Fixed Bugs and Malfunctions</title>
+      <list>
+        <item>
+	    <p>Fixed a rare bug that could cause processes to be
+	    scheduled after they had been freed.</p>
+          <p>
+	    Own Id: OTP-15067 Aux Id: ERL-573 </p>
+        </item>
+        <item>
+	    <p>Fixed a race condition in the inet driver that could
+	    cause receive to hang when the emulator was compiled with
+	    gcc 8.</p>
+          <p>
+	    Own Id: OTP-15158 Aux Id: ERL-654 </p>
+        </item>
+      </list>
+    </section>
+
+</section>
+
+<section><title>Erts 10.0.1</title>
+
+    <section><title>Fixed Bugs and Malfunctions</title>
+      <list>
+        <item>
+	    <p>The keys used in <c>os:getenv</c> and <c>os:putenv</c>
+	    are case-insensitive again on Windows.</p>
+          <p>
+	    Own Id: OTP-15147 Aux Id: ERL-644 </p>
+        </item>
+      </list>
+    </section>
+
+</section>
+
 <section><title>Erts 10.0</title>
 
     <section><title>Fixed Bugs and Malfunctions</title>
