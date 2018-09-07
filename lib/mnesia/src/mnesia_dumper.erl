@@ -1047,11 +1047,8 @@ insert_op(Tid, _, {op, change_table_frag, _Change, TabDef}, InPlace, InitBy) ->
     Cs = mnesia_schema:list2cs(TabDef),
     insert_cstruct(Tid, Cs, true, InPlace, InitBy).
 
-
-storage_semantics({ext, Alias, Mod}) ->
-    Mod:semantics(Alias, storage);
-storage_semantics(Storage) when is_atom(Storage) ->
-    Storage.
+storage_semantics(Storage) ->
+    mnesia_lib:semantics(Storage, storage).
 
 storage_alias({ext, Alias, _}) ->
     Alias;

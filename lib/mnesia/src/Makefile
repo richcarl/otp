@@ -63,6 +63,7 @@ MODULES= \
 	mnesia_locker \
 	mnesia_log \
 	mnesia_monitor \
+	mnesia_ram_copies \
 	mnesia_recover \
 	mnesia_registry \
 	mnesia_schema\
