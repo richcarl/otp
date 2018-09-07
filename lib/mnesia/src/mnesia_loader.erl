@@ -121,35 +121,6 @@ do_get_disc_copy2(Tab, Reason, Storage, Type) when Storage == ram_copies ->
     set({Tab, load_reason}, Reason),
     {loaded, ok};
 
-do_get_disc_copy2(Tab, Reason, Storage, Type) when Storage == disc_only_copies ->
-    StorageProps = val({Tab, storage_properties}),
-    DetsOpts = proplists:get_value(dets, StorageProps, []),
-
-    Args = [{file, mnesia_lib:tab2dat(Tab)},
-	    {type, mnesia_lib:disk_type(Tab, Type)},
-	    {keypos, 2},
-	    {repair, mnesia_monitor:get_env(auto_repair)} 
-	    | DetsOpts],
-    case Reason of
-	{dumper, _} ->
-	    mnesia_index:init_index(Tab, Storage),
-	    snmpify(Tab, Storage),
-	    set({Tab, load_node}, node()),
-	    set({Tab, load_reason}, Reason),
-	    {loaded, ok};
-	_ ->
-	    case mnesia_monitor:open_dets(Tab, Args) of
-		{ok, _} ->
-		    mnesia_index:init_index(Tab, Storage),
-		    snmpify(Tab, Storage),
-		    set({Tab, load_node}, node()),
-		    set({Tab, load_reason}, Reason),
-		    {loaded, ok};
-		{error, Error} ->
-		    {not_loaded, {"Failed to create dets table", Error}}
-	    end
-    end;
-
 do_get_disc_copy2(Tab, Reason, Storage = {ext, Alias, Mod}, _Type) ->
     Cs = val({Tab, cstruct}),
     case mnesia_monitor:unsafe_create_external(Tab, Alias, Mod, Cs) of
@@ -310,8 +281,6 @@ start_remote_sender(Node,Tab,Storage) ->
 	    {SenderPid, Sz, Data};
 	{SenderPid, {first, TabSize}} =_M1 ->
 	    {SenderPid, TabSize, false};
-	{SenderPid, {first, TabSize, DetsData}} ->
-	    {SenderPid, TabSize, DetsData};
 	%% Protocol conversion hack
 	{copier_done, Node} ->
 	    verbose("Sender of table ~tp crashed on node ~p ~n", [Tab, Node]),
@@ -385,28 +354,6 @@ do_init_table(Tab,Storage,Cs,SenderPid,
 create_table(Tab, TabSize, Storage, Cs) ->
     StorageProps = val({Tab, storage_properties}),
     if
-	Storage == disc_only_copies ->
-	    mnesia_lib:lock_table(Tab),
-	    Tmp = mnesia_lib:tab2tmp(Tab),
-	    Size = lists:max([TabSize, 256]),
-	    DetsOpts = lists:keydelete(estimated_no_objects, 1,
-				       proplists:get_value(dets, StorageProps, [])),
-	    Args = [{file, Tmp},
-		    {keypos, 2},
-%%		    {ram_file, true},
-		    {estimated_no_objects, Size},
-		    {repair, mnesia_monitor:get_env(auto_repair)},
-		    {type, mnesia_lib:disk_type(Tab, Cs#cstruct.type)}
-		    | DetsOpts],
-	    file:delete(Tmp),
-	    case mnesia_lib:dets_sync_open(Tab, Args) of
-		{ok, _} ->
-		    mnesia_lib:unlock_table(Tab),
-		    {Storage, Tab};
-		Else ->
-		    mnesia_lib:unlock_table(Tab),
-		    Else
-	    end;
 	(Storage == ram_copies) or (Storage == disc_copies) ->
 	    EtsOpts = proplists:get_value(ets, StorageProps, []),
 	    Args = [{keypos, 2}, public, named_table, Cs#cstruct.type | EtsOpts],
@@ -509,29 +456,6 @@ ext_init_table(Action, Alias, Mod, Tab, Fun, State, Sender) ->
 
 init_table(Tab, {ext,Alias,Mod}, Fun, State, Sender) ->
     ext_init_table(Alias, Mod, Tab, Fun, State, Sender);
-init_table(Tab, disc_only_copies, Fun, DetsInfo,Sender) ->
-    ErtsVer = erlang:system_info(version),
-    case DetsInfo of
-	{ErtsVer, DetsData}  ->
-	    try dets:is_compatible_bchunk_format(Tab, DetsData) of
-		false ->
-		    Sender ! {self(), {old_protocol, Tab}},
-		    dets:init_table(Tab, Fun);  %% Old dets version
-		true ->
-		    dets:init_table(Tab, Fun, [{format, bchunk}])
-	    catch
-		error:{undef,[{dets,_,_,_}|_]} ->
-		    Sender ! {self(), {old_protocol, Tab}},
-		    dets:init_table(Tab, Fun);  %% Old dets version
-		error:What ->
-		    What
-	    end;
-	Old when Old /= false ->
-	    Sender ! {self(), {old_protocol, Tab}},
-	    dets:init_table(Tab, Fun);  %% Old dets version
-	_ ->
-	    dets:init_table(Tab, Fun)
-    end;
 init_table(Tab, _, Fun, _DetsInfo,_) ->
     try
 	true = ets:init_table(Tab, Fun),
@@ -606,25 +530,6 @@ handle_last({disc_copies, Tab}, _Type, nobin) ->
     end,
     Ret;
 
-handle_last({disc_only_copies, Tab}, Type, nobin) ->
-    mnesia_lib:dets_sync_close(Tab),
-    Tmp = mnesia_lib:tab2tmp(Tab),
-    Dat = mnesia_lib:tab2dat(Tab),
-    case file:rename(Tmp, Dat) of
-	ok ->
-	    StorageProps = val({Tab, storage_properties}),
-	    DetsOpts = proplists:get_value(dets, StorageProps, []),
-
-	    Args = [{file, mnesia_lib:tab2dat(Tab)},
-		    {type, mnesia_lib:disk_type(Tab, Type)},
-		    {keypos, 2},
-		    {repair, mnesia_monitor:get_env(auto_repair)} | DetsOpts],
-	    mnesia_monitor:open_dets(Tab, Args),
-	    ok;
-	{error, Reason} ->
-	    {error, {"Cannot swap tmp files", Tab, Reason}}
-    end;
-
 handle_last({ram_copies, _Tab}, _Type, nobin) ->
     ok;
 handle_last({ram_copies, Tab}, _Type, DatBin) ->
@@ -649,10 +554,6 @@ down(Tab, Storage) ->
 	    ?SAFE(?ets_delete_table(Tab));
 	disc_copies ->
 	    ?SAFE(?ets_delete_table(Tab));
-	disc_only_copies ->
-	    TmpFile = mnesia_lib:tab2tmp(Tab),
-	    mnesia_lib:dets_sync_close(Tab),
-	    file:delete(TmpFile);
         {ext, Alias, Mod} ->
 	    catch Mod:close_table(Alias, Tab),
             catch Mod:delete_table(Alias, Tab)
@@ -679,8 +580,6 @@ db_erase({ram_copies, Tab}, Key) ->
     true = ?ets_delete(Tab, Key);
 db_erase({disc_copies, Tab}, Key) ->
     true = ?ets_delete(Tab, Key);
-db_erase({disc_only_copies, Tab}, Key) ->
-    ok = dets:delete(Tab, Key);
 db_erase({{ext, Alias, Mod}, Tab}, Key) ->
     ok = Mod:delete(Alias, Tab, Key).
 
@@ -688,8 +587,6 @@ db_match_erase({ram_copies, Tab} , Pat) ->
     true = ?ets_match_delete(Tab, Pat);
 db_match_erase({disc_copies, Tab} , Pat) ->
     true = ?ets_match_delete(Tab, Pat);
-db_match_erase({disc_only_copies, Tab}, Pat) ->
-    ok = dets:match_delete(Tab, Pat);
 db_match_erase({{ext, Alias, Mod}, Tab}, Pat) ->
     % "ets style" is to return true
     % "dets style" is to return N | { error, Reason }
@@ -705,8 +602,6 @@ db_put({ram_copies, Tab}, Val) ->
     true = ?ets_insert(Tab, Val);
 db_put({disc_copies, Tab}, Val) ->
     true = ?ets_insert(Tab, Val);
-db_put({disc_only_copies, Tab}, Val) ->
-    ok = dets:insert(Tab, Val);
 db_put({{ext, Alias, Mod}, Tab}, Val) ->
     ok = Mod:insert(Alias, Tab, Val).
 
@@ -745,19 +640,7 @@ do_send_table(Pid, Tab, Storage, RemoteS) ->
 		%% Send first
 		TabSize = mnesia:table_info(Tab, size),
 		KeysPerTransfer = calc_nokeys(Storage, Tab),
-		ChunkData = dets:info(Tab, bchunk_format),
-
-		UseDetsChunk =
-		    Storage == RemoteS andalso
-		    Storage == disc_only_copies andalso
-		    ChunkData /= undefined,
-		if
-		    UseDetsChunk == true ->
-			DetsInfo = erlang:system_info(version),
-			Pid ! {self(), {first, TabSize, {DetsInfo, ChunkData}}};
-		    true  ->
-			Pid ! {self(), {first, TabSize}}
-		end,
+                Pid ! {self(), {first, TabSize}},
 		{_I, _C} =
 		    reader_funcs(UseDetsChunk, Tab, Storage, KeysPerTransfer)
 	end,

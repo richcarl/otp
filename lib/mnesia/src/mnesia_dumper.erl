@@ -279,8 +279,6 @@ do_insert_rec(Tid, Rec, InPlace, InitBy, LogV) ->
 	storage_semantics(Ext) == disc_copies],
     case InitBy of
 	startup ->
-	    DO = Rec#commit.disc_only_copies,
-	    insert_ops(Tid, disc_only_copies, DO, InPlace, InitBy, LogV),
 	    [insert_ops(Tid, Ext, Ops, InPlace, InitBy, LogV) ||
 		{Ext, Ops} <- ExtOps, storage_semantics(Ext) == disc_only_copies];
 	_ ->
@@ -463,11 +461,6 @@ insert(Tid, Storage, Tab, Key, Val, Op, InPlace, InitBy) ->
 
 	_ when Semantics == disc_copies ->
 	    disc_insert(Tid, Storage, Tab, Key, Val, Op, InPlace, InitBy),
-	    mnesia_tm:do_update_op(Tid, Storage, Item),
-	    Snmp = mnesia_tm:prepare_snmp(Tab, Key, [Item]),
-	    mnesia_tm:do_snmp(Tid, Snmp);
-
-	_ when Semantics == disc_only_copies ->
 	    mnesia_tm:do_update_op(Tid, Storage, Item),
 	    Snmp = mnesia_tm:prepare_snmp(Tab, Key, [Item]),
 	    mnesia_tm:do_snmp(Tid, Snmp);
@@ -1047,11 +1040,8 @@ insert_op(Tid, _, {op, change_table_frag, _Change, TabDef}, InPlace, InitBy) ->
     Cs = mnesia_schema:list2cs(TabDef),
     insert_cstruct(Tid, Cs, true, InPlace, InitBy).
 
-
-storage_semantics({ext, Alias, Mod}) ->
-    Mod:semantics(Alias, storage);
-storage_semantics(Storage) when is_atom(Storage) ->
-    Storage.
+storage_semantics(Storage) ->
+    mnesia_lib:semantics(Storage, storage).
 
 storage_alias({ext, Alias, _}) ->
     Alias;

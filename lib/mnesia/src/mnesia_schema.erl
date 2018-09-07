@@ -164,7 +164,7 @@ init(IgnoreFallback) ->
 init_backends() ->
     Backends = lists:foldl(fun({Alias, Mod}, Acc) ->
 				   orddict:append(Mod, Alias, Acc)
-			   end, orddict:new(), get_ext_types()),
+			   end, orddict:new(), get_storage_types()),
     [init_backend(Mod, Aliases) || {Mod, Aliases} <- Backends],
     ok.
 
@@ -935,16 +935,21 @@ pick_external_copies(List, ExtTypes) ->
       end, [], List).
 
 expand_storage_type(S) when S==ram_copies;
-			    S==disc_copies;
-			    S==disc_only_copies ->
+			    S==disc_copies ->
     S;
 expand_storage_type(S) ->
-    case lists:keyfind(S, 1, get_ext_types()) of
+    case lists:keyfind(S, 1, get_storage_types()) of
 	false ->
 	    mnesia:abort({bad_type, {storage_type, S}});
 	{Alias, Mod} ->
 	    {ext, Alias, Mod}
     end.
+
+get_storage_types() ->
+    get_default_types() ++ get_ext_types().
+
+get_default_types() ->
+    [{disc_only_copies, mnesia_disc_only_copies}].
 
 get_ext_types() ->
     get_schema_user_property(mnesia_backend_types).
@@ -1471,7 +1476,7 @@ legal_backend_name(Name) ->
 
 %% Used e.g. by mnesia:system_info(backend_types).
 backend_types() ->
-    [ram_copies, disc_copies, disc_only_copies |
+    [ram_copies, disc_copies |
      [T || {T,_} <- get_ext_types()]].
 
 add_index_plugin(Name, Module, Function) ->

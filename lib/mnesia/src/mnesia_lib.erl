@@ -339,7 +339,7 @@ cs_to_storage_type(Node, Cs) ->
 		      {disc_only_copies, Cs#cstruct.disc_only_copies} |
                       wrap_external(Cs#cstruct.external_copies)]).
 
--define(native(T), T==ram_copies; T==disc_copies; T==disc_only_copies).
+-define(native(T), T==ram_copies; T==disc_copies).
 
 semantics({ext,Alias,Mod}, Item) ->
     Mod:semantics(Alias, Item);

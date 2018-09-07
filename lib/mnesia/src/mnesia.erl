@@ -142,7 +142,6 @@
         {'access_mode', 'read_write' | 'read_only'} |
         {'attributes', [atom()]} |
         {'disc_copies', [node()]} |
-        {'disc_only_copies', [node]} |
         {'index', [index_attr()]} |
         {'load_order', non_neg_integer()} |
         {'majority', boolean()} |
@@ -159,7 +158,7 @@
                     {'transaction', Retries::non_neg_integer()} |
                     {'sync_transaction', Retries::non_neg_integer()}.
 -type table() :: atom().
--type storage_type() :: 'ram_copies' | 'disc_copies' | 'disc_only_copies'.
+-type storage_type() :: 'ram_copies' | 'disc_copies'
 -type index_attr() :: atom() | non_neg_integer().
 -type write_locks() :: 'write' | 'sticky_write'.
 -type read_locks() :: 'read'.
@@ -2087,8 +2086,6 @@ raw_table_info(Tab, Item) ->
 		info_reply(?ets_info(Tab, Item), Tab, Item);
 	    disc_copies ->
 		info_reply(?ets_info(Tab, Item), Tab, Item);
-	    disc_only_copies ->
-		info_reply(dets:info(Tab, Item), Tab, Item);
             {ext, Alias, Mod} ->
                 info_reply(catch Mod:info(Alias, Tab, Item), Tab, Item);
 	    unknown ->
@@ -2301,7 +2298,6 @@ storage_count(T, {U, R, D, DO, Ext}) ->
 	unknown -> {[T | U], R, D, DO, Ext};
 	ram_copies -> {U, [T | R], D, DO, Ext};
 	disc_copies -> {U, R, [T | D], DO, Ext};
-	disc_only_copies -> {U, R, D, [T | DO], Ext};
         {ext, A, _} -> {U, R, D, DO, orddict:append(A, T, Ext)}
     end.
 
