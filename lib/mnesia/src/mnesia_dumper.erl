@@ -42,8 +42,7 @@
 	 load_from_logfile/3,
 	 start_regulator/0,
 	 opt_dump_log/1,
-	 update/3,
-	 snapshot_dcd/1
+	 update/3
 	]).
 
  %% Internal stuff
@@ -103,19 +102,6 @@ opt_dump_log(InitBy) ->
 		  Pid
 	  end,
     perform_dump(InitBy, Reg).
-
-snapshot_dcd(Tables) ->
-    lists:foreach(
-      fun(Tab) ->
-	      case mnesia_lib:storage_type_at_node(node(), Tab) of
-		  disc_copies ->
-		      mnesia_log:ets2dcd(Tab);
-		  _ ->
-		      %% Storage type was checked before queueing the op, though
-		      skip
-	      end
-      end, Tables),
-    dumped.
 
 %% Scan for decisions
 perform_dump(InitBy, Regulator) when InitBy == scan_decisions ->
@@ -271,9 +257,7 @@ do_insert_rec(Tid, Rec, InPlace, InitBy, LogV) ->
 		    insert_ops(Tid, schema_ops, SchemaOps, InPlace, InitBy, LogV)
 	    end
     end,
-    D = Rec#commit.disc_copies,
     ExtOps = commit_ext(Rec),
-    insert_ops(Tid, disc_copies, D, InPlace, InitBy, LogV),
     [insert_ops(Tid, Ext, Ops, InPlace, InitBy, LogV) ||
 	{Ext, Ops} <- ExtOps,
 	storage_semantics(Ext) == disc_copies],
@@ -1047,11 +1031,8 @@ insert_op(Tid, _, {op, change_table_frag, _Change, TabDef}, InPlace, InitBy) ->
     Cs = mnesia_schema:list2cs(TabDef),
     insert_cstruct(Tid, Cs, true, InPlace, InitBy).
 
-
-storage_semantics({ext, Alias, Mod}) ->
-    Mod:semantics(Alias, storage);
-storage_semantics(Storage) when is_atom(Storage) ->
-    Storage.
+storage_semantics(Storage) ->
+    mnesia_lib:semantics(Storage, storage).
 
 storage_alias({ext, Alias, _}) ->
     Alias;
@@ -1105,10 +1086,7 @@ open_files(Tab, Semantics, Storage, UpdateInPlace, InitBy)
 		    false;
 		Type ->
 		    Cs = val({Tab, cstruct}),
-		    if Semantics  == disc_copies, Tab /= schema ->
-			    Bool = open_disc_copies(Tab, InitBy),
-			    Bool;
-		       Storage == disc_only_copies; Tab == schema ->
+		    if Storage == disc_only_copies; Tab == schema ->
 			    Props = val({Tab, storage_properties}),
 			    DetsProps = proplists:get_value(dets, Props, []),
 			    Fname = prepare_open(Tab, UpdateInPlace),
@@ -1135,25 +1113,6 @@ open_files(Tab, Semantics, Storage, UpdateInPlace, InitBy)
     end;
 open_files(_Tab, _Semantics, _Storage, _UpdateInPlace, _InitBy) ->
     false.
-
-open_disc_copies(Tab, InitBy) ->
-    DumpEts = needs_dump_ets(Tab),
-    if
-	DumpEts == false; InitBy == startup ->
-            DclF = mnesia_lib:tab2dcl(Tab),
-	    mnesia_log:open_log({?MODULE,Tab},
-				mnesia_log:dcl_log_header(),
-				DclF,
-				mnesia_lib:exists(DclF),
-				mnesia_monitor:get_env(auto_repair),
-				read_write),
-	    put({?MODULE, Tab}, {opened_dumper, dcl}),
-	    true;
-	true ->
-	    mnesia_log:ets2dcd(Tab),
-	    put({?MODULE, Tab}, already_dumped),
-	    false
-    end.
 
 needs_dump_ets(Tab) ->
     DclF = mnesia_lib:tab2dcl(Tab),
@@ -1296,8 +1255,7 @@ delete_cstruct(Tid, Cs, InPlace, InitBy) ->
 
 temp_set_master_nodes() ->
     Tabs = val({schema, local_tables}),
-    Masters = [{Tab, (val({Tab, disc_copies}) ++
-		      val({Tab, ram_copies}) ++
+    Masters = [{Tab, (val({Tab, ram_copies}) ++
 		      val({Tab, disc_only_copies}) ++
 		      external_copies(Tab)) -- [node()]}
 	       || Tab <- Tabs],

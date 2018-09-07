@@ -52,7 +52,6 @@
 	 force_load_table/1,
 	 async_dump_log/1,
 	 sync_dump_log/1,
-	 snapshot_dcd/1,
 	 connect_nodes/1,
          connect_nodes/2,
 	 wait_for_schema_commit_lock/0,
@@ -204,15 +203,6 @@ sync_dump_log(InitBy) ->
 async_dump_log(InitBy) ->
     ?SERVER_NAME ! {async_dump_log, InitBy},
     ok.
-
-snapshot_dcd(Tables) when is_list(Tables) ->
-    case [T || T <- Tables,
-	       mnesia_lib:storage_type_at_node(node(), T) =/= disc_copies] of
-	[] ->
-	    call({snapshot_dcd, Tables});
-	BadTabs ->
-	    {error, {not_disc_copies, BadTabs}}
-    end.
 
 %% Wait for tables to be active
 %% If needed, we will wait for Mnesia to start
@@ -653,15 +643,6 @@ handle_call({sync_dump_log, InitBy}, From, State) ->
     Worker = #dump_log{initiated_by = InitBy,
 		       opt_reply_to = From
 		      },
-    State2 = add_worker(Worker, State),
-    noreply(State2);
-
-handle_call({snapshot_dcd, Tables}, From, State) ->
-    Worker = #dump_log{initiated_by = user,
-		       opt_reply_to = From,
-		       operation = fun() ->
-					   mnesia_dumper:snapshot_dcd(Tables)
-				   end},
     State2 = add_worker(Worker, State),
     noreply(State2);
 
