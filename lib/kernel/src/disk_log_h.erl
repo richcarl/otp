@@ -26,7 +26,7 @@
 -behaviour(gen_event).
 
 %% External exports
--export([init/2, info/2, change_size/3]).
+-export([init/2, info/2, change_size/3, change_func/3]).
 
 %% gen_event callbacks
 -export([init/1, handle_event/2, handle_call/2, handle_info/2, terminate/2,
@@ -59,7 +59,7 @@
 %%       list_to_binary(io_lib:format("tr_event: ~p\n", [Event])).
 %%
 %%   start() ->
-%%     Args = disk_log_h:init({?MODULE, tr_event}, [{name, tst},
+%%     Args = disk_log_h:init(fun ?MODULE:tr_event/1, [{name, tst},
 %%                                                  {format, external},
 %%                                                  {file, "/tmp/tst.log"}]),
 %%     gen_event:add_handler(error_logger, {disk_log_h, tst}, Args).
@@ -76,6 +76,9 @@ info(EventMgr, Handler) ->
 
 change_size(EventMgr, Handler, NewSize) ->
     gen_event:call(EventMgr, Handler, {change_size, NewSize}).
+
+change_func(EventMgr, Handler, NewFunc) ->
+    gen_event:call(EventMgr, Handler, {change_func, NewFunc}).
 
 %%%----------------------------------------------------------------------
 %%% Callback functions from gen_event
@@ -123,22 +126,36 @@ init([Func, Opts]) ->
 %%          remove_handler                              
 %%----------------------------------------------------------------------
 handle_event(Event, S) ->
-    case (S#state.func)(Event) of
-	false ->
-	    {ok, S};
-	Bin ->
-	    case disk_log:do_log(get(log), [Bin]) of
-		N when is_integer(N) ->
-		    disk_log:do_sync(get(log)),
-		    {ok, S#state{cnt = S#state.cnt+N}};
-		{error, {error, {full, _Name}}, N} ->
-		    disk_log:do_sync(get(log)),
-		    {ok, S#state{cnt = S#state.cnt+N}};
-		{error, Error, _N} ->
-		    Error;
-		Error ->
-		    Error
-	    end
+    try (S#state.func)(Event) of
+        false ->
+            {ok, S};
+        Bin when is_binary(Bin) ->
+            do_log(Bin, S);
+        Other ->
+            Msg = io_lib:format(
+                    "== LOG FORMAT FUNCTION RETURNED NON BINARY ==~n~P~n",
+                    [Other,20]),
+            do_log(list_to_binary(Msg), S)
+    catch
+        Class:Reason ->
+            Trace = erlang:get_stacktrace(),
+            Msg = io_lib:format("== LOG FORMAT FUNCTION FAILED ==~n~P~n",
+                                [{Class, Reason, Trace},30]),
+            do_log(list_to_binary(Msg), S)
+    end.
+
+do_log(Bin, S) ->
+    case disk_log:do_log(get(log), [Bin]) of
+        N when is_integer(N) ->
+            disk_log:do_sync(get(log)),
+            {ok, S#state{cnt = S#state.cnt+N}};
+        {error, {error, {full, _Name}}, N} ->
+            disk_log:do_sync(get(log)),
+            {ok, S#state{cnt = S#state.cnt+N}};
+        {error, Error, _N} ->
+            Error;
+        Error ->
+            Error
     end.
 
 %%----------------------------------------------------------------------
@@ -149,8 +166,10 @@ handle_event(Event, S) ->
 %%----------------------------------------------------------------------
 handle_call(info, S) ->
     Reply = disk_log:do_info(get(log), S#state.cnt),
-    {ok, Reply, S};
-handle_call({change_size, NewSize}, S) ->
+    {ok, Reply ++ [{func, S#state.func}], S};
+handle_call({change_func, NewFunc}, S) when is_function(NewFunc, 1) ->
+    {ok, S#state.func, S#state{func = NewFunc}};
+handle_call({change_size, {_NewMaxB, _NewMaxF}=NewSize}, S) ->
     {ok, catch do_change_size(get(log), NewSize), S}.
 
 %%----------------------------------------------------------------------
