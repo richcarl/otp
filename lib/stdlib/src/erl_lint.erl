@@ -2558,6 +2558,8 @@ expr({op,Line,Op,L,R}, Vt, St0) when Op =:= 'orelse'; Op =:= 'andalso' ->
 expr({op,_Line,_Op,L,R}, Vt, St) ->
     expr_list([L,R], Vt, St);                   %They see the same variables
 %% The following are not allowed to occur anywhere!
+expr({dot,Line,_A,_B}, _Vt, St) ->
+    {[],add_error(Line, illegal_expr, St)};
 expr({remote,Line,_M,_F}, _Vt, St) ->
     {[],add_error(Line, illegal_expr, St)}.
 
