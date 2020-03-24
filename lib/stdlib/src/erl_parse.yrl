@@ -30,7 +30,7 @@ expr expr_100 expr_150 expr_160 expr_200 expr_300 expr_400 expr_500
 expr_600 expr_650 expr_700 expr_800 expr_900
 expr_max
 pat_expr pat_expr_200 pat_expr_300 pat_expr_400 pat_expr_500
-pat_expr_600 pat_expr_650 pat_expr_700 pat_expr_800
+pat_expr_600 pat_expr_650 pat_expr_700 pat_expr_800 pat_expr_900
 pat_expr_max map_pat_expr record_pat_expr
 pat_argument_list pat_exprs
 list tail
@@ -42,7 +42,7 @@ map_expr map_tuple map_field map_field_assoc map_field_exact map_fields map_key
 if_expr if_clause if_clauses case_expr cr_clause cr_clauses receive_expr
 fun_expr fun_clause fun_clauses atom_or_var integer_or_var
 try_expr try_catch try_clause try_clauses try_opt_stacktrace
-function_call argument_list
+function_call argument_list pat_function_call
 exprs guard
 atomic strings dot_atom
 prefix_op mult_op add_op list_op comp_op
@@ -315,10 +315,15 @@ pat_expr_600 -> pat_expr_650 : '$1'.
 pat_expr_650 -> map_pat_expr : '$1'.
 pat_expr_650 -> pat_expr_700 : '$1'.
 
+pat_expr_700 -> pat_function_call : '$1'.
 pat_expr_700 -> record_pat_expr : '$1'.
-pat_expr_700 -> pat_expr_800 : '$1'.
+pat_expr_700 -> pat_expr_800 : fold_dots('$1').
 
-pat_expr_800 -> pat_expr_max : '$1'.
+pat_expr_800 -> pat_expr_900 : '$1'.
+
+pat_expr_900 -> pat_expr_900 '.' pat_expr_max :
+        {dot,?anno('$1'),'$1','$3'}.
+pat_expr_900 -> pat_expr_max : '$1'.
 
 pat_expr_max -> var : '$1'.
 pat_expr_max -> atomic : '$1'.
@@ -338,6 +343,12 @@ record_pat_expr -> '#' atom '.' atom :
 	{record_index,?anno('$1'),element(3, '$2'),'$4'}.
 record_pat_expr -> '#' atom record_tuple :
 	{record,?anno('$1'),element(3, '$2'),'$3'}.
+
+pat_function_call -> pat_expr_800 pat_argument_list :
+	{call,?anno('$1'),'$1',element(1, '$2')}.
+pat_function_call -> '.' pat_expr_800 pat_argument_list :
+	{call,?anno('$1'),{dot,?anno('$1'),{atom,?anno('$1'),''},'$2'},
+        element(1, '$3')}.
 
 list -> '[' ']' : {nil,?anno('$1')}.
 list -> '[' expr tail : {cons,?anno('$1'),'$2','$3'}.
