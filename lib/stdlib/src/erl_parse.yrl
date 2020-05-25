@@ -25,7 +25,8 @@ Nonterminals
 form
 attribute attr_val
 function function_clauses function_clause
-clause_args clause_guard clause_body
+anon_function_clauses anon_function_clause
+clause_guard clause_body
 expr expr_100 expr_150 expr_160 expr_200 expr_300 expr_400 expr_500
 expr_600 expr_650 expr_700 expr_800
 expr_max
@@ -205,16 +206,21 @@ attr_val -> expr                     : ['$1'].
 attr_val -> expr ',' exprs           : ['$1' | '$3'].
 attr_val -> '(' expr ',' exprs ')'   : ['$2' | '$4'].
 
-function -> function_clauses : build_function('$1').
+function -> function_clause : build_function(['$1']).
+function -> function_clause ';' function_clauses : build_function(['$1'|'$3']).
+function -> function_clause ';' anon_function_clauses : build_function(['$1'|'$3']).
 
 function_clauses -> function_clause : ['$1'].
 function_clauses -> function_clause ';' function_clauses : ['$1'|'$3'].
 
-function_clause -> atom clause_args clause_guard clause_body :
-	{clause,?anno('$1'),element(3, '$1'),'$2','$3','$4'}.
+function_clause -> atom pat_argument_list clause_guard clause_body :
+	{clause,?anno('$1'),element(3, '$1'),element(1, '$2'),'$3','$4'}.
 
+anon_function_clauses -> anon_function_clause : ['$1'].
+anon_function_clauses -> anon_function_clause ';' anon_function_clauses : ['$1'|'$3'].
 
-clause_args -> pat_argument_list : element(1, '$1').
+anon_function_clause -> pat_argument_list clause_guard clause_body :
+	{clause,element(2, '$1'),[],element(1, '$1'),'$2','$3'}.
 
 clause_guard -> 'when' guard : '$2'.
 clause_guard -> '$empty' : [].
@@ -1351,6 +1357,8 @@ build_fun(Anno, Cs) ->
 
 check_clauses(Cs, Name, Arity) ->
     [case C of
+         {clause,A,[],As,G,B} when length(As) =:= Arity ->
+             {clause,A,As,G,B};  % function clause without repeated name
          {clause,A,N,As,G,B} when N =:= Name, length(As) =:= Arity ->
              {clause,A,As,G,B};
          {clause,A,_N,_As,_G,_B} ->
