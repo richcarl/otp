@@ -1637,6 +1637,7 @@ pattern({float,_Line,_F}, _Vt, _Old, St) -> {[],[],St};
 pattern({atom,Line,A}, _Vt, _Old, St) ->
     {[],[],keyword_warning(Line, A, St)};
 pattern({string,_Line,_S}, _Vt, _Old, St) -> {[],[],St};
+pattern({utfstring,_Line,_S}, _Vt, _Old, St) -> {[],[],St};
 pattern({nil,_Line}, _Vt, _Old, St) -> {[],[],St};
 pattern({cons,_Line,H,T}, Vt, Old,  St0) ->
     {Hvt,Hnew,St1} = pattern(H, Vt, Old, St0),
@@ -2087,6 +2088,7 @@ gexpr({float,_Line,_F}, _Vt, St) -> {[],St};
 gexpr({atom,Line,A}, _Vt, St) ->
     {[],keyword_warning(Line, A, St)};
 gexpr({string,_Line,_S}, _Vt, St) -> {[],St};
+gexpr({utfstring,_Line,_S}, _Vt, St) -> {[],St};
 gexpr({nil,_Line}, _Vt, St) -> {[],St};
 gexpr({cons,_Line,H,T}, Vt, St) ->
     gexpr_list([H,T], Vt, St);
@@ -2260,6 +2262,7 @@ is_gexpr({integer,_L,_I}, _Info) -> true;
 is_gexpr({float,_L,_F}, _Info) -> true;
 is_gexpr({atom,_L,_A}, _Info) -> true;
 is_gexpr({string,_L,_S}, _Info) -> true;
+is_gexpr({utfstring,_L,_S}, _Info) -> true;
 is_gexpr({nil,_L}, _Info) -> true;
 is_gexpr({cons,_L,H,T}, Info) -> is_gexpr_list([H,T], Info);
 is_gexpr({tuple,_L,Es}, Info) -> is_gexpr_list(Es, Info);
@@ -2349,6 +2352,7 @@ expr({float,_Line,_F}, _Vt, St) -> {[],St};
 expr({atom,Line,A}, _Vt, St) ->
     {[],keyword_warning(Line, A, St)};
 expr({string,_Line,_S}, _Vt, St) -> {[],St};
+expr({utfstring,_Line,_S}, _Vt, St) -> {[],St};
 expr({nil,_Line}, _Vt, St) -> {[],St};
 expr({cons,_Line,H,T}, Vt, St) ->
     expr_list([H,T], Vt, St);
@@ -2607,6 +2611,7 @@ is_valid_record(Rec) ->
         {float, _, _} -> false;
         {atom, _, _} -> false;
         {string, _, _} -> false;
+        {utfstring, _, _} -> false;
         {cons, _, _, _} -> false;
         {nil, _} -> false;
         {lc, _, _, _} -> false;
@@ -2633,6 +2638,7 @@ is_valid_call(Call) ->
         {integer, _, _} -> false;
         {float, _, _} -> false;
         {string, _, _} -> false;
+        {utfstring, _, _} -> false;
         {cons, _, _, _} -> false;
         {nil, _} -> false;
         {lc, _, _, _} -> false;
@@ -4047,6 +4053,7 @@ canonicalize_string(Term) ->
 check_format_2(Fmt, As) ->
     case Fmt of
         {string,_L,S} -> check_format_2a(S, As);
+        {utfstring,_L,S} -> check_format_2a(S, As);
         {atom,_L,A} -> check_format_2a(atom_to_list(A), As);
         _ -> {warn,2,"format string not a textual constant",[]}
     end.
@@ -4077,6 +4084,7 @@ args_list({cons,_L,_H,T}) -> args_list(T);
 args_list({string,_L,_Cs}) -> maybe;
 args_list({nil,_L}) -> true;
 args_list({atom,_,_}) -> false;
+args_list({utfstring,_,_}) -> false;
 args_list({integer,_,_}) -> false;
 args_list({float,_,_}) -> false;
 args_list(_Other) -> maybe.

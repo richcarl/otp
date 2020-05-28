@@ -237,7 +237,7 @@ latin1_state(Quote) ->
         end,
     #pp{value_fun  = ValueFun,
         singleton_atom_type_fun = SingletonFun,
-        string_fun = fun io_lib:write_string_as_latin1/1,
+        string_fun = fun io_lib:write_string_as_latin1/2,
         char_fun   = fun io_lib:write_char_as_latin1/1}.
 
 unicode_state(Quote) ->
@@ -252,7 +252,7 @@ unicode_state(Quote) ->
         end,
     #pp{value_fun = ValueFun,
         singleton_atom_type_fun = SingletonFun,
-        string_fun = fun io_lib:write_string/1,
+        string_fun = fun io_lib:write_string/2,
         char_fun   = fun io_lib:write_char/1}.
 
 encoding(Options) ->
@@ -545,6 +545,7 @@ lexpr({integer,_,N}, _, _) -> leaf(write(N));
 lexpr({float,_,F}, _, _) -> leaf(write(F));
 lexpr({atom,_,A}, _, _) -> {atom,A};
 lexpr({string,_,S}, _, _) -> {string,S};
+lexpr({utfstring,_,S}, _, _) -> {utfstring,S};
 lexpr({nil,_}, _, _) -> '[]';
 lexpr({cons,_,H,T}, _, Opts) ->
     list(T, [H], Opts);
@@ -986,6 +987,7 @@ frmt(Item, I, PP) ->
 %%% - {singleton_atom_type,A}: a singleton atom type
 %%% - {char,C}: a character
 %%% - {string,S}: a string.
+%%% - {utfstring,S}: a backtick-string.
 %%% - {value,T}: a term.
 %%% - {hook,...}, {ehook,...}: hook expressions.
 %%%
@@ -1059,7 +1061,9 @@ f({singleton_atom_type,A}, I, ST, WT, PP) ->
 f({char,C}, I, ST, WT, PP) ->
     f(write_a_char(C, PP), I, ST, WT, PP);
 f({string,S}, I, ST, WT, PP) ->
-    f(write_a_string(S, I, PP), I, ST, WT, PP);
+    f(write_a_string(S, I, PP, $"), I, ST, WT, PP); %" Emacs
+f({utfstring,S}, I, ST, WT, PP) ->
+    f(write_a_string(S, I, PP, $`), I, ST, WT, PP); %` Emacs
 f({reserved,R}, I, ST, WT, PP) ->
     f(R, I, ST, WT, PP);
 f({hook,HookExpr,Precedence,Func,Options}, I, _ST, _WT, _PP) ->
@@ -1264,23 +1268,23 @@ write_a_char(C, PP) ->
 
 -define(MIN_SUBSTRING, 5).
 
-write_a_string(S, I, PP) when I < 0; S =:= [] ->
-    flat_leaf(write_string(S, PP));
-write_a_string(S, I, PP) ->
+write_a_string(S, I, PP, Qc) when I < 0; S =:= [] ->
+    flat_leaf(write_string(S, PP, Qc));
+write_a_string(S, I, PP, Qc) ->
     Len = erlang:max(PP#pp.linewidth-I, ?MIN_SUBSTRING),
-    {list,write_a_string(S, Len, Len, PP)}.
+    {list,write_a_string(S, Len, Len, PP, Qc)}.
 
-write_a_string([], _N, _Len, _PP) ->
+write_a_string([], _N, _Len, _PP, _Qc) ->
     [];
-write_a_string(S, N, Len, PP) ->
+write_a_string(S, N, Len, PP, Qc) ->
     SS = string:slice(S, 0, N),
-    Sl = write_string(SS, PP),
+    Sl = write_string(SS, PP, Qc),
     case (string:length(Sl) > Len) and (N > ?MIN_SUBSTRING) of
         true ->
-            write_a_string(S, N-1, Len, PP);
+            write_a_string(S, N-1, Len, PP, Qc);
         false ->
             [flat_leaf(Sl) |
-             write_a_string(string:slice(S, string:length(SS)), Len, Len, PP)]
+             write_a_string(string:slice(S, string:length(SS)), Len, Len, PP, Qc)]
     end.
 
 flat_leaf(S) ->
@@ -1296,8 +1300,8 @@ write_atom(A, PP) ->
 write_singleton_atom_type(A, PP) ->
     (PP#pp.singleton_atom_type_fun)(A).
 
-write_string(S, PP) ->
-    (PP#pp.string_fun)(S).
+write_string(S, PP, Qc) ->
+    (PP#pp.string_fun)(S, Qc).
 
 write_char(C, PP) ->
     (PP#pp.char_fun)(C).

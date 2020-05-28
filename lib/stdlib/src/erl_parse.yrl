@@ -40,7 +40,7 @@ fun_expr fun_clause fun_clauses atom_or_var integer_or_var
 try_expr try_catch try_clause try_clauses try_opt_stacktrace
 function_call argument_list
 exprs guard
-atomic strings
+atomic strings utfstrings
 prefix_op mult_op add_op list_op comp_op
 binary bin_elements bin_element bit_expr
 opt_bit_size_expr bit_size_expr opt_bit_type_list bit_type_list bit_type
@@ -51,7 +51,7 @@ map_pair_types map_pair_type
 bin_base_type bin_unit_type.
 
 Terminals
-char integer float atom string var
+char integer float atom string utfstring var
 
 '(' ')' ',' '->' '{' '}' '[' ']' '|' '||' '<-' ';' ':' '#' '.'
 'after' 'begin' 'case' 'try' 'catch' 'end' 'fun' 'if' 'of' 'receive' 'when'
@@ -496,10 +496,15 @@ atomic -> integer : '$1'.
 atomic -> float : '$1'.
 atomic -> atom : '$1'.
 atomic -> strings : '$1'.
+atomic -> utfstrings : '$1'.
 
 strings -> string : '$1'.
 strings -> string strings :
 	{string,?anno('$1'),element(3, '$1') ++ element(3, '$2')}.
+
+utfstrings -> utfstring : '$1'.
+utfstrings -> utfstring utfstrings :
+	{utfstring,?anno('$1'),element(3, '$1') ++ element(3, '$2')}.
 
 prefix_op -> '+' : '$1'.
 prefix_op -> '-' : '$1'.

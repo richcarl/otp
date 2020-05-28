@@ -105,6 +105,8 @@ pattern({atom,_,_}=Atom, St) ->
     {Atom,St};
 pattern({string,_,_}=String, St) ->
     {String,St};
+pattern({utfstring,_,_}=String, St) ->
+    {String,St};
 pattern({nil,_}=Nil, St) ->
     {Nil,St};
 pattern({cons,Line,H,T}, St0) ->
@@ -233,6 +235,7 @@ not_a_tuple({nil,_}) -> true;
 not_a_tuple({cons,_,_,_}) -> true;
 not_a_tuple({char,_,_}) -> true;
 not_a_tuple({string,_,_}) -> true;
+not_a_tuple({utfstring,_,_}) -> true;
 not_a_tuple({record_index,_,_,_}) -> true;
 not_a_tuple({bin,_,_}) -> true;
 not_a_tuple({op,_,_,_}) -> true;
@@ -270,6 +273,8 @@ expr({float,_,_}=Float, St) ->
 expr({atom,_,_}=Atom, St) ->
     {Atom,St};
 expr({string,_,_}=String, St) ->
+    {String,St};
+expr({utfstring,_,_}=String, St) ->
     {String,St};
 expr({nil,_}=Nil, St) ->
     {Nil,St};

@@ -590,6 +590,9 @@ expr({float,L,F}, St) -> {#c_literal{anno=full_anno(L, St),val=F},[],St};
 expr({atom,L,A}, St) -> {#c_literal{anno=full_anno(L, St),val=A},[],St};
 expr({nil,L}, St) -> {#c_literal{anno=full_anno(L, St),val=[]},[],St};
 expr({string,L,S}, St) -> {#c_literal{anno=full_anno(L, St),val=S},[],St};
+expr({utfstring,L,S}, St) ->
+    %% `...` is equivalent to <<"..."/utf8>>
+    expr({bin,L,[{bin_element,L,{string,L,S},default,[utf8]}]}, St);
 expr({cons,L,H0,T0}, St0) ->
     {H1,Hps,St1} = safe(H0, St0),
     {T1,Tps,St2} = safe(T0, St1),
@@ -1814,7 +1817,9 @@ pattern({char,L,C}, St) -> {#c_literal{anno=lineno_anno(L, St),val=C},St};
 pattern({integer,L,I}, St) -> {#c_literal{anno=lineno_anno(L, St),val=I},St};
 pattern({float,L,F}, St) -> {#c_literal{anno=lineno_anno(L, St),val=F},St};
 pattern({atom,L,A}, St) -> {#c_literal{anno=lineno_anno(L, St),val=A},St};
-pattern({string,L,S}, St) -> {#c_literal{anno=lineno_anno(L, St),val=S},St};
+pattern({string,L,S}, St) -> {#c_literal{anno=full_anno(L, St),val=S},[],St};
+pattern({utfstring,L,S}, St) ->
+    pattern({bin,L,[{bin_element,L,{string,L,S},default,[utf8]}]}, St);
 pattern({nil,L}, St) -> {#c_literal{anno=lineno_anno(L, St),val=[]},St};
 pattern({cons,L,H,T}, St) ->
     {Ph,St1} = pattern(H, St),

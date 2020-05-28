@@ -223,6 +223,8 @@ expr({atom,_,A}, Bs, _Lf, _Ef, RBs) ->
     ret_expr(A, Bs, RBs);
 expr({string,_,S}, Bs, _Lf, _Ef, RBs) ->
     ret_expr(S, Bs, RBs);
+expr({utfstring,L,S}, Bs, Lf, Ef, RBs) ->
+    expr({bin,L,[{bin_element,L,{string,L,S},default,[utf8]}]}, Bs, Lf, Ef, RBs);
 expr({nil, _}, Bs, _Lf, _Ef, RBs) ->
     ret_expr([], Bs, RBs);
 expr({cons,_,H0,T0}, Bs0, Lf, Ef, RBs) ->
@@ -1135,6 +1137,11 @@ match1({var,_,Name}, Term, Bs, _BBs) ->
 match1({match,_,Pat1,Pat2}, Term, Bs0, BBs) ->
     {match, Bs1} = match1(Pat1, Term, Bs0, BBs),
     match1(Pat2, Term, Bs1, BBs);
+match1({utfstring,_,S0}, S, Bs, _BBs) ->
+    case unicode:characters_to_binary(S0) of
+	S -> {match,Bs};
+	_ -> throw(nomatch)
+    end;
 match1({string,_,S0}, S, Bs, _BBs) ->
     case S of
 	S0 -> {match,Bs};

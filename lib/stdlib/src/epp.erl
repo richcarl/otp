@@ -1658,6 +1658,8 @@ token_src({char,_,C}) ->
     io_lib:write_char(C);
 token_src({string, _, X}) ->
     io_lib:write_string(X);
+token_src({utfstring, _, X}) ->
+    io_lib:write_string(X, $`);
 token_src({_, _, X}) ->
     io_lib:format("~w", [X]).
 
