@@ -401,6 +401,9 @@ scan1("."=Cs, _St, Line, Col, Toks) ->
     {more,{Cs,Col,Toks,Line,[],fun scan/6}};
 scan1([$.=C|Cs], St, Line, Col, Toks) ->
     scan_dot(Cs, St, Line, Col, Toks, [C]);
+scan1([$`|Cs], St, Line, Col, Toks) -> %` Emacs
+    State0 = {[],[],Line,Col},
+    scan_utfstring(Cs, St, Line, incr_column(Col, 1), Toks, State0);
 scan1([$"|Cs], St, Line, Col, Toks) -> %" Emacs
     State0 = {[],[],Line,Col},
     scan_string(Cs, St, Line, incr_column(Col, 1), Toks, State0);
@@ -521,8 +524,6 @@ scan1([$\\|Cs], St, Line, Col, Toks) ->
     tok2(Cs, St, Line, Col, Toks, "\\", '\\', 1);
 scan1([$^|Cs], St, Line, Col, Toks) ->
     tok2(Cs, St, Line, Col, Toks, "^", '^', 1);
-scan1([$`|Cs], St, Line, Col, Toks) ->
-    tok2(Cs, St, Line, Col, Toks, "`", '`', 1);
 scan1([$~|Cs], St, Line, Col, Toks) ->
     tok2(Cs, St, Line, Col, Toks, "~", '~', 1);
 scan1([$&|Cs], St, Line, Col, Toks) ->
@@ -755,8 +756,14 @@ scan_char([], _St, Line, Col, Toks) ->
 scan_char(eof, _St, Line, Col, _Toks) ->
     scan_error(char, Line, Col, Line, incr_column(Col, 1), eof).
 
-scan_string(Cs, St, Line, Col, Toks, {Wcs,Str,Line0,Col0}) ->
-    case scan_string0(Cs, St, Line, Col, $\", Str, Wcs) of %"
+scan_string(Cs, St, Line, Col, Toks, State) ->
+    scan_string(Cs, St, Line, Col, Toks, State, $", string). %" Emacs
+
+scan_utfstring(Cs, St, Line, Col, Toks, State) ->
+    scan_string(Cs, St, Line, Col, Toks, State, $`, utfstring). %` Emacs
+
+scan_string(Cs, St, Line, Col, Toks, {Wcs,Str,Line0,Col0}, Q, Tag) ->
+    case scan_string0(Cs, St, Line, Col, Q, Str, Wcs) of
         {more,Ncs,Nline,Ncol,Nstr,Nwcs} ->
             State = {Nwcs,Nstr,Line0,Col0},
             {more,{Ncs,Ncol,Toks,Nline,State,fun scan_string/6}};
@@ -764,10 +771,10 @@ scan_string(Cs, St, Line, Col, Toks, {Wcs,Str,Line0,Col0}) ->
             scan_error(Error, Nline, Ncol, Nline, EndCol, Ncs);
         {error,Nline,Ncol,Nwcs,Ncs} ->
             Estr = string:slice(Nwcs, 0, 16), % Expanded escape chars.
-            scan_error({string,$\",Estr}, Line0, Col0, Nline, Ncol, Ncs); %"
+            scan_error({Tag,Q,Estr}, Line0, Col0, Nline, Ncol, Ncs);
         {Ncs,Nline,Ncol,Nstr,Nwcs} ->
             Anno = anno(Line0, Col0, St, Nstr),
-            scan1(Ncs, St, Nline, Ncol, [{string,Anno,Nwcs}|Toks])
+            scan1(Ncs, St, Nline, Ncol, [{Tag,Anno,Nwcs}|Toks])
     end.
 
 scan_qatom(Cs, St, Line, Col, Toks, {Wcs,Str,Line0,Col0}) ->
