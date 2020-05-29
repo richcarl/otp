@@ -230,7 +230,7 @@
 -export(['and'/2, 'or'/2,
          'xor'/2, 'not'/1]).
 
--export(['--'/2, '++'/2]).
+-export(['--'/2, '++'/2, '<>'/2]).
 
 -export(['!'/2]).
 
@@ -4364,6 +4364,10 @@ gc_info(Ref, N, {OrigColls,OrigRecl}) ->
 -spec erlang:'++'(list(), term()) -> term().
 '++'(_A, _B) ->
     erlang:nif_error(undefined).
+
+-spec erlang:'<>'(binary(), binary()) -> binary().
+'<>'(A, B) ->
+    <<A/binary, B/binary>>.
 
 -spec erlang:'and'(boolean(), boolean()) -> boolean().
 'and'(_A, _B) ->
