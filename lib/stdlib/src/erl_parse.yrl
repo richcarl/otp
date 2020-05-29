@@ -61,7 +61,7 @@ char integer float atom string utfstring var
 '+' '-' 'bor' 'bxor' 'bsl' 'bsr' 'or' 'xor'
 '++' '--'
 '==' '/=' '=<' '<' '>=' '>' '=:=' '=/=' '<=' '=>' ':='
-'<<' '>>'
+'<<' '>>' '<>'
 '!' '=' '::' '..' '...'
 'spec' 'callback' % helper
 dot.
@@ -529,6 +529,7 @@ add_op -> 'xor' : '$1'.
 
 list_op -> '++' : '$1'.
 list_op -> '--' : '$1'.
+list_op -> '<>' : '$1'.
 
 comp_op -> '==' : '$1'.
 comp_op -> '/=' : '$1'.
@@ -953,7 +954,7 @@ Erlang code.
 -type binary_op() :: '/' | '*' | 'div' | 'rem' | 'band' | 'and' | '+' | '-'
                    | 'bor' | 'bxor' | 'bsl' | 'bsr' | 'or' | 'xor' | '++'
                    | '--' | '==' | '/=' | '=<' | '<'  | '>=' | '>' | '=:='
-                   | '=/='.
+                   | '=/=' | '<>'.
 
 -type af_unary_op(T) :: {'op', anno(), unary_op(), T}.
 
@@ -1540,6 +1541,7 @@ inop_prec('=:=') -> {300,200,300};
 inop_prec('=/=') -> {300,200,300};
 inop_prec('++') -> {400,300,300};
 inop_prec('--') -> {400,300,300};
+inop_prec('<>') -> {400,300,300};
 inop_prec('+') -> {400,400,500};
 inop_prec('-') -> {400,400,500};
 inop_prec('bor') -> {400,400,500};

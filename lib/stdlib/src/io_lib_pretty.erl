@@ -562,11 +562,12 @@ print_length(<<_/bitstring>> = Bin, D, T, RF, Enc, Str) ->
         printable_bin0(Bin, D1, tsub(T, 6), Enc)
     of
         {true, List} when is_list(List) ->
-            S = io_lib:write_string(List, $"), %"
-            {[$<,$<,S,$>,$>], 4 + length(S), 0, no_more};
+            S = io_lib:write_string(List, $`), %`
+            %{[$<,$<,S,$>,$>], 4 + length(S), 0, no_more};
+            {S, length(S), 0, no_more};
         {false, List} when is_list(List) ->
             S = io_lib:write_string(List, $"), %"
-            {[$<,$<,S,"/utf8>>"], 9 + io_lib:chars_length(S), 0, no_more};
+            {[$<,$<,S,"/utf7>>"], 9 + io_lib:chars_length(S), 0, no_more};
         {true, true, Prefix} ->
             S = io_lib:write_string(Prefix, $"), %"
             More = fun(T1, Dd) ->
