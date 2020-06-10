@@ -401,9 +401,12 @@ scan1("."=Cs, _St, Line, Col, Toks) ->
     {more,{Cs,Col,Toks,Line,[],fun scan/6}};
 scan1([$.=C|Cs], St, Line, Col, Toks) ->
     scan_dot(Cs, St, Line, Col, Toks, [C]);
+scan1([$`,$`,$`|Cs], St, Line, Col, Toks) -> %` Emacs
+    State0 = {[],[],Line,Col},
+    scan_utfstring(Cs, St, Line, incr_column(Col, 3), Toks, State0, $`);
 scan1([$`|Cs], St, Line, Col, Toks) -> %` Emacs
     State0 = {[],[],Line,Col},
-    scan_utfstring(Cs, St, Line, incr_column(Col, 1), Toks, State0);
+    scan_utfstring(Cs, St, Line, incr_column(Col, 1), Toks, State0, '```');
 scan1([$"|Cs], St, Line, Col, Toks) -> %" Emacs
     State0 = {[],[],Line,Col},
     scan_string(Cs, St, Line, incr_column(Col, 1), Toks, State0);
@@ -761,8 +764,8 @@ scan_char(eof, _St, Line, Col, _Toks) ->
 scan_string(Cs, St, Line, Col, Toks, State) ->
     scan_string(Cs, St, Line, Col, Toks, State, $", string). %" Emacs
 
-scan_utfstring(Cs, St, Line, Col, Toks, State) ->
-    scan_string(Cs, St, Line, Col, Toks, State, $`, utfstring). %` Emacs
+scan_utfstring(Cs, St, Line, Col, Toks, State, Q) ->
+    scan_string(Cs, St, Line, Col, Toks, State, Q, utfstring). %` Emacs
 
 scan_string(Cs, St, Line, Col, Toks, {Wcs,Str,Line0,Col0}, Q, Tag) ->
     case scan_string0(Cs, St, Line, Col, Q, Str, Wcs) of
@@ -811,6 +814,8 @@ scan_string0(Cs, _St, Line, Col, Q, Str, Wcs) ->
 %% Optimization. Col =:= no_col.
 scan_string_no_col([Q|Cs], Line, Col, Q, Wcs) ->
     {Cs,Line,Col,_DontCare=[],lists:reverse(Wcs)};
+scan_string_no_col([$`,$`,$`|Cs], Line, Col, '```', Wcs) ->
+    {Cs,Line,Col,_DontCare=[],strip_indent(lists:reverse(Wcs),Col-1)};
 scan_string_no_col([$\n=C|Cs], Line, Col, Q, Wcs) ->
     scan_string_no_col(Cs, Line+1, Col, Q, [C|Wcs]);
 scan_string_no_col([C|Cs], Line, Col, Q, Wcs) when C =/= $\\, ?UNICODE(C) ->
@@ -819,6 +824,10 @@ scan_string_no_col(Cs, Line, Col, Q, Wcs) ->
     scan_string1(Cs, Line, Col, Q, Wcs, Wcs).
 
 %% Optimization. Col =/= no_col.
+scan_string_col([$`,$`,$`|Cs], St, Line, Col, '```', Wcs0) ->
+    Wcs = strip_indent(lists:reverse(Wcs0),Col-1),
+    Str = ?STR(St, [$`,$`,$`|Wcs++[$`,$`,$`]]),
+    {Cs,Line,Col+3,Str,Wcs};
 scan_string_col([Q|Cs], St, Line, Col, Q, Wcs0) ->
     Wcs = lists:reverse(Wcs0),
     Str = ?STR(St, [Q|Wcs++[Q]]),
@@ -837,6 +846,10 @@ scan_string_col(Cs, _St, Line, Col, Q, Wcs) ->
 %% location could be modified, but that too is ugly.)
 scan_string1([Q|Cs], Line, Col, Q, Str0, Wcs0) ->
     Wcs = lists:reverse(Wcs0),
+    Str = [Q|lists:reverse(Str0, [Q])],
+    {Cs,Line,incr_column(Col, 1),Str,Wcs};
+scan_string1([$`,$`,$`|Cs], Line, Col, '```', Str0, Wcs0) ->
+    Wcs = strip_indent(lists:reverse(Wcs0), Col-1),
     Str = [Q|lists:reverse(Str0, [Q])],
     {Cs,Line,incr_column(Col, 1),Str,Wcs};
 scan_string1([$\n=C|Cs], Line, Col, Q, Str, Wcs) ->
