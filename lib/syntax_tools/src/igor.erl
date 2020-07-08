@@ -1822,20 +1822,17 @@ transform_application(T, Env, St) ->
 
     %% See if the operator is an explicit function name.
     %% (Usually, this will be the case.)
-    case catch {ok, erl_syntax_lib:analyze_function_name(F)} of
-	{ok, Name} ->
-	    transform_application_1(Name, F, As, T, Env, St1);
+    try erl_syntax_lib:analyze_function_name(F) of
+	Name ->
+	    transform_application_1(Name, F, As, T, Env, St1)
+    catch
 	syntax_error ->
 	    %% Oper is not a function name, but might be any other
 	    %% expression - we just visit it and reassemble the
 	    %% application.
 	    %% We do not handle applications of tuples `{M, F}'.
 	    {F1, St2} = transform(F, Env, St1),
-	    {rewrite(T, erl_syntax:application(F1, As)), St2};
-	{'EXIT', R} ->
-	    exit(R);
-	R ->
-	    throw(R)
+	    {rewrite(T, erl_syntax:application(F1, As)), St2}
     end.
 
 %% At this point we should have an explicit function name, which might
@@ -2222,7 +2219,7 @@ transform_attribute(T, Env, St) ->
 
 transform_record(T, Env, St) ->
     {T1, St1} = TSt1 = default_transform(T, Env, St),
-    X = case catch erl_syntax_lib:analyze_record_expr(T1) of
+    X = try erl_syntax_lib:analyze_record_expr(T1) of
 	    {record_expr, {R, _}} ->
 		F = fun (R) ->
 			    erl_syntax:record_expr(
@@ -2248,6 +2245,8 @@ transform_record(T, Env, St) ->
 		{R, F};
 	    _Type ->
 		false
+        catch
+            syntax_error -> false
 	end,
     case X of
 	{R1, F1} ->
@@ -2543,16 +2542,12 @@ rename_file(File, Dict, Opts) ->
 %% are guaranteed to be in the set of function names.
 
 get_module_info(Forms) ->
-    L = case catch {ok, erl_syntax_lib:analyze_forms(Forms)} of
-	    {ok, L1} ->
-		L1;
+    L = try erl_syntax_lib:analyze_forms(Forms) of
+	    L1 -> L1
+        catch
 	    syntax_error ->
 		report_error("syntax error in input."),
-		erlang:error(badarg);
-	    {'EXIT', R} ->
-		exit(R);
-	    R ->
-		throw(R)
+		erlang:error(badarg)
 	end,
     {Name, Vars} =
 	case lists:keyfind(module, 1, L) of
@@ -2660,11 +2655,12 @@ report_warnings([], _) ->
 error_text(D, Name) ->
     case D of
 	{L, M, E} when is_integer(L), is_atom(M) ->
-	    case catch M:format_error(E) of
-		S when is_list(S) ->
+	    try M:format_error(E) of
+		S ->
 		    io_lib:fwrite("`~w', line ~w: ~ts.",
-				  [Name, L, S]);
-		_ ->
+				  [Name, L, S])
+            catch
+		_:_ ->
 		    error_text_1(D, Name)
 	    end;
 	_E ->
@@ -2706,18 +2702,12 @@ expand_imports(Is, Name) ->
 %% open_output_file(filename()) -> filedescriptor()
 
 open_output_file(FName) ->
-    case catch file:open(FName, [write]) of
+    case file:open(FName, [write]) of
 	{ok, FD} ->
 	    FD;
 	{error, _} = Error ->
 	    error_open_output(FName),
-	    exit(Error);
-	{'EXIT', R} ->
-	    error_open_output(FName),
-	    exit(R);
-	R ->
-	    error_open_output(FName),
-	    exit(R)
+	    exit(Error)
     end.
 
 output_encoding(FD, Opts) ->
@@ -2814,20 +2804,14 @@ find_src(Name, Rules) ->
 %% file_type(filename()) -> {value, Type} | none
 
 file_type(Name) ->
-    case catch file:read_file_info(Name) of
+    case file:read_file_info(Name) of
 	{ok, Env} ->
 	    {value, Env#file_info.type};
 	{error, enoent} ->
 	    none;
 	{error, _} = Error ->
 	    error_read_file_info(Name),
-	    exit(Error);
-	{'EXIT', R} ->
-	    error_read_file_info(Name),
-	    exit(R);
-	R ->
-	    error_read_file_info(Name),
-	    throw(R)
+	    exit(Error)
     end.
 
 %% Create the target directory and make a backup file if necessary, then
@@ -2874,17 +2858,14 @@ write_module(Tree, Name, Dir, Opts) ->
     FD = open_output_file(File),
     ok = output_encoding(FD, Opts),
     verbose("writing to file `~ts'.", [File], Opts),
-    V = (catch {ok, output(FD, Printer, Tree, Opts)}),
-    ok = file:close(FD),
-    case V of
-	{ok, _} ->
-	    File;
-	{'EXIT', R} ->
+    try output(FD, Printer, Tree, Opts) of
+	_ -> File
+    catch
+        Class:Term:Trace ->
 	    error_write_file(File),
-	    exit(R);
-	R ->
-	    error_write_file(File),
-	    throw(R)
+            erlang:raise(Class, Term, Trace)
+    after
+        file:close(FD)
     end.
 
 output(FD, Printer, Tree, Opts) ->
@@ -2912,18 +2893,12 @@ backup_file_1(Name, Opts) ->
     Suffix = proplists:get_value(backup_suffix, Opts, ""),
     Dest = filename:join(filename:dirname(Name1),
 			 filename:basename(Name1) ++ Suffix),
-    case catch file:rename(Name1, Dest) of
+    case file:rename(Name1, Dest) of
 	ok ->
 	    verbose("made backup of file `~ts'.", [Name1], Opts);
 	{error, R} ->
 	    error_backup_file(Name1),
-	    exit({error, R});
-	{'EXIT', R} ->
-	    error_backup_file(Name1),
-	    exit(R);
-	R ->
-	    error_backup_file(Name1),
-	    throw(R)
+	    exit({error, R})
     end.
 
 

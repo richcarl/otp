@@ -434,9 +434,9 @@ parse_form(Dev, L0, Parser, Options) ->
     Opt = #opt{clever = proplists:get_bool(clever, Options)},
     case io:scan_erl_form(Dev, "", L0) of
         {ok, Ts, L1} ->
-            case catch {ok, Parser(Ts, Opt)} of
-                {'EXIT', Term} ->
-                    {error, io_error(L1, {unknown, Term}), L1};
+            try Parser(Ts, Opt) of
+                F -> {ok, F, L1}
+            catch
                 {error, Term} ->
 		    IoErr = io_error(L1, Term),
 		    {error, IoErr, L1};
@@ -446,9 +446,7 @@ parse_form(Dev, L0, Parser, Options) ->
 			   start_pos(Ts, L1)),
 		     L1};
                 {parse_error, IoErr} ->
-		    {error, IoErr, L1};
-                {ok, F} ->
-                    {ok, F, L1}
+		    {error, IoErr, L1}
             end;
         {error, _IoErr, _L1} = Err -> Err;
         {error, _Reason} -> {eof, L0}; % This is probably encoding problem

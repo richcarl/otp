@@ -671,57 +671,8 @@ lay_2(Node, Ctxt) ->
                     N0 ->
                         N0
                 end,
-            D = case attribute_type(Node) of
-                    spec ->
-                        [SpecTuple] = Args,
-                        [FuncName, FuncTypes] =
-                            erl_syntax:tuple_elements(SpecTuple),
-                        Name =
-                            case erl_syntax:type(FuncName) of
-                                tuple ->
-                                    case erl_syntax:tuple_elements(FuncName) of
-                                        [F0, _] ->
-                                            F0;
-                                        [M0, F0, _] ->
-                                            erl_syntax:module_qualifier(M0,
-                                                                        F0);
-                                        _ ->
-                                            FuncName
-                                    end;
-                                _ ->
-                                    FuncName
-                            end,
-                        Types = dodge_macros(FuncTypes),
-                        D1 = lay_clauses(erl_syntax:concrete(Types),
-                                         spec, Ctxt1),
-                        beside(follow(lay(N, Ctxt1),
-                                      lay(Name, Ctxt1),
-                                      Ctxt1#ctxt.break_indent),
-                               D1);
-                    type ->
-                        [TypeTuple] = Args,
-                        [Name, Type0, Elements] =
-                            erl_syntax:tuple_elements(TypeTuple),
-                        TypeName = dodge_macros(Name),
-                        Type = dodge_macros(Type0),
-                        As0 = dodge_macros(Elements),
-                        As = erl_syntax:concrete(As0),
-                        D1 = lay_type_application(TypeName, As, Ctxt1),
-                        D2 = lay(erl_syntax:concrete(Type), Ctxt1),
-                        beside(follow(lay(N, Ctxt1),
-                                      beside(D1, floating(text(" :: "))),
-                                      Ctxt1#ctxt.break_indent),
-                               D2);
-                    Tag when Tag =:= export_type;
-                             Tag =:= optional_callbacks ->
-                        [FuncNs] = Args,
-                        FuncNames = erl_syntax:concrete(dodge_macros(FuncNs)),
-                        As = unfold_function_names(FuncNames),
-                        beside(lay(N, Ctxt1),
-                               beside(text("("),
-                                      beside(lay(As, Ctxt1),
-                                             floating(text(")")))));
-                    _ when Args =:= none ->
+            D = case Args of
+                    none ->
 			lay(N, Ctxt1);
                     _ ->
                         D1 = sep(seq(Args, text(","), Ctxt1,
@@ -987,6 +938,60 @@ lay_2(Node, Ctxt) ->
 	text ->
 	    text(erl_syntax:text_string(Node));
 
+	type_def ->
+            %% basically an attribute but with a special syntax
+	    Ctxt1 = reset_prec(Ctxt),
+            Kind = erl_syntax:type_def_kind(Node),
+            Name = erl_syntax:type_def_name(Node),
+            Params = erl_syntax:type_def_parameters(Node),
+            Type = erl_syntax:type_def_type(Node),
+            %Type = dodge_macros(Type0),
+            %As0 = dodge_macros(Elements),
+            %As = erl_syntax:concrete(As0),
+            D1 = lay_type_application(Name, Params, Ctxt1),
+            D = beside(follow(lay(Kind, Ctxt1),
+                              beside(D1, floating(text(" :: "))),
+                              Ctxt1#ctxt.break_indent),
+                       lay(Type, Ctxt1)),
+	    beside(floating(text("-")), beside(D, floating(text("."))));
+
+	type_spec ->
+            %% basically an attribute but with a special syntax
+	    Ctxt1 = reset_prec(Ctxt),
+            Args = erl_syntax:attribute_arguments(Node),
+            N = case erl_syntax:attribute_name(Node) of
+                    {atom, _, 'if'} ->
+                        erl_syntax:variable('if');
+                    N0 ->
+                        N0
+                end,
+            [SpecTuple] = Args,
+            [FuncName, FuncTypes] =
+                erl_syntax:tuple_elements(SpecTuple),
+            Name =
+                case erl_syntax:type(FuncName) of
+                    tuple ->
+                        case erl_syntax:tuple_elements(FuncName) of
+                            [F0, _] ->
+                                F0;
+                            [M0, F0, _] ->
+                                erl_syntax:module_qualifier(M0,
+                                                            F0);
+                            _ ->
+                                FuncName
+                        end;
+                    _ ->
+                        FuncName
+                end,
+            %Types = dodge_macros(FuncTypes),
+            D1 = lay_clauses(FuncTypes, %erl_syntax:concrete(Types),
+                             spec, Ctxt1),
+            D = beside(follow(lay(N, Ctxt1),
+                              lay(Name, Ctxt1),
+                              Ctxt1#ctxt.break_indent),
+                       D1),
+	    beside(floating(text("-")), beside(D, floating(text("."))));
+
         typed_record_field ->
             {_, Prec, _} = type_inop_prec('::'),
             Ctxt1 = reset_prec(Ctxt),
@@ -1220,51 +1225,25 @@ lay_2(Node, Ctxt) ->
 
     end.
 
-attribute_type(Node) ->
-    N = erl_syntax:attribute_name(Node),
-    case catch erl_syntax:concrete(N) of
-        opaque ->
-            type;
-        spec ->
-            spec;
-        callback ->
-            spec;
-        type ->
-            type;
-        export_type ->
-            export_type;
-        optional_callbacks ->
-            optional_callbacks;
-        _ ->
-            N
-    end.
-
 is_subtype(Name, [Var, _]) ->
     (erl_syntax:is_atom(Name, is_subtype) andalso
      erl_syntax:type(Var) =:= variable);
 is_subtype(_, _) -> false.
 
-unfold_function_names(Ns) ->
-    F = fun ({Atom, Arity}) ->
-		erl_syntax:arity_qualifier(erl_syntax:atom(Atom),
-                                           erl_syntax:integer(Arity))
-	end,
-    erl_syntax:list([F(N) || N <- Ns]).
-
-%% Macros are not handled well.
-dodge_macros(Type) ->
-    F = fun (T) ->
-                case erl_syntax:type(T) of
-                    macro ->
-                        Var = erl_syntax:macro_name(T),
-                        VarName0 = erl_syntax:variable_name(Var),
-                        VarName = list_to_atom("?"++atom_to_list(VarName0)),
-                        Atom = erl_syntax:atom(VarName),
-                        Atom;
-                    _ -> T
-                end
-        end,
-    erl_syntax_lib:map(F, Type).
+%% %% Macros are not handled well.
+%% dodge_macros(Type) ->
+%%     F = fun (T) ->
+%%                 case erl_syntax:type(T) of
+%%                     macro ->
+%%                         Var = erl_syntax:macro_name(T),
+%%                         VarName0 = erl_syntax:variable_name(Var),
+%%                         VarName = list_to_atom("?"++atom_to_list(VarName0)),
+%%                         Atom = erl_syntax:atom(VarName),
+%%                         Atom;
+%%                     _ -> T
+%%                 end
+%%         end,
+%%     erl_syntax_lib:map(F, Type).
 
 lay_parentheses(D, _Ctxt) ->
     beside(floating(text("(")), beside(D, floating(text(")")))).

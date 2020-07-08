@@ -904,31 +904,30 @@ delete_binding_anns([]) ->
 
 -spec is_fail_expr(erl_syntax:syntaxTree()) -> boolean().
 
-is_fail_expr(E) ->          
+is_fail_expr(E) ->
     case erl_syntax:type(E) of
         application ->
             N = length(erl_syntax:application_arguments(E)),
             F = erl_syntax:application_operator(E),
-            case catch {ok, analyze_function_name(F)} of
-                syntax_error ->
-                    false;
-                {ok, exit} when N =:= 1 ->
+            try analyze_function_name(F) of
+                exit when N =:= 1 ->
                     true;
-                {ok, throw} when N =:= 1 ->
+                throw when N =:= 1 ->
                     true;
-                {ok, {erlang, exit}} when N =:= 1 ->
+                {erlang, exit} when N =:= 1 ->
                     true;
-                {ok, {erlang, throw}} when N =:= 1 ->
+                {erlang, throw} when N =:= 1 ->
                     true;
-                {ok, {erlang, error}} when N =:= 1 ->
+                {erlang, error} when N =:= 1 ->
                     true;
-                {ok, {erlang, error}} when N =:= 2 ->
+                {erlang, error} when N =:= 2 ->
                     true;
-                {ok, {erlang, fault}} when N =:= 1 ->
-                    true;
-                {ok, {erlang, fault}} when N =:= 2 ->
+                {erlang, raise} when N =:= 3 ->
                     true;
                 _ ->
+                    false
+            catch
+                syntax_error ->
                     false
             end;
         _ ->
@@ -1602,11 +1601,11 @@ analyze_wild_attribute(Node) ->
                     case erl_syntax:attribute_arguments(Node) of
                         [V] ->
                             %% Note: does not work well with macros.
-			    case catch {ok, erl_syntax:concrete(V)} of
-				{ok, Val} ->
-				    {erl_syntax:atom_value(N), Val};
-				_ ->
-				    throw(syntax_error)
+			    try erl_syntax:concrete(V) of
+				Val ->
+				    {erl_syntax:atom_value(N), Val}
+                            catch
+                                _:_ -> throw(syntax_error)
 			    end;
                         _ ->
                             throw(syntax_error)
@@ -1943,13 +1942,10 @@ analyze_application(Node) ->
         application ->
             A = length(erl_syntax:application_arguments(Node)),
             F = erl_syntax:application_operator(Node),
-            case catch {ok, analyze_function_name(F)} of
-                syntax_error ->
-                    A;
-                {ok, N} ->
-                    append_arity(A, N);
-                _ ->
-                    throw(syntax_error)
+            try analyze_function_name(F) of
+                N -> append_arity(A, N)
+            catch
+                syntax_error -> A
             end;
         _ ->
             throw(syntax_error)
@@ -1985,21 +1981,13 @@ analyze_type_application(Node) ->
         type_application ->
             A = length(erl_syntax:type_application_arguments(Node)),
             N = erl_syntax:type_application_name(Node),
-            case catch {ok, analyze_type_name(N)} of
-                {ok, TypeName} ->
-                    append_arity(A, TypeName);
-                _ ->
-                    throw(syntax_error)
-            end;
+            TypeName = analyze_type_name(N),
+            append_arity(A, TypeName);
         user_type_application ->
             A = length(erl_syntax:user_type_application_arguments(Node)),
             N = erl_syntax:user_type_application_name(Node),
-            case catch {ok, analyze_type_name(N)} of
-                {ok, TypeName} ->
-                    append_arity(A, TypeName);
-                _ ->
-                    throw(syntax_error)
-            end;
+            TypeName = analyze_type_name(N),
+            append_arity(A, TypeName);
         _ ->
             throw(syntax_error)
     end.
