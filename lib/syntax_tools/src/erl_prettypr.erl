@@ -958,35 +958,13 @@ lay_2(Node, Ctxt) ->
 	type_spec ->
             %% basically an attribute but with a special syntax
 	    Ctxt1 = reset_prec(Ctxt),
-            Args = erl_syntax:attribute_arguments(Node),
-            N = case erl_syntax:attribute_name(Node) of
-                    {atom, _, 'if'} ->
-                        erl_syntax:variable('if');
-                    N0 ->
-                        N0
-                end,
-            [SpecTuple] = Args,
-            [FuncName, FuncTypes] =
-                erl_syntax:tuple_elements(SpecTuple),
-            Name =
-                case erl_syntax:type(FuncName) of
-                    tuple ->
-                        case erl_syntax:tuple_elements(FuncName) of
-                            [F0, _] ->
-                                F0;
-                            [M0, F0, _] ->
-                                erl_syntax:module_qualifier(M0,
-                                                            F0);
-                            _ ->
-                                FuncName
-                        end;
-                    _ ->
-                        FuncName
-                end,
+            Kind = erl_syntax:type_spec_kind(Node),
+            Name = erl_syntax:type_spec_name(Node),
+            FuncTypes = erl_syntax:type_spec_signatures(Node),
             %Types = dodge_macros(FuncTypes),
             D1 = lay_clauses(FuncTypes, %erl_syntax:concrete(Types),
                              spec, Ctxt1),
-            D = beside(follow(lay(N, Ctxt1),
+            D = beside(follow(lay(Kind, Ctxt1),
                               lay(Name, Ctxt1),
                               Ctxt1#ctxt.break_indent),
                        D1),

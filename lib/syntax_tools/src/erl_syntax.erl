@@ -692,7 +692,7 @@ type(Node) ->
 	% {attribute, _, type, _} -> type_def;
 	% {attribute, _, opaque, _} -> type_def;
 	% {attribute, _, spec, _} -> type_spec;
-	% {attribute, _, callback, _} -> type_spec;
+	{attribute, _, callback, _} -> type_spec;
 	{attribute, _, _, _} -> attribute;
 	{bin, _, _} -> binary;
 	{bin_element, _, _, _, _} -> binary_field;
@@ -721,7 +721,7 @@ type(Node) ->
 	{tuple, _, _} -> tuple;
 
         %% Type types
-        % {ann_type, _, _} -> annotated_type;
+        %{ann_type, _, _} -> annotated_type;
         % {remote_type, _, _} -> type_application;
         % {type, _, binary, [_, _]} -> bitstring_type;
         % {type, _, bounded_fun, [_, _]} -> constrained_function_type;

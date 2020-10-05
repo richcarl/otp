@@ -7,7 +7,18 @@
 
 -include_lib("eunit/include/eunit.hrl").
 
+%% declarations which list functions
 -export([foo/0, foo/1, foo/2]).
+
+-import(lists, [reverse/1, append/2]).
+
+
+%% type declarations
+-callback foo() -> atom().  % callback specification, no arguments.
+%-callback foo(X::atom(), Y::integer()) -> tuple().  % callback specification
+
+
+
 
 %% function with zero parameters
 foo() ->
