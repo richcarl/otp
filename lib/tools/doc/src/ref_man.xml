@@ -34,19 +34,23 @@
     <taglist>
       <tag><em>cover</em></tag>
       <item>A coverage analysis tool for Erlang.</item>
+
       <tag><em>cprof</em></tag>
       <item>A profiling tool that shows how many
        times each function is called. Uses a kind of local call trace
        breakpoints containing counters to achieve very low runtime
        performance degradation.</item>
+
       <tag><em>erlang.el</em>- Erlang mode for Emacs</tag>
       <item>Editing support such as indentation, syntax highlighting,
        electric commands, module name verification, comment support
        including paragraph filling, skeletons, tags support and more
        for erlang source code. </item>
+
       <tag><em>eprof</em></tag>
       <item>A time profiling tool; measure how time is used in Erlang
        programs. Predecessor of <em>fprof</em> (see below).</item>
+
       <tag><em>fprof</em></tag>
       <item>Another Erlang profiler; measure how time is used in your
        Erlang programs. Uses trace to file to minimize runtime
@@ -62,10 +66,15 @@
 
       <tag><em>make</em></tag>
       <item>A make utility for Erlang similar to UNIX make.</item>
+
+      <tag><em>prettypr</em></tag>
+      <item>A pretty-printing library for flexibly formatting text.</item>
+
       <tag><em>tags</em></tag>
       <item>A tool for generating Emacs TAGS files from Erlang source
        files.</item>
-      <tag><em>xref</em></tag>
+
+       <tag><em>xref</em></tag>
       <item>A cross reference tool. Can be used to check dependencies 
        between functions, modules, applications and releases.</item>
     </taglist>
@@ -78,6 +87,7 @@
   <xi:include href="instrument.xml"/>
   <xi:include href="lcnt.xml"/>
   <xi:include href="make.xml"/>
+  <xi:include href="prettypr.xml"/>
   <xi:include href="tags.xml"/>
   <xi:include href="xref.xml"/>
 </application>

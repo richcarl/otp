@@ -43,6 +43,7 @@ MODULES= \
 	lcnt                 \
 	instrument           \
 	make		     \
+	prettypr	     \
 	tags		     \
 	xref		     \
 	xref_base	     \

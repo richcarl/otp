@@ -39,8 +39,7 @@ EDOC_REF3_FILES = \
 	erl_syntax.xml \
 	erl_syntax_lib.xml \
 	merl.xml \
-	merl_transform.xml \
-	prettypr.xml
+	merl_transform.xml
 
 XML_PART_FILES = part.xml
 EDOC_CHAPTER_FILE = chapter.xml

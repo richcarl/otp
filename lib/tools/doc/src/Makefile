@@ -32,6 +32,9 @@ APPLICATION=tools
 # ----------------------------------------------------
 XML_APPLICATION_FILES = ref_man.xml
 
+EDOC_REF3_FILES = \
+	prettypr.xml
+
 XML_REF3_FILES = \
 	cover.xml \
 	eprof.xml \

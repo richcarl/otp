@@ -28,6 +28,7 @@
 	     lcnt,
 	     make,
 	     tags,
+	     prettypr,
 	     xref,
 	     xref_base,
 	     xref_compiler,

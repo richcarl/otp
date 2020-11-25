@@ -20,10 +20,6 @@ annotations to nodes of the tree. Using the abstract layer makes
 applications less sensitive to changes in the {@link //stdlib/erl_parse}
 data structures, only requiring the `erl_syntax' module to be up-to-date.
 
-The pretty printer {@link erl_prettypr} is implemented on top of the
-library module {@link prettypr}: this is a powerful and flexible generic
-pretty printing library, which is also distributed separately.
-
 For a short demonstration of parsing and pretty-printing, simply
 compile the included module <a href="demo.erl">`demo.erl'</a>,
 and execute `demo:run()' from the Erlang shell. It will compile the
