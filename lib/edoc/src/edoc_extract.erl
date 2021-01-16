@@ -326,7 +326,7 @@ get_module_info(Forms, File) ->
 
 get_list_keyval(Key, L) ->
     case lists:keyfind(Key, 1, L) of
-	{Key, As} ->
+	{^Key, As} ->
 	    ordsets:from_list(As);
 	_ ->
 	    []

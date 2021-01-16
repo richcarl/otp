@@ -439,14 +439,14 @@ discover_dupl_in_mods(Name,Def,[M=#module{name=N,typeorval=TorV}|Ms],
 			      Acc,AnyRenamed) ->
     Fun = fun(T,RenamedOrDupl)->
 		  case {get_name_of_def(T),compare_defs(Def,T)} of
-		      {Name,not_equal} ->
+		      {^Name,not_equal} ->
 			  %% rename def
 			  NewT=set_name_of_def(N,Name,T),
 			  warn_renamed_def(N,get_name_of_def(NewT),Name),
 			  asn1ct_table:insert(renamed_defs,
 						          {get_name_of_def(NewT), Name, N}),
 			  {NewT,?dupl_uniquedefs bor RenamedOrDupl};
-		      {Name,equal} ->
+		      {^Name,equal} ->
 			  %% delete def
 			  warn_deleted_def(N,Name),
 			  {[],?dupl_equaldefs bor RenamedOrDupl};
@@ -499,7 +499,7 @@ exit_if_nameduplicate([Def|Rest]) ->
 exit_if_nameduplicate2(Name,Rest) ->
     Pred=fun(Def)->
 		 case get_name_of_def(Def) of
-		     Name -> true;
+		     ^Name -> true;
 		     _ -> false
 		 end
 	 end,
@@ -760,9 +760,9 @@ merge_symbols_from_module([Imp|Imps],Acc) ->
 	lists:filter(
 	  fun(I)->
 		  case I#'SymbolsFromModule'.module of
-		      #'Externaltypereference'{type=ModName} ->
+		      #'Externaltypereference'{type=^ModName} ->
 			  true;
-		      #'Externalvaluereference'{value=ModName} ->
+		      #'Externalvaluereference'{value=^ModName} ->
 			  true;
 		      _ -> false
 		  end
@@ -790,7 +790,7 @@ delete_double_of_symbol1([TRef=#'Externaltypereference'{type=TrefName}|Rest],Acc
     NewRest = 
 	lists:filter(fun(S)->
 			     case S of
-				 #'Externaltypereference'{type=TrefName}->
+				 #'Externaltypereference'{type=^TrefName}->
 				     false;
 				 _ -> true
 			     end
@@ -801,7 +801,7 @@ delete_double_of_symbol1([VRef=#'Externalvaluereference'{value=VName}|Rest],Acc)
     NewRest = 
 	lists:filter(fun(S)->
 			     case S of
-				 #'Externalvaluereference'{value=VName}->
+				 #'Externalvaluereference'{value=^VName}->
 				     false;
 				 _ -> true
 			     end
@@ -815,8 +815,8 @@ delete_double_of_symbol1([TRef={#'Externaltypereference'{type=MRef},
 	lists:filter(
 	  fun(S)->
 		  case S of
-		      {#'Externaltypereference'{type=MRef},
-		       #'Externaltypereference'{type=TRef}}->
+		      {#'Externaltypereference'{type=^MRef},
+		       #'Externaltypereference'{type=^TRef}}->
 			  false;
 		      _ -> true
 		  end
@@ -1020,7 +1020,7 @@ input_file_type(File) ->
 		    case file:read_file_info(lists:concat([File,".asn"])) of
 			{ok,_FileInfo} ->
 			    {single_file, lists:concat([File,".asn"])};
-			_Error ->
+			^_Error ->
 			    case file:read_file_info(lists:concat([File,".py"])) of
 				{ok,_FileInfo} ->
 				    {single_file, lists:concat([File,".py"])};
@@ -1353,10 +1353,10 @@ test_value(Module, Type, Value) ->
 test_value_decode(Module, Type, Value, Bytes) ->
     NewBytes = prepare_bytes(Bytes),
     case Module:decode(Type, NewBytes) of
-        {ok,Value}      -> {ok, {Module,Type,Value}};
-        {ok,Value,<<>>} -> {ok, {Module,Type,Value}};
-        Value           -> {ok, {Module,Type,Value}};
-        {Value,<<>>}    -> {ok, {Module,Type,Value}};
+        {ok,^Value}      -> {ok, {Module,Type,Value}};
+        {ok,^Value,<<>>} -> {ok, {Module,Type,Value}};
+        ^Value           -> {ok, {Module,Type,Value}};
+        {^Value,<<>>}    -> {ok, {Module,Type,Value}};
 
         %% Errors:
         {ok, Res}   ->
@@ -1517,10 +1517,10 @@ create_pdec_inc_command(ModName,
 						prop=Prop}|Comps],
 			TNL=[C1|Cs],Acc)  ->
     case C1 of
-	{Name,undecoded} ->
+	{^Name,undecoded} ->
 	    TagCommand = get_tag_command(TS,?UNDECODED,Prop),
 	    create_pdec_inc_command(ModName,Comps,Cs,concat_sequential(TagCommand,Acc));
-	{Name,parts} ->
+	{^Name,parts} ->
 	    TagCommand = get_tag_command(TS,?PARTS,Prop),
 	    create_pdec_inc_command(ModName,Comps,Cs,concat_sequential(TagCommand,Acc));
 	L when is_list(L) ->
@@ -1535,7 +1535,7 @@ create_pdec_inc_command(ModName,
 	    %% a "complete" command will be decoded by an ordinary TLV
 	    %% decode.
 	    create_pdec_inc_command(ModName,CList,L,Acc);
-	{Name,RestPartsList} when is_list(RestPartsList) ->
+	{^Name,RestPartsList} when is_list(RestPartsList) ->
 	    %% Same as previous, but this may occur at any place in
 	    %% the structure. The previous is only possible as the
 	    %% second element.
@@ -1572,7 +1572,7 @@ create_pdec_inc_command(ModName,
 	    NewAcc = case TagCommand of
 			 [Command,Tag] when is_atom(Command) ->
 			     [[Command,Tag,CompAcc]|Acc];
-			 [L1,_L2|Rest] when is_list(L1) ->
+			 [L1,_L2|^Rest] when is_list(L1) ->
 			     case lists:reverse(TagCommand) of
 				 [Atom|Comms] when is_atom(Atom) ->
 				     [concat_sequential(lists:reverse(Comms),
@@ -1910,13 +1910,13 @@ read_config_file0(_, []) ->
 ensure_ext(ModuleName, Ext) ->
     Name = filename:join([ModuleName]),
     case filename:extension(Name) of
-        Ext -> Name;
+        ^Ext -> Name;
         _ -> Name ++ Ext
     end.
     
 get_config_info(CfgList,InfoType) ->
     case lists:keysearch(InfoType,1,CfgList) of
-	{value,{InfoType,Value}} ->
+	{value,{^InfoType,Value}} ->
 	    Value;
 	false ->
 	    []
@@ -2059,10 +2059,10 @@ update_gen_state(current_suffix_index,State,Data) ->
 
 update_namelist(Name) ->
     case get_gen_state_field(namelist) of
-	[Name,Rest] -> update_gen_state(namelist,Rest);
-	[Name|Rest] -> update_gen_state(namelist,Rest);
-	[{Name,List}] when is_list(List) -> update_gen_state(namelist,List);
-	[{Name,Atom}|Rest] when is_atom(Atom) -> update_gen_state(namelist,Rest);
+	[^Name,Rest] -> update_gen_state(namelist,Rest);
+	[^Name|Rest] -> update_gen_state(namelist,Rest);
+	[{^Name,List}] when is_list(List) -> update_gen_state(namelist,List);
+	[{^Name,Atom}|Rest] when is_atom(Atom) -> update_gen_state(namelist,Rest);
 	Other -> Other
     end.
 
@@ -2396,8 +2396,8 @@ in_process(Fun) ->
     Parent = self(),
     Pid = spawn_link(fun() -> process(Parent, Fun) end),
     receive
-        {Pid, Result}               -> Result;
-        {Pid, Class, Reason, Stack} ->
+        {^Pid, Result}               -> Result;
+        {^Pid, Class, Reason, Stack} ->
             ST = try throw(x) catch throw:x:Stk -> Stk end,
             erlang:raise(Class, Reason, Stack ++ ST)
     end.

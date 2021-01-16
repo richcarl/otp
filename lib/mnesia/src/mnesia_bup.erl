@@ -310,7 +310,7 @@ convert_0_1([], Acc, Cs) ->
 %% Returns Val or throw error
 lookup_schema(Key, Schema) ->
     case lists:keysearch(Key, 2, Schema) of
-        {value, {schema, Key, Val}} -> Val;
+        {value, {schema, ^Key, Val}} -> Val;
         false -> throw({error, {"Cannot lookup", Key}})
     end.
 
@@ -492,9 +492,9 @@ do_install_fallback(FA) ->
     Pid = spawn_link(?MODULE, install_fallback_master, [self(), FA]),
     Res =
         receive
-            {'EXIT', Pid, Reason} -> % if appl has trapped exit
+            {'EXIT', ^Pid, Reason} -> % if appl has trapped exit
                 {error, {'EXIT', Reason}};
-            {Pid, Res2} ->
+            {^Pid, Res2} ->
                 case Res2 of
                     {ok, _} ->
                         ok;
@@ -669,7 +669,7 @@ check_fallback_dir_arg(FA) ->
 
 fallback_receiver_loop(Master, R, FA, State) ->
     receive
-        {Master, {start, Header, Schema}} when State =:= schema ->
+        {^Master, {start, Header, Schema}} when State =:= schema ->
             Dir = FA#fallback_args.mnesia_dir,
             throw_bad_res(ok, mnesia_schema:opt_create_dir(true, Dir)),
             R2 = safe_apply(R, open_write, [R#restore.bup_data]),
@@ -679,12 +679,12 @@ fallback_receiver_loop(Master, R, FA, State) ->
             Master ! {self(), ok},
             fallback_receiver_loop(Master, R4, FA, records);
 
-        {Master, {records, Recs}} when State =:= records ->
+        {^Master, {records, Recs}} when State =:= records ->
             R2 = safe_apply(R, write, [R#restore.bup_data, Recs]),
             Master ! {self(), ok},
             fallback_receiver_loop(Master, R2, FA, records);
 
-        {Master, swap} when State =/= schema ->
+        {^Master, swap} when State =/= schema ->
             ?eval_debug_fun({?MODULE, fallback_receiver_loop, pre_swap}, []),
             safe_apply(R, commit_write, [R#restore.bup_data]),
             Bup = FA#fallback_args.fallback_bup,
@@ -695,7 +695,7 @@ fallback_receiver_loop(Master, R, FA, State) ->
             Master ! {self(), ok},
             fallback_receiver_loop(Master, R, FA, stop);
 
-        {Master, stop} when State =:= stop ->
+        {^Master, stop} when State =:= stop ->
             stopped;
 
         Msg ->
@@ -886,11 +886,11 @@ create_dat_files([{schema, Tab, TabDef} | Tail], Ext, LocalTabs) ->
             Add = fun(T, Key, Rec, LT) when T =:= LT#local_tab.name ->
 			  Log = {?MODULE, T},
 			  case Rec of
-			      {_T, Key} ->
+			      {_T, ^Key} ->
 				  mnesia_log:append(Log, {{T, Key}, {T, Key}, delete});
-			      (Rec) when T =:= RecName ->
+			      (^Rec) when T =:= RecName ->
 				  mnesia_log:append(Log, {{T, Key}, Rec, write});
-			      (Rec) ->
+			      (^Rec) ->
 				  Rec2 = setelement(1, Rec, RecName),
 				  mnesia_log:append(Log, {{T, Key}, Rec2, write})
 			  end
@@ -980,11 +980,11 @@ disc_only_add_fun(Storage, #cstruct{name = Tab,
 				    record_name = RecName}) ->
     fun(T, Key, Rec, #local_tab{name = T}) when T =:= Tab->
 	    case Rec of
-		{_T, Key} ->
+		{_T, ^Key} ->
 		    ok = mnesia_lib:db_erase(Storage, T, Key);
-		(Rec) when T =:= RecName ->
+		(^Rec) when T =:= RecName ->
 		    ok = mnesia_lib:db_put(Storage, T, Rec);
-		(Rec) ->
+		(^Rec) ->
 		    ok = mnesia_lib:db_put(Storage, T,
 					   setelement(1, Rec, RecName))
 	    end
@@ -1046,9 +1046,9 @@ do_uninstall_fallback(FA) ->
         ok ->
             Pid = spawn_link(?MODULE, uninstall_fallback_master, [self(), FA]),
             receive
-                {'EXIT', Pid, Reason} -> % if appl has trapped exit
+                {'EXIT', ^Pid, Reason} -> % if appl has trapped exit
                     {error, {'EXIT', Reason}};
-                {Pid, Res} ->
+                {^Pid, Res} ->
                     Res
             end;
         {error, Reason} ->
@@ -1088,15 +1088,15 @@ do_uninstall(ClientPid, [Pid | Pids], GoodPids, BadNodes, Res) ->
     receive
         %% {'EXIT', ClientPid, _} ->
         %% client_exit;
-        {'EXIT', Pid, Reason} ->
+        {'EXIT', ^Pid, Reason} ->
             BadNode = node(Pid),
             BadRes = {error, {"Uninstall fallback", BadNode, Reason}},
             do_uninstall(ClientPid, Pids, GoodPids, [BadNode | BadNodes], BadRes);
-        {Pid, {error, Reason}} ->
+        {^Pid, {error, Reason}} ->
             BadNode = node(Pid),
             BadRes = {error, {"Uninstall fallback", BadNode, Reason}},
             do_uninstall(ClientPid, Pids, GoodPids, [BadNode | BadNodes], BadRes);
-        {Pid, started} ->
+        {^Pid, started} ->
             do_uninstall(ClientPid, Pids, [Pid | GoodPids], BadNodes, Res)
     end;
 do_uninstall(ClientPid, [], GoodPids, [], ok) ->
@@ -1114,7 +1114,7 @@ local_uninstall_fallback(Master, FA) ->
     Master ! {self(), started},
 
     receive
-        {Master, do_uninstall} ->
+        {^Master, do_uninstall} ->
             ?eval_debug_fun({?MODULE, uninstall_fallback2, pre_delete}, []),
             ?SAFE(mnesia_lib:set(active_fallback, false)),
             Tmp = FA2#fallback_args.fallback_tmp,
@@ -1132,12 +1132,12 @@ rec_uninstall(ClientPid, [Pid | Pids], AccRes) ->
     receive
         %% {'EXIT', ClientPid, _} ->
         %% exit(shutdown);
-        {'EXIT', Pid, R} ->
+        {'EXIT', ^Pid, R} ->
             Reason = {node_not_running, {node(Pid), R}},
             rec_uninstall(ClientPid, Pids, {error, Reason});
-        {Pid, ok} ->
+        {^Pid, ok} ->
             rec_uninstall(ClientPid, Pids, AccRes);
-        {Pid, BadRes} ->
+        {^Pid, BadRes} ->
             rec_uninstall(ClientPid, Pids, BadRes)
     end;
 rec_uninstall(_, [], Res) ->
@@ -1181,9 +1181,9 @@ traverse_backup(Source, SourceMod, Target, TargetMod, Fun, Acc) ->
     Args = [self(), Source, SourceMod, Target, TargetMod, Fun, Acc],
     Pid = spawn_link(?MODULE, do_traverse_backup, Args),
     receive
-        {'EXIT', Pid, Reason} ->
+        {'EXIT', ^Pid, Reason} ->
             {error, {"Backup traversal crashed", Reason}};
-        {iter_done, Pid, Res} ->
+        {iter_done, ^Pid, Res} ->
             Res
     end.
 

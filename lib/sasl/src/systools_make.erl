@@ -471,9 +471,9 @@ check_rel(Release) ->
     end.
 
 check_rel1({release,{Name,Vsn},{erts,EVsn},Appl}) when is_list(Appl) ->
-    Name = check_name(Name),
-    Vsn = check_vsn(Vsn),
-    EVsn = check_evsn(EVsn),
+    ^Name = check_name(Name),
+    ^Vsn = check_vsn(Vsn),
+    ^EVsn = check_evsn(EVsn),
     {{Appls,Incls},Ws} = check_appl(Appl),
     {ok, {Name,Vsn,EVsn,Appls,Incls},Ws};
 check_rel1(_) ->
@@ -584,7 +584,7 @@ collect_applications(Release, Path) ->
 		      case read_application(to_list(Name), Vsn, Path, Incls) of
 			  {ok, A} ->
 			      case {A#application.name,A#application.vsn} of
-				 {Name,Vsn} ->
+				 {^Name,^Vsn} ->
 				     {[{{Name,Vsn}, A#application{type=Type}} | Ok],
 				      Errs};
 				 E ->
@@ -612,12 +612,12 @@ read_application(Name, Vsn, [Dir|Path], Incls, Found, FirstError) ->
     case read_file(Name ++ ".app", [Dir]) of
 	{ok, Term, FullName} ->
 	    case parse_application(Term, FullName, Vsn, Incls) of
-		{error, {no_valid_version, {Vsn, OtherVsn}}} when FirstError == no_fault ->
+		{error, {no_valid_version, {^Vsn, OtherVsn}}} when FirstError == no_fault ->
 		    NFE = {no_valid_version, {{"should be", Vsn}, 
 					       {"found file", filename:join(Dir, Name++".app"),
 						OtherVsn}}},
 		    read_application(Name, Vsn, Path, Incls, true, NFE);
-		{error, {no_valid_version, {Vsn, _OtherVsn}}} ->
+		{error, {no_valid_version, {^Vsn, _OtherVsn}}} ->
 			    read_application(Name, Vsn, Path, Incls, true, FirstError);
 		Res ->
 		    Res
@@ -645,7 +645,7 @@ parse_application({application, Name, Dict}, File, Vsn, Incls)
     Items = [vsn,id,description,modules,registered,
 	     applications,included_applications,mod,start_phases,env,maxT,maxP],
     case catch get_items(Items, Dict) of
-	[Vsn,Id,Desc,Mods,Regs,Apps,Incs0,Mod,Phases,Env,MaxT,MaxP] ->
+	[^Vsn,Id,Desc,Mods,Regs,Apps,Incs0,Mod,Phases,Env,MaxT,MaxP] ->
 	    case override_include(Name, Incs0, Incls) of
 		{ok, Incs} ->
 		    {ok, #application{name=Name,
@@ -678,7 +678,7 @@ parse_application(Other, _, _, _) ->
 %% .app file.
 override_include(Name, Incs, Incls) ->
     case keysearch(Name, 1, Incls) of
-	{value, {Name, I}} ->
+	{value, {^Name, I}} ->
 	    case specified(I, Incs) of
 		[] ->
 		    {ok, I};
@@ -758,13 +758,13 @@ check_item({_,{env,Env}},I) ->
     end;
 check_item({_,{maxT,MaxT}},I) ->
     case MaxT of
-	MaxT when is_integer(MaxT), MaxT > 0 -> MaxT;
+	^MaxT when is_integer(MaxT), MaxT > 0 -> MaxT;
 	infinity -> infinity;
 	_ -> throw({bad_param, I})
     end;
 check_item({_,{maxP,MaxP}},I) ->
     case MaxP of
-	MaxP when is_integer(MaxP), MaxP > 0 -> MaxP;
+	^MaxP when is_integer(MaxP), MaxP > 0 -> MaxP;
 	infinity -> infinity;
 	_ -> throw({bad_param, I})
     end;
@@ -870,7 +870,7 @@ add_top_apps_to_uses(InclApps, [{Name,Appl} | Appls], Res) ->
 				%% the top app is already in the uses
 				%% list, remove UsedApp
 				AccIn -- [UsedApp];
-			    {_, UsedAppTop} ->
+			    {_, ^UsedAppTop} ->
 				%% both are included in the same app
 				AccIn;
 			    _ ->
@@ -1430,8 +1430,8 @@ strip_prefix(Path, Dir) ->
 strip_name_ebin(Dir, Name, Vsn) ->
     FullName = Name ++ "-" ++ Vsn,
     case reverse(Dir) of
-	["ebin",Name|D]     -> {ok, reverse(D)};
-	["ebin",FullName|D] -> {ok, reverse(D)};
+	["ebin",^Name|D]     -> {ok, reverse(D)};
+	["ebin",^FullName|D] -> {ok, reverse(D)};
 	_                   -> false
     end.
 
@@ -1874,7 +1874,7 @@ add_appl(Name, Vsn, App, Tar, Variables, Flags, Var) ->
 
 add_to(AppDir,Name,Vsn,Variables,Variable) ->
     case var_dir(AppDir,Name,Vsn,Variables) of
-	{ok, Variable, RestPath} ->
+	{ok, ^Variable, RestPath} ->
 	    {ok, filename:join(RestPath ++ [Name ++ "-" ++ Vsn])};
 	{ok, _, _} ->
 	    false;
@@ -2102,7 +2102,7 @@ is_app_type(_) -> false.
 
 string_p(S) ->
     case unicode:characters_to_list(S) of
-	S -> true;
+	^S -> true;
 	_ -> false
     end.
 

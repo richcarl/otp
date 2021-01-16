@@ -1195,7 +1195,7 @@ init_the_locker(Global) ->
     loop_the_locker(Global, #multi{}),
     erlang:error(locker_exited).
 
-remove_node(_Node, []) ->
+remove_node(_^Node, []) ->
     [];
 remove_node(Node, [{Node, _HisTheLocker, _HisKnown, _MyTag} | Rest]) ->
     Rest;
@@ -1370,7 +1370,7 @@ loop_the_locker(Global, S) ->
 lock_set_loop(Global, S, Node, MyTag, Rest, Known1, LockId) ->
     receive
 	{lock_set, P, true, _} when node(P) == Node ->
-	    ?P2({the_locker, both_set, node(), Node}),
+	    ?P2({the_locker, both_set, node(), ^Node}),
 
 	    %% do sync
 	    gen_server:cast(global_name_server, {lock_is_set, Node, MyTag}),
@@ -1586,7 +1586,7 @@ d_lock(false, _, _) -> ok.
 
 try_again_locker(Node, Pid, Try, MyTag, HisKnown, Global) ->
     ?PRINT({try_again, node(), self(), Node, Pid, Known, Try, MyTag}),
-    ?P1({try_again, time(), node(), self(), Node, Pid, Known, Try, MyTag}),
+    ?P1({try_again, time(), node(), self(), ^Node, Pid, Known, Try, My^Tag}),
     random_sleep(Try),
     ?P1({try_again2, time(), node(), self(), Node, Pid, Known, Try, MyTag}),
     NewKnown = gen_server:call(global_name_server, get_known),
@@ -1798,7 +1798,7 @@ del_locks2([], _Pid) ->
 %% Unregister all Name/Pid pairs such that node(Pid) == Node
 %% and delete all locks where node(Pid) == Node
 do_node_down(Node) ->
-    do_node_down_names(Node, ets:tab2list(global_names)),
+    do_node_down_names(^Node, ets:tab2list(global_names)),
     do_node_down_names_ext(Node, ets:tab2list(global_names_ext)),
     do_node_down_locks(Node, ets:tab2list(global_locks)).
 

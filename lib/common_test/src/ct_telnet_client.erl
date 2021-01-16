@@ -88,9 +88,9 @@ open(Server, Port, Timeout, KeepAlive, NoDelay, ConnName) ->
 			     KeepAlive, NoDelay, ConnName)
 		end),
     receive 
-	{open,Pid} ->
+	{open,^Pid} ->
 	    {ok,Pid};
-	{Error,Pid} ->
+	{Error,^Pid} ->
 	    Error
     end.
 

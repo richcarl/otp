@@ -54,7 +54,7 @@ datetime_bin({{Y,Mo,D},{H,Mi,S}}) ->
     <<D:32/?UI,(Mo-1):32/?UI,Y:32/?UI,H:32/?UI,Mi:32/?UI,S:32/?UI>>.
 
 get_const(Id) ->
-    [{Id, Data}] = ets:lookup(wx_non_consts, Id),
+    [{^Id, Data}] = ets:lookup(wx_non_consts, Id),
     Data.
 
 cast(Op,Args) ->
@@ -79,7 +79,7 @@ call(Op, Args) ->
 rec(Op) ->
     receive 
 	{'_wxe_result_', Res} -> Res;
-	{'_wxe_error_', Op, Error} -> 
+	{'_wxe_error_', ^Op, Error} -> 
 	    [{_,MF}] = ets:lookup(wx_debug_info,Op),
 	    erlang:error({Error, MF});
 	{'_wxe_error_', Old, Error} ->

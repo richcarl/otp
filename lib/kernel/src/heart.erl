@@ -78,11 +78,11 @@ start() ->
 
 wait_for_init_ack(From) ->
     receive
-	{ok, From} = Ok ->
+	{ok, ^From} = Ok ->
 	    Ok;
-	{no_heart, From} ->
+	{no_heart, ^From} ->
 	    ignore;
-	{Error, From} ->
+	{Error, ^From} ->
 	    {error, Error}
     end.
 
@@ -214,11 +214,11 @@ check_start_heart() ->
 
 wait_ack(Port) ->
     receive
-	{Port, {data, [?START_ACK]}} ->
+	{^Port, {data, [?START_ACK]}} ->
 	    ok;
-	{'EXIT', Port, badsig} -> % Since this is not synchronous, skip it!
+	{'EXIT', ^Port, badsig} -> % Since this is not synchronous, skip it!
 	    wait_ack(Port);
-	{'EXIT', Port, Reason} -> % The port really terminated.
+	{'EXIT', ^Port, Reason} -> % The port really terminated.
 	    {error, Reason}
     end.
 
@@ -283,14 +283,14 @@ loop(Parent, #state{port=Port}=S) ->
 	{From, cycle} ->
 	    %% Calls back to loop
 	    do_cycle_port_program(From, Parent, S);
-	{'EXIT', Parent, shutdown} ->
+	{'EXIT', ^Parent, shutdown} ->
 	    no_reboot_shutdown(Port);
-	{'EXIT', Parent, Reason} ->
+	{'EXIT', ^Parent, Reason} ->
 	    exit(Port, Reason),
 	    exit(Reason);
-	{'EXIT', Port, badsig} ->  % we can ignore badsig-messages!
+	{'EXIT', ^Port, badsig} ->  % we can ignore badsig-messages!
 	    loop(Parent, S);
-	{'EXIT', Port, _Reason} ->
+	{'EXIT', ^Port, _Reason} ->
 	    exit({port_terminated, {?MODULE, loop, [Parent, S]}});
 	_ -> 
 	    loop(Parent, S)
@@ -304,7 +304,7 @@ loop(Parent, #state{port=Port}=S) ->
 no_reboot_shutdown(Port) ->
     _ = send_shutdown(Port),
     receive
-	{'EXIT', Port, Reason} when Reason =/= badsig ->
+	{'EXIT', ^Port, Reason} when Reason =/= badsig ->
 	    exit(normal)
     end.
 
@@ -319,7 +319,7 @@ do_cycle_port_program(Caller, Parent, #state{port=Port} = S) ->
 	{ok, NewPort} ->
 	    _ = send_shutdown(Port),
 	    receive
-		{'EXIT', Port, _Reason} ->
+		{'EXIT', ^Port, _Reason} ->
 		    _ = send_heart_cmd(NewPort, S#state.cmd),
 		    Caller ! {?MODULE, ok},
 		    loop(Parent, S#state{port=NewPort})
@@ -357,7 +357,7 @@ send_heart_cmd(Port, Cmd) ->
 get_heart_cmd(Port) ->
     Port ! {self(), {command, [?GET_CMD]}},
     receive
-	{Port, {data, [?HEART_CMD | Cmd]}} ->
+	{^Port, {data, [?HEART_CMD | Cmd]}} ->
 	    {ok, Cmd}
     end.
 

@@ -268,7 +268,7 @@ gen_decode_sequence(Gen, Typename, #type{}=D) ->
 		    ok;
 		{_,[]} ->
 		    ok;
-		{[{ObjSetRef,LeadingAttr,Term}],PostponedDecArgs} ->
+		{[{ObjSetRef,LeadingAttr,Term}],^PostponedDecArgs} ->
 		    DecObj = asn1ct_gen:un_hyphen_var(lists:concat(['DecObj',LeadingAttr,Term])),
 		    ValueMatch = value_match(Gen, ValueIndex,Term),
 		    {ObjSetMod,ObjSetName} = ObjSetRef,
@@ -492,7 +492,7 @@ gen_decode_set(Gen, Typename, #type{}=D) ->
 		    ok;
 		{_,[]} ->
 		    ok;
-		{[{ObjSetRef,LeadingAttr,Term}],PostponedDecArgs} ->
+		{[{ObjSetRef,LeadingAttr,Term}],^PostponedDecArgs} ->
 		    DecObj = asn1ct_gen:un_hyphen_var(lists:concat(['DecObj',LeadingAttr,Term])),
 		    ValueMatch = value_match(Gen, ValueIndex, Term),
 		    {ObjSetMod,ObjSetName} = ObjSetRef,
@@ -941,7 +941,7 @@ gen_dec_choice_cases(Erules,TopType, [H|T]) ->
     case {Tags,asn1ct:get_gen_state_field(namelist)} of
 	{[],_} -> % choice without explicit tags
 	    Fcases(H#'ComponentType'.tags,Fcases);
-	{[FirstT|_RestT],[{Cname,undecoded}|Names]} ->
+	{[FirstT|_RestT],[{^Cname,undecoded}|Names]} ->
 	    DecTag=(?ASN1CT_GEN_BER:decode_class(FirstT#tag.class) bsl 10) +
 		FirstT#tag.number,
 	    asn1ct:add_generated_refed_func({[Cname|TopType],undecoded,
@@ -1105,7 +1105,7 @@ gen_optormand_case({'DEFAULT',DefaultValue}, Gen, _TopType,
                   Ind9,indent(3),"{",empty_lb(Gen),",0};",nl,
                   Ind9,"_ when ",Element," =:= "]),
 	    Dv = case DefaultValue of
-                     #'Externalvaluereference'{module=CurrMod,
+                     #'Externalvaluereference'{module=^CurrMod,
                                                value=V} ->
                          ["?",{asis,V}];
                      _ ->
@@ -1222,7 +1222,7 @@ gen_dec_line(Erules,TopType,Cname,CTags,Type,OptOrMand,DecObjInf)  ->
 		PostponedDec
 	end,
     case DecObjInf of
-	{Cname,ObjSet} ->
+	{^Cname,ObjSet} ->
             %% This must be the component were an object is chosen
 	    %% from the object set according to the table constraint.
 	    ObjSetName = case ObjSet of
@@ -1270,7 +1270,7 @@ gen_dec_call(InnerType, Gen, TopType, Cname, Type, BytesVar,
     gen_dec_call1(WhatKind, InnerType, TopType, Cname,
 		  Type, BytesVar, Tag),
     case DecObjInf of
-	{Cname,{_,OSet,_UniqueFName,ValIndex}} ->
+	{^Cname,{_,OSet,_UniqueFName,ValIndex}} ->
 	    Term = asn1ct_gen:mk_var(asn1ct_name:curr(term)),
 	    ValueMatch = value_match(Gen, ValIndex, Term),
 	    {ObjSetMod,ObjSetName} = OSet,
@@ -1284,7 +1284,7 @@ gen_dec_call(InnerType, Gen, TopType, Cname, Type, BytesVar,
 gen_dec_call1({primitive,bif}, InnerType, TopType, Cname,
 	      Type, BytesVar, Tag) ->
     case {asn1ct:get_gen_state_field(namelist),InnerType} of
-	{[{Cname,undecoded}|Rest],_} ->
+	{[{^Cname,undecoded}|Rest],_} ->
 	    asn1ct:add_generated_refed_func({[Cname|TopType],undecoded,
 					     Tag,Type}),
 	    asn1ct:update_gen_state(namelist,Rest),
@@ -1296,7 +1296,7 @@ gen_dec_call1({primitive,bif}, InnerType, TopType, Cname,
 gen_dec_call1('ASN1_OPEN_TYPE', _InnerType, TopType, Cname,
 	      Type, BytesVar, Tag) ->
     case {asn1ct:get_gen_state_field(namelist),Type#type.def} of
-	{[{Cname,undecoded}|Rest],_} ->
+	{[{^Cname,undecoded}|Rest],_} ->
 	    asn1ct:add_generated_refed_func({[Cname|TopType],undecoded,
 					     Tag,Type}),
 	    asn1ct:update_gen_state(namelist,Rest),
@@ -1310,7 +1310,7 @@ gen_dec_call1('ASN1_OPEN_TYPE', _InnerType, TopType, Cname,
     end;
 gen_dec_call1(WhatKind, _, TopType, Cname, Type, BytesVar, Tag) ->
     case asn1ct:get_gen_state_field(namelist) of
-	[{Cname,undecoded}|Rest] ->
+	[{^Cname,undecoded}|Rest] ->
 	    asn1ct:add_generated_refed_func({[Cname|TopType],undecoded,
 					     Tag,Type}),
 	    asn1ct:update_gen_state(namelist,Rest),
@@ -1328,7 +1328,7 @@ gen_dec_call1(WhatKind, _, TopType, Cname, Type, BytesVar, Tag) ->
 			end
 		end,
 	    case asn1ct:get_gen_state_field(namelist) of
-		[{Cname,List}|Rest] when is_list(List) ->
+		[{^Cname,List}|Rest] when is_list(List) ->
 		    Sindex =
 			case WhatKind of
 			    #'Externaltypereference'{} ->
@@ -1352,7 +1352,7 @@ gen_dec_call1(WhatKind, _, TopType, Cname, Type, BytesVar, Tag) ->
 		    {DecFunName,_,_}=
 			mkfuncname(TopType,Cname,WhatKind,Prefix,Suffix),
 		    EmitDecFunCall(DecFunName);
-		[{Cname,parts}|Rest] ->
+		[{^Cname,parts}|Rest] ->
 		    asn1ct:update_gen_state(namelist,Rest),
 		    asn1ct:get_gen_state_field(prefix),
 		    %% This is to prepare SEQUENCE OF value in
@@ -1447,7 +1447,7 @@ print_attribute_comment(InnerType,Pos,Cname,Prop) ->
 mkfuncname(TopType,Cname,WhatKind,Prefix,Suffix) ->
     CurrMod = get(currmod),
     case WhatKind of
-	#'Externaltypereference'{module=CurrMod,type=EType} ->
+	#'Externaltypereference'{module=^CurrMod,type=EType} ->
 	    F = lists:concat(["'",Prefix,EType,Suffix,"'"]),
 	    {F, "?MODULE", F};
 	#'Externaltypereference'{module=Mod,type=EType} ->

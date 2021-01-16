@@ -224,7 +224,7 @@ handle_event(#wx{event=#wxList{type=command_list_col_click, col=Column0}},
 	true ->
 	    Column = sort_col(Column0+1),
 	    Sort = case Sort0 of
-		       {Column,Bool} -> {Column, not Bool};
+		       {^Column,Bool} -> {Column, not Bool};
 		       {_,_} -> {Column, false}
 		   end,
 	    {noreply, update_window(State0#state{files=sort_files(Fs,Sort),sort=Sort})};
@@ -379,7 +379,7 @@ show_completion(Wanted, State = #state{text=TC, win=Win, list=LC, completion=Com
 	    wxTextCtrl:setSelection(TC, Start, Last),
 	    destroy_completion(Comp),
 	    State#state{ptext=Path, completion=undefined};
-	Paths when Comp =:= undefined ->
+	^Paths when Comp =:= undefined ->
 	    {PosX,PosY} = wxListCtrl:getPosition(LC),
 	    {SzX, SzY}  = wxListCtrl:getSize(LC),
 	    Pos0  = {PosX+5,PosY},
@@ -407,7 +407,7 @@ show_completion(Wanted, State = #state{text=TC, win=Win, list=LC, completion=Com
 	    wxWindow:setFocus(TC),
 	    wxTextCtrl:setSelection(TC, Start, Last),
 	    State#state{completion = {Temp, LB}, ptext=Wanted};
-	Paths ->
+	^Paths ->
 	    {_Temp, LB} = Comp,
 	    wxListBox:clear(LB),
 	    Files = [filename:basename(File) || File <- Paths],

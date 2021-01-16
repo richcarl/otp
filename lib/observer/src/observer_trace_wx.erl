@@ -376,7 +376,7 @@ handle_event(#wx{id=Id, obj=LogWin, event=Ev},
 	     #state{toggle_button = ToggleBtn, logwin=Latest} = State)
   when Id =:= ?LOG_WIN; is_record(Ev, wxClose) ->
     case LogWin of
-	Latest ->
+	^Latest ->
 	    %%Stop tracing
 	    ttb:stop(nofetch),
 	    wxToggleButton:setLabel(ToggleBtn, "Start Trace"),
@@ -748,7 +748,7 @@ do_add_patterns({Module, NewPs}, State=#state{tpatterns=TPs0, m_view=Mview, f_vi
 	      error -> []
 	  end,
     case merge_patterns(NewPs, Old) of
-	{Old, [], []} ->
+	{^Old, [], []} ->
 	    State;
 	{MPatterns, _New, _Changed} ->
 	    %% if dynamicly updates update New and Changed
@@ -772,7 +772,7 @@ do_add_ports(POpts, S0=#state{n_view=Nview, port_view=LCtrl, tports=OldPorts, no
 
 do_add_pid_or_port(POpts, Nview, LCtrl, OldPs, Ns0, Check) ->
     case merge_trace_items(POpts, OldPs) of
-	{OldPs, [], []} ->
+	{^OldPs, [], []} ->
 	    {OldPs,Ns0};
 	{Ps, New, _Changed} ->
 	    Ns1 = lists:usort([node(Id) || #titem{id=Id} <- New, Check(Id)]),

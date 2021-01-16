@@ -334,7 +334,7 @@ check_imported_functions({File, {Line, F, A}}, Inc, Types) ->
 	  Obj = {File, Val ++ [{FA, {Line, Type}}]},
 	  NewMap = map__insert(Obj, IncMap),
 	  Inc#inc{map = NewMap};
-	Type ->
+	^Type ->
 	  %% Function is in and with same type
 	  Inc;
 	_ ->
@@ -505,7 +505,7 @@ write_typed_file([Ch|Chs] = Chars, File, Info, LineNo, Acc) ->
 	  NewLineNo = LineNo + 1,
 	  {NewInfo, NewAcc} =
 	    case NewLineNo of
-	      Line ->
+	      ^Line ->
 		ok = raw_write(F, A, Info, File, [Ch|Acc]),
 		{Info#info{functions = RestFuncs}, []};
 	      _ ->
@@ -1068,9 +1068,9 @@ rcv_ext_types() ->
 
 rcv_ext_types(Self, ExtTypes) ->
   receive
-    {Self, ext_types, ExtType} ->
+    {^Self, ext_types, ExtType} ->
       rcv_ext_types(Self, [ExtType|ExtTypes]);
-    {Self, done} ->
+    {^Self, done} ->
       lists:usort(ExtTypes)
   end.
 

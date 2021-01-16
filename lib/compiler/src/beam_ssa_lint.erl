@@ -79,7 +79,7 @@ validate_function(F) ->
 -spec validate_variables(beam_ssa:b_function()) -> ok.
 validate_variables(#b_function{ args = Args, bs = Blocks }) ->
     %% Prefill the mapping with function arguments.
-    Args = vvars_get_variables(Args),
+    ^Args = vvars_get_variables(Args),
     DefVars = gb_sets:from_list(Args),
     Entry = 0,
 
@@ -202,7 +202,7 @@ vvars_block(Id, State0) ->
 
 validate_normalized(I) ->
     case beam_ssa:normalize(I) of
-        I ->
+        ^I ->
             ok;
         _ ->
             %% Some denormalized forms of #b_br{} can confuse

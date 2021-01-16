@@ -269,9 +269,9 @@ i({Ack, WPid, {M, Ref} = T, Opts, {SvcOpts, Nodes, Dict0, Svc}}) ->
 %% death. (Since the exit reason is used in diameter_service.)
 wait(Ref, Pid) ->
     receive
-        Ref ->
+        ^Ref ->
             ok;
-        {'DOWN', _, process, Pid, _} = D ->
+        {'DOWN', _, process, ^Pid, _} = D ->
             x(D)
     end.
 
@@ -355,7 +355,7 @@ handle_info(T, #state{} = State) ->
             ?LOG(stop, truncate(T)),
             {stop, {shutdown, T}, State}
     catch
-        exit: {diameter_codec, encode, T} = Reason ->
+        exit: {diameter_codec, encode, ^T} = Reason ->
             incr_error(send, T, State#state.dictionary),
             ?LOG(stop, Reason),
             {stop, {shutdown, Reason}, State};
@@ -1303,9 +1303,9 @@ tls_ack(true, Caps, Type, IS, #state{transport = TPid}) ->
     Ref = make_ref(),
     TPid ! {diameter, {tls, Ref, Type, IS == ?TLS}},
     receive
-        {diameter, {tls, Ref}} ->
+        {diameter, {tls, ^Ref}} ->
             ok;
-        {'DOWN', _, process, TPid, Reason} ->
+        {'DOWN', _, process, ^TPid, Reason} ->
             close({tls_ack, Reason, Caps})
     end;
 

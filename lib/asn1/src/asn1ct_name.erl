@@ -57,7 +57,7 @@ name_server_loop({Ref, Parent} = Monitor,Vars) ->
 	{From,{next,Variable}} ->
 	    From ! {?MODULE,get_next(Vars,Variable)},
 	    name_server_loop(Monitor,Vars);
-	{'DOWN', Ref, process, Parent, Reason} ->
+	{'DOWN', ^Ref, process, ^Parent, Reason} ->
 	    exit(Reason)
     end.
 
@@ -68,7 +68,7 @@ req(Req) ->
     receive
         {?MODULE, Reply} ->
 	    Reply;
-	{'DOWN', Ref, process, Pid, Reason} ->
+	{'DOWN', ^Ref, process, ^Pid, Reason} ->
             error({name_server_died,Reason})
     end.
 
@@ -133,7 +133,7 @@ new_var(Vars, Variable) ->
     case lists:keyfind(Variable, 1, Vars) of
 	false ->
 	    [{Variable,1}|Vars];
-	{Variable,Digit} ->
+	{^Variable,Digit} ->
 	    NewVars = lists:keydelete(Variable, 1, Vars),
 	    [{Variable,Digit+1}|NewVars]
     end.
@@ -142,9 +142,9 @@ get_prev(Vars, Variable) ->
     case lists:keyfind(Variable, 1, Vars) of
 	false ->
 	    none;
-	{Variable,Digit} when Digit =< 1 ->
+	{^Variable,Digit} when Digit =< 1 ->
 	    Variable;
-	{Variable,Digit} when Digit > 1 ->
+	{^Variable,Digit} when Digit > 1 ->
 	    list_to_atom(lists:concat([Variable,Digit-1]))
     end.
 
@@ -152,6 +152,6 @@ get_next(Vars, Variable) ->
     case lists:keyfind(Variable, 1, Vars) of
 	false ->
 	    list_to_atom(lists:concat([Variable,"1"]));
-	{Variable,Digit} when Digit >= 0 ->
+	{^Variable,Digit} when Digit >= 0 ->
 	    list_to_atom(lists:concat([Variable,Digit+1]))
     end.

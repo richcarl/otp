@@ -571,7 +571,7 @@ execute_request(Pid, {Convert,Converted}) ->
     Pid ! {io_request,self(),Mref,Converted},
 
     receive
-	{io_reply, Mref, Reply} ->
+	{io_reply, ^Mref, Reply} ->
 	    erlang:demonitor(Mref, [flush]),
 	    if
 		Convert ->
@@ -579,9 +579,9 @@ execute_request(Pid, {Convert,Converted}) ->
 		true ->
 		    Reply
 	    end;
-	{'DOWN', Mref, _, _, _} ->
+	{'DOWN', ^Mref, _, _, _} ->
 	    receive
-		{'EXIT', Pid, _What} -> true
+		{'EXIT', ^Pid, _What} -> true
 	    after 0 -> true
 	    end,
 	    {error,terminated}

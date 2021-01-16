@@ -190,11 +190,11 @@ server_loop(Iport, Oport, User, Gr, IOQueue) ->
 
 server_loop(Iport, Oport, Curr, User, Gr, {Resp, IOQ} = IOQueue) ->
     receive
-	{Iport,{data,Bs}} ->
+	{^Iport,{data,Bs}} ->
 	    BsBin = list_to_binary(Bs),
 	    Unicode = unicode:characters_to_list(BsBin,utf8),
 	    port_bytes(Unicode, Iport, Oport, Curr, User, Gr, IOQueue);
-	{Iport,eof} ->
+	{^Iport,eof} ->
 	    Curr ! {self(),eof},
 	    server_loop(Iport, Oport, Curr, User, Gr, IOQueue);
 
@@ -214,25 +214,25 @@ server_loop(Iport, Oport, Curr, User, Gr, {Resp, IOQ} = IOQueue) ->
             %% We match {User|Curr,_}|{User|Curr,_,_}
             NewQ = handle_req(Req, Iport, Oport, IOQueue),
             server_loop(Iport, Oport, Curr, User, Gr, NewQ);
-        {Oport,ok} ->
+        {^Oport,ok} ->
             %% We get this ok from the port, in io_request we store
             %% info about where to send reply at head of queue
             {Origin,Reply} = Resp,
             Origin ! {reply,Reply},
             NewQ = handle_req(next, Iport, Oport, {false, IOQ}),
             server_loop(Iport, Oport, Curr, User, Gr, NewQ);
-	{'EXIT',Iport,_R} ->
+	{'EXIT',^Iport,_R} ->
 	    server_loop(Iport, Oport, Curr, User, Gr, IOQueue);
-	{'EXIT',Oport,_R} ->
+	{'EXIT',^Oport,_R} ->
 	    server_loop(Iport, Oport, Curr, User, Gr, IOQueue);
-        {'EXIT',User,shutdown} ->               % force data to port
+        {'EXIT',^User,shutdown} ->               % force data to port
 	    server_loop(Iport, Oport, Curr, User, Gr, IOQueue);
-	{'EXIT',User,_R} ->			% keep 'user' alive
+	{'EXIT',^User,_R} ->			% keep 'user' alive
 	    NewU = start_user(),
 	    server_loop(Iport, Oport, Curr, NewU, gr_set_num(Gr, 1, NewU, {}), IOQueue);
 	{'EXIT',Pid,R} ->			% shell and group leader exit
 	    case gr_cur_pid(Gr) of
-		Pid when R =/= die ,
+		^Pid when R =/= die ,
 			 R =/= terminated  ->	% current shell exited
 		    if R =/= normal ->
 			    io_requests([{put_chars,unicode,"*** ERROR: "}], Iport, Oport);
@@ -335,7 +335,7 @@ handle_escape(Iport, Oport, User, Gr, IOQueue) ->
 		    {_Ix,{}} ->			% no shell
 			Gr;
 		    _ ->
-			receive {'EXIT',Pid,_} ->
+			receive {'EXIT',^Pid,_} ->
 				gr_del_pid(Gr, Pid)
 			after 1000 ->
 				Gr
@@ -396,7 +396,7 @@ switch_cmd({ok,[{atom,_,k},{integer,_,I}],_}, Iport, Oport, Gr) ->
 		    switch_loop(Iport, Oport, Gr);
 		_ ->
 		    Gr1 = 
-			receive {'EXIT',Pid,_} ->
+			receive {'EXIT',^Pid,_} ->
 				gr_del_pid(Gr, Pid)
 			after 1000 ->
 				Gr
@@ -417,7 +417,7 @@ switch_cmd({ok,[{atom,_,k}],_}, Iport, Oport, Gr) ->
 	_ ->
 	    exit(Pid, die),
 	    Gr1 = 
-		receive {'EXIT',Pid,_} ->
+		receive {'EXIT',^Pid,_} ->
 			gr_del_pid(Gr, Pid)
 		after 1000 ->
 			Gr
@@ -509,9 +509,9 @@ get_line({undefined,_Char,Cs,Cont,Rs}, Iport, Oport) ->
 get_line({What,Cont0,Rs}, Iport, Oport) ->
     io_requests(Rs, Iport, Oport),
     receive
-	{Iport,{data,Cs}} ->
+	{^Iport,{data,Cs}} ->
 	    get_line(edlin:edit_line(Cs, Cont0), Iport, Oport);
-	{Iport,eof} ->
+	{^Iport,eof} ->
 	    get_line(edlin:edit_line(eof, Cont0), Iport, Oport)
     after
 	get_line_timeout(What) ->

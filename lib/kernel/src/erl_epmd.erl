@@ -378,7 +378,7 @@ epmd_dist_low() ->
 %%% reason; there is no interpretation of the error result code.)
 wait_for_reg_reply(Socket, SoFar) ->
     receive
-	{tcp, Socket, Data0} ->
+	{tcp, ^Socket, Data0} ->
 	    case SoFar ++ Data0 of
 		[$v, Result, A, B, C, D] ->
 		    case Result of
@@ -399,7 +399,7 @@ wait_for_reg_reply(Socket, SoFar) ->
 		Garbage ->
 		    {error, {garbage_from_epmd, Garbage}}
 	    end;
-	{tcp_closed, Socket} ->
+	{tcp_closed, ^Socket} ->
 	    {error, epmd_close}
     after 10000 ->
 	    gen_tcp:close(Socket),
@@ -430,7 +430,7 @@ get_port(Node, EpmdAddress, Timeout) ->
 
 wait_for_port_reply(Socket, SoFar) ->
     receive
-	{tcp, Socket, Data0} ->
+	{tcp, ^Socket, Data0} ->
 %	    io:format("got ~p~n", [Data0]),
 	    case SoFar ++ Data0 of
 		[$w, Result | Rest] ->
@@ -447,7 +447,7 @@ wait_for_port_reply(Socket, SoFar) ->
 		    ?port_please_failure(),
 		    {error, {garbage_from_epmd, Garbage}}
 	    end;
-	{tcp_closed, Socket} ->
+	{tcp_closed, ^Socket} ->
 	    ?port_please_failure(),
 	    closed
     after 10000 ->
@@ -460,7 +460,7 @@ wait_for_port_reply_cont(Socket, SoFar) when length(SoFar) >= 10 ->
     wait_for_port_reply_cont2(Socket, SoFar);
 wait_for_port_reply_cont(Socket, SoFar) ->
     receive
-	{tcp, Socket, Data0} ->
+	{tcp, ^Socket, Data0} ->
 	    case SoFar ++ Data0 of
 		Data when length(Data) >= 10 ->
 		    wait_for_port_reply_cont2(Socket, Data);
@@ -470,7 +470,7 @@ wait_for_port_reply_cont(Socket, SoFar) ->
 		    ?port_please_failure(),
 		    {error, {garbage_from_epmd, Garbage}}
 	    end;
-	{tcp_closed, Socket} ->
+	{tcp_closed, ^Socket} ->
 	    ?port_please_failure(),
 	    noport
     after 10000 ->
@@ -496,10 +496,10 @@ wait_for_port_reply_cont2(Socket, Data) ->
 %%% currently.
 wait_for_port_reply_name(Socket, Len, Sofar) ->
     receive
-	{tcp, Socket, _Data} ->
+	{tcp, ^Socket, _Data} ->
 %	    io:format("data = ~p~n", _Data),
 	    wait_for_port_reply_name(Socket, Len, Sofar);
-	{tcp_closed, Socket} ->
+	{tcp_closed, ^Socket} ->
 	    ok
     end.
 		    
@@ -520,7 +520,7 @@ select_best_version(_L1, H1, _L2, H2) ->
 
 wait_for_close(Socket, Reply) ->
     receive
-	{tcp_closed, Socket} -> 
+	{tcp_closed, ^Socket} -> 
 	    Reply
     after 10000 ->
 	    gen_tcp:close(Socket),
@@ -551,16 +551,16 @@ do_get_names(Socket) ->
     case gen_tcp:send(Socket, [?int16(1),?EPMD_NAMES]) of
 	ok ->
 	    receive
-		{tcp, Socket, [P0,P1,P2,P3|T]} ->
+		{tcp, ^Socket, [P0,P1,P2,P3|T]} ->
 		    EpmdPort = ?u32(P0,P1,P2,P3),
 		    case get_epmd_port() of
-			EpmdPort ->
+			^EpmdPort ->
 			    names_loop(Socket, T, []);
 			_ ->
 			    close(Socket),
 			    {error, address}
 		    end;
-		{tcp_closed, Socket} ->
+		{tcp_closed, ^Socket} ->
 		    {ok, []}
 	    end;
 	_ ->
@@ -570,10 +570,10 @@ do_get_names(Socket) ->
 
 names_loop(Socket, Acc, Ps) ->
     receive
-	{tcp, Socket, Bytes} ->
+	{tcp, ^Socket, Bytes} ->
 	    {NAcc, NPs} = scan_names(Acc ++ Bytes, Ps),
 	    names_loop(Socket, NAcc, NPs);
-	{tcp_closed, Socket} ->
+	{tcp_closed, ^Socket} ->
 	    {_, NPs} = scan_names(Acc, Ps),
 	    {ok, NPs}
     end.

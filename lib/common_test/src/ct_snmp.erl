@@ -74,7 +74,7 @@ start(Config, MgrAgentConfName, SnmpAppConfName) ->
 
 start_application(App) ->
     case application:start(App) of
-        {error, {already_started, App}} ->
+        {error, {already_started, ^App}} ->
             ok;
         Else ->
             Else
@@ -311,7 +311,7 @@ merge_snmp_conf([Def={Key,DefList=[P|_]}|DefParams], UserParams) when is_tuple(P
     case lists:keysearch(Key, 1, UserParams) of
 	false ->
 	    [Def | merge_snmp_conf(DefParams, UserParams)];
-	{value,{Key,UserList}} ->
+	{value,{^Key,UserList}} ->
 	    DefList1 = [{SubKey,Val} || {SubKey,Val} <- DefList, 
 					lists:keysearch(SubKey, 1, UserList) == false],
 	    [{Key,DefList1++UserList} | merge_snmp_conf(DefParams, 
@@ -419,7 +419,7 @@ del_dir(Dir) ->
 agent_conf(Agent, MgrAgentConfName) ->
     Agents = ct:get_config({MgrAgentConfName, managed_agents}),
     case lists:keysearch(Agent, 1, Agents) of
-	{value, {Agent, AgentConf}} ->
+	{value, {^Agent, AgentConf}} ->
 	    AgentConf;
 	_ ->
 	    exit({error, {unknown_agent, Agent, Agents}})

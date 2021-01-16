@@ -74,9 +74,9 @@ call(AppMaster, Req) ->
     Ref = erlang:monitor(process, AppMaster),
     AppMaster ! {Req, Tag, self()},
     receive 
-	{'DOWN', Ref, process, _, _Info} ->
+	{'DOWN', ^Ref, process, _, _Info} ->
 	    ok;
-	{Tag, Res} ->
+	{^Tag, Res} ->
 	    erlang:demonitor(Ref, [flush]),
 	    Res
     end.
@@ -160,9 +160,9 @@ init_loop(Pid, Tag, State, Type) ->
  	IoReq when element(1, IoReq) =:= io_request ->
 	    State#state.gleader ! IoReq,
 	    init_loop(Pid, Tag, State, Type);
-	{Tag, Res} ->
+	{^Tag, Res} ->
 	    Res;
-	{'EXIT', Pid, Reason} ->
+	{'EXIT', ^Pid, Reason} ->
 	    {error, Reason};
 	{start_type, From} ->
 	    From ! {start_type, Type},
@@ -177,7 +177,7 @@ main_loop(Parent, State) ->
 	IoReq when element(1, IoReq) =:= io_request ->
 	    State#state.gleader ! IoReq,
 	    main_loop(Parent, State);
-	{'EXIT', Parent, Reason} ->
+	{'EXIT', ^Parent, Reason} ->
 	    terminate(Reason, State);
 	{'EXIT', Child, Reason} when State#state.child =:= Child ->
 	    terminate(Reason, State#state{child=undefined});
@@ -200,7 +200,7 @@ terminate_loop(Child, State) ->
  	IoReq when element(1, IoReq) =:= io_request ->
 	    State#state.gleader ! IoReq,
 	    terminate_loop(Child, State);
-	{'EXIT', Child, _} ->
+	{'EXIT', ^Child, _} ->
 	    ok;
 	Other ->
 	    NewState = handle_msg(Other, State),
@@ -350,26 +350,26 @@ start_supervisor(Type, M, A) ->
 
 loop_it(Parent, Child, Mod, AppState) ->
     receive
-	{Parent, get_child, Ref} ->
+	{^Parent, get_child, Ref} ->
 	    Parent ! {child, Ref, Child, Mod},
 	    loop_it(Parent, Child, Mod, AppState);
-	{Parent, terminate} ->
+	{^Parent, terminate} ->
 	    NewAppState = prep_stop(Mod, AppState),
 	    exit(Child, shutdown),
 	    receive
-		{'EXIT', Child, _} -> ok
+		{'EXIT', ^Child, _} -> ok
 	    end,
 	    catch Mod:stop(NewAppState),
 	    exit(normal);
-	{'EXIT', Parent, Reason} ->
+	{'EXIT', ^Parent, Reason} ->
 	    NewAppState = prep_stop(Mod, AppState),
 	    exit(Child, Reason),
 	    receive
-		{'EXIT', Child, _} -> ok
+		{'EXIT', ^Child, _} -> ok
 	    end,
 	    catch Mod:stop(NewAppState),
 	    exit(Reason);
-	{'EXIT', Child, Reason} -> % forward *all* exit reasons (inc. normal)
+	{'EXIT', ^Child, Reason} -> % forward *all* exit reasons (inc. normal)
 	    NewAppState = prep_stop(Mod, AppState),
 	    catch Mod:stop(NewAppState),
 	    exit(Reason);
@@ -421,7 +421,7 @@ kill_all_procs_1([Self|Ps], Self, N) ->
     kill_all_procs_1(Ps, Self, N);
 kill_all_procs_1([P|Ps], Self, N) ->
     case process_info(P, group_leader) of
-	{group_leader,Self} ->
+	{group_leader,^Self} ->
 	    exit(P, kill),
 	    kill_all_procs_1(Ps, Self, N+1);
 	_ ->

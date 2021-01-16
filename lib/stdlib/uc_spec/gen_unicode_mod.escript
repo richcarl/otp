@@ -861,7 +861,7 @@ decompose([CP|CPs], Data) when is_integer(CP) ->
 
 decompose_compat(Canon, [], Data) ->
     case decompose_compat(Canon, Data) of
-        Canon -> [];
+        ^Canon -> [];
         Other -> {compat, Other}
     end;
 decompose_compat([], {CompatMode, CPs}, Data) ->

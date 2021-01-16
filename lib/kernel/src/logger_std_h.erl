@@ -132,7 +132,7 @@ check_config(Name,SetOrUpdate,OldHConfig,NewHConfig0) ->
 
     %% Fail if write-once fields are changed
     case maps:with([type,file,modes],NewHConfig) of
-        WriteOnce ->
+        ^WriteOnce ->
             check_h_config(NewHConfig);
         Other ->
             {error,{illegal_config_change,?MODULE,WriteOnce,Other}}
@@ -282,7 +282,7 @@ terminate(_Name, _Reason, #{file_ctrl_pid:=FWPid}) ->
             _ = file_ctrl_stop(FWPid),
             MRef = erlang:monitor(process, FWPid),
             receive
-                {'DOWN',MRef,_,_,_} ->
+                {'DOWN',^MRef,_,_,_} ->
                     ok
             after
                 ?DEFAULT_CALL_TIMEOUT ->
@@ -359,9 +359,9 @@ file_ctrl_start(HandlerName, HConfig) ->
                            file_ctrl_init(HandlerName, HConfig, Starter)
                    end),
     receive
-        {FileCtrlPid,ok} ->
+        {^FileCtrlPid,ok} ->
             {ok,FileCtrlPid};
-        {FileCtrlPid,Error} ->
+        {^FileCtrlPid,Error} ->
             Error
     after
         ?DEFAULT_CALL_TIMEOUT ->
@@ -387,10 +387,10 @@ file_ctrl_call(Pid, Msg) ->
     MRef = monitor(process, Pid),
     Pid ! {Msg,{self(),MRef}},
     receive
-        {MRef,Result} ->
+        {^MRef,Result} ->
             demonitor(MRef, [flush]),
             Result;
-        {'DOWN',MRef,_Type,_Object,Reason} ->
+        {'DOWN',^MRef,_Type,_Object,Reason} ->
             {error,Reason}
     after
         ?DEFAULT_CALL_TIMEOUT ->
@@ -480,7 +480,7 @@ maybe_ensure_file(State) ->
 %% logrotate)
 ensure_file(#{inode:=INode0,file_name:=FileName,modes:=Modes}=State) ->
     case file:read_file_info(FileName,[raw]) of
-        {ok,#file_info{inode=INode0}} ->
+        {ok,#file_info{inode=^INode0}} ->
             State#{last_check=>timestamp()};
         _ ->
             close_log_file(State),

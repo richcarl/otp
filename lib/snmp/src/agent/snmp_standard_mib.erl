@@ -564,7 +564,7 @@ snmp_set_serial_no(get) ->
 
 snmp_set_serial_no(is_set_ok, NewVal) ->
     case snmp_generic:variable_func(get, {snmpSetSerialNo, volatile}) of
-	{value, NewVal} -> noError;
+	{value, ^NewVal} -> noError;
 	_ -> inconsistentValue
     end;
 snmp_set_serial_no(set, NewVal) ->

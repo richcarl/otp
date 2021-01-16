@@ -301,7 +301,7 @@ do_open(State, Req, From, Args, Tab) ->
                 [] -> 
                     A = [Tab, Args, get(verbose)],
                     do_internal_open(State, From, A);
-                [{Tab, _Counter, Pid}] ->
+                [{^Tab, _Counter, Pid}] ->
                     pending_call(Tab, Pid, make_ref(), From, Args, 
                                  add_user, State)
             end
@@ -340,7 +340,7 @@ handle_close(State, Req, {FromPid,_Tag}=From, Tab) ->
                     {{error, not_owner}, State};
                 [_ | Keep] ->
                     case ets:lookup(?REGISTRY, Tab) of
-                        [{Tab, 1, Pid}] ->
+                        [{^Tab, 1, Pid}] ->
                             do_unlink(Store, FromPid),
                             true = ets:delete(?REGISTRY, Tab),
                             true = ets:delete(?OWNERS, Pid),
@@ -348,7 +348,7 @@ handle_close(State, Req, {FromPid,_Tag}=From, Tab) ->
                             unlink(Pid),
                             pending_call(Tab, Pid, make_ref(), From, [], 
                                          internal_close, State);
-                        [{Tab, _Counter, Pid}] ->
+                        [{^Tab, _Counter, Pid}] ->
 			    do_unlink(Store, FromPid),
 			    true = ets:match_delete(Store, {FromPid, Tab}),
                             true = ets:insert(Store, Keep),
@@ -406,7 +406,7 @@ pending_call(Tab, Pid, Ref, {FromPid, _Tag}=From, Args, ReqT, State) ->
 
 check_pending(Tab, From, State, Req) ->
     case lists:keysearch(Tab, #pending.tab, State#state.pending) of
-        {value, #pending{tab = Tab, clients = Clients}=P} ->
+        {value, #pending{tab = ^Tab, clients = Clients}=P} ->
             NP = lists:keyreplace(Tab, #pending.tab, State#state.pending, 
                                   P#pending{clients = Clients++[{Req,From}]}),
             {pending, State#state{pending = NP}};

@@ -211,7 +211,7 @@ start_channel(Host, Port, UserOptions) ->
                 Error ->
                     Error
             end;
-	{error, Timeout} ->
+	{error, ^Timeout} ->
             {error, timeout};
 	Error ->
 	    Error
@@ -232,7 +232,7 @@ stop_channel(Pid) ->
             MonRef = erlang:monitor(process, Pid),
             unlink(Pid),
             exit(Pid, ssh_sftp_stop_channel),
-            receive {'DOWN',MonRef,_,_,_} -> ok
+            receive {'DOWN',^MonRef,_,_,_} -> ok
             after
                 1000 ->
                     exit(Pid, kill),

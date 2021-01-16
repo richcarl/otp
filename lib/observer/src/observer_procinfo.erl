@@ -471,7 +471,7 @@ global_pid_node_pref(Pid) ->
 io_get_data(Pid) ->
     Pid ! {self(), get_data_and_close},
     receive
-	{Pid, data, Data} ->  lists:flatten(Data)
+	{^Pid, data, Data} ->  lists:flatten(Data)
     end.
 
 io_server() ->

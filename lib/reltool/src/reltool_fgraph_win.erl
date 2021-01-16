@@ -100,7 +100,7 @@ stop(Pid, Reason) ->
     Ref = erlang:monitor(process, Pid),
     Pid ! {stop, Reason},
     receive
-        {'DOWN', Ref, _, _, _} ->
+        {'DOWN', ^Ref, _, _, _} ->
             ok
     end.
 
@@ -110,7 +110,7 @@ new(Parent, Options) ->
     Env = wx:get_env(),
     Me  = self(),
     Pid = spawn_link(fun() -> init([Parent, Me, Env, Options]) end),
-    receive {Pid, {?MODULE, Panel}} -> {Pid,Panel} end.
+    receive {^Pid, {?MODULE, Panel}} -> {Pid,Panel} end.
 
 init([ParentWin, Pid, Env, Options]) ->
     wx:set_env(Env),
@@ -254,7 +254,7 @@ ticker_loop(Pid, Time) ->
     receive after Time ->
         Pid ! {self(), redraw},
         T0 = erlang:monotonic_time(),
-        receive {Pid, ok} -> ok end,
+        receive {^Pid, ok} -> ok end,
         T1 = erlang:monotonic_time(),
         D = erlang:convert_time_unit(T1-T0, native, milli_seconds),
         case round(40 - D) of
@@ -578,7 +578,7 @@ mouse_left_up_select(G, {_X,_Y}) ->
 
 mouse_left_up_move(G = #graph{ select = Select, vs = Vs} = G, {X,Y}, Shift) ->
     case Select of
-        {node, Key, _, X, Y} ->
+        {node, Key, _, ^X, ^Y} ->
             io:format("click: ~p\n", [Key]),
             G#graph{ select = none, offset_state = false };
         {node, Key, Type, _, _} ->
@@ -743,7 +743,7 @@ draw_vs(DC, Vs, {Xo, Yo}, Pen, Brush) ->
 				       {FgColor, BgColor} ->
 					   wxPen:setColour(Pen, FgColor),
 					   wxBrush:setColour(Brush, BgColor);
-				       Color ->
+				       ^Color ->
 					   wxPen:setColour(Pen, Color),
 					   wxBrush:setColour(Brush, Color)
 				   end,

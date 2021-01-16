@@ -256,7 +256,7 @@ use_tags([#tag{origin = code}=T | Ts], E, TypeTable, NTs) ->
                     use_tags(Ts, E, TypeTable, NTs);
                 [] ->
                     use_tags(Ts, E, TypeTable, NTs);
-                [{TypeName, Tag, seen}] ->
+                [{^TypeName, Tag, seen}] ->
                     use_tags(Ts, E, TypeTable, [Tag | NTs])
             end
     end;
@@ -569,11 +569,11 @@ seen_type(N, NArgs, P) ->
     TypeName = {N, NArgs},
     #parms{tab = DT} = P,
     case {ets:lookup(DT, TypeName), N} of
-        {[{TypeName, _, seen}], _} ->
+        {[{^TypeName, _, seen}], _} ->
             true;
-        {[{TypeName, TagType, not_seen}], _} when N#t_name.module =:= [] ->
+        {[{^TypeName, TagType, not_seen}], _} when N#t_name.module =:= [] ->
             expand_datatype(TagType, proper_type, DT, P);
-        {[{TypeName, TagType, not_seen}], {record, _}} ->
+        {[{^TypeName, TagType, not_seen}], {record, _}} ->
             expand_datatype(TagType, record_type, DT, P);
         {[], {record, R}} ->
             #parms{warn = W, line = L, file = File} = P,
@@ -604,9 +604,9 @@ expand_datatype(Tag0, Kind, DT, P0) ->
 select_fields(Fields, Name, DT) ->
     RecordName = {Name, 0},
     case ets:lookup(DT, RecordName) of
-        [{RecordName, fake, seen}] ->
+        [{^RecordName, fake, seen}] ->
             Fields;
-        [{RecordName, #tag{data = {T, _Doc}}, seen}] ->
+        [{^RecordName, #tag{data = {T, _Doc}}, seen}] ->
             #t_typedef{args = [], type = #t_record{fields = Fs}, defs = []}=T,
             [find_field(F, Fields) || F <- Fs]
     end.

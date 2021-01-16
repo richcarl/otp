@@ -42,7 +42,7 @@ lookup(DbRef, Key) ->
 		  ets:lookup(ModDb, Key)
 	  end,
     case Res of
-	[{Key, Value}] -> {ok, Value};
+	[{^Key, Value}] -> {ok, Value};
 	_ -> not_found
     end.
 

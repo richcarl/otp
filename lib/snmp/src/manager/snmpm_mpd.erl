@@ -302,8 +302,8 @@ process_v3_msg(NoteStore, Msg, Hdr, Data, Address, Log) ->
 	    %% BMK BMK BMK: discovery?
 	    Note = snmp_note_store:get_note(NoteStore, MsgID), 
 	    case Note of
-		{SecEngineID, MsgSecModel, SecName, SecLevel,
-		 CtxEngineID, CtxName, _ReqId} ->
+		{^SecEngineID, ^MsgSecModel, ^SecName, ^SecLevel,
+		 ^CtxEngineID, ^CtxName, _ReqId} ->
 		    ?vtrace("process_v3_msg -> 7.2.11b: ok", []),
 		    %% BMK BMK: Should we discard the cached info
 		    %% BMK BMK: or do we let the gc deal with it?
@@ -327,8 +327,8 @@ process_v3_msg(NoteStore, Msg, Hdr, Data, Address, Log) ->
 	'get-response' -> 
 	    %% 7.2.10 & 12 
 	    case snmp_note_store:get_note(NoteStore, MsgID) of
-		{SecEngineID, MsgSecModel, SecName, SecLevel,
-		 CtxEngineID, CtxName, _} ->
+		{^SecEngineID, ^MsgSecModel, ^SecName, ^SecLevel,
+		 ^CtxEngineID, ^CtxName, _} ->
 		    %% 7.2.12.d
 		    {ok, 'version-3', PDU, PduMMS, undefined};
 		_ ->
@@ -346,7 +346,7 @@ process_v3_msg(NoteStore, Msg, Hdr, Data, Address, Log) ->
 	    %% 7.2.13 
 	    SnmpEngineID = get_engine_id(),
 	    case SecEngineID of
-		SnmpEngineID -> % 7.2.13.b
+		^SnmpEngineID -> % 7.2.13.b
 		    ?vtrace("7.2.13d - valid securityEngineID: ~p", 
 			    [SecEngineID]),
 		    %% 4.2.2.1.1 - we don't handle proxys yet => we only 

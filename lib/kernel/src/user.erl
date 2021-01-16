@@ -102,7 +102,7 @@ catch_loop(Port, Shell, Q) ->
 	new_shell ->
 	    exit(Shell, kill),
 	    catch_loop(Port, start_new_shell());
-	{unknown_exit,{Shell,Reason},_} ->		 % shell has exited
+	{unknown_exit,{^Shell,Reason},_} ->		 % shell has exited
 	    case Reason of
 		normal ->
                     put_port(<<"*** ">>, Port);
@@ -132,7 +132,7 @@ server_loop(Port, Q) ->
     receive
 	{io_request,From,ReplyAs,Request} when is_pid(From) ->
 	    server_loop(Port, do_io_request(Request, From, ReplyAs, Port, Q));
-	{Port,{data,Bytes}} ->
+	{^Port,{data,Bytes}} ->
 	    case get(shell) of
 		noshell ->
 		    server_loop(Port, queue:snoc(Q, Bytes));
@@ -144,14 +144,14 @@ server_loop(Port, Q) ->
 			    throw(new_shell)
 		    end
 	    end;
-	{Port, eof} ->
+	{^Port, eof} ->
 	    put(eof, true),
 	    server_loop(Port, Q);
 
 	%% Ignore messages from port here.
-	{'EXIT',Port,badsig} ->			% Ignore badsig errors
+	{'EXIT',^Port,badsig} ->			% Ignore badsig errors
 	    server_loop(Port, Q);
-	{'EXIT',Port,What} ->			% Port has exited
+	{'EXIT',^Port,What} ->			% Port has exited
 	    exit(What);
 
 	%% Check if shell has exited
@@ -396,9 +396,9 @@ get_line(Prompt, Port, Q, Acc, Enc) ->
     case queue:is_empty(Q) of
 	true ->
 	    receive
-		{Port,{data,Bytes}} ->
+		{^Port,{data,Bytes}} ->
 		    get_line_bytes(Prompt, Port, Q, Acc, Bytes, Enc);
-		{Port, eof} ->
+		{^Port, eof} ->
 		    put(eof, true),
 		    {ok, eof, queue:new()};
                 {io_request,From,ReplyAs,{get_geometry,_}=Req} when is_pid(From) ->
@@ -565,9 +565,9 @@ get_chars(Prompt, M, F, Xa, Port, Q, State, Enc) ->
     case queue:is_empty(Q) of
 	true ->
 	    receive
-		{Port,{data,Bytes}} ->
+		{^Port,{data,Bytes}} ->
 		    get_chars_bytes(State, M, F, Xa, Port, Q, Bytes, Enc);
-		{Port, eof} ->
+		{^Port, eof} ->
 		    put(eof, true),
 		    {ok, eof, queue:new()};
                 {io_request,From,ReplyAs,{get_geometry,_}=Req} when is_pid(From) ->
@@ -633,9 +633,9 @@ get_chars_more(State, M, F, Xa, Port, Q, Enc) ->
 	    case get(eof) of
 		undefined ->
 		    receive
-			{Port,{data,Bytes}} ->
+			{^Port,{data,Bytes}} ->
 			    get_chars_bytes(State, M, F, Xa, Port, Q, Bytes, Enc);
-			{Port,eof} ->
+			{^Port,eof} ->
 			    put(eof, true),
 			    get_chars_apply(State, M, F, Xa, Port, 
 					    queue:snoc(Q, eof), Enc);

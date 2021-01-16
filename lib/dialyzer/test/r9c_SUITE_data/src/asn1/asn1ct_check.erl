@@ -1641,7 +1641,7 @@ is_contextswitchtype(_) ->
 %     end;
 %% This case occurs when there is a valuereference
 validate_integer(S=#state{mname=M},
-		 #'Externalvaluereference'{module=M,value=Id},
+		 #'Externalvaluereference'{module=^M,value=Id},
 		 NamedNumberList,_Constr) ->
     case lists:keysearch(Id,1,NamedNumberList) of
 	{value,_} -> ok;
@@ -2055,7 +2055,7 @@ normalize_octetstring(S,Value,CType) ->
 	Rec when record(Rec,'Externalvaluereference') ->
 	    get_normalized_value(S,Value,CType,
 				 fun normalize_octetstring/3,[]);
-	{Name,String} when atom(Name) ->
+	{^Name,String} when atom(Name) ->
 	    normalize_octetstring(S,String,CType);
 	List when list(List) ->
 	    %% check if list elements are valid octet values

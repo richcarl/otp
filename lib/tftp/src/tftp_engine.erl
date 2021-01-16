@@ -105,10 +105,10 @@ call(Req, ToPid, Timeout) when is_pid(ToPid) ->
     Ref = erlang:monitor(Type, ToPid),
     ToPid ! {Req, Ref, self()},
     receive
-        {Reply, Ref, FromPid} when FromPid =:= ToPid ->
+        {Reply, ^Ref, FromPid} when FromPid =:= ToPid ->
             erlang:demonitor(Ref, [flush]),
             Reply;
-        {'DOWN', Ref, Type, FromPid, _Reason} when FromPid =:= ToPid ->
+        {'DOWN', ^Ref, ^Type, FromPid, _Reason} when FromPid =:= ToPid ->
             {error, timeout}
     after Timeout ->
             {error, timeout}
@@ -486,12 +486,12 @@ client_open(Config, Callback, Req, BlockNo, #transfer_res{status = Status, decod
                     end;
                 #tftp_msg_ack{block_no = ActualBlockNo} when LocalAccess =:= read ->
                     Req2 = Req#tftp_msg_req{options = []},
-                    {Config2, Callback2, Req2} = do_client_open(Config, Callback, Req2),
+                    {Config2, Callback2, ^Req2} = do_client_open(Config, Callback, Req2),
                     ExpectedBlockNo = 0,
                     common_read(Config2, Callback2, Req2, LocalAccess, ExpectedBlockNo, ActualBlockNo, Prepared);
                 #tftp_msg_data{block_no = ActualBlockNo, data = Data} when LocalAccess =:= write ->
                     Req2 = Req#tftp_msg_req{options = []},
-                    {Config2, Callback2, Req2} = do_client_open(Config, Callback, Req2),
+                    {Config2, Callback2, ^Req2} = do_client_open(Config, Callback, Req2),
                     ExpectedBlockNo = 1,
                     common_write(Config2, Callback2, Req2, LocalAccess, ExpectedBlockNo, ActualBlockNo, Data, Prepared);
                 %% #tftp_msg_error{code = Code, text = Text} when Req#tftp_msg_req.options =/= [] ->
@@ -1363,7 +1363,7 @@ do_print_debug_info(Config, Who, Where, Data) ->
                 Who
         end,
     case {Where, Data} of
-        {_, #error{where = Where, code = Code, text = Text, filename = Filename}} -> 
+        {_, #error{where = ^Where, code = Code, text = Text, filename = Filename}} -> 
             do_format(Config, Side, Local, "error ~s ->\n\t~p ~p\n\t~p ~p: ~s\n",
                       [PeerInfo, self(), Filename, Where, Code, Text]);
         {open, #tftp_msg_req{filename = Filename}} ->

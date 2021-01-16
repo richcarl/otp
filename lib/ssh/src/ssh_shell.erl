@@ -172,7 +172,7 @@ terminate(_Reason, #state{io = IoPid}) ->
 %%--------------------------------------------------------------------
 encoding(Bin) ->
     case unicode:characters_to_binary(Bin,utf8,utf8) of
-	Bin ->
+	^Bin ->
 	    utf8;
         Bin2 when is_binary(Bin2) ->
             unicode;

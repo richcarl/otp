@@ -185,7 +185,7 @@ handle_end_document({fatal_error, {State, Reason}}) ->
         State1 = event_callback(endDocument, State),
         format_error(fatal_error, State1, Reason)
     catch 
-        throw:{event_receiver_error, State2, {Tag, Reason}} ->
+        throw:{event_receiver_error, State2, {Tag, ^Reason}} ->
               format_error(Tag, State2, Reason); 
           _:Other ->
               {fatal_error, Other}
@@ -195,7 +195,7 @@ handle_end_document({event_receiver_error, State, {Tag, Reason}}) ->
         State1 =  event_callback(endDocument, State),
         format_error(Tag, State1, Reason)
     catch 
-        throw:{event_receiver_error, State2, {Tag, Reason}} ->
+        throw:{event_receiver_error, State2, {^Tag, ^Reason}} ->
               format_error(Tag, State2, Reason); 
           _:Other ->
               {fatal_error, Other}
@@ -1053,7 +1053,7 @@ merge_on_key({Key, Value}, List) ->
 fix_ns({Prefix, Name}, Attributes, Ns) ->
     Uri = 
 	case lists:keysearch(Prefix, 1, Ns) of
-	    {value, {Prefix, U}} -> 
+	    {value, {^Prefix, U}} -> 
 		U;
 	    false -> 
 		""
@@ -1080,7 +1080,7 @@ fix_attributes_ns([{{"", Name}, AttrValue} | Attrs], Ns, Acc) ->
 fix_attributes_ns([{{Prefix, Name}, AttrValue} | Attrs], Ns, Acc) ->
     Uri = 
 	case lists:keysearch(Prefix, 1, Ns) of
-	    {value, {Prefix, U}} -> 
+	    {value, {^Prefix, U}} -> 
 		U;
 	    false -> 
 		""
@@ -1196,7 +1196,7 @@ parse_att_value(?STRING_REST("&", Rest), State, Stop, Acc)  ->
     case Ref of 
         {character, _, CharValue}  ->
             parse_att_value(Rest1, State1, Stop, [CharValue | Acc]); 
-        {internal_general, true, _, [Stop]} -> % stop char in entity
+        {internal_general, true, _, [^Stop]} -> % stop char in entity
             parse_att_value(Rest1, State1, Stop, [Stop|Acc]);
         {internal_general, true, _, Value} ->
             IValue = ?TO_INPUT_FORMAT(Value),
@@ -1639,14 +1639,14 @@ send_character_event(_, true, String, State) ->
 %%----------------------------------------------------------------------
 whitespace(?STRING_EMPTY, State, Acc) ->  
     case cf(?STRING_EMPTY, State, Acc, fun whitespace/3) of
-	{?STRING_EMPTY, State} ->
+	{?STRING_EMPTY, ^State} ->
 	    {lists:reverse(Acc), ?STRING_EMPTY, State};
 	Ret ->
 	    Ret
     end;
 whitespace(?STRING("\r") = Bytes, State, Acc) -> 
     case cf(Bytes, State, Acc, fun whitespace/3) of
-	{?STRING("\r") = Bytes, State} ->
+	{?STRING("\r") = B, ^State} when B =:= Bytes ->
 	    {lists:reverse(Acc), Bytes, State}; 
 	Ret ->
 	    Ret
@@ -1714,7 +1714,7 @@ parse_reference_1(?STRING_EMPTY, State, HaveToExist, Name) ->
     cf(?STRING_EMPTY, State, HaveToExist, Name, fun parse_reference_1/4);
 parse_reference_1(?STRING_REST(";", Rest), State, HaveToExist, Name) ->
     case look_up_reference(Name, HaveToExist, State) of
-	{internal_general, Name, RefValue} ->
+	{internal_general, ^Name, RefValue} ->
 	    {{internal_general, is_delimiter(RefValue), Name, RefValue}, 
 	     Rest, State};
 	Result ->
@@ -2230,7 +2230,7 @@ parse_external_entity_1(?STRING_REST("<?xml", Rest) = Bytes,
                     % this my not truly be empty. the file may have 
                     % more unbalanced stuff, but not have been read yet
                     {[], ?STRING_EMPTY, State2};
-                {_, State1} when is_record(State1, xmerl_sax_parser_state) ->
+                {_, ^State1} when is_record(State1, xmerl_sax_parser_state) ->
                     ?fatal_error(State1, "Not well-formed DTD");
                 {fatal_error, {State2, "No more bytes"}} ->
                     {[], ?STRING_EMPTY, State2};
@@ -3110,7 +3110,7 @@ parse_att_type(?STRING_UNBOUND_REST(C, _) = Bytes, State) when ?is_whitespace(C)
                 {"(" ++ T, Rest2, State3}
         end;
     {"NOTATION", Rest1, State2} ->
-        {_WS, Rest2, State3} = whitespace(Rest1, State2, []),
+        {^_WS, Rest2, State3} = whitespace(Rest1, State2, []),
         case parse_att_type_1(Rest2, State3, []) of
             {"(", Rest3, State4} ->
                 {T, Rest4, State5} = parse_until_right_paren(Rest3, State4, []),
@@ -4600,16 +4600,16 @@ http_get_file(Host, Port, Key) ->
 %%----------------------------------------------------------------------
 receive_msg(Socket, FD, WaitForHeader, Timeout) ->
     receive 
-	{tcp_closed, Socket} ->
+	{tcp_closed, ^Socket} ->
 	    ok;
-	{tcp, Socket, Response} when WaitForHeader == false  ->
+	{tcp, ^Socket, Response} when WaitForHeader == false  ->
 	    ok = file:write(FD, Response),
 	    receive_msg(Socket, FD, WaitForHeader, Timeout);
-	{tcp, Socket, Response} ->
+	{tcp, ^Socket, Response} ->
 	    MsgBody = remove_header(Response),
 	    ok = file:write(FD, MsgBody),
 	    receive_msg(Socket, FD, false, Timeout);
-	{tcp_error, Socket, _Reason} ->
+	{tcp_error, ^Socket, _Reason} ->
 	    gen_tcp:close(Socket),
 	    throw({error, "http connection failed"})
     after Timeout ->
@@ -4657,7 +4657,7 @@ http("http://" ++ Address) ->
 		_ ->
 		    throw({error, "Malformed key; port not an integer, should be http://Host:Port/path or http://Host/path"})
 	    end;
-	[Address] ->
+	[^Address] ->
 	    %% Use default port
 	    {Host, Key} = split_to_slash(Address, []),
 	    {Host, ?HTTP_DEF_PORT, Key};

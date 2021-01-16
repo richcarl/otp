@@ -175,7 +175,7 @@ do_decode_binary(<<>>) ->
 which_scheme_defaults(Opts) ->
     Key = scheme_defaults, 
     case lists:keysearch(Key, 1, Opts) of
-	{value, {Key, SchemeDefaults}} ->
+	{value, {^Key, SchemeDefaults}} ->
 	    SchemeDefaults;
 	false ->
 	    scheme_defaults()
@@ -192,7 +192,7 @@ parse_scheme(AbsURI, Opts) ->
 		{ok, Scheme} ->
 		    SchemeDefaults = which_scheme_defaults(Opts),
 		    case lists:keysearch(Scheme, 1, SchemeDefaults) of
-			{value, {Scheme, DefaultPort}} ->
+			{value, {^Scheme, DefaultPort}} ->
 			    {Scheme, DefaultPort, Rest};
 			false ->
 			    {Scheme, no_default_port, Rest}

@@ -672,7 +672,7 @@ write(_Tid, _Ts, Tab, Val, LockKind) ->
 
 write_to_store(Tab, Store, Oid, Val) ->
     {_, _, Type} = mnesia_lib:validate_record(Tab, Val),
-    Oid = {Tab, element(2, Val)},
+    ^Oid = {Tab, element(2, Val)},
     case Type of
 	bag ->
 	    ?ets_insert(Store, {Oid, Val, write});
@@ -1037,8 +1037,8 @@ get_next_tskey(Key,Keys,Tab) ->
 	   true ->
 		case lists:dropwhile(fun(A) -> A /= Key end, Keys) of
 		    [] -> hd(Keys); %% First stored key
-		    [Key] -> '$end_of_table';
-		    [Key,Next2|_] -> Next2
+		    [^Key] -> '$end_of_table';
+		    [^Key,Next2|_] -> Next2
 		end
 	end,
     case Next of
@@ -1404,7 +1404,7 @@ add_sel_match([], Objs, _Type, Acc) ->
     {Objs,lists:reverse(Acc)};
 add_sel_match([Op={Oid, _, delete}|R], Objs, Type, Acc) ->
     case deloid(Oid, Objs) of
-	Objs ->
+	^Objs ->
 	    add_sel_match(R, Objs, Type, [Op|Acc]);
 	NewObjs when Type == set ->
 	    add_sel_match(R, NewObjs, Type, Acc);
@@ -1413,7 +1413,7 @@ add_sel_match([Op={Oid, _, delete}|R], Objs, Type, Acc) ->
     end;
 add_sel_match([Op = {_Oid, Val, delete_object}|R], Objs, Type, Acc) ->
     case lists:delete(Val, Objs) of
-	Objs ->
+	^Objs ->
 	    add_sel_match(R, Objs, Type, [Op|Acc]);
 	NewObjs when Type == set ->
 	    add_sel_match(R, NewObjs, Type, Acc);
@@ -1430,7 +1430,7 @@ add_sel_match([Op={Oid={_,Key}, Val, write}|R], Objs, bag, Acc) ->
     end;
 add_sel_match([Op={Oid, Val, write}|R], Objs, set, Acc) ->
     case deloid(Oid,Objs) of
-	Objs ->
+	^Objs ->
 	    add_sel_match(R, Objs,set, [Op|Acc]);
 	NewObjs ->
 	    add_sel_match(R, [Val | NewObjs],set, Acc)
@@ -3019,7 +3019,7 @@ snmp_get_row(Tab, RowIndex) when is_atom(Tab), Tab /= schema, is_list(RowIndex) 
 		    SnmpType = val({Tab,snmp}),
 		    Fix = fun({{_,Key},Row,Op}, Res) ->
 				  case mnesia_snmp_hook:key_to_oid(Tab,Key,SnmpType) of
-				      RowIndex ->
+				      ^RowIndex ->
 					  case Op of
 					      write -> {ok, Row};
 					      _ ->
@@ -3126,7 +3126,7 @@ snmp_filter_key(undefined, RowIndex, Tab, Store) ->
 	    SnmpType = val({Tab,snmp}),
 	    Fix = fun({{_,Key},_,Op}, Res) ->
 			  case mnesia_snmp_hook:key_to_oid(Tab,Key,SnmpType) of
-			      RowIndex ->
+			      ^RowIndex ->
 				  case Op of
 				      write -> {ok, Key};
 				      _ ->
@@ -3262,7 +3262,7 @@ qlc_opts(Option, Keys) ->
 
 qlc_opts(Opts, [{Key,Def}|Keys], Acc) ->
     Opt = case lists:keysearch(Key,1, Opts) of
-	      {value, {Key,Value}} ->
+	      {value, {^Key,Value}} ->
 		  Value;
 	      false ->
 		  Def

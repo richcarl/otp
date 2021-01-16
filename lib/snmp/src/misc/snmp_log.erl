@@ -549,7 +549,7 @@ do_log_convert(Log, Block, File, Converter) ->
 		  exit(Result)
 	  end),
     receive 
-	{'DOWN', Ref, process, Pid, Result} ->
+	{'DOWN', ^Ref, process, ^Pid, Result} ->
 	    %% ?vtrace("do_log_converter -> received result"
 	    %% 	    "~n   Result: ~p", [Result]),
 	    Result
@@ -672,7 +672,7 @@ do_log_to_io(Log, Mibs, Start, Stop) ->
 			{Tag, S} when (Tag =:= ok) orelse (Tag =:= error) ->
 			    io:format("~s", [S]),
                             Tag;
-			X ->
+			^X ->
 			    X
 		    end
 	    end,

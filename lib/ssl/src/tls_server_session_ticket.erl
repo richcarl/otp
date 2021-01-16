@@ -225,7 +225,7 @@ stateful_ticket_store(Ref, NewSessionTicket, Hash, Psk,
     Id = {erlang:monotonic_time(), erlang:unique_integer([monotonic])},
     StatefulTicket = {NewSessionTicket, Hash, Psk},
     case gb_trees:size(Tree0) of
-        Max ->
+        ^Max ->
             %% Trow away oldes ticket
             {_, {#new_session_ticket{ticket = OldRef},_,_}, Tree1} 
                 = gb_trees:take_smallest(Tree0),
@@ -270,7 +270,7 @@ stateful_use([#psk_identity{identity = Ref} | Refs], [Binder | Binders],
                     {Error, State}
             end
     catch
-        _:{badkey, Ref} -> 
+        _:{badkey, ^Ref} -> 
             stateful_use(Refs, Binders, Prf, HandshakeHist, Index + 1, State)
     end.
 
@@ -278,7 +278,7 @@ stateful_usable_ticket(Key, Prf, Binder, HandshakeHist, Tree) ->
     case gb_trees:lookup(Key, Tree) of
         none ->
             false;
-        {value, {NewSessionTicket, Prf, PSK}} ->
+        {value, {NewSessionTicket, ^Prf, PSK}} ->
             case stateful_living_ticket(Key, NewSessionTicket) of
                 true ->
                     validate_binder(Binder, HandshakeHist, PSK, Prf, stateful);
@@ -337,7 +337,7 @@ stateless_use([#psk_identity{identity = Encrypted,
               #state{stateless = #{seed := {IV, Shard},
                                    window := Window}} = State) ->
     case ssl_cipher:decrypt_ticket(Encrypted, Shard, IV) of
-        #stateless_ticket{hash = Prf,
+        #stateless_ticket{hash = ^Prf,
                           pre_shared_key = PSK} = Ticket ->
             case stateless_usable_ticket(Ticket, ObfAge, Binder,
                                         HandshakeHist, Window) of

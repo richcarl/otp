@@ -123,7 +123,7 @@ whereis_evaluator(Shell) ->
 
 start_restricted(RShMod) when is_atom(RShMod) ->
     case code:ensure_loaded(RShMod) of
-	{module,RShMod} -> 
+	{module,^RShMod} -> 
 	    application:set_env(stdlib, restricted_shell, RShMod),
             exit(restricted_shell_started);
 	{error,What} = Error ->
@@ -190,7 +190,7 @@ server(StartSync) ->
 	    {ok,RShMod} when is_atom(RShMod) ->
 		io:fwrite(<<"Restricted ">>, []),
 		case code:ensure_loaded(RShMod) of
-		    {module,RShMod} -> 
+		    {module,^RShMod} -> 
 			undefined;
 		    {error,What} ->
 			{RShMod,What}
@@ -302,12 +302,12 @@ get_command(Prompt, Eval, Bs, RT, Ds) ->
 
 get_command1(Pid, Eval, Bs, RT, Ds) ->
     receive
-	{'EXIT', Pid, Res} ->
+	{'EXIT', ^Pid, Res} ->
 	    {Res, Eval};
-	{'EXIT', Eval, {Reason,Stacktrace}} ->
+	{'EXIT', ^Eval, {Reason,Stacktrace}} ->
             report_exception(error, {Reason,Stacktrace}, RT),
 	    get_command1(Pid, start_eval(Bs, RT, Ds), Bs, RT, Ds);
-	{'EXIT', Eval, Reason} ->
+	{'EXIT', ^Eval, Reason} ->
             report_exception(error, {Reason,[]}, RT),
 	    get_command1(Pid, start_eval(Bs, RT, Ds), Bs, RT, Ds)
     end.
@@ -533,37 +533,37 @@ shell_cmd(Es, Eval, Bs, RT, Ds, W) ->
 
 shell_rep(Ev, Bs0, RT, Ds0) ->
     receive
-	{shell_rep,Ev,{value,V,Bs,Ds}} ->
+	{shell_rep,^Ev,{value,V,Bs,Ds}} ->
 	    {V,Ev,Bs,Ds};
-        {shell_rep,Ev,{command_error,{Line,M,Error}}} -> 
+        {shell_rep,^Ev,{command_error,{Line,M,Error}}} -> 
             fwrite_severity(benign, <<"~w: ~ts">>,
                             [Line, M:format_error(Error)]),
             {{'EXIT',Error},Ev,Bs0,Ds0};
-	{shell_req,Ev,get_cmd} ->
+	{shell_req,^Ev,get_cmd} ->
 	    Ev ! {shell_rep,self(),get()},
 	    shell_rep(Ev, Bs0, RT, Ds0);
-	{shell_req,Ev,exit} ->
+	{shell_req,^Ev,exit} ->
 	    Ev ! {shell_rep,self(),exit},
 	    exit(normal);
-	{shell_req,Ev,{update_dict,Ds}} ->	% Update dictionary
+	{shell_req,^Ev,{update_dict,Ds}} ->	% Update dictionary
 	    Ev ! {shell_rep,self(),ok},
 	    shell_rep(Ev, Bs0, RT, Ds);
-        {ev_exit,{Ev,Class,Reason0}} ->         % It has exited unnaturally
-            receive {'EXIT',Ev,normal} -> ok end,
+        {ev_exit,{^Ev,Class,Reason0}} ->         % It has exited unnaturally
+            receive {'EXIT',^Ev,normal} -> ok end,
 	    report_exception(Class, Reason0, RT),
             Reason = nocatch(Class, Reason0),
 	    {{'EXIT',Reason},start_eval(Bs0, RT, Ds0), Bs0, Ds0};
-        {ev_caught,{Ev,Class,Reason0}} ->       % catch_exception is in effect
+        {ev_caught,{^Ev,Class,Reason0}} ->       % catch_exception is in effect
 	    report_exception(Class, benign, Reason0, RT),
             Reason = nocatch(Class, Reason0),
             {{'EXIT',Reason},Ev,Bs0,Ds0};
 	{'EXIT',_Id,interrupt} ->		% Someone interrupted us
 	    exit(Ev, kill),
 	    shell_rep(Ev, Bs0, RT, Ds0);
-        {'EXIT',Ev,{Reason,Stacktrace}} ->
+        {'EXIT',^Ev,{Reason,Stacktrace}} ->
             report_exception(exit, {Reason,Stacktrace}, RT),
 	    {{'EXIT',Reason},start_eval(Bs0, RT, Ds0), Bs0, Ds0};
-        {'EXIT',Ev,Reason} ->
+        {'EXIT',^Ev,Reason} ->
             report_exception(exit, {Reason,[]}, RT),
 	    {{'EXIT',Reason},start_eval(Bs0, RT, Ds0), Bs0, Ds0};
 	{'EXIT',_Id,R} ->
@@ -620,7 +620,7 @@ evaluator(Shell, Bs, RT, Ds) ->
 
 eval_loop(Shell, Bs0, RT) ->
     receive
-	{shell_cmd,Shell,{eval,Es},W} ->
+	{shell_cmd,^Shell,{eval,Es},W} ->
             Ef = {value, 
                   fun(MForFun, As) -> apply_fun(MForFun, As, Shell) end},
             Lf = local_func_handler(Shell, RT, Ef),
@@ -630,7 +630,7 @@ eval_loop(Shell, Bs0, RT) ->
 
 restricted_eval_loop(Shell, Bs0, RT, RShMod) ->
     receive
-	{shell_cmd,Shell,{eval,Es}, W} ->
+	{shell_cmd,^Shell,{eval,Es}, W} ->
             {LFH,NLFH} = restrict_handlers(RShMod, Shell, RT),
             put(restricted_expr_state, []),
             Bs = eval_exprs(Es, Shell, Bs0, RT, {eval,LFH}, {value,NLFH}, W),
@@ -929,7 +929,7 @@ expand_records(UsedRecords, E0) ->
     E = prep_rec(E0),
     Forms0 = RecordDefs ++ [{function,L,foo,0,[{clause,L,[],[],[E]}]}],
     Forms = erl_expand_records:module(Forms0, [strict_record_tests]),
-    {function,L,foo,0,[{clause,L,[],[],[NE]}]} = lists:last(Forms),
+    {function,^L,foo,0,[{clause,^L,[],[],[NE]}]} = lists:last(Forms),
     prep_rec(NE).
 
 prep_rec({value,_CommandN,_V}=Value) ->
@@ -1080,7 +1080,7 @@ local_func_handler(Shell, RT, Ef) ->
 record_print_fun(RT) ->
     fun(Tag, NoFields) ->
             case ets:lookup(RT, Tag) of
-                [{_,{attribute,_,record,{Tag,Fields}}}] 
+                [{_,{attribute,_,record,{^Tag,Fields}}}] 
                                   when length(Fields) =:= NoFields ->
                     record_fields(Fields);
                 _ ->
@@ -1301,7 +1301,7 @@ record_attrs(Forms) ->
 shell_req(Shell, Req) ->
     Shell ! {shell_req,self(),Req},
     receive
-	{shell_rep,Shell,Rep} -> Rep
+	{shell_rep,^Shell,Rep} -> Rep
     end.
 
 list_commands([{{N,command},Es0}, {{N,result}, V} |Ds], RT) ->

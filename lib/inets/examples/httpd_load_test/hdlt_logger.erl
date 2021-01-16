@@ -90,7 +90,7 @@ logger_loop(Ref) ->
 	{?MSG, F, A} ->
 	    io:format(F, A),
 	    logger_loop(Ref);
-	{'DOWN', Ref, process, _Object, _Info} ->
+	{'DOWN', ^Ref, process, _Object, _Info} ->
 	    %% start the stop timer
 	    erlang:send_after(timer:seconds(5), self(), stop),
 	    logger_loop(undefined);

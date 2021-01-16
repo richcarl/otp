@@ -915,7 +915,7 @@ options(Options0, [Key | Keys], L) when is_list(Options0) ->
                 {ok, Size};
             {no_files, NoFiles} when is_integer(NoFiles), NoFiles > 1 ->
                 {ok, NoFiles};
-            {Key, _} ->
+            {^Key, _} ->
                 badarg;
             false ->
                 Default = default_option(Key),
@@ -1071,7 +1071,7 @@ cursor_process(H, GUnique, GCache, TmpDir, SpawnOptions, MaxList, TmpUsage) ->
 %% Expect calls from tables calling the parent_fun and finally an 'ok'.
 parent_fun(Pid, Parent) ->
     receive 
-        {Pid, ok} -> Pid;
+        {^Pid, ok} -> Pid;
         {TPid, {parent_fun, Fun}} ->
             V = try 
                     {value, Fun()}
@@ -1080,9 +1080,9 @@ parent_fun(Pid, Parent) ->
             end,
             TPid ! {Parent, V},
             parent_fun(Pid, Parent);
-        {Pid, {caught, throw, Error, [?THROWN_ERROR | _]}} ->
+        {^Pid, {caught, throw, Error, [?THROWN_ERROR | _]}} ->
             Error;
-        {Pid, {caught, Class, Reason, Stacktrace}} ->
+        {^Pid, {caught, Class, Reason, Stacktrace}} ->
             erlang:raise(Class, Reason, Stacktrace)
     end.
 
@@ -1116,15 +1116,15 @@ no_more(Parent, MonRef, Post) ->
 
 wait_for_request(Parent, MonRef, Post) ->
     receive 
-        {Parent, stop} ->
+        {^Parent, stop} ->
             post_funs(Post),
             exit(normal);
-        {Parent, more} ->
+        {^Parent, more} ->
             ok;
-        {'EXIT', Parent, _Reason} ->
+        {'EXIT', ^Parent, _Reason} ->
             post_funs(Post),
             exit(normal);
-        {'DOWN', MonRef, process, Parent, _Info} ->
+        {'DOWN', ^MonRef, process, ^Parent, _Info} ->
             post_funs(Post),
             exit(normal);
         {'EXIT', Pid, _Reason} when Pid =:= self() ->
@@ -1162,9 +1162,9 @@ abstract(Info, true=_Flat, NElements, Depth) ->
     case Body0 of
         [] -> 
             Expr;
-        [{match,_,Expr,Q}] ->
+        [{match,_,^Expr,Q}] ->
             Q;
-        [{match,_,Expr,Q} | Body] ->
+        [{match,_,^Expr,Q} | Body] ->
             {block, anno0(), lists:reverse(Body, [Q])};
         _ ->
             {block, anno0(), lists:reverse(Body0, [Expr])}
@@ -1405,14 +1405,14 @@ stop_cursor(Pid) ->
     erlang:monitor(process, Pid),
     unlink(Pid),
     receive
-        {'EXIT',Pid,_Reason} -> % Simply ignore the error.
+        {'EXIT',^Pid,_Reason} -> % Simply ignore the error.
             receive 
-                {'DOWN',_,process,Pid,_} -> ok
+                {'DOWN',_,process,^Pid,_} -> ok
             end
     after 0 -> 
             Pid ! {self(),stop},
             receive
-                {'DOWN',_,process,Pid,_} -> ok
+                {'DOWN',_,process,^Pid,_} -> ok
             end
     end.
 
@@ -1420,16 +1420,16 @@ monitor_request(Pid, Req) ->
     Ref = erlang:monitor(process, Pid),
     Pid ! {self(), Req},
     receive 
-        {'DOWN', Ref, process, Pid, _Info} ->
+        {'DOWN', ^Ref, process, ^Pid, _Info} ->
             receive
-                {'EXIT', Pid, _Reason} -> ok
+                {'EXIT', ^Pid, _Reason} -> ok
             after 1 -> ok end,
             error;
-        {'EXIT', Pid, _Reason} ->
+        {'EXIT', ^Pid, _Reason} ->
             receive 
-                {'DOWN', _, process, Pid, _} -> error
+                {'DOWN', _, process, ^Pid, _} -> error
             end;
-        {Pid, Reply} ->
+        {^Pid, Reply} ->
             erlang:demonitor(Ref, [flush]),
             Reply
     end.
@@ -1583,7 +1583,7 @@ join_info(Join, QInfo, Qdata, Code) ->
                            {call,L,{atom,L,element},[{integer,L,C2},G2]}}),
     P = term_to_binary({cons, L, G1, G2}),
     JInfo = {generate, JP, {qlc, P, QInfoL ++ [JFil], JOpt}},
-    {Before, [I1 | After]} = lists:split(QNum1 - 1, QInfo),
+    {Before, [^I1 | After]} = lists:split(QNum1 - 1, QInfo),
     Before ++ [JInfo] ++ lists:delete(I2, After).
 
 kind2op({merge, _KE}) -> {merge, '=='};
@@ -2088,7 +2088,7 @@ pref_lookup_join(KE, [{_,Cs1},{_,Cs2}]=L, Prep, QOpt) when is_list(Cs1),
 
 lookup_qual_data(QData, QNum, KeyEquality) ->
     case lists:keysearch(QNum, 1, QData) of
-        {value, ?qual_data(QNum, _, _, {gen, PrepLE})} ->
+        {value, ?qual_data(^QNum, _, _, {gen, PrepLE})} ->
             join_indices(PrepLE, KeyEquality)
     end.
 
@@ -2137,7 +2137,7 @@ selections_no_skip(L) ->
 
 merge_qual_data(QData, QNum) ->
     case lists:keysearch(QNum, 1, QData) of
-        {value, ?qual_data(QNum, _, _, {gen, PrepLE})} ->
+        {value, ?qual_data(^QNum, _, _, {gen, PrepLE})} ->
             #prepared{sort_info2 = SortInfo} = PrepLE,
             SortInfo
     end.
@@ -2258,7 +2258,7 @@ opt_le(#prepared{qh = #simple_qlc{le = LE0, optz = Optz0}=QLC}=Prep0,
 opt_le(#prepared{qh = #qlc{}, lu_skip_quals = LU_SkipQuals0}=Prep0, GenNum) ->
     #prepared{qh = #qlc{qdata = Qdata0, optz = Optz0}=QLC} = Prep0,
     #optz{join_option = JoinOption, opt = Opt} = Optz0,
-    JoinOption = Optz0#optz.join_option,
+    ^JoinOption = Optz0#optz.join_option,
     {LU_QNum, Join, JoinSkipFs, DoSort} = 
         opt_join(Prep0#prepared.join, JoinOption, Qdata0, Opt, LU_SkipQuals0),
     {LU_Skip, LU_SkipQuals} = 
@@ -2298,7 +2298,7 @@ no_cache_of_first_generator(Optz, 1) ->
 
 maybe_sort(LE, QNum, DoSort, Opt) ->
     case lists:keyfind(QNum, 1, DoSort) of
-        {QNum, Col} ->
+        {^QNum, Col} ->
             #qlc_opt{tmpdir = TmpDir, tmpdir_usage = TmpUsage} = Opt,
             SortOpts = [{tmpdir,Dir} || Dir <- [TmpDir], Dir =/= ""],
             Sort = #qlc_sort{h = LE, keypos = {keysort, Col}, unique = false,
@@ -2358,7 +2358,7 @@ opt_join(Join, JoinOption, Qdata, Opt, LU_SkipQuals) ->
 
 opt_join_lu([{{_Q1,_C1,Q2,_C2}=J,[{lookup_join,_KEols,JKE,Skip0} | _]} | LJ], 
             Qdata, LU_SkipQuals) ->
-    {Q2,_,_,{gen,Prep2}} = lists:keyfind(Q2, 1, Qdata),
+    {^Q2,_,_,{gen,Prep2}} = lists:keyfind(Q2, 1, Qdata),
     #qlc_table{ms = MS, key_equality = KE, 
                lookup_fun = LU_fun} = Prep2#prepared.qh,
     %% If there is no filter to skip (the match spec was derived 
@@ -2580,7 +2580,7 @@ flat_goto(GoTo) ->
 
 next_after([?qual_data(_, _, S, _) | Qdata], S, QNum2) ->
     case Qdata of
-        [?qual_data(QNum2, _, _, _) | Qdata1] ->
+        [?qual_data(^QNum2, _, _, _) | Qdata1] ->
             next_state(Qdata1);
         _ -> 
             next_state(Qdata)
@@ -2668,7 +2668,7 @@ table_handle(#qlc_table{trav_fun = TraverseFun, trav_MS = TravMS,
                     throw_error(Error)
             end;
         _ when not TravMS ->
-            MS = no_match_spec, % assertion
+            ^MS = no_match_spec, % assertion
             TraverseFun;
         _ when MS =:= no_match_spec ->
             fun() -> TraverseFun([{'$1',[],['$1']}]) end;
@@ -3137,7 +3137,7 @@ cache_recall(MTab, SeqNo) ->
     case ets:lookup(MTab, SeqNo) of
         []=Cont ->
             Cont;
-        [{SeqNo, Object}] ->
+        [{^SeqNo, Object}] ->
             [Object | fun() -> cache_recall(MTab, SeqNo + 1) end]
     end.
 
@@ -3186,11 +3186,11 @@ ucache_recall(UTab, MTab, SeqNo) ->
     case ets:lookup(MTab, SeqNo) of
         []=Cont ->
             Cont;
-        [{SeqNo, Hash}] ->
+        [{^SeqNo, Hash}] ->
             Object = case ets:lookup(UTab, Hash) of
-                         [{Hash, SeqNo, Object0}] -> Object0;
+                         [{^Hash, ^SeqNo, Object0}] -> Object0;
                          HashSeqObjects -> 
-                             {Hash, SeqNo, Object0} =
+                             {^Hash, ^SeqNo, Object0} =
                                  lists:keyfind(SeqNo, 2, HashSeqObjects),
                              Object0
                      end,
@@ -3703,7 +3703,7 @@ merge_join_id() ->
 tmp_merge_file(MergeId) ->
     TmpFiles = get(?MERGE_JOIN_FILE),
     case lists:keyfind(MergeId, 1, TmpFiles) of
-        {MergeId, Fd, FileName} ->
+        {^MergeId, Fd, FileName} ->
             {Fd, FileName};
         false ->
             none

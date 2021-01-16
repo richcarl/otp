@@ -160,7 +160,7 @@ build_dom({endElement, _Uri, LocalName, _QName},
 				   dom=[{CName, CAttributes, CContent}, 
 					{PName, PAttributes, PContent} | D]} = State) ->
     case list_to_atom(LocalName) of
-	CName ->	    
+	^CName ->	    
 	    State#xmerl_sax_simple_dom_state{tags=T,
 					     cno=CN,
 					     dom=[{PName, PAttributes, 
@@ -258,7 +258,7 @@ parse_attributes(ElName, [{_Uri, _Prefix, LocalName, AttrValue} |As], N, Acc) ->
 %%----------------------------------------------------------------------
 find_and_remove_attribute(Key, Data, Default) ->
     case lists:keysearch(Key, 1, Data) of
-	{value, {Key, Value}} ->
+	{value, {^Key, Value}} ->
 	    Data2 = lists:keydelete(Key, 1, Data),
 	    {Value, Data2};
 	false ->

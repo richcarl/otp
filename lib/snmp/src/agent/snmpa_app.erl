@@ -334,7 +334,7 @@ get_opts([], _Options, Opts) ->
 get_opts([{Key1, Key2, Def}|KeyVals], Options, Opts) ->
     %% If not found among Options, then use default value
     case lists:keysearch(Key1, 1, Options) of
-	{value, {Key1, Val}} ->
+	{value, {^Key1, Val}} ->
 	    get_opts(KeyVals, Options, [{Key2, Val}|Opts]);
 	false ->
 	    get_opts(KeyVals, Options, [{Key2, Def}|Opts])

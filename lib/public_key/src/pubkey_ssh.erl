@@ -195,19 +195,19 @@ new_openssh_decode(<<"openssh-key-v1",0,
 
 new_openssh_decode(<<"none">>, <<"none">>, <<"">>, _PublicKey, 1,
                    <<?UINT32(CheckInt),
-                     ?UINT32(CheckInt),
+                     ?UINT32(CheckInt1),
                      ?DEC_BIN(Type, _Lt),
                      ?DEC_BIN(PubKey, _Lpu),
                      ?DEC_BIN(PrivPubKey, _Lpripub),
                      ?DEC_BIN(_Comment,    _C1),
-                     _Pad/binary>>) ->
+                     _Pad/binary>>) when CheckInt1 =:= CheckInt ->
     case {Type,PrivPubKey} of
         {<<"ssh-ed25519">>,
-         <<PrivKey:32/binary, PubKey:32/binary>>} ->
+         <<PrivKey:32/binary, ^PubKey:32/binary>>} ->
             {ed_pri, ed25519, PubKey, PrivKey}; 
 
         {<<"ssh-ed448">>,
-         <<PrivKey:57/binary, PubKey/binary>>} -> % "Intelligent" guess from
+         <<PrivKey:57/binary, ^PubKey/binary>>} -> % "Intelligent" guess from
                                                 % https://tools.ietf.org/html/draft-ietf-curdle-ssh-ed25519-ed448
             {ed_pri, ed448, PubKey, PrivKey}
     end.
@@ -330,7 +330,7 @@ decode_comment(Comment) ->
 
 openssh_pubkey_decode(Type,  Base64Enc) ->
     try
-        <<?DEC_BIN(Type,_TL), Bin/binary>> = ?b64mime_dec(Base64Enc),
+        <<?DEC_BIN(^Type,_TL), Bin/binary>> = ?b64mime_dec(Base64Enc),
 	ssh2_pubkey_decode(Type,  Bin)
     catch
 	_:_ ->

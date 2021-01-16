@@ -322,7 +322,7 @@ passive_connect_monitor(From, Node) ->
                     true;
                 _ ->
                     receive
-                        {nodeup,Node,_} ->
+                        {nodeup,^Node,_} ->
                             true
                     after connecttime() ->
                             false
@@ -441,9 +441,9 @@ do_auto_connect_2(Node, passive_cnct, From, State, ConnLookup) ->
     end;
 do_auto_connect_2(Node, ConnId, From, State, ConnLookup) ->
     case ConnLookup of
-        [#connection{conn_id=ConnId, state = up}] ->
+        [#connection{conn_id=^ConnId, state = up}] ->
             {reply, true, State};
-        [#connection{conn_id=ConnId, waiting=Waiting}=Conn] ->
+        [#connection{conn_id=^ConnId, waiting=Waiting}=Conn] ->
             case From of
                 noreply -> ok;
                 _ -> ets:insert(sys_dist, Conn#connection{waiting = [From|Waiting]})
@@ -850,7 +850,7 @@ handle_info({AcceptPid, {accept_pending,MyNode,NodeOrHost,Type}}, State0) ->
 		    ?debug({net_kernel, remark, old, OldOwner, new, AcceptPid}),
 		    exit(OldOwner, remarked),
 		    receive
-			{'EXIT', OldOwner, _} ->
+			{'EXIT', ^OldOwner, _} ->
 			    true
 		    end,
 		    ets:insert(sys_dist, Conn#connection{owner = AcceptPid}),
@@ -895,7 +895,7 @@ handle_info({AcceptPid, {accept_pending,MyNode,NodeOrHost,Type}}, State0) ->
 
 handle_info({SetupPid, {is_pending, Node}}, State) ->
     Reply = case maps:get(SetupPid, State#state.conn_owners, undefined) of
-                Node -> true;
+                ^Node -> true;
                 _ -> false
             end,
     SetupPid ! {self(), {is_pending, Reply}},
@@ -965,7 +965,7 @@ ensure_node_name(Node, State) when is_atom(Node) ->
     {static, Node, undefined, ets:lookup(sys_dist, Node), State};
 ensure_node_name(Host, State0) when is_list(Host) ->
     case string:split(Host, "@", all) of
-        [Host] ->
+        [^Host] ->
             {Node, Creation, State1} = generate_node_name(Host, State0),
             case ets:lookup(sys_dist, Node) of
                 [#connection{}] ->
@@ -1091,7 +1091,7 @@ ticker_exit(_, _) ->
 
 restarter_exit(Pid, State) ->
     case State#state.supervisor of
-        {restart, Pid} ->
+        {restart, ^Pid} ->
 	    error_msg("** Distribution restart failed, net_kernel terminating... **\n", []),
 	    throw({stop, restarter_exit, State});
         _ ->
@@ -1357,7 +1357,7 @@ do_disconnect(Node, State) ->
 disconnect_ctrlr(Ctrlr, State) ->
     exit(Ctrlr, disconnect),
     receive
-        {'EXIT',Ctrlr,Reason} ->
+        {'EXIT',^Ctrlr,Reason} ->
             {_,State1} = handle_exit(Ctrlr, Reason, State),
             {true, State1}
     end.
@@ -1598,7 +1598,7 @@ create_name(Name, LongOrShortNames, Try) ->
 create_hostpart(Name, LongOrShortNames) ->
     {Head,Host} = split_node(Name),
     Host1 = case {Host,LongOrShortNames} of
-		{[$@,_|_] = Host,longnames} ->
+		{[$@,_|_],longnames} ->
                     validate_hostname(Host);
 		{[$@,_|_],shortnames} ->
 		    case lists:member($.,Host) of
@@ -1867,11 +1867,11 @@ get_node_info(Node) ->
             MRef = monitor(process, Owner),
             Owner ! {self(), get_status},
             receive
-                {Owner, get_status, {ok, Read, Write}} ->
+                {^Owner, get_status, {ok, Read, Write}} ->
                     demonitor(MRef, [flush]),
                     {ok, [{owner, Owner}, {state, up}, {address, Addr},
                         {type, Type}, {in, Read}, {out, Write}]};
-                {'DOWN', MRef, process, Owner, _Info} ->
+                {'DOWN', ^MRef, process, ^Owner, _Info} ->
                     {error, bad_node}
             end;
         [#connection{owner = Owner, state = State, address = Addr, type = Type}] ->
@@ -1885,7 +1885,7 @@ get_node_info(Node, Key) ->
     case get_node_info(Node) of
         {ok, Info} ->
             case lists:keyfind(Key, 1, Info) of
-                {Key, Value} ->
+                {^Key, Value} ->
                     {ok, Value};
                 false ->
                     {error, invalid_key}
@@ -2074,10 +2074,10 @@ call_owner(Owner, Msg) ->
     Mref = monitor(process, Owner),
     Owner ! {self(), Mref, Msg},
     receive
-	{Mref, Reply} ->
+	{^Mref, Reply} ->
 	    erlang:demonitor(Mref, [flush]),
 	    {ok, Reply};
-	{'DOWN', Mref, _, _, _} ->
+	{'DOWN', ^Mref, _, _, _} ->
 	    error
     end.
 

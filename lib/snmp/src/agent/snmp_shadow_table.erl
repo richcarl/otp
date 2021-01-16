@@ -140,7 +140,7 @@ create_table(Tab, Props, Storage, DeleteAll) ->
 		unknown ->
 		    ?verify(mnesia:add_table_copy(Tab, node(), Storage),
 			    [add_table_copy, Tab, node(), Storage]);
-		Storage when DeleteAll == true ->
+		^Storage when DeleteAll == true ->
 		    delete_all(Tab);
 		_ ->
 		    ignore

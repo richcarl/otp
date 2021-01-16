@@ -224,7 +224,7 @@ do_compile(Input, Opts0) ->
                                       exit(IntFun())
                               end),
             receive
-                {'DOWN',Ref,process,Pid,Rep} -> Rep
+                {'DOWN',^Ref,process,^Pid,Rep} -> Rep
             end
     end.
 
@@ -723,8 +723,8 @@ select_passes([List|Ps], Opts) when is_list(List) ->
 select_cond(Flag, ShouldBe, Pass, Ps, Opts) ->
     ShouldNotBe = not ShouldBe,
     case member(Flag, Opts) of
-	ShouldBe    -> select_passes([Pass|Ps], Opts);
-	ShouldNotBe -> select_passes(Ps, Opts)
+	^ShouldBe    -> select_passes([Pass|Ps], Opts);
+	^ShouldNotBe -> select_passes(Ps, Opts)
     end.
 
 %% select_list_passes([Pass], Opts) -> {done,[Pass]} | {not_done,[Pass]}
@@ -1322,7 +1322,7 @@ makedep_add_header(Ifile, Included, LineLen, MainTarget, Phony, File) ->
 
 	    %% Prepare the phony target name.
 	    Phony1 = case File of
-			 Ifile -> Phony;
+			 ^Ifile -> Phony;
 			 _     -> Phony ++ "\n\n" ++ File1 ++ ":"
 	    end,
 
@@ -1648,7 +1648,7 @@ save_binary(Code, #compile{module=Mod,ofile=Outfile,options=Opts}=St) ->
 	false ->
 	    Base = filename:rootname(filename:basename(Outfile)),
 	    case atom_to_list(Mod) of
-		Base ->
+		^Base ->
 		    save_binary_1(Code, St);
 		_ ->
 		    Es = [{St#compile.ofile,
@@ -1839,13 +1839,13 @@ to_dis(Code, #compile{module=Module,ofile=Outfile}=St) ->
     Sticky = code:is_sticky(Module),
     _ = [code:unstick_mod(Module) || Sticky],
 
-    {module,Module} = code:load_binary(Module, "", Code),
+    {module,^Module} = code:load_binary(Module, "", Code),
     DestDir = filename:dirname(Outfile),
     DisFile = filename:join(DestDir, atom_to_list(Module) ++ ".dis"),
     ok = erts_debug:dis_to_file(Module, DisFile),
 
     %% Restore loaded module
-    _ = [{module, Module} = code:load_file(Module) || Loaded =/= false],
+    _ = [{module, ^Module} = code:load_file(Module) || Loaded =/= false],
     [code:stick_mod(Module) || Sticky],
     {ok,Code,St}.
 

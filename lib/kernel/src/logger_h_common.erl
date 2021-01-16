@@ -289,7 +289,7 @@ handle_cast({config_changed, CommonConfig, HConfig},
                       filesync_repeat_interval := OldFSyncInt}) ->
     State1 =
         case maps:get(filesync_repeat_interval,CommonConfig) of
-            OldFSyncInt ->
+            ^OldFSyncInt ->
                 State;
             FSyncInt ->
                 set_repeated_filesync(
@@ -410,7 +410,7 @@ try_format(Log,Formatter,FormatterConfig) ->
                                      {reason,
                                       {C,R,logger:filter_stacktrace(?MODULE,S)}}]),
             case {?DEFAULT_FORMATTER,#{}} of
-                {Formatter,FormatterConfig} ->
+                {^Formatter,^FormatterConfig} ->
                     "DEFAULT FORMATTER CRASHED\n";
                 {DefaultFormatter,DefaultConfig} ->
                     try_format(Log#{msg=>{"FORMATTER CRASH: ~tp",

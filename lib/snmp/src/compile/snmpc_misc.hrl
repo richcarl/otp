@@ -31,7 +31,7 @@
 			    end,
 		Toks2 = string:tokens(VFV_V2, [$.]),
 		case (catch [list_to_integer(I) || I <- Toks2]) of
-		    [Major1|_] ->
+		    [^Major1|_] ->
 			ok;
 		    [_Major2|_] ->
 			{error, wrong_version};

@@ -80,7 +80,7 @@ start(Pid, TraceWin, BackTrace, Strings) ->
 	Monitor when is_pid(Monitor) ->
 	    Monitor ! {?MODULE, self(), get_env},
 	    receive
-		{env, Monitor, Env, Parent} ->
+		{env, ^Monitor, Env, Parent} ->
 		    start(Pid, Env, Parent, TraceWin, BackTrace, Strings)
 	    end
     end.
@@ -201,7 +201,7 @@ loop(#state{meta=Meta, win=Win} = State) ->
 	    loop(State2);
 
 	%% From the meta process
-	{Meta, Cmd} ->
+	{^Meta, Cmd} ->
 	    State2 = meta_cmd(Cmd, State),
 	    loop(State2);
 	{NewMeta, {exit_at, Where, Reason, Cur}} ->
@@ -524,7 +524,7 @@ gui_cmd({edit, {Var, Value}}, State) ->
     case dbg_wx_win:entry(Window, "Edit variable", Var, {term, Val}) of
 	cancel ->
 	    State;
-	{Var, Term} ->
+	{^Var, Term} ->
             %% The space after "=" is needed for handling "B= <<1>>".
 	    Cmd = atom_to_list(Var)++"= "++io_lib:format("~w", [Term]),
 	    gui_cmd({user_command, lists:flatten(Cmd)}, State)
@@ -609,10 +609,10 @@ meta_cmd({re_entry, dbg_ieval, eval_fun}, State) ->
 meta_cmd({re_entry, Mod, _Func}, State) ->
     Obs = State#state.cm_obsolete,
     case State#state.cm of
-	Mod when Obs =:= true ->
+	^Mod when Obs =:= true ->
 	    Win = gui_load_module(State#state.win, Mod,State#state.pid),
 	    State#state{win=Win, cm_obsolete=false};
-	Mod -> State;
+	^Mod -> State;
 	Cm ->
 	    Win = gui_show_module(State#state.win, Mod, 0,
 				  Cm, State#state.pid, break),

@@ -45,7 +45,7 @@ load_mod(Mod, File, Binary, Db) ->
     Flag = process_flag(trap_exit, true),
     Pid = spawn_link(load_mod1(Mod, File, Binary, Db)),
     receive
-	{'EXIT', Pid, What} ->
+	{'EXIT', ^Pid, What} ->
 	    process_flag(trap_exit, Flag),
 	    What
     end.
@@ -535,7 +535,7 @@ make_bit_type(Line, default, Type0) ->
         {ok,Size,Bt} -> {{integer,Line,Size},erl_bits:as_list(Bt)}
     end;
 make_bit_type(_Line, Size, Type0) ->            %Integer or 'all'
-    {ok,Size,Bt} = erl_bits:set_bit_type(Size, Type0),
+    {ok,^Size,Bt} = erl_bits:set_bit_type(Size, Type0),
     {Size,erl_bits:as_list(Bt)}.
 
 expr_lc_bc({Tag,Anno,E0,Gs0}) ->

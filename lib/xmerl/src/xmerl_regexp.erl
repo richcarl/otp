@@ -370,7 +370,7 @@ matches(S, {comp_regexp,RE}) -> {match,matches_comp(S, RE, 1)}.
 
 matches_re([_|Cs]=S0, RE, P0) ->
     case re_apply(S0, P0, RE) of
-	{match,P0,S1,_Subs} ->			%0 length match
+	{match,^P0,S1,_Subs} ->			%0 length match
 	    [{P0,0}|matches_re(tl(S1), RE, P0+1)];
 	{match,P1,S1,_Subs} ->
 	    [{P0,P1-P0}|matches_re(S1, RE, P1)];
@@ -381,7 +381,7 @@ matches_re([], _RE, _P) -> [].
 
 matches_comp([_|Cs]=S0, RE, P0) ->
     case comp_apply(S0, P0, RE) of
-	{match,P0,S1} ->			%0 length match
+	{match,^P0,S1} ->			%0 length match
 	    [{P0,0}|matches_comp(tl(S1), RE, P0+1)];
 	{match,P1,S1} ->
 	    [{P0,P1-P0}|matches_comp(S1, RE, P1)];
@@ -420,7 +420,7 @@ sub(String, {comp_regexp,RE}, Rep) ->
 
 sub_re([C|Cs]=S0, P0, RE, Bef, Rep) ->
     case re_apply(S0, P0, RE) of
-	{match,P0,_S1,_} ->			%Ignore 0 length match
+	{match,^P0,_S1,_} ->			%Ignore 0 length match
 	    sub_re(Cs, P0+1, RE, [C|Bef], Rep);
 	{match,P1,Rest,_Gps} ->
 	    {yes,reverse(Bef, sub_repl(Rep, substr(S0, 1, P1-P0), Rest))};
@@ -431,7 +431,7 @@ sub_re([], _P, _RE, _Bef, _Rep) -> no.
 
 sub_comp([C|Cs]=S0, P0, RE, Bef, Rep) ->
     case comp_apply(S0, P0, RE) of
-	{match,P0,_S1} ->			%Ignore 0 length match
+	{match,^P0,_S1} ->			%Ignore 0 length match
 	    sub_comp(Cs, P0+1, RE, [C|Bef], Rep);
 	{match,P1,Rest} ->
 	    {yes,reverse(Bef, sub_repl(Rep, substr(S0, 1, P1-P0), Rest))};
@@ -475,7 +475,7 @@ gsub(String, {comp_regexp,RE}, Rep) ->
 
 gsub_re([C|Cs]=S0, P0, RE, Bef, Rep) ->
     case re_apply(S0, P0, RE) of
-	{match,P0,_S1,_} ->			%Ignore 0 length match
+	{match,^P0,_S1,_} ->			%Ignore 0 length match
 	    gsub_re(Cs, P0+1, RE, [C|Bef], Rep);
 	{match,P1,S1,_Gps} ->
 	    case gsub_re(S1, P1, RE, [], Rep) of
@@ -493,7 +493,7 @@ gsub_re([], _P, _RE, _Bef, _Rep) -> no.
 
 gsub_comp([C|Cs]=S0, P0, RE, Bef, Rep) ->
     case comp_apply(S0, P0, RE) of
-	{match,P0,_S1} ->			%Ignore 0 length match
+	{match,^P0,_S1} ->			%Ignore 0 length match
 	    gsub_comp(Cs, P0+1, RE, [C|Bef], Rep);
 	{match,P1,S1} ->
 	    case gsub_comp(S1, P1, RE, [], Rep) of
@@ -532,7 +532,7 @@ split_apply_re([], _P, _RE, true, []) -> [];
 split_apply_re([], _P, _RE, _T, Sub) -> [reverse(Sub)];
 split_apply_re([C|Cs]=S, P0, RE, T, Sub) ->
     case re_apply(S, P0, RE) of
-	{match,P0,_S1,_} ->			%Ignore 0 length match
+	{match,^P0,_S1,_} ->			%Ignore 0 length match
 	    split_apply_re(Cs, P0+1, RE, T, [C|Sub]);
 	{match,P1,S1,_} ->
 	    [reverse(Sub)|split_apply_re(S1, P1, RE, T, [])];
@@ -547,7 +547,7 @@ split_apply_comp(S, RE, Trim) -> split_apply_comp(S, 1, RE, Trim, []).
 split_apply_comp([], _P, _RE, _T, Sub) -> [reverse(Sub)];
 split_apply_comp([C|Cs]=S, P0, RE, T, Sub) ->
     case comp_apply(S, P0, RE) of
-	{match,P0,_S1} ->			%Ignore 0 length match
+	{match,^P0,_S1} ->			%Ignore 0 length match
 	    split_apply_comp(Cs, P0+1, RE, T, [C|Sub]);
 	{match,P1,S1} ->
 	    [reverse(Sub)|split_apply_comp(S1, P1, RE, T, [])];
@@ -862,7 +862,7 @@ re_apply({literal,[C|Lcs]}, More, [C|S], P, Subs) ->
 re_apply({kclosure,RE}, More, S0, P0, Subs0) ->
     %% Greedy so try RE first, no difference here actually.
     Loop = case re_apply(RE, [], S0, P0, Subs0) of
-	       {match,P0,_S1,_Subs1} ->		%0 length match, don't loop!
+	       {match,^P0,_S1,_Subs1} ->		%0 length match, don't loop!
 		   nomatch;
 	       {match,P1,S1,Subs1} ->
 		   re_apply_more([{kclosure,RE}|More], S1, P1, Subs1);

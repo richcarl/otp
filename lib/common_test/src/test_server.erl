@@ -454,7 +454,7 @@ run_test_case_msgloop(#st{ref=Ref,pid=Pid,end_conf_pid=EndConfPid0}=St0) ->
 	    erlang:yield(),
 	    From ! {self(),abort_current_testcase,ok},
 	    St = receive
-		     {'DOWN', Mon, process, Pid, _} ->
+		     {'DOWN', ^Mon, process, ^Pid, _} ->
 			 St0
 		 after 10000 ->
 			 %% Pid is probably trapping exits, hit it harder...
@@ -511,11 +511,11 @@ run_test_case_msgloop(#st{ref=Ref,pid=Pid,end_conf_pid=EndConfPid0}=St0) ->
 		end,
 	    From ! {self(),make_priv_dir,Result},
 	    run_test_case_msgloop(St0);
-	{'EXIT',Pid,{Ref,Time,Value,Loc,Opts}} ->
+	{'EXIT',^Pid,{^Ref,Time,Value,Loc,Opts}} ->
 	    RetVal = {Time/1000000,Value,Loc,Opts},
 	    St = setup_termination(RetVal, St0#st{config=undefined}),
 	    run_test_case_msgloop(St);
-	{'EXIT',Pid,Reason} ->
+	{'EXIT',^Pid,Reason} ->
 	    %% This exit typically happens when an unknown external process
 	    %% has caused a test case process to terminate (e.g. if a linked
 	    %% process has crashed).
@@ -533,7 +533,7 @@ run_test_case_msgloop(#st{ref=Ref,pid=Pid,end_conf_pid=EndConfPid0}=St0) ->
 			handle_tc_exit(Reason, St0)
 		end,
 	    run_test_case_msgloop(St);
-	{EndConfPid0,{call_end_conf,Data,_Result}} ->
+	{^EndConfPid0,{call_end_conf,Data,_Result}} ->
 	    #st{mf={Mod,Func},config=CurrConf} = St0,
 	    case CurrConf of
 		_ when is_list(CurrConf) ->
@@ -583,7 +583,7 @@ run_test_case_msgloop(#st{ref=Ref,pid=Pid,end_conf_pid=EndConfPid0}=St0) ->
 		[{File, Line}| get(test_server_detected_fail)]),
 	    run_test_case_msgloop(St0);
 
-	{user_timetrap,Pid,_TrapTime,StartTime,E={user_timetrap_error,_},_} ->
+	{user_timetrap,^Pid,_TrapTime,StartTime,E={user_timetrap_error,_},_} ->
 	    case update_user_timetraps(Pid, StartTime) of
 		proceed ->
 		    self() ! {abort_current_testcase,E,Pid},
@@ -592,7 +592,7 @@ run_test_case_msgloop(#st{ref=Ref,pid=Pid,end_conf_pid=EndConfPid0}=St0) ->
 		    ok
 	    end,
 	    run_test_case_msgloop(St0);
-	{user_timetrap,Pid,TrapTime,StartTime,ElapsedTime,Scale} ->
+	{user_timetrap,^Pid,TrapTime,StartTime,ElapsedTime,Scale} ->
 	    %% a user timetrap is triggered, ignore it if new
 	    %% timetrap has been started since
 	    case update_user_timetraps(Pid, StartTime) of
@@ -660,7 +660,7 @@ handle_tc_exit(Reason, #st{status={framework,{FwMod,FwFunc,_}=FwMFA},
 		{timetrap,TVal};
 	    {testcase_aborted=E,AbortReason,_} ->
 		{E,AbortReason};
-	    {fw_error,{FwMod,FwFunc,FwError}} ->
+	    {fw_error,{^FwMod,^FwFunc,FwError}} ->
 		FwError;
 	    Other ->
 		Other
@@ -752,9 +752,9 @@ do_call_end_conf(Starter,Mod,Func,Data,TCExitReason,Conf,TVal) ->
 		    end,
 		Pid = spawn_link(EndConfApply),
 		receive
-		    {Pid,end_conf} ->
+		    {^Pid,end_conf} ->
 			Starter ! {self(),{call_end_conf,Data,ok}};
-		    {'EXIT',Pid,Reason} ->
+		    {'EXIT',^Pid,Reason} ->
 			print_end_conf_result(Mod,Func,Conf,"failed",Reason),
 			Starter ! {self(),{call_end_conf,Data,{error,Reason}}};
 		    {'EXIT',_OtherPid,Reason} ->
@@ -853,7 +853,7 @@ spawn_fw_call(Mod,EPTC={end_per_testcase,Func},EndConf,Pid,
                 FailLoc0 = proplists:get_value(tc_fail_loc, EndConf),
                 {RetVal1,FailLoc} =
                     try do_end_tc_call(Mod,EPTC,{Pid,Report,[EndConf]}, Why) of
-                        Why ->
+                        ^Why ->
                             {RetVal,FailLoc0};
                         {failed,_} = R ->
                             {R,[{Mod,Func}]};
@@ -936,7 +936,7 @@ spawn_fw_call(Mod,Func,CurrConf,Pid,Error,Loc,SendTo) ->
 		Conf = [{tc_status,{failed,Error}}|CurrConf],
                 {Time,RetVal,Loc1} =
                     try do_end_tc_call(Mod,EndTCFunc,{Pid,Error,[Conf]},Error) of
-                        Error ->
+                        ^Error ->
                             {died, Error, Loc};
                         {failed,Reason} = NewReturn ->
                             fw_error_notify(Mod,Func1,Conf,Reason),
@@ -1405,7 +1405,7 @@ do_end_tc_call1(Mod, Func, Res, Return) ->
 		    case Return of
 			{fail,Reason} ->
 			    {failed,Reason};
-			Return ->
+			^Return ->
 			    Return
 		    end;
 		NewReturn ->
@@ -1737,7 +1737,7 @@ print_timestamp(Detail,Leader) ->
 
 lookup_config(Key,Config) ->
     case lists:keysearch(Key,1,Config) of
-	{value,{Key,Val}} ->
+	{value,{^Key,Val}} ->
 	    Val;
 	_ ->
 	    io:format("Could not find element ~tp in Config.~n",[Key]),
@@ -2197,7 +2197,7 @@ time_ms_apply(Func, TCPid, MultAndScale) ->
 					       GL, T0, MultAndScale)
 	      end),
     receive
-	{UserTTSup,infinity} ->
+	{^UserTTSup,infinity} ->
 	    %% remember the user timetrap so that it can be cancelled
 	    save_user_timetrap(TCPid, UserTTSup, T0),
 	    %% we need to make sure the user timetrap function
@@ -2222,7 +2222,7 @@ user_timetrap_supervisor(Func, Spawner, TCPid, GL, T0, MultAndScale) ->
     group_leader(GL, UserTTSup),
     UserTT = spawn_link(fun() -> call_user_timetrap(Func, UserTTSup) end),
     receive
-	{UserTT,Result} ->
+	{^UserTT,Result} ->
 	    demonitor(MonRef, [flush]),
 	    T1 = erlang:monotonic_time(),
 	    Elapsed = erlang:convert_time_unit(T1-T0, native, milli_seconds),
@@ -2236,11 +2236,11 @@ user_timetrap_supervisor(Func, Spawner, TCPid, GL, T0, MultAndScale) ->
 		    %% which will be the normal case for user timetraps
 		    GL ! {user_timetrap,TCPid,0,T0,Elapsed,MultAndScale}
 	    end;
-	{'EXIT',UserTT,Error} when Error /= normal ->
+	{'EXIT',^UserTT,Error} when Error /= normal ->
 	    demonitor(MonRef, [flush]),
 	    GL ! {user_timetrap,TCPid,0,T0,{user_timetrap_error,Error},
 		  MultAndScale};
-	{'DOWN',MonRef,_,_,_} ->
+	{'DOWN',^MonRef,_,_,_} ->
 	    demonitor(MonRef, [flush]),
 	    exit(UserTT, kill)
     end.
@@ -2288,7 +2288,7 @@ update_user_timetraps(TCPid, StartTime) ->
 	    proceed;
 	UserTTs ->
 	    case proplists:get_value(TCPid, UserTTs) of
-		{_UserTTSup,StartTime} ->	% same timetrap
+		{_UserTTSup,^StartTime} ->	% same timetrap
 		    put(test_server_user_timetrap,
 			proplists:delete(TCPid, UserTTs)),
 		    proceed;
@@ -2324,7 +2324,7 @@ timetrap_cancel_one(Handle, SendToServer) ->
     case get(test_server_timetraps) of
 	undefined ->
 	    ok;
-	[{Handle,_,_}] ->
+	[{^Handle,_,_}] ->
 	    erase(test_server_timetraps);
 	Timers ->
 	    case lists:keysearch(Handle, 1, Timers) of
@@ -2431,7 +2431,7 @@ tc_supervisor_req(Tag) ->
     Pid = test_server_gl:get_tc_supervisor(group_leader()),
     Pid ! {Tag,self()},
     receive
-	{Pid,Tag,Result} ->
+	{^Pid,^Tag,Result} ->
 	    Result
     after 5000 ->
 	    error(no_answer_from_tc_supervisor)
@@ -2441,7 +2441,7 @@ tc_supervisor_req(Tag, Msg) ->
     Pid = test_server_gl:get_tc_supervisor(group_leader()),
     Pid ! {Tag,self(),Msg},
     receive
-	{Pid,Tag,Result} ->
+	{^Pid,^Tag,Result} ->
 	    Result
     after 5000 ->
 	    error(no_answer_from_tc_supervisor)
@@ -2586,7 +2586,7 @@ start_node(Name, Type, Options) ->
     lists:foreach(
       fun(N) ->
 	      case firstname(N) of
-		  Name ->
+		  ^Name ->
 		      format("=== WARNING: Trying to start node \'~w\' when node"
 			     " with same first name exists: ~w", [Name, N]);
 		  _other -> ok
@@ -2675,7 +2675,7 @@ stop_node(Slave) ->
 	    erlang:monitor_node(Slave, true),
 	    slave:stop(Slave),
 	    receive
-		{nodedown, Slave} ->
+		{nodedown, ^Slave} ->
 		    format(minor, "Stopped slave node: ~w", [Slave]),
 		    format(major, "=node_stop     ~w", [Slave]),
 		    if Cover -> do_cover_for_node(Slave,stop,false);
@@ -2686,7 +2686,7 @@ stop_node(Slave) ->
 		    format("=== WARNING: Node ~w does not seem to terminate.",
 			   [Slave]),
 		    erlang:monitor_node(Slave, false),
-		    receive {nodedown, Slave} -> ok after 0 -> ok end,
+		    receive {nodedown, ^Slave} -> ok after 0 -> ok end,
 		    false
 	    end;
 	{error, _Reason} ->
@@ -2701,7 +2701,7 @@ stop_node(Slave) ->
 		    erlang:monitor_node(Slave, true),
 		    slave:stop(Slave),
 		    receive
-			{nodedown, Slave} ->
+			{nodedown, ^Slave} ->
 			    format(minor, "Stopped slave node: ~w", [Slave]),
 			    format(major, "=node_stop     ~w", [Slave]),
 			    if Cover -> do_cover_for_node(Slave,stop,false);
@@ -2712,7 +2712,7 @@ stop_node(Slave) ->
 			    format("=== WARNING: Node ~w does not seem to terminate.",
 				   [Slave]),
 			    erlang:monitor_node(Slave, false),
-			    receive {nodedown, Slave} -> ok after 0 -> ok end,
+			    receive {nodedown, ^Slave} -> ok after 0 -> ok end,
 			    false
 		    end;
 		pang ->
@@ -2772,13 +2772,13 @@ run_on_shielded_node(Fun, CArgs) when is_function(Fun), is_list(CArgs) ->
     MRef = erlang:monitor(process, Slave),
     Slave ! Ref,
     receive
-	{'DOWN', MRef, _, _, Info} ->
+	{'DOWN', ^MRef, _, _, Info} ->
 	    stop_node(Node),
 	    fail(Info);
-	{Ref, Res} ->
+	{^Ref, Res} ->
 	    stop_node(Node),
 	    receive
-		{'DOWN', MRef, _, _, _} ->
+		{'DOWN', ^MRef, _, _, _} ->
 		    Res
 	    end
     end.

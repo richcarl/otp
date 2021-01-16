@@ -441,7 +441,7 @@ empty_avp('AVP', _, _) ->
 
 empty_avp(Name, Opts, Mod) ->
     {Code, Flags, VId} = Mod:avp_header(Name),
-    {Name, Type} = Mod:avp_name(Code, VId),
+    {^Name, Type} = Mod:avp_name(Code, VId),
     #diameter_avp{name = Name,
                   code = Code,
                   vendor_id = VId,

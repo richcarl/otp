@@ -173,7 +173,7 @@ value({win32reg, Reg}, Name) when is_port(Reg) ->
     Cmd = [?cmd_get_value, Name, 0],
     Reg ! {self(), {command, Cmd}},
     case get_result(Reg) of
-	{value, {Name, Value}} ->
+	{value, {^Name, Value}} ->
 	    {ok, Value};
 	{error, Reason} ->
 	    {error, Reason}
@@ -261,7 +261,7 @@ collect_keys(P, Result) ->
     
 get_result(P) ->
     receive
-	{P, {data, Data}} ->
+	{^P, {data, Data}} ->
 	    get_result1(Data)
     end.
 

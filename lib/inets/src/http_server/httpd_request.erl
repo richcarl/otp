@@ -315,7 +315,7 @@ body_chunk(Body, Length, MaxChunk) when Length > MaxChunk ->
     end;
 body_chunk(Body, Length, MaxChunk) ->
     case size(Body) of
-        Length ->
+        ^Length ->
             {ok, {last, Body}};
         _ ->
             {ok, {continue, ?MODULE, add_chunk, [Body, Length, MaxChunk]}}

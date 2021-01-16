@@ -115,7 +115,7 @@ verify_context(PathArgs, #{env := Env}=Parameters, St0) ->
     case ensure_cwd(Parameters, St0) of
         {ok, #st{config=Config}=St} ->
             case make_config(PathArgs, Env) of
-                Config ->
+                ^Config ->
                     {ok, St};
                 _ ->
                     wrong_config
@@ -207,7 +207,7 @@ create_gl() ->
 gl_get_output(GL) ->
     GL ! {self(), get_output},
     receive
-        {GL, Output} -> Output
+        {^GL, Output} -> Output
     end.
 
 gl_loop(State0) ->

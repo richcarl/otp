@@ -493,7 +493,7 @@ read_report(Fd) ->
 		    case (catch {Ref,binary_to_term(Bin)}) of
 			{'EXIT',_} ->
 			    {error, "Incomplete erlang term in log"};
-			{Ref,Term} ->
+			{^Ref,Term} ->
 			    {ok, Term}
 		    end
 	    end;
@@ -629,7 +629,7 @@ print_typed_reports(_Dir, [], _Type, Device, _Abort, _Log) ->
 print_typed_reports(Dir, Data, Type, Device, Abort, Log) ->
     {Next,Device1} = 
 	case element(2, hd(Data)) of
-	    Type -> 
+	    ^Type -> 
 		print_report(Dir, Data, element(1, hd(Data)), Device, Abort, Log);
 	    _ -> 
 		{proceed,Device}
@@ -784,14 +784,14 @@ filter_report([], _Msg) ->
     true;
 filter_report([{Key, Value}|T], Msg) ->
     case proplists:get_value(Key, Msg) of
-	Value ->
+	^Value ->
 	    filter_report(T, Msg);
 	_ ->
 	    false
     end;
 filter_report([{Key, Value, no}|T], Msg) ->
     case proplists:get_value(Key, Msg) of
-	Value ->
+	^Value ->
 	    false;
 	_ ->
 	    filter_report(T, Msg)

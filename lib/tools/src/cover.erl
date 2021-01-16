@@ -199,7 +199,7 @@ start() ->
 			{ok,Pid};
 		    {?SERVER,{error,Error}} -> 
 			{error,Error};
-		    {'DOWN', Ref, _Type, _Object, Info} -> 
+		    {'DOWN', ^Ref, _Type, _Object, Info} -> 
 			{error,Info}
 		end,
 	    erlang:demonitor(Ref),
@@ -413,7 +413,7 @@ get_mods_and_beams([Module|ModFiles],Acc) when is_atom(Module) ->
 get_mods_and_beams([File|ModFiles],Acc) when is_list(File) ->
     {WithExt,WithoutExt}
 	= case filename:rootname(File,".beam") of
-	      File ->
+	      ^File ->
 		  {File++".beam",File};
 	      Rootname ->
 		  {File,Rootname}
@@ -424,10 +424,10 @@ get_mods_and_beams([File|ModFiles],Acc) when is_list(File) ->
 get_mods_and_beams([{Module,File}|ModFiles],Acc) ->
     %% Check for duplicates
     case lists:keyfind(Module,2,Acc) of
-	{ok,Module,File} ->
+	{ok,^Module,^File} ->
 	    %% Duplicate, but same file so ignore
 	    get_mods_and_beams(ModFiles,Acc);
-	{ok,Module,_OtherFile} ->
+	{ok,^Module,_OtherFile} ->
 	    %% Duplicate and differnet file - error
 	    get_mods_and_beams(ModFiles,[{error,{duplicate,Module}}|Acc]);
 	_ ->
@@ -761,7 +761,7 @@ get_main_node() ->
 
 call(Request) ->
     Ref = erlang:monitor(process,?SERVER),
-    receive {'DOWN', Ref, _Type, _Object, noproc} -> 
+    receive {'DOWN', ^Ref, _Type, _Object, noproc} -> 
 	    erlang:demonitor(Ref),
             {ok,_} = start(),
 	    call(Request)
@@ -769,7 +769,7 @@ call(Request) ->
 	    ?SERVER ! {self(),Request},
 	    Return = 
 		receive 
-		    {'DOWN', Ref, _Type, _Object, Info} -> 
+		    {'DOWN', ^Ref, _Type, _Object, Info} -> 
 			exit(Info);
 		    {?SERVER,Reply} -> 
 			Reply
@@ -787,14 +787,14 @@ is_from(From) ->
 
 remote_call(Node,Request) ->
     Ref = erlang:monitor(process,{?SERVER,Node}),
-    receive {'DOWN', Ref, _Type, _Object, noproc} -> 
+    receive {'DOWN', ^Ref, _Type, _Object, noproc} -> 
 	    erlang:demonitor(Ref),
 	    {error,node_dead}
     after 0 ->
 	    {?SERVER,Node} ! Request,
 	    Return = 
 		receive 
-		    {'DOWN', Ref, _Type, _Object, _Info} -> 
+		    {'DOWN', ^Ref, _Type, _Object, _Info} -> 
 			case Request of
 			    {remote,stop} -> ok;
 			    _ -> {error,node_dead}
@@ -1236,7 +1236,7 @@ load_compiled([Data|Compiled],Acc) ->
                      false
              end,
     NewAcc = case code:load_binary(Module, ?TAG, Beam) of
-                 {module,Module} ->
+                 {module,^Module} ->
                      add_compiled(Module, File, Acc);
                  _  ->
                      do_clear(Module),
@@ -1305,9 +1305,9 @@ remote_start(MainNode) ->
 	    Ref = erlang:monitor(process,Pid),
 	    Return = 
 		receive 
-		    {Pid,started} -> 
+		    {^Pid,started} -> 
 			{ok,Pid};
-		    {'DOWN', Ref, _Type, _Object, Info} -> 
+		    {'DOWN', ^Ref, _Type, _Object, Info} -> 
 			{error,Info}
 		end,
 	    erlang:demonitor(Ref),
@@ -1389,7 +1389,7 @@ get_downs_r(Mons) ->
 %% Binary is the beam code for the module and InitialTable is the initial
 %% data to insert in ?COVER_TABLE.
 get_data_for_remote_loading({Module,File}) ->
-    [{Module,Code}] = ets:lookup(?BINARY_TABLE, Module),
+    [{^Module,Code}] = ets:lookup(?BINARY_TABLE, Module),
     %%! The InitialTable list will be long if the module is big - what to do??
     Mapping = counters_mapping_table(Module),
     InitialClauses = ets:lookup(?COVER_CLAUSE_TABLE,Module),
@@ -1514,7 +1514,7 @@ do_get_all_importfiles([],Acc) ->
 
 imported_info(Text,Module,Imported) ->
     case lists:keysearch(Module,1,Imported) of
-	{value,{Module,_File,ImportFiles}} ->
+	{value,{^Module,_File,ImportFiles}} ->
 	    io:format("~ts includes data from imported files\n~tp\n",
 		      [Text,ImportFiles]);
 	false ->
@@ -1545,7 +1545,7 @@ add_imported(M, F, ImportFile, [], Acc) ->
 %% This is done when a module is compiled.
 remove_imported(Module,Imported) ->
     case lists:keysearch(Module,1,Imported) of
-	{value,{Module,_,ImportFiles}} ->
+	{value,{^Module,_,ImportFiles}} ->
 	    io:fwrite("WARNING: Deleting data for module ~w imported from~n"
 		      "~tp~n",[Module,ImportFiles]),
 	    lists:keydelete(Module,1,Imported);
@@ -1601,7 +1601,7 @@ get_file(_Module, []) ->
     false.
 
 get_beam_file(Module,?TAG,Compiled) ->
-    {value,{Module,File}} = lists:keysearch(Module,1,Compiled),
+    {value,{^Module,File}} = lists:keysearch(Module,1,Compiled),
     case filename:extension(File) of
 	".erl" -> {error,no_beam};
 	".beam" -> {ok,File}
@@ -1667,7 +1667,7 @@ do_compile_beam(Module,BeamFile0,State) ->
 	    UserOptions = get_compile_options(Module,BeamFile),
 	    case do_compile_beam1(Module,BeamFile,
                                   UserOptions,LocalOnly) of
-		{ok, Module} ->
+		{ok, ^Module} ->
 		    {ok,Module,BeamFile};
 		error ->
 		    {error, BeamFile};
@@ -1747,7 +1747,7 @@ do_compile_beam1(Module,Beam,UserOptions,LocalOnly) ->
 
 get_abstract_code(Module, Beam) ->
     case beam_lib:chunks(Beam, [abstract_code]) of
-	{ok, {Module, [{abstract_code, AbstractCode}]}} ->
+	{ok, {^Module, [{abstract_code, AbstractCode}]}} ->
 	    AbstractCode;
 	{error,beam_lib,{key_missing_or_invalid,_,_}} ->
 	    encrypted_abstract_code;
@@ -1773,10 +1773,10 @@ do_compile_beam2(Module,Beam,UserOptions,Forms0,MainFile,LocalOnly) ->
     %% It's necessary to check the result of loading since it may
     %% fail, for example if Module resides in a sticky directory.
     Options = SourceInfo ++ UserOptions,
-    {ok, Module, Binary} = compile:forms(Forms, Options),
+    {ok, ^Module, Binary} = compile:forms(Forms, Options),
 
     case code:load_binary(Module, ?TAG, Binary) of
-	{module, Module} ->
+	{module, ^Module} ->
 
 	    %% Store info about all function clauses in database.
 	    InitInfo = lists:reverse(Vars#vars.init_info),
@@ -1808,7 +1808,7 @@ get_compile_options(Module, Beam) ->
 
 get_compile_info(Module, Beam) ->
     case beam_lib:chunks(Beam, [compile_info]) of
-	{ok, {Module, [{compile_info, Compile}]}} ->
+	{ok, {^Module, [{compile_info, Compile}]}} ->
 		Compile;
 	_ ->
 		[]
@@ -2303,7 +2303,7 @@ counter_index(Vars, Line) ->
                                        Mod, {2,1}),
             true = ets:insert(?COVER_MAPPING_TABLE, {Key,Index}),
             Index;
-        [{Key,Index}] ->
+        [{^Key,Index}] ->
             Index
     end.
 
@@ -2562,12 +2562,12 @@ do_parallel_analysis(Module, Analysis, Level, Loaded, From, State) ->
     analyse_info(Module,State#main_state.imported),
     C = case Loaded of
 	    {loaded, _File} ->
-		[{Module,Clauses}] = 
+		[{^Module,Clauses}] = 
 		    ets:lookup(?COVER_CLAUSE_TABLE,Module),
 		collect(Module,Clauses,State#main_state.nodes),
 		Clauses;
 	    _ ->
-		[{Module,Clauses}] = 
+		[{^Module,Clauses}] = 
 		    ets:lookup(?COLLECTION_CLAUSE_TABLE,Module),
 		Clauses
 	end,
@@ -2703,7 +2703,7 @@ split_ok_error([],Ok,Error) ->
 do_parallel_analysis_to_file(Module, Opts, Loaded, From, State) ->
     File = case Loaded of
 	       {loaded, File0} ->
-		   [{Module,Clauses}] = 
+		   [{^Module,Clauses}] = 
 		       ets:lookup(?COVER_CLAUSE_TABLE,Module),
 		   collect(Module, Clauses,
 			   State#main_state.nodes),
@@ -2812,7 +2812,7 @@ print_lines(Module, CovLines, InFd, OutFd, L, HTML) ->
 	{ok,RawLine} ->
 	    Line = escape_lt_and_gt(RawLine,HTML),
 	    case CovLines of
-	       [{L,N}|CovLines1] ->
+	       [{^L,N}|CovLines1] ->
                     if N=:=0, HTML=:=true ->
                            MissedLine = table_row("miss", Line, L, N),
                            ok = file:write(OutFd, MissedLine);
@@ -2916,7 +2916,7 @@ do_export(Module, OutFile, From, State) ->
 			export_info(Module,State#main_state.imported),
 			try is_loaded(Module, State) of
 			    {loaded, File} ->
-				[{Module,Clauses}] = 
+				[{^Module,Clauses}] = 
 				    ets:lookup(?COVER_CLAUSE_TABLE,Module),
 				collect(Module, Clauses,
 					State#main_state.nodes),

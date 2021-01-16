@@ -161,15 +161,15 @@ req(ReqMsg, Ref, TryStart) ->
 req(ReqMsg, Ref, TryStart, Mon) ->
     (catch ?SERVER ! ReqMsg),
     receive
-	{response, Ref, Res} ->
+	{response, ^Ref, Res} ->
 	    erlang:demonitor(Mon, [flush]),
 	    Res;
-	{'DOWN', Mon, _, _, noproc} ->
+	{'DOWN', ^Mon, _, _, noproc} ->
 	    case TryStart of
 		true -> start_server(Ref, ReqMsg);
 		false -> {error, server_died}
 	    end;
-	{'DOWN', Mon, _, _, Reason} ->
+	{'DOWN', ^Mon, _, _, Reason} ->
 	    {error, Reason}
     end.
 
@@ -182,9 +182,9 @@ start_server(Ref, ReqMsg) ->
 		end),
     Mon = erlang:monitor(process, Pid),
     receive
-	{Ref, Pid, started} ->
+	{^Ref, ^Pid, started} ->
 	    req(ReqMsg, Ref, false, Mon);
-	{'DOWN', Mon, _, _, _} ->
+	{'DOWN', ^Mon, _, _, _} ->
 	    req(ReqMsg, Ref, false)
     end.
 
@@ -244,7 +244,7 @@ strategy(temp_alloc, _AI) ->
     af;
 strategy(A, AI) ->
     try
-	{A, OptList} = lists:keyfind(A, 1, AI),
+	{^A, OptList} = lists:keyfind(A, 1, AI),
 	{as, S} = lists:keyfind(as, 1, OptList),
 	S
     catch
@@ -302,7 +302,7 @@ make_state() ->
 
 ai_value(Key1, Key2, AI) ->
     case lists:keysearch(Key1, 1, AI) of
-	{value, {Key1, Value1}} ->
+	{value, {^Key1, Value1}} ->
 	    case lists:keysearch(Key2, 1, Value1) of
 		{value, Result} -> Result;
 		_ -> undefined
@@ -418,10 +418,10 @@ sbct(#conf{format_to = FTO}, #alloc{name = A, sbct = SBCT}) ->
     format(FTO, " +M~csbct ~p~n", [alloc_char(A), SBCT]).
 
 default_mmbcs(temp_alloc = A, _Insts) ->
-    {value, {A, MMBCS_Default}} = lists:keysearch(A, 1, ?MMBCS_DEFAULTS),
+    {value, {^A, MMBCS_Default}} = lists:keysearch(A, 1, ?MMBCS_DEFAULTS),
     MMBCS_Default;
 default_mmbcs(A, Insts) ->
-    {value, {A, MMBCS_Default}} = lists:keysearch(A, 1, ?MMBCS_DEFAULTS),
+    {value, {^A, MMBCS_Default}} = lists:keysearch(A, 1, ?MMBCS_DEFAULTS),
     I = case Insts > 4 of
 	    true -> 4;
 	    _ -> Insts

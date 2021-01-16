@@ -245,7 +245,7 @@ backup(#tab{id = ID}, BackupDir) ->
 	    {error, no_file};
 	Filename ->
 	    case filename:dirname(Filename) of
-		BackupDir ->
+		^BackupDir ->
 		    {error, db_dir};
 		_ ->
 		    Type = dets:info(ID, type),

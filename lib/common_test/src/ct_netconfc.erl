@@ -372,7 +372,7 @@ session(Conn, Opts, InitRec, NameOpt) ->
         [_ | ok] = [T | hello(Client, caps(Opts), Rec#options.timeout)],
         Ok
     catch
-        error: {badmatch, [T | Error]} ->
+        error: {badmatch, [^T | Error]} ->
             Error
     end.
 
@@ -424,7 +424,7 @@ open(Opts, InitRec, NameOpt, Hello) ->
         [_, ok] = [T, hello(Client, caps(Opts), Rec#options.timeout)],
         Ok
     catch
-        error: {badmatch, [T, Res | _]} ->
+        error: {badmatch, [^T, Res | _]} ->
             Res
     end.
 
@@ -1070,7 +1070,7 @@ close(Client) ->
     case get_handle(Client) of
 	{ok,Pid} ->
 	    case ct_gen_conn:stop(Pid) of
-		{error,{process_down,Pid,noproc}} ->
+		{error,{process_down,^Pid,noproc}} ->
 		    {error,already_closed};
 		Result ->
 		    Result
@@ -1093,24 +1093,24 @@ call(Client, Msg, Timeout, WaitStop) ->
     case get_handle(Client) of
 	{ok,Pid} ->
 	    case ct_gen_conn:call(Pid,Msg,Timeout) of
-		{error,{process_down,Pid,noproc}} ->
+		{error,{process_down,^Pid,noproc}} ->
 		    {error,no_such_client};
-		{error,{process_down,Pid,normal}} when WaitStop ->
+		{error,{process_down,^Pid,normal}} when WaitStop ->
 		    %% This will happen when server closes connection
 		    %% before client received rpc-reply on
 		    %% close-session.
 		    ok;
-		{error,{process_down,Pid,normal}} ->
+		{error,{process_down,^Pid,normal}} ->
 		    {error,closed};
-		{error,{process_down,Pid,Reason}} ->
+		{error,{process_down,^Pid,Reason}} ->
 		    {error,{closed,Reason}};
 		Other when WaitStop ->
 		    MRef = erlang:monitor(process,Pid),
 		    receive
-			{'DOWN',MRef,process,Pid,Normal} when Normal==normal;
+			{'DOWN',^MRef,process,^Pid,Normal} when Normal==normal;
 							      Normal==noproc ->
 			    Other;
-			{'DOWN',MRef,process,Pid,Reason} ->
+			{'DOWN',^MRef,process,^Pid,Reason} ->
 			    {error,{{closed,Reason},Other}}
 		    after Timeout ->
 			    erlang:demonitor(MRef, [flush]),
@@ -1791,9 +1791,9 @@ decode_hello({hello, _Attrs, Hello}) ->
             = [decode_caps(Capabilities, [], false), false | U],
         {ok, Id, Caps}
     catch
-        error: {badmatch, [Error, false | U]} ->
+        error: {badmatch, [Error, false | ^U]} ->
             Error;
-        error: {badmatch, [_, Reason | U]} ->
+        error: {badmatch, [_, Reason | ^U]} ->
             {error, {incorrect_hello, Reason}}
     end.
 
@@ -1939,7 +1939,7 @@ indent_line("/>"++Rest,Indent,Line) ->
 indent_line("></"++Rest,Indent,Line) ->
     LastTag = erase(tag),
     case get_tag(Rest) of
-	LastTag ->
+	^LastTag ->
 	    %% Start and stop tag, but no content
 	    indent_line1(Rest,Indent,[$/,$<,$>|Line]);
 	_ ->

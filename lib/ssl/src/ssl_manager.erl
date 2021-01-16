@@ -478,7 +478,7 @@ client_register_session(Host, Port, Session, #state{session_cache_client = Cache
 do_register_session(Key, Session, Max, Cache0, CacheCb, Options) ->
     try 
         case CacheCb:size(Cache0) of
-            Max ->
+            ^Max ->
                 {_, Cache} = CacheCb:take_oldest(Cache0),
                 CacheCb:update(Cache, Key, Session),
                 Cache;

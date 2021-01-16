@@ -361,7 +361,7 @@ make_succeeded(Var, {guard, Fail}, St) ->
 make_succeeded(Var, {in_catch, CatchLbl}, St) ->
     make_succeeded_1(Var, body, CatchLbl, St);
 make_succeeded(Var, {no_catch, Fail}, St) ->
-    #cg{ultimate_failure=Fail} = St,            %Assertion
+    #cg{ultimate_failure=^Fail} = St,            %Assertion
     make_succeeded_1(Var, body, Fail, St).
 
 make_succeeded_1(Var, Kind, Fail, St0) ->
@@ -404,11 +404,11 @@ select_bin_seg(#k_val_clause{val=#k_bin_int{size=Sz,unit=U,flags=Fs,
     Is = case Mis ++ Bis of
              [#b_set{op=bs_match,args=[#b_literal{val=string},OtherCtx1,Bin1]},
               #b_set{op={succeeded,guard},dst=Bool1},
-              #b_br{bool=Bool1,succ=Succ,fail=Fail},
+              #b_br{bool=Bool1,succ=Succ,fail=^Fail},
               {label,Succ},
               #b_set{op=bs_match,dst=Dst,args=[#b_literal{val=string},_OtherCtx2,Bin2]}|
               [#b_set{op={succeeded,guard},dst=Bool2},
-               #b_br{bool=Bool2,fail=Fail}|_]=Is0] ->
+               #b_br{bool=Bool2,fail=^Fail}|_]=Is0] ->
                  %% We used to do this optimization later, but it
                  %% turns out that in huge functions with many
                  %% string matching instructions, it's a huge win
@@ -463,7 +463,7 @@ select_extract_int(#k_var{name=Tl}, Val, #k_literal{val=Sz}, U, Fs, Vf,
                   true = member(little, Fs),	%Assertion.
                   <<Val:Bits/little>>
           end,
-    Bits = bit_size(Bin),			%Assertion.
+    ^Bits = bit_size(Bin),			%Assertion.
     {TestIs,St} = make_succeeded(Dst, {guard, Vf}, St1),
     Set = #b_set{op=bs_match,dst=Dst,
                  args=[#b_literal{val=string},Ctx,#b_literal{val=Bin}]},
@@ -597,7 +597,7 @@ test_cg(Test, Inverted, As0, Fail, St0) ->
           when is_atom(Atom), is_integer(Int) ->
             false = Inverted,                   %Assertion.
             test_is_record_cg(Fail, Tuple, Tag, Arity, St0);
-        {_,As} ->
+        {_,^As} ->
             {Bool,St1} = new_ssa_var('@ssa_bool', St0),
             {Succ,St} = new_label(St1),
             Bif = #b_set{op={bif,Test},dst=Bool,args=As},

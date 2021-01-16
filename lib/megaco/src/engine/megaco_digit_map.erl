@@ -508,7 +508,7 @@ match_event(Event, [ST | OldSTL], NewSTL, Collect, KeepDur, MatchingDuration)
        "~n   MatchingDuration: ~p", 
        [Event, ST, NewSTL, Collect, KeepDur, MatchingDuration]),
     case ST#state_transition.next of
-	{single, Event} ->
+	{single, ^Event} ->
 	    ?d("match_event -> keep ST (1)", []),
 	    match_event(Event, OldSTL, [ST | NewSTL], true, KeepDur,
 			MatchingDuration);
@@ -559,7 +559,7 @@ match_event(Event, [ST | OldSTL], NewSTL, Collect, KeepDur, MatchingDuration)
 				MatchingDuration) 
 	    end;
 
-	Event ->
+	^Event ->
 	    ?d("match_event -> keep ST (8)", []),
 	    match_event(Event, OldSTL, [ST | NewSTL], Collect, KeepDur,
 			MatchingDuration);
@@ -618,7 +618,7 @@ match_letter(Event, [Letter | Letters], MatchingDuration) ->
        "~n   Letter:           ~p", 
        [Event, Letter]),
     case Letter of
-	{single, Event} ->
+	{single, ^Event} ->
 	    ?d("match_letter -> keep ST (1)", []),
 	    true;
 
@@ -844,9 +844,9 @@ test(DigitMap, Events) ->
     Pid = spawn_link(?MODULE, test_eval, [DigitMap, Self]),
     report(Pid, Events),
     receive
-	{Self, Pid, Res} ->
+	{^Self, ^Pid, Res} ->
 	    Res;
-	{'EXIT', Pid, Reason} ->
+	{'EXIT', ^Pid, Reason} ->
 	    {error, {'EXIT', Reason}}
     end.
 

@@ -693,7 +693,7 @@ do_start(#client_hello{cipher_suites = ClientCiphers,
                 Maybe(session_resumption(NextStateTuple, PSK))
         end
     catch
-        {Ref, #alert{} = Alert} ->
+        {^Ref, #alert{} = Alert} ->
             Alert
     end;
 %% TLS Client
@@ -784,7 +784,7 @@ do_start(#server_hello{cipher_suite = SelectedCipherSuite,
         {State, wait_sh}
 
     catch
-        {Ref, #alert{} = Alert} ->
+        {^Ref, #alert{} = Alert} ->
             Alert
     end.
 
@@ -846,7 +846,7 @@ do_negotiated({start_handshake, PSK0},
         {State, NextState}
 
     catch
-        {Ref, #alert{} = Alert} ->
+        {^Ref, #alert{} = Alert} ->
             Alert
     end.
 
@@ -856,9 +856,9 @@ do_wait_cert(#certificate_1_3{} = Certificate, State0) ->
     try
         Maybe(process_certificate(Certificate, State0))
     catch
-        {Ref, #alert{} = Alert} ->
+        {^Ref, #alert{} = Alert} ->
             {Alert, State0};
-        {Ref, {#alert{} = Alert, State}} ->
+        {^Ref, {#alert{} = Alert, State}} ->
             {Alert, State}
     end.
 
@@ -869,7 +869,7 @@ do_wait_cv(#certificate_verify_1_3{} = CertificateVerify, State0) ->
         State1 = Maybe(verify_signature_algorithm(State0, CertificateVerify)),
         Maybe(verify_certificate_verify(State1, CertificateVerify))
     catch
-        {Ref, {#alert{} = Alert, State}} ->
+        {^Ref, {#alert{} = Alert, State}} ->
             {Alert, State}
     end.
 
@@ -892,7 +892,7 @@ do_wait_finished(#finished{verify_data = VerifyData},
         maybe_send_session_ticket(State4)
 
     catch
-        {Ref, #alert{} = Alert} ->
+        {^Ref, #alert{} = Alert} ->
             Alert
     end;
 %% TLS Client
@@ -918,7 +918,7 @@ do_wait_finished(#finished{verify_data = VerifyData},
         %% Configure traffic keys
         ssl_record:step_encryption_state(State7)
     catch
-        {Ref, #alert{} = Alert} ->
+        {^Ref, #alert{} = Alert} ->
             Alert
     end.
 
@@ -975,9 +975,9 @@ do_wait_sh(#server_hello{cipher_suite = SelectedCipherSuite,
         {State4, wait_ee}
 
     catch
-        {Ref, {State, StateName, ServerHello}} ->
+        {^Ref, {State, StateName, ^ServerHello}} ->
             {State, StateName, ServerHello};
-        {Ref, #alert{} = Alert} ->
+        {^Ref, #alert{} = Alert} ->
             Alert
     end.
 
@@ -1002,9 +1002,9 @@ do_wait_ee(#encrypted_extensions{extensions = Extensions}, State0) ->
 
         {State1, wait_cert_cr}
     catch
-        {Ref, {State, StateName}} ->
+        {^Ref, {State, StateName}} ->
             {State, StateName};
-        {Ref, #alert{} = Alert} ->
+        {^Ref, #alert{} = Alert} ->
             Alert
     end.
 
@@ -1014,9 +1014,9 @@ do_wait_cert_cr(#certificate_1_3{} = Certificate, State0) ->
     try
         Maybe(process_certificate(Certificate, State0))
     catch
-        {Ref, #alert{} = Alert} ->
+        {^Ref, #alert{} = Alert} ->
             {Alert, State0};
-        {Ref, {#alert{} = Alert, State}} ->
+        {^Ref, {#alert{} = Alert, State}} ->
             {Alert, State}
     end;
 do_wait_cert_cr(#certificate_request_1_3{} = CertificateRequest, State0) ->
@@ -1024,7 +1024,7 @@ do_wait_cert_cr(#certificate_request_1_3{} = CertificateRequest, State0) ->
     try
         Maybe(process_certificate_request(CertificateRequest, State0))
     catch
-        {Ref, #alert{} = Alert} ->
+        {^Ref, #alert{} = Alert} ->
             {Alert, State0}
     end.
 
@@ -1145,7 +1145,7 @@ maybe_queue_cert_cert_cv(#state{connection_states = _ConnectionStates0,
         State = Maybe(maybe_queue_cert_verify(Certificate, State1)),
         {ok, State}
     catch
-        {Ref, #alert{} = Alert} ->
+        {^Ref, #alert{} = Alert} ->
             {error, Alert}
     end.
 
@@ -1165,7 +1165,7 @@ maybe_queue_cert_verify(_Certificate,
         CertificateVerify = Maybe(certificate_verify(CertPrivateKey, SignatureScheme, State, client)),
         {ok, tls_connection:queue_handshake(CertificateVerify, State)}
     catch
-        {Ref, #alert{} = Alert} ->
+        {^Ref, #alert{} = Alert} ->
             {error, Alert}
     end.
 

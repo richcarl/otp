@@ -462,7 +462,7 @@ find_upper(Lower, Term, T, Dl, Dd, D, RF, Enc, Str) ->
     case If of
         {_, _, _Dots=0, _} -> % even if Len > T
             If;
-        {_, _Len=T, _, _} ->  % increasing the depth is meaningless
+        {_, _Len=^T, _, _} ->  % increasing the depth is meaningless
             If;
         {_, Len, _, _} when Len < T, D1 < D orelse D < 0 ->
 	    find_upper(If, Term, T, D1, Dd2, D, RF, Enc, Str);
@@ -476,7 +476,7 @@ search_depth(Lower, Upper, _Term, T, Dl, Du, _RF, _Enc, _Str)
         when Du - Dl =:= 1 ->
     %% The returned intermediate format has Len >= T.
     case Lower of
-        {_, T, _, _} ->
+        {_, ^T, _, _} ->
             Lower;
         _ ->
             Upper
@@ -1143,6 +1143,6 @@ chars(C, N) ->
 get_option(Key, TupleList, Default) ->
     case lists:keyfind(Key, 1, TupleList) of
 	false -> Default;
-	{Key, Value} -> Value;
+	{^Key, Value} -> Value;
 	_ -> Default
     end.

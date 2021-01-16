@@ -303,11 +303,11 @@ file(Name, Opts) ->
     Parent = self(),
     Child = spawn_link(fun () -> file_1(Parent, Name, Opts) end),
     receive
-        {Child, ok} ->
+        {^Child, ok} ->
             ok;
-        {Child, {error, Reason}} ->
+        {^Child, {error, Reason}} ->
             exit(Reason);
-        {'EXIT', Child, Reason} ->
+        {'EXIT', ^Child, Reason} ->
             exit(Reason)
     end.
 

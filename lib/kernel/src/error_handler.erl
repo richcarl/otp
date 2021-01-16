@@ -34,7 +34,7 @@
 
 undefined_function(Module, Func, Args) ->
     case ensure_loaded(Module) of
-	{module, Module} ->
+	{module, ^Module} ->
 	    case erlang:function_exported(Module, Func, length(Args)) of
 		true ->
 		    apply(Module, Func, Args);
@@ -54,7 +54,7 @@ undefined_function(Module, Func, Args) ->
 
 undefined_lambda(Module, Fun, Args) ->
     case ensure_loaded(Module) of
-	{module, Module} ->
+	{module, ^Module} ->
 	    %% There is no need (and no way) to test if the fun is present.
 	    %% apply/2 will not call us again if the fun is missing.
 	    apply(Fun, Args);
@@ -116,7 +116,7 @@ ensure_loaded(Module) ->
 	%% code server can resolve the problem or not.
 	%% An {error, Reason} return from there would crash the code server and 
 	%% bring down the node.
-	Self ->
+	^Self ->
 	    Error = "The code server called the unloaded module `" ++
 		atom_to_list(Module) ++ "'",
 	    halt(Error);

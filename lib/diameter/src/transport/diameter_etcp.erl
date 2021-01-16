@@ -109,7 +109,7 @@ send(Pid, Bin) ->
 close(Pid) ->
     Pid ! close,
     monitor(Pid),
-    receive {'DOWN', _, process, Pid, _} -> ok end.
+    receive {'DOWN', _, process, ^Pid, _} -> ok end.
 
 %% setopts/2
 
@@ -232,9 +232,9 @@ start(Fun) ->
         = diameter_etcp_sup:start_child({connect, Fun, Ref, self()}),
     MRef = monitor(Pid),
     receive
-        {ok, Ref} ->
+        {ok, ^Ref} ->
             T;
-        {'DOWN', MRef, process, _, Reason} ->
+        {'DOWN', ^MRef, process, _, Reason} ->
             {error, Reason}
     end.
 

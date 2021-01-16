@@ -209,7 +209,7 @@ process_chunks(F) ->
 
 optional_chunk(F, ChunkTag) ->
     case beam_lib:chunks(F, [ChunkTag]) of
-	{ok,{_Module,[{ChunkTag,Chunk}]}} -> Chunk;
+	{ok,{_Module,[{^ChunkTag,Chunk}]}} -> Chunk;
 	{error,beam_lib,{missing_chunk,_,_}} -> none
     end.
 
@@ -684,13 +684,13 @@ resolve_names(Fun, Imports, Str, Lbls, Lambdas, Literals, M) ->
 
 resolve_inst({make_fun2,Args}, _, _, _, Lambdas, _, M) ->
     [OldIndex] = resolve_args(Args),
-    {OldIndex,{F,A,_Lbl,_Index,NumFree,OldUniq}} =
+    {^OldIndex,{F,A,_Lbl,_Index,NumFree,OldUniq}} =
 	lists:keyfind(OldIndex, 1, Lambdas),
     {make_fun2,{M,F,A},OldIndex,OldUniq,NumFree};
 resolve_inst({make_fun3,[Fun,Dst,{{z,1},{u,_},Env0}]}, _, _, _, Lambdas, _, M) ->
     OldIndex = resolve_arg(Fun),
     Env1 = resolve_args(Env0),
-    {OldIndex,{F,A,_Lbl,_Index,_NumFree,OldUniq}} =
+    {^OldIndex,{F,A,_Lbl,_Index,_NumFree,OldUniq}} =
 	lists:keyfind(OldIndex, 1, Lambdas),
     {make_fun3,{M,F,A},OldIndex,OldUniq,Dst,{list,Env1}};
 resolve_inst(Instr, Imports, Str, Lbls, _Lambdas, _Literals, _M) ->

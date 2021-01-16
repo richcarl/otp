@@ -888,14 +888,14 @@ handle_call({set_library_path, Path, Options}, _From, State) ->
     end;
 handle_call({replace_module, Module, File}, _From, State) ->
     case xref_base:replace_module(State, Module, File) of
-	{ok, Module, NewState} ->
+	{ok, ^Module, NewState} ->
 	    {reply, {ok, Module}, NewState};
 	Error ->
 	    {reply, Error, State}
     end;
 handle_call({replace_module, Module, File, Options}, _From, State) ->
     case xref_base:replace_module(State, Module, File, Options) of
-	{ok, Module, NewState} ->
+	{ok, ^Module, NewState} ->
 	    {reply, {ok, Module}, NewState};
 	Error ->
 	    {reply, Error, State}

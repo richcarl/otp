@@ -3032,7 +3032,7 @@ ensure_started(App) ->
     case (catch App:start()) of
 	ok ->
 	    ok;
-	{error, {already_started, App}} ->
+	{error, {already_started, ^App}} ->
 	    ok;
 	E ->
 	    error({failed_starting, App, E})

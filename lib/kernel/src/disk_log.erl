@@ -697,7 +697,7 @@ handle({From, {log, Format, B}}=Message, S) ->
 	    log_loop(S, From, [B], [], iolist_size(B), LogFormat);
 	#log{status = {blocked, false}}=L ->
 	    reply(From, {error, {blocked_log, L#log.name}}, S);
-	#log{blocked_by = From}=L ->
+	#log{blocked_by = ^From}=L ->
 	    reply(From, {error, {blocked_log, L#log.name}}, S);
 	_ ->
 	    enqueue(Message, S)
@@ -725,7 +725,7 @@ handle({From, {block, QueueLogRecs}}=Message, S) ->
 	    reply(From, ok, S);
 	#log{status = {blocked, false}}=L ->
 	    reply(From, {error, {blocked_log, L#log.name}}, S);
-	#log{blocked_by = From}=L ->
+	#log{blocked_by = ^From}=L ->
 	    reply(From, {error, {blocked_log, L#log.name}}, S);
 	_ ->
 	    enqueue(Message, S)
@@ -734,7 +734,7 @@ handle({From, unblock}, S) ->
     case get(log) of
 	#log{status = ok}=L ->
 	    reply(From, {error, {not_blocked, L#log.name}}, S);
-	#log{blocked_by = From}=L ->
+	#log{blocked_by = ^From}=L ->
 	    S2 = do_unblock(L, S),
 	    reply(From, ok, S2);
 	L ->
@@ -748,7 +748,7 @@ handle({From, sync}=Message, S) ->
             log_loop(S, [], [], [From], 0, LogFormat);
 	#log{status = {blocked, false}}=L ->
 	    reply(From, {error, {blocked_log, L#log.name}}, S);
-	#log{blocked_by = From}=L ->
+	#log{blocked_by = ^From}=L ->
 	    reply(From, {error, {blocked_log, L#log.name}}, S);
 	_ ->
 	    enqueue(Message, S)
@@ -772,7 +772,7 @@ handle({From, {truncate, Head, F, A}}=Message, S) ->
 	    end;
 	#log{status = {blocked, false}}=L ->
 	    reply(From, {error, {blocked_log, L#log.name}}, S);
-	#log{blocked_by = From}=L ->
+	#log{blocked_by = ^From}=L ->
 	    reply(From, {error, {blocked_log, L#log.name}}, S);
 	_ ->
 	    enqueue(Message, S)
@@ -784,7 +784,7 @@ handle({From, {chunk, Pos, B, N}}=Message,  S) ->
 	#log{status = ok}=L ->
 	    R = do_chunk(L, Pos, B, N),
 	    reply(From, R, S);
-	#log{blocked_by = From}=L ->
+	#log{blocked_by = ^From}=L ->
 	    R = do_chunk(L, Pos, B, N),
 	    reply(From, R, S);
 	#log{status = {blocked, false}}=L ->
@@ -799,7 +799,7 @@ handle({From, {chunk_step, Pos, N}}=Message,  S) ->
 	#log{status = ok}=L ->
 	    R = do_chunk_step(L, Pos, N),
 	    reply(From, R, S);
-	#log{blocked_by = From}=L ->
+	#log{blocked_by = ^From}=L ->
 	    R = do_chunk_step(L, Pos, N),
 	    reply(From, R, S);
 	#log{status = {blocked, false}}=L ->
@@ -819,7 +819,7 @@ handle({From, {change_notify, Pid, NewNotify}}=Message, S) ->
 	    end;
 	#log{status = {blocked, false}}=L ->
 	    reply(From, {error, {blocked_log, L#log.name}}, S);
-	#log{blocked_by = From}=L ->
+	#log{blocked_by = ^From}=L ->
 	    reply(From, {error, {blocked_log, L#log.name}}, S);
 	_ ->
 	    enqueue(Message, S)
@@ -838,7 +838,7 @@ handle({From, {change_header, NewHead}}=Message, S) ->
 	    end;
 	#log{status = {blocked, false}}=L ->
 	    reply(From, {error, {blocked_log, L#log.name}}, S);
-	#log{blocked_by = From}=L ->
+	#log{blocked_by = ^From}=L ->
 	    reply(From, {error, {blocked_log, L#log.name}}, S);
 	_ ->
 	    enqueue(Message, S)
@@ -866,7 +866,7 @@ handle({From, {change_size, NewSize}}=Message, S) ->
 	    end;
 	#log{status = {blocked, false}}=L ->
 	    reply(From, {error, {blocked_log, L#log.name}}, S);
-	#log{blocked_by = From}=L ->
+	#log{blocked_by = ^From}=L ->
 	    reply(From, {error, {blocked_log, L#log.name}}, S);
 	_ ->
 	    enqueue(Message, S)
@@ -891,7 +891,7 @@ handle({From, inc_wrap_file}=Message, S) ->
 	    end;
 	#log{status = {blocked, false}}=L ->
 	    reply(From, {error, {blocked_log, L#log.name}}, S);
-	#log{blocked_by = From}=L ->
+	#log{blocked_by = ^From}=L ->
 	    reply(From, {error, {blocked_log, L#log.name}}, S);
 	_ ->
 	    enqueue(Message, S)
@@ -902,7 +902,7 @@ handle({From, {reopen, NewFile, Head, F, A}}, S) ->
 	    reply(From, {error, {read_only_mode, L#log.name}}, S);
 	#log{status = ok} when S#state.cache_error =/= ok ->
 	    loop(cache_error(S, [From]));
-	#log{status = ok, filename = NewFile}=L ->
+	#log{status = ok, filename = ^NewFile}=L ->
 	    reply(From, {error, {same_file_name, L#log.name}}, S);
 	#log{status = ok}=L ->
 	    case catch close_disk_log2(L) of
@@ -1077,7 +1077,7 @@ rflat([], L) -> L.
 %% -> {ok, Log} | {error, Error}
 do_change_notify(L, Pid, Notify) ->
     case is_owner(Pid, L) of
-	{true, Notify} ->
+	{true, ^Notify} ->
 	    {ok, L};
 	{true, _OldNotify} when Notify =/= true, Notify =/= false ->
 	    {error, {badarg, notify}};
@@ -1186,7 +1186,7 @@ add_pid(Pid, Notify, L) when is_pid(Pid) ->
 	false ->
             link(Pid),
 	    {ok, L#log{owners = [{Pid, Notify} | L#log.owners]}};
-	{true, Notify}  ->
+	{true, ^Notify}  ->
 %%	    {error, {pid_already_connected, L#log.name}};
 	    {ok, L};
 	{true, CurNotify} when Notify =/= CurNotify ->
@@ -1861,9 +1861,9 @@ monitor_request(Pid, Req) ->
     Ref = erlang:monitor(process, Pid),
     Pid ! {self(), Req},
     receive 
-	{'DOWN', Ref, process, Pid, _Info} ->
+	{'DOWN', ^Ref, process, ^Pid, _Info} ->
 	    {error, no_such_log};
-	{disk_log, Pid, Reply} when not is_tuple(Reply) orelse
+	{disk_log, ^Pid, Reply} when not is_tuple(Reply) orelse
                                     element(2, Reply) =/= disk_log_stopped ->
 	    erlang:demonitor(Ref, [flush]),
 	    Reply

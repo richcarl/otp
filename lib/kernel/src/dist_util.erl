@@ -338,7 +338,7 @@ mark_pending(#hs_data{kernel_pid=Kernel,
 
 wait_pending(Kernel) ->
     receive
-	{Kernel, pending} ->
+	{^Kernel, pending} ->
 	    ?trace("wait_pending returned for pid ~p.~n", 
 		   [self()]),
 	    ok
@@ -355,7 +355,7 @@ do_mark_pending(Kernel, MyNode, Node, Flags) ->
     Kernel ! {self(), {accept_pending,MyNode,Node,
 		       publish_type(Flags)}},
     receive
-	{Kernel,{accept_pending,Ret}} ->
+	{^Kernel,{accept_pending,Ret}} ->
 	    ?trace("do_mark_pending(~p,~p,~p,~p) -> ~p~n",
 		   [Kernel, MyNode, Node, Flags, Ret]),
 	    Ret
@@ -364,7 +364,7 @@ do_mark_pending(Kernel, MyNode, Node, Flags) ->
 is_pending(Kernel, Node) ->
     Kernel ! {self(), {is_pending, Node}},
     receive
-	{Kernel, {is_pending, Reply}} -> Reply
+	{^Kernel, {is_pending, Reply}} -> Reply
     end.
     
 %%
@@ -547,13 +547,13 @@ do_setnode(#hs_data{other_node = Node, socket = Socket,
                               dynamic = name_type(HSData#hs_data.this_flags),
                               erlang:setnode(MyNode, HSData#hs_data.this_creation),
                               true;
-                          MyNode ->
+                          ^MyNode ->
                               false
                       end,
 	    ?trace("setnode: node=~p port=~p flags=~p(~p) ver=~p creation=~p~n",
 		   [Node, Port, Flags, publish_type(Flags), Version, Creation]),
 
-            MyNode = node(), % ASSERT
+            ^MyNode = node(), % ASSERT
             try
                 DHandle = erlang:setnode(Node, Port, {Flags, Version, Creation}),
                 {DHandle, NamedMe}
@@ -580,9 +580,9 @@ mark_nodeup(#hs_data{kernel_pid = Kernel,
 	    Address, NamedMe) ->
     Kernel ! {self(), {nodeup,Node,Address,publish_type(Flags),NamedMe}},
     receive
-	{Kernel, inserted} ->
+	{^Kernel, inserted} ->
 	    ok;
-	{Kernel, bad_request} ->
+	{^Kernel, bad_request} ->
 	    TypeT = case OtherStarted of
 		       true ->
 			   "accepting connection";
@@ -604,11 +604,11 @@ con_loop({Kernel, Node, Socket, Type, DHandle, MFTick, MFGetstat,
           MFSetOpts, MFGetOpts}=ConData,
 	 Tick) ->
     receive
-	{tcp_closed, Socket} ->
+	{tcp_closed, ^Socket} ->
 	    ?shutdown2(Node, connection_closed);
-	{Kernel, disconnect} ->
+	{^Kernel, disconnect} ->
 	    ?shutdown2(Node, disconnected);
-	{Kernel, aux_tick} ->
+	{^Kernel, aux_tick} ->
 	    case getstat(DHandle, Socket, MFGetstat) of
 		{ok, _, _, PendWrite} ->
 		    send_aux_tick(Type, Socket, PendWrite, MFTick);
@@ -616,7 +616,7 @@ con_loop({Kernel, Node, Socket, Type, DHandle, MFTick, MFGetstat,
 		    ignore_it
 	    end,
 	    con_loop(ConData, Tick);
-	{Kernel, tick} ->
+	{^Kernel, tick} ->
 	    case send_tick(DHandle, Socket, Tick, Type, 
 			   MFTick, MFGetstat) of
 		{ok, NewTick} ->
@@ -880,7 +880,7 @@ is_allowed(Node, [AllowedNode|Allowed]) ->
         {node,AllowedName,AllowedHost} ->
             %% Allowed node name
             case split_node(Node) of
-                {node,AllowedName,AllowedHost} ->
+                {node,^AllowedName,^AllowedHost} ->
                     true;
                 _ ->
                     is_allowed(Node, Allowed)
@@ -888,10 +888,10 @@ is_allowed(Node, [AllowedNode|Allowed]) ->
         {host,AllowedHost} ->
             %% Allowed host name
             case split_node(Node) of
-                {node,_,AllowedHost} ->
+                {node,_,^AllowedHost} ->
                     %% Matching Host part
                     true;
-                {host,AllowedHost} ->
+                {host,^AllowedHost} ->
                     %% Host matches Host
                     true;
                 _ ->
@@ -900,10 +900,10 @@ is_allowed(Node, [AllowedNode|Allowed]) ->
         {name,AllowedName} ->
             %% Allowed name before '@'
             case split_node(Node) of
-                {node,AllowedName,_} ->
+                {node,^AllowedName,_} ->
                     %% Matching Name part
                     true;
-                {name,AllowedName} ->
+                {name,^AllowedName} ->
                     %% Name matches Name
                     true;
                 _ ->
@@ -948,7 +948,7 @@ recv_challenge_old(#hs_data{other_node=Node},
     ?trace("recv: 'n' node=~p, challenge=~w version=~w\n",
            [Ns, Challenge, _Version]),
     try {list_to_existing_atom(Ns), Flags band ?DFLAG_HANDSHAKE_23} of
-        {Node, 0} ->
+        {^Node, 0} ->
             {Flags, Challenge, ?CREATION_UNKNOWN};
         _ ->
             ?shutdown2(no_node, {recv_challenge_failed, version, Msg})
@@ -982,7 +982,7 @@ recv_challenge_new(#hs_data{other_node=Node},
     case Flags band ?DFLAG_HANDSHAKE_23 of
         ?DFLAG_HANDSHAKE_23 ->
             try list_to_existing_atom(Ns) of
-                Node ->
+                ^Node ->
                     {Flags, Challenge, Creation};
                 _ ->
                     ?shutdown2(no_node, {recv_challenge_failed, no_node, Ns})
@@ -1033,7 +1033,7 @@ recv_challenge_reply(#hs_data{socket = Socket,
 		   [ChallengeB,SumB]),
 	    ?trace("sum = ~p\n", [SumA]),
 	    case list_to_binary(SumB) of
-		SumA ->
+		^SumA ->
 		    ChallengeB;
 		_ ->
 		    error_msg("** Connection attempt from node ~w rejected."
@@ -1053,7 +1053,7 @@ recv_challenge_ack(#hs_data{socket = Socket, f_recv = FRecv,
 	    ?trace("recv_ack: digest=~p\n", [SumB]),
 	    ?trace("sum = ~p\n", [SumA]),
 	    case list_to_binary(SumB) of
-		SumA ->
+		^SumA ->
 		    ok;
 		_ ->
 		    error_msg("** Connection attempt to node ~w cancelled."
@@ -1075,7 +1075,7 @@ recv_status(#hs_data{kernel_pid = Kernel, socket = Socket,
               _/binary>> = list_to_binary(Rest),
             dynamic = name_type(MyFlgs),
             {node, _Name, Host} = split_node(NodeName),
-            Host = HSData#hs_data.this_node,
+            ^Host = HSData#hs_data.this_node,
             HSData#hs_data{this_node = binary_to_atom(NodeName, utf8),
                            this_creation = Creation};
 
@@ -1196,7 +1196,7 @@ send_tick(DHandle, Socket, Tick, Type, MFTick, MFGetstat) ->
     T = T0 + 1,
     T1 = T rem 4,
     case getstat(DHandle, Socket, MFGetstat) of
-	{ok, Read, _, _} when Ticked0 =:= T ->
+	{ok, ^Read, _, _} when Ticked0 =:= T ->
 	    {error, not_responding};
 
         {ok, R, W1, Pend} ->
@@ -1250,7 +1250,7 @@ start_timer(Timeout) ->
 
 setup_timer(Pid, Timeout) ->
     receive
-	{Pid, reset} ->
+	{^Pid, reset} ->
 	    setup_timer(Pid, Timeout)
     after Timeout ->
 	    ?trace("Timer expires ~p, ~p~n",[Pid, Timeout]),

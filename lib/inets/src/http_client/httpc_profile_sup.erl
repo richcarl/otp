@@ -68,7 +68,7 @@ stop_child(Profile) ->
 id(Profile) ->
     DefaultProfile = httpc:default_profile(),
     case Profile of
-	DefaultProfile ->
+	^DefaultProfile ->
 	    httpc_manager;
 	_ ->
 	    {httpc, Profile}

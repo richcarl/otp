@@ -352,7 +352,7 @@ stylesheet(Options) ->
 			  ?STYLESHEET;
 		      "" ->
 			  "";    % no stylesheet
-		      S when is_list(S) ->
+		      ^S when is_list(S) ->
 			  S;
 		      _ ->
 			  report("bad value for option 'stylesheet'.",

@@ -590,7 +590,7 @@ next_loop_varbinds({table, TableOid, ME, TabOids},
  	"~n   TableOid: ~p"
  	"~n   Vb:       ~p", [TableOid, Vb]),
     case varbind_next(Vb, MibView) of
-	{table, TableOid, TableRestOid, _ME} ->
+	{table, ^TableOid, TableRestOid, _ME} ->
 	    next_loop_varbinds({table, TableOid, ME,
 				[{tab_oid(TableRestOid), Vb} | TabOids]},
 			       Vbs, MibView, Res, [], GbMaxVBs);
@@ -635,7 +635,7 @@ next_loop_varbinds({subagent, SAPid, SAOid, SAVbs},
 	"~n   SAOid: ~p"
  	"~n   Vb:    ~p", [SAPid, SAOid, Vb]),
     case varbind_next(Vb, MibView) of
-	{subagent, _SubAgentPid, SAOid} ->
+	{subagent, _SubAgentPid, ^SAOid} ->
 	    next_loop_varbinds({subagent, SAPid, SAOid,
 				[Vb | SAVbs]},
 			       Vbs, MibView, Res, [], GbMaxVBs);
@@ -1021,7 +1021,7 @@ do_get_bulk(MibView, NonRepeaters, MaxRepetitions,
 			    ?LIB:user_err("failed encoding varbind ~w:~n~p", 
                                           [Idx, Reason]),
 			    {genErr, Idx, []};
-			Res when is_list(Res) ->
+			^Res when is_list(Res) ->
 			    ?vtrace("do get bulk -> Res: "
 				    "~n   ~w", [Res]),
 			    {noError, 0, conv_res(Res)};

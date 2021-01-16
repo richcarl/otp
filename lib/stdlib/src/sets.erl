@@ -412,8 +412,8 @@ maybe_contract_segs(T) -> T.
 rehash([E|T], Slot1, Slot2, MaxN) ->
     {L1,L2} = rehash(T, Slot1, Slot2, MaxN),
     case erlang:phash(E, MaxN) of
-	Slot1 -> {[E|L1],L2};
-	Slot2 -> {L1,[E|L2]}
+	^Slot1 -> {[E|L1],L2};
+	^Slot2 -> {L1,[E|L2]}
     end;
 rehash([], _, _, _) -> {[],[]}.
 

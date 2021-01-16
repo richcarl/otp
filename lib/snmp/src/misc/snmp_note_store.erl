@@ -303,7 +303,7 @@ restart_timer(#state{timer = Pid, timeout = Timeout} = State) ->
     exit(Pid, kill),
     ?d("restart_timer -> await acknowledgement",[]),
     receive
-	{'EXIT', Pid, _Reason} ->
+	{'EXIT', ^Pid, _Reason} ->
 	    ok
     end,
     ?d("restart_timer -> start a new timer process",[]),
@@ -348,9 +348,9 @@ timer(Pid, active, Timeout) ->
 
 handle_get_note(Notes, Mod, Key) ->
     case ets:lookup(Notes, Key) of
-	[{Key, {infinity, Val}}] ->
+	[{^Key, {infinity, Val}}] ->
 	    Val;
-	[{Key, {BestBefore, Val}}] ->
+	[{^Key, {BestBefore, Val}}] ->
 	    ?vtrace("get note -> BestBefore: ~w", [BestBefore]),
 	    StartTime = Mod:system_start_time(), 
 	    ?vtrace("get note -> StartTime: ~w", [StartTime]),

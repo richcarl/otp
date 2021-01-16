@@ -424,7 +424,7 @@ check_password(User, Password, _Dir, DirData) ->
     case int_get_user(DirData, User) of
 	{ok, UStruct} ->
 	    case UStruct#httpd_user.password of
-		Password ->
+		^Password ->
 		    %% FIXME
 		    {yes, UStruct#httpd_user.username};
 		_ ->

@@ -51,9 +51,9 @@ start(Config) ->
 	case hdlt_ctrl:start(Config) of
 	    {ok, Pid} ->
 		receive
-		    {'EXIT', Pid, normal} ->
+		    {'EXIT', ^Pid, normal} ->
 			ok;
-		    {'EXIT', Pid, Reason} ->
+		    {'EXIT', ^Pid, Reason} ->
 			io:format("HDLT failed: "
 				  "~n   ~p"
 				  "~n", [Reason]),

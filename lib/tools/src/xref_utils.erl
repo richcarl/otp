@@ -457,7 +457,7 @@ find_beam(Module) when is_atom(Module) ->
 	non_existing ->
 	    error({no_such_module, Module});
 	preloaded ->
-	    {Module, {_M, _Bin, File}} = 
+	    {^Module, {_M, _Bin, File}} = 
                 {Module, code:get_object_code(Module)},
 	    {ok, File};
         cover_compiled ->

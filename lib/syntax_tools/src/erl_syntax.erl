@@ -1655,9 +1655,9 @@ revert_integer(Node) ->
 
 is_integer(Node, Value) ->
     case unwrap(Node) of
-	{integer, _, Value} ->
+	{integer, _, ^Value} ->
 	    true;
-	#tree{type = integer, data = Value} ->
+	#tree{type = integer, data = ^Value} ->
 	    true;
 	_ ->
 	    false
@@ -1801,9 +1801,9 @@ revert_char(Node) ->
 
 is_char(Node, Value) ->
     case unwrap(Node) of
-	{char, _, Value} ->
+	{char, _, ^Value} ->
 	    true;
-	#tree{type = char, data = Value} ->
+	#tree{type = char, data = ^Value} ->
 	    true;
 	_ ->
 	    false
@@ -1904,9 +1904,9 @@ revert_string(Node) ->
 
 is_string(Node, Value) ->
     case unwrap(Node) of
-	{string, _, Value} ->
+	{string, _, ^Value} ->
 	    true;
-	#tree{type = string, data = Value} ->
+	#tree{type = string, data = ^Value} ->
 	    true;
 	_ ->
 	    false
@@ -2001,9 +2001,9 @@ revert_atom(Node) ->
 
 is_atom(Node, Value) ->
     case unwrap(Node) of
-	{atom, _, Value} ->
+	{atom, _, ^Value} ->
 	    true;
-	#tree{type = atom, data = Value} ->
+	#tree{type = atom, data = ^Value} ->
 	    true;
 	_ ->
 	    false

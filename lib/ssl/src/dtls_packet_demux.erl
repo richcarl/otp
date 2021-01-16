@@ -257,12 +257,12 @@ next_datagram(Socket, N) ->
 handle_active_once(Client, Pid, #state{dtls_msq_queues = MsgQueues} = State0) ->
     Queue0 = kv_get(Client, MsgQueues),
     case queue:out(Queue0) of
-	{{value, Pid}, _} when is_pid(Pid) ->
+	{{value, ^Pid}, _} when is_pid(Pid) ->
 	    State0;
 	{{value, Msg}, Queue} ->	      
 	    Pid ! Msg,
 	    State0#state{dtls_msq_queues = kv_update(Client, Queue, MsgQueues)};
-	{empty, Queue0} ->
+	{empty, ^Queue0} ->
 	    State0#state{dtls_msq_queues = kv_update(Client, queue:in(Pid, Queue0), MsgQueues)}
     end.
 

@@ -712,7 +712,7 @@ mlo([]) -> [].
 sort_emulator_restart(Mode,Before,After) ->
     {Before1,After1} =
 	case filter_out(restart_new_emulator, After) of
-	    After ->
+	    ^After ->
 		{Before,After};
 	    A1 when Mode==up ->
 		{[restart_new_emulator|Before],A1};
@@ -721,7 +721,7 @@ sort_emulator_restart(Mode,Before,After) ->
 	end,
     After2 =
 	case filter_out(restart_emulator, After1) of
-	    After1 ->
+	    ^After1 ->
 		After1;
 	    A2 ->
 		A2++[restart_emulator]
@@ -1070,7 +1070,7 @@ restriction(Rs, G) ->
     lists:foreach(
       fun(R) ->
 	      case digraph:vertex(G, R) of
-		  {R, Data} ->
+		  {^R, Data} ->
 		      digraph:add_vertex(H, R, Data);
 		  _  ->
 		      ok
@@ -1082,7 +1082,7 @@ restriction(Rs, G) ->
       fun(GE) ->
 	      {_, GV1, GV2, GData} = digraph:edge(G, GE),
 	      case {digraph:vertex(H, GV1), digraph:vertex(H, GV2)} of
-		  {{GV1, _}, {GV2, _}} ->
+		  {{^GV1, _}, {^GV2, _}} ->
 		      digraph:add_edge(H, GE, GV1, GV2, GData);
 		  _  ->
 		      ok

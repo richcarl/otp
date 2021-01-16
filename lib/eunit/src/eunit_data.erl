@@ -582,7 +582,7 @@ get_module_tests_1(M, Es) ->
 		Fs1 ->
 		    Fs ++ [{"module '" ++ Name1 ++ "'", Fs1}]
 	    catch
-		{module_not_found, M1} ->
+		{module_not_found, ^M1} ->
 		    Fs
 	    end;
 	true ->
@@ -645,7 +645,7 @@ objfile_test({M, File}) ->
      fun () ->
 	     %% TODO: better error/stacktrace for this internal fun
 	     code:purge(M),
-	     {module,M} = code:load_abs(filename:rootname(File)),
+	     {module,^M} = code:load_abs(filename:rootname(File)),
 	     ok
      end,
      {module, M}};

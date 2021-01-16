@@ -598,7 +598,7 @@ insert_op(Tid, _, {op, change_table_copy_type, N, FromS, ToS, TabDef}, InPlace, 
 		    file:delete(Logtmp),
 		    restore_indexes(Tab, ToS, Cs);
 
-		{{ext,_FromAlias,_FromMod} = FromS, ToS} ->
+		{{ext,_FromAlias,_FromMod}, _} ->
 		    disc_delete_table(Tab, FromS),
 		    case ToS of
 			ram_copies ->
@@ -888,7 +888,7 @@ insert_op(Tid, _, {op, merge_schema, TabDef}, InPlace, InitBy) ->
 	    %% I think this is a good place to do it.
 	    Update = fun(NS = {Node,Storage}) ->
 			     case mnesia_lib:cs_to_storage_type(Node, Cs) of
-				 Storage -> NS;
+				 ^Storage -> NS;
 				 disc_copies when Node == node() ->
 				     Dir = mnesia_lib:dir(),
 				     ok = mnesia_schema:opt_create_dir(true, Dir),
@@ -947,7 +947,7 @@ insert_op(Tid, _, {op, del_table_copy, Storage, Node, TabDef}, InPlace, InitBy) 
 		    mnesia_checkpoint:tm_del_copy(Tab, Node);
 		true ->
 		    case val({Tab, where_to_read}) of
-			Node ->
+			^Node ->
 			    mnesia_lib:set_remote_where_to_read(Tab);
 			_  ->
 			    ignore
@@ -1072,7 +1072,7 @@ change_disc_to_ram(Tab, Cs, FromS, ToS, Logtmp, InitBy) ->
 	    ignore;
 	_ ->
 	    %% ram table will already have been created
-	    Tab = ets:info(Tab, name),  %% assertion
+	    ^Tab = ets:info(Tab, name),  %% assertion
 	    load_from_logfile(ToS, Tab, Logtmp),
 	    PosList = Cs#cstruct.index,
 	    mnesia_index:init_indecies(Tab, ToS, PosList)
@@ -1346,7 +1346,7 @@ raw_named_dump_table(Tab, Ftype) ->
 		    {repair, mnesia_monitor:get_env(auto_repair)},
 		    {type, DiskType}],
 	    case mnesia_lib:dets_sync_open(TabRef, Args) of
-		{ok, TabRef} ->
+		{ok, ^TabRef} ->
 		    Storage = ram_copies,
 		    mnesia_lib:db_fixtable(Storage, Tab, true),
 
@@ -1473,7 +1473,7 @@ regulate(nopid) ->
 regulate(RegulatorPid) ->
     RegulatorPid ! {regulate, self()},
     receive
-	{regulated, RegulatorPid} -> ok
+	{regulated, ^RegulatorPid} -> ok
     end.
 
 %% Local function in order to avoid external function call

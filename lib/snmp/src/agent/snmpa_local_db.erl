@@ -554,7 +554,7 @@ handle_call({register_notify_client, Client, Module}, _From, State) ->
 	"~n   Module: ~p", [Client, Module]),
     Nc = State#state.notify_clients,
     case lists:keysearch(Client,1,Nc) of
-	{value,{Client,Mod}} ->
+	{value,{^Client,Mod}} ->
 	    ?vlog("register_notify_client: already registered to: ~p",
 		  [Module]),
 	    {reply, {error,{already_registered,Mod}}, State};
@@ -566,7 +566,7 @@ handle_call({unregister_notify_client, Client}, _From, State) ->
     ?vlog("unregister_notify_client: ~p",[Client]),
     Nc = State#state.notify_clients,
     case lists:keysearch(Client,1,Nc) of
-	{value,{Client,_Module}} ->
+	{value,{^Client,_Module}} ->
 	    Nc1 = lists:keydelete(Client,1,Nc),
 	    {reply, ok, State#state{notify_clients = Nc1}};
 	false ->
@@ -674,7 +674,7 @@ handle_backup(D, BackupDir) ->
 	Filename ->
 	    ?vinfo("handle_backup -> file to backup: ~n   ~p", [Filename]),
 	    case filename:dirname(Filename) of
-		BackupDir ->
+		^BackupDir ->
 		    ?vinfo("handle_backup -> backup dir and db dir the same", 
 			   []),
 		    {error, db_dir};
@@ -754,7 +754,7 @@ dets_backup(read, Cont1, D, B) ->
 %% Find larger element and insert before.
 handle_create_row(Db, Name, Indexes, Row, State) ->		
     case table_find_first_after_maybe_same(Db, Name, Indexes, State) of
-	{{Name, Next}, {NRow, NPrev, NNext}} ->
+	{{^Name, Next}, {NRow, NPrev, NNext}} ->
 	    {value, {PRow, PPrev, _PNext}} = lookup(Db, {Name, NPrev}, State),
 	    if 
 		Next =:= NPrev ->
@@ -771,9 +771,9 @@ handle_create_row(Db, Name, Indexes, Row, State) ->
 
 handle_delete_row(Db, Name, Indexes, State) ->
     {value, {_, Prev, Next}} = lookup(Db, {Name, Indexes}, State),
-    {value, {PRow, PPrev, Indexes}} = lookup(Db, {Name, Prev}, State),
+    {value, {PRow, PPrev, ^Indexes}} = lookup(Db, {Name, Prev}, State),
     insert(Db, {Name, Prev}, {PRow, PPrev, Next}, State),
-    {value, {NRow, Indexes, NNext}} = lookup(Db, {Name, Next}, State),
+    {value, {NRow, ^Indexes, NNext}} = lookup(Db, {Name, Next}, State),
     insert(Db, {Name, Next}, {NRow, Prev, NNext}, State),
     delete(Db, {Name, Indexes}, State).
 
@@ -802,7 +802,7 @@ handle_delete(Db, Name, Indexes, State) ->
 %%-----------------------------------------------------------------
 table_search_next(Db, Name, Indexes, State) ->
     case catch table_find_first_after(Db, Name, Indexes, State) of
-	{{Name, Key}, {_, _, _Next}} ->
+	{{^Name, Key}, {_, _, _Next}} ->
 	    case Key of
 		first -> endOfTable;
 		_ -> Key

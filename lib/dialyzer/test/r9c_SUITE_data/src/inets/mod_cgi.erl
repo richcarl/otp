@@ -279,7 +279,7 @@ exec_script(true, Info, Script, AfterScript, RequestURI) ->
     [Script_Name|_] = string:tokens(RequestURI, "?"),
     Env  = env(Info, Script_Name, AfterScript),
     Port = (catch open_port({spawn,Script},[stream,{cd, Dir},{env, Env}])),
-    ?vtrace("exec_script -> Port: ~w",[Port]),
+    ?vtrace("exec_script -> ^Port: ~w",[Port]),
     case Port of
 	P when port(P) ->
 	    %% Send entity_body to port.
@@ -287,7 +287,7 @@ exec_script(true, Info, Script, AfterScript, RequestURI) ->
 		      [] ->
 			  true;
 		      EntityBody ->
-			  (catch port_command(Port, EntityBody))
+			  (catch port_command(^Port, EntityBody))
 		  end,
 	    case Res of
 		{'EXIT',Reason} ->

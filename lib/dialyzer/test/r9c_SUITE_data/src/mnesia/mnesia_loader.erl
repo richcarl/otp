@@ -353,7 +353,7 @@ tab_receiver(Node, Tab, Storage, Cs, PConv, OrigTabRec) ->
 	    dbg_out("Sender of table ~p crashed on node ~p ~n", [Tab, Node]),
 	    down(Tab, Storage);
 
-	{'EXIT', Pid, Reason} ->
+	{'EXIT', ^Pid, Reason} ->
 	    handle_exit(Pid, Reason),
 	    tab_receiver(Node, Tab, Storage, Cs, PConv,OrigTabRec)
     end.
@@ -411,7 +411,7 @@ do_init_table(Tab,Storage,Cs,SenderPid,
 	    Error
     end.
 
-make_table_fun(Pid, TabRec) ->
+make_table_fun(Pid, ^TabRec) ->
     fun(close) ->
 	    ok;
        (read) ->

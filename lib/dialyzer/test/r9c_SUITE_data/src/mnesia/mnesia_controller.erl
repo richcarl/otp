@@ -350,7 +350,7 @@ do_force_load_table(Tab) ->
     Loaded = ?catch_val({Tab, load_reason}),
     case Loaded of
 	unknown ->
-	    set({Tab, load_by_force}, true),
+	    set({^Tab, load_by_force}, true),
 	    mnesia_late_loader:async_late_disc_load(node(), [Tab], forced_by_user),
 	    wait_for_tables([Tab], infinity);
 	{'EXIT', _} ->

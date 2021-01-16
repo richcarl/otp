@@ -307,7 +307,7 @@ backup(#tab{id = ID, file = File, checksum = Checksum}, BackupDir) ->
     ?vtrace("backup ~p to ~p", [ID, BackupDir]),
     Filename = filename:basename(File),
     case filename:join(BackupDir, Filename) of
-	File ->
+	^File ->
 	    %% Oups: backup-dir and db-dir the same
 	    {error, db_dir};
 	BackupFile ->

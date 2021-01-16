@@ -67,8 +67,8 @@ start(Mode) ->
 	    Me = self(),
 	    Pid = spawn_link(fun() -> do_start(Me) end),
 	    receive
-		{Pid,started} -> Pid;
-		{Pid,Error} -> exit(Error)
+		{^Pid,started} -> Pid;
+		{^Pid,Error} -> exit(Error)
 	    end;
 	Pid ->
 	    case ct_util:get_mode() of
@@ -114,10 +114,10 @@ call(Msg) ->
     Ref = make_ref(),
     ct_config_server ! {Msg,{self(),Ref}},
     receive
-	{Ref, Result} ->
+	{^Ref, Result} ->
 	    erlang:demonitor(MRef, [flush]),
 	    Result;
-	{'DOWN',MRef,process,_,Reason} ->
+	{'DOWN',^MRef,process,_,Reason} ->
 	    {error,{ct_util_server_down,Reason}}
     end.
 
@@ -339,9 +339,9 @@ get_config(KeyOrName,Default,Opts) when is_atom(KeyOrName) ->
     case get_config({KeyOrName}, Default, Opts) of
 	%% If only an atom is given, then we need to unwrap the
 	%% key if it is returned
-	{{KeyOrName}, Val} ->
+	{{^KeyOrName}, Val} ->
 	    {KeyOrName, Val};
-	[{{KeyOrName}, _Val}|_] = Res ->
+	[{{^KeyOrName}, _Val}|_] = Res ->
 	    [{K, Val} || {{K},Val} <- Res, K == KeyOrName];
 	Else ->
 	    Else
@@ -380,7 +380,7 @@ get_config([SubKeys], Vals, Default, _Opts) when is_list(SubKeys) ->
     end;
 get_config([Key|Rest], Vals, Default, Opts) ->
     case do_get_config([Key], Vals, []) of
-	{ok, [{Key,NewVals}]} ->
+	{ok, [{^Key,NewVals}]} ->
 	    get_config(Rest, NewVals, Default, Opts);
 	_ ->
 	    Default
@@ -390,7 +390,7 @@ do_get_config([Key|_], Available, _Mapped) when not is_list(Available) ->
     {error,{not_available,Key}};
 do_get_config([Key|Required],Available,Mapped) ->
     case lists:keysearch(Key,1,Available) of
-	{value,{Key,Value}} ->
+	{value,{^Key,Value}} ->
 	    NewAvailable = lists:keydelete(Key,1,Available),
 	    NewMapped = [{Key,Value}|Mapped],
 	    do_get_config(Required,NewAvailable,NewMapped);
@@ -491,7 +491,7 @@ release_allocated([]) ->
 allocate(Name,Key) ->
     Ref = make_ref(),
     case get_config(Key,Ref,[all,element]) of
-	[{_,Ref}] ->
+	[{_,^Ref}] ->
 	    {error,{not_available,Key}};
 	Configs ->
 	    associate(Name,Key,Configs),
@@ -555,7 +555,7 @@ do_require(Name,Key) ->
 	    %% already allocated - check that it has all required subkeys
 	    R = make_ref(),
 	    case get_config(Key,R,[]) of
-		R ->
+		^R ->
 		    {error,{not_available,Key}};
 		{error,_} = Error ->
 		    Error;
@@ -723,7 +723,7 @@ check_callback_load(Callback) ->
 	    check_exports(Callback);
 	false ->
 	    case code:load_file(Callback) of
-		{module, Callback} ->
+		{module, ^Callback} ->
 		    check_exports(Callback);
 		{error, Error} ->
 		    {error, Error}
@@ -744,7 +744,7 @@ check_config_files(Configs) ->
     ConfigChecker = fun
 	({Callback, [F|_R]=Files}) ->
 	    case check_callback_load(Callback) of
-		{ok, Callback} ->
+		{ok, ^Callback} ->
 			if is_integer(F) ->
 				Callback:check_parameter(Files);
 			   is_list(F) ->
@@ -758,7 +758,7 @@ check_config_files(Configs) ->
 	    end;
 	({Callback, []}) ->
 	    case check_callback_load(Callback) of
-		{ok, Callback} ->
+		{ok, ^Callback} ->
 		     Callback:check_parameter([]);
 		{error, Why} ->
 		     {error, {callback, {Callback,Why}}}

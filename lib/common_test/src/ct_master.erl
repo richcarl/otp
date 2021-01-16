@@ -230,7 +230,7 @@ start_master(NodeOptsList,EvHandlers,MasterLogDir,LogDirs,InitOptions,Specs) ->
 					     MasterLogDir,LogDirs,
 					     InitOptions,Specs]),
     receive 
-	{Master,Result} -> Result
+	{^Master,Result} -> Result
     end.	    
 
 init_master(Parent,NodeOptsList,EvHandlers,MasterLogDir,LogDirs,
@@ -434,7 +434,7 @@ master_loop(State=#state{node_ctrl_pids=NodeCtrlPids,
 	 {call,{abort,Nodes},From} ->
 	    lists:foreach(fun(Node) ->
 				  case lists:keysearch(Node,2,NodeCtrlPids) of
-				      {value,{Pid,Node}} ->
+				      {value,{Pid,^Node}} ->
 					  log(all,"Test Info",
 					      "Aborting tests on ~w",[Node]),
 					  exit(Pid,kill);
@@ -490,7 +490,7 @@ update_queue(take,Node,From,Lock={Op,Resource},Locks,Blocked) ->
 update_queue(release,Node,_From,Lock={Op,Resource},Locks,Blocked) ->
     Locks1 = lists:delete({Lock,Node},Locks),
     case lists:keysearch(Lock,1,Blocked) of
-	{value,E={Lock,SomeNode,WaitingPid}} ->
+	{value,E={^Lock,SomeNode,WaitingPid}} ->
 	    Blocked1 = lists:delete(E,Blocked),
 	    log(html,"Lock Info","Node ~w proceeds with ~w. Resource: ~tp",
 		[SomeNode,Op,Resource]),
@@ -516,7 +516,7 @@ release_locks(_,[],Locks,Blocked) ->
 
 get_node(Pid,NodeCtrlPids) ->
     case lists:keysearch(Pid,1,NodeCtrlPids) of
-	{value,{Pid,Node}} ->
+	{value,{^Pid,Node}} ->
 	    {Node,lists:keydelete(Pid,1,NodeCtrlPids)};
 	false ->
 	    undefined
@@ -524,7 +524,7 @@ get_node(Pid,NodeCtrlPids) ->
 
 get_pid(Node,NodeCtrlPids) ->
     case lists:keysearch(Node,2,NodeCtrlPids) of
-	{value,{Pid,Node}} ->
+	{value,{Pid,^Node}} ->
 	    {Pid,lists:keydelete(Node,2,NodeCtrlPids)};
 	false ->
 	    undefined
@@ -591,7 +591,7 @@ init_node_ctrl(MasterPid,Cookie,Opts) ->
     %% but now we set it explicitly for the connection so that test suites
     %% can change the cookie for the node if they wish
     case erlang:get_cookie() of
-	Cookie ->			% first time or cookie not changed
+	^Cookie ->			% first time or cookie not changed
 	    erlang:set_cookie(node(MasterPid),Cookie);
 	_ ->
 	    ok
@@ -673,9 +673,9 @@ call(Pid,Msg) ->
     Ref = erlang:monitor(process,Pid),
     Pid ! {call,Msg,self()},
     Return = receive
-		 {Pid,Result} ->
+		 {^Pid,Result} ->
 		     Result;
-		 {'DOWN', Ref, _, _, _} ->
+		 {'DOWN', ^Ref, _, _, _} ->
 		     {error,master_died}
 	     end,	    
     erlang:demonitor(Ref, [flush]),
@@ -715,7 +715,7 @@ start_nodes(InitOptions)->
 		{value, {callback_module, Callback}, NodeStart2}=
 		    lists:keytake(callback_module, 1, NodeStart),
 		case Callback:start(Host, Node, NodeStart2) of
-		    {ok, NodeName} ->
+		    {ok, ^NodeName} ->
 			io:format("Node ~w started successfully "
 				  "with callback ~w~n", [NodeName,Callback]);
 		    {error, Reason, _NodeName} ->

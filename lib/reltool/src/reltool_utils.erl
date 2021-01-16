@@ -216,7 +216,7 @@ assign_image_list(ListCtrl) ->
 
 get_latest_resize(#wx{obj = ObjRef, event = #wxSize{}} = Wx) ->
     receive
-	#wx{obj = ObjRef, event = #wxSize{}} = Wx2 ->
+	#wx{obj = ^ObjRef, event = #wxSize{}} = Wx2 ->
 	    get_latest_resize(Wx2)
     after 10 ->
 	    Wx
@@ -226,7 +226,7 @@ get_latest_resize(#wx{obj = ObjRef, event = #wxSize{}} = Wx) ->
 
 wait_for_stop_motion(ObjRef, {_,_}=Pos) ->
     receive
-	#wx{obj = ObjRef, event = #wxMouse{type = motion, x=X, y=Y}} ->
+	#wx{obj = ^ObjRef, event = #wxMouse{type = motion, x=X, y=Y}} ->
 	    wait_for_stop_motion(ObjRef, {X,Y})
     after 100 ->
 	    Pos
@@ -665,12 +665,12 @@ call(Pid, Msg) when is_pid(Pid) ->
     Ref = erlang:monitor(process, Pid),
     Pid ! {call, self(), Ref, Msg},
     receive
-        {Ref, Reply} ->
+        {^Ref, Reply} ->
             Reply;
-        {'EXIT', Pid, Reason} ->
+        {'EXIT', ^Pid, Reason} ->
             erlang:demonitor(Ref, [flush]),
             {error, Reason};
-	{'DOWN', Ref, _, _, Reason} ->
+	{'DOWN', ^Ref, _, _, Reason} ->
             {error, Reason}
     end.
 

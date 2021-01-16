@@ -111,7 +111,7 @@ insert_keywords_into_ets(DB, [Word | T]) ->
 
 reserved_word(X) ->
     case ets:lookup(get(db), X) of
-	[{X, reserved_word}] -> 
+	[{^X, reserved_word}] -> 
 	    true;
 	_ -> 
 	    false

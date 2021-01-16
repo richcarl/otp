@@ -214,7 +214,7 @@ set_app_default(App, Dir0, Opts) ->
 	    AppName = atom_to_list(App),
 	    Dir = edoc_lib:simplify_path(filename:absname(Dir0)),
 	    AppDir = case filename:basename(Dir) of
-			 AppName ->
+			 ^AppName ->
 			     filename:dirname(Dir);
 			 _ ->
 			     ?APP_DEFAULT

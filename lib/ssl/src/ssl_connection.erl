@@ -619,7 +619,7 @@ read_application_data_deliver(State, Front, BufferSize, Rear, SocketOpts0, RecvF
 read_application_dist_data(DHandle, [Bin|Front], BufferSize, Rear) ->
     read_application_dist_data(DHandle, Front, BufferSize, Rear, Bin);
 read_application_dist_data(_DHandle, [] = Front, BufferSize, [] = Rear) ->
-    BufferSize = 0,
+    ^BufferSize = 0,
     {Front,BufferSize,Rear};
 read_application_dist_data(DHandle, [], BufferSize, Rear) ->
     [Bin|Front] = lists:reverse(Rear),
@@ -719,7 +719,7 @@ iovec_from_front(Size, [], Rear, Acc) ->
             iovec_from_front(Size, [Bin1,Bin2], [], Acc);
         [Bin3,Bin2,Bin1] ->
             iovec_from_front(Size, [Bin1,Bin2,Bin3], [], Acc);
-        [_,_,_|_] = Rear ->
+        [_,_,_|_] ->
             iovec_from_front(Size, lists:reverse(Rear), [], Acc)
     end;
 iovec_from_front(Size, [Bin|Front], Rear, []) ->
@@ -1185,7 +1185,7 @@ certify(internal, #server_hello_done{},
 	       connection_states = ConnectionStates0} = State0, Connection) ->
     case ssl_handshake:master_secret(ssl:tls_version(Version), Session,
 				     ConnectionStates0, client) of
-	{MasterSecret, ConnectionStates} ->
+	{^MasterSecret, ConnectionStates} ->
 	    State = State0#state{connection_states = ConnectionStates},
 	    client_certify_and_key_exchange(State, Connection);
 	#alert{} = Alert ->
@@ -1968,7 +1968,7 @@ certify_client_key_exchange(#encrypted_premaster_secret{premaster_secret= EncPMS
         try ssl_handshake:premaster_secret(EncPMS, Key) of
             Secret when erlang:byte_size(Secret) == ?NUM_OF_PREMASTERSECRET_BYTES ->
                 case Secret of
-                    <<?BYTE(Major), ?BYTE(Minor), Rest/binary>> -> %% Correct
+                    <<?BYTE(^Major), ?BYTE(^Minor), Rest/binary>> -> %% Correct
                         <<?BYTE(Major), ?BYTE(Minor), Rest/binary>>;
                     <<?BYTE(_), ?BYTE(_), Rest/binary>> -> %% Version mismatch
                         <<?BYTE(Major), ?BYTE(Minor), Rest/binary>>
@@ -2835,7 +2835,7 @@ handle_resumed_session(SessId, #state{static_env = #static_env{host = Host,
                                       ssl_options = Opts} = State) ->
 
     Session = case maps:get(reuse_session, Opts, undefined) of
-        {SessId,SessionData} when is_binary(SessId), is_binary(SessionData) ->
+        {^SessId,SessionData} when is_binary(SessId), is_binary(SessionData) ->
              binary_to_term(SessionData, [safe]);
         _Else ->
              CacheCb:lookup(Cache, {{Host, Port}, SessId})
@@ -3231,7 +3231,7 @@ update_ssl_options_from_sni(#{sni_fun := SNIFun,
 	    undefined ->
 		proplists:get_value(SNIHostname, 
 				    SNIHosts);
-	    SNIFun ->
+	    ^SNIFun ->
 		SNIFun(SNIHostname)
 	end,
     case SSLOption of

@@ -142,7 +142,7 @@ ensure_all_started(Application, Type, Started) ->
     case start(Application, Type) of
 	ok ->
 	    {ok, [Application | Started]};
-	{error, {already_started, Application}} ->
+	{error, {already_started, ^Application}} ->
 	    {ok, Started};
 	{error, {not_started, Dependency}} ->
 	    case ensure_all_started(Dependency, Type, Started) of
@@ -195,7 +195,7 @@ ensure_started(Application, RestartType) ->
     case start(Application, RestartType) of
 	ok ->
 	    ok;
-	{error, {already_started, Application}} ->
+	{error, {already_started, ^Application}} ->
 	    ok;
 	Error ->
 	    Error

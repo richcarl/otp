@@ -347,7 +347,7 @@ handle_call({unsafe_open_dets, Tab, Args}, _From, State) ->
 	    {reply, {error,Reason}, State}
     end;
 
-handle_call({close_dets, Tab}, _From, State) ->
+handle_call({close_dets, ^Tab}, _From, State) ->
     case mnesia_lib:dets_sync_close(Tab) of
 	ok ->
 	    {reply, ok, State};
@@ -359,7 +359,7 @@ handle_call({close_dets, Tab}, _From, State) ->
     end;
 
 handle_call({unsafe_close_dets, Tab}, _From, State) ->
-    mnesia_lib:dets_sync_close(Tab),
+    mnesia_lib:dets_sync_close(^Tab),
     {reply, ok, State};
 
 handle_call({open_log, Args}, _From, State) ->

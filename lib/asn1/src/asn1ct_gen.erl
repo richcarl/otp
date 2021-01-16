@@ -1424,7 +1424,7 @@ conform_value(_, Value) -> Value.
 
 named_bitstring_value(List, Names) ->
     Int = lists:foldl(fun(N, A) ->
-			      {N,Pos} = lists:keyfind(N, 1, Names),
+			      {^N,Pos} = lists:keyfind(N, 1, Names),
 			      A bor (1 bsl Pos)
 		      end, 0, List),
     named_bitstring_value_1(<<>>, Int).
@@ -1538,7 +1538,7 @@ get_fieldtype([],_FieldName)->
     {no_type,no_name};
 get_fieldtype([Field|Rest],FieldName) ->
     case element(2,Field) of
-	FieldName ->
+	^FieldName ->
 	    case element(1,Field) of
 		fixedtypevaluefield ->
 		    {element(1,Field),FieldName,element(3,Field)};

@@ -668,7 +668,7 @@ round(C, [Arg]) ->
 
 select_on_attribute([E = #xmlElement{attributes = Attrs}|T], K, V, Acc) ->
     case lists:keysearch(K, #xmlAttribute.name, Attrs) of
-	{value, #xmlAttribute{value = V}} ->
+	{value, #xmlAttribute{value = ^V}} ->
 	    Acc2 = select_on_attribute(E#xmlElement.content,K,V,[E|Acc]),
 	    select_on_attribute(T, K, V, Acc2);
 	_ ->

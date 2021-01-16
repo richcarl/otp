@@ -1988,7 +1988,7 @@ handle_guard_call(Guard, Map, Env, Eval, State) ->
       handle_guard_type_test(Guard, F, Map, Env, Eval, State);
     {erlang, is_function, 2} ->
       handle_guard_is_function(Guard, Map, Env, Eval, State);
-    MFA when (MFA =:= {erlang, internal_is_record, 3}) or
+    ^MFA when (MFA =:= {erlang, internal_is_record, 3}) or
 	     (MFA =:= {erlang, is_record, 3}) ->
       handle_guard_is_record(Guard, Map, Env, Eval, State);
     {erlang, '=:=', 2} ->
@@ -2612,7 +2612,7 @@ signal_guard_fatal_fail(Eval, Guard, ArgTypes, State) ->
 signal_guard_failure(Eval, Guard, ArgTypes, Tag, State) ->
   Args = cerl:call_args(Guard),
   F = cerl:atom_val(cerl:call_name(Guard)),
-  {M, F, A} = MFA = {cerl:atom_val(cerl:call_module(Guard)), F, length(Args)},
+  {M, ^F, A} = MFA = {cerl:atom_val(cerl:call_module(Guard)), F, length(Args)},
   Opaques = State#state.opaques,
   {Kind, XInfo} =
     case erl_bif_types:opaque_args(M, F, A, ArgTypes, Opaques) of

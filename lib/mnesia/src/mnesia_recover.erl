@@ -189,14 +189,14 @@ call(Msg) ->
     case Pid of
 	undefined ->
 	    {error, {node_not_running, node()}};
-	Pid ->
+	^Pid ->
 	    link(Pid),
 	    Res = gen_server:call(Pid, Msg, infinity),
 	    unlink(Pid),
 
             %% We get an exit signal if server dies
             receive
-                {'EXIT', Pid, _Reason} ->
+                {'EXIT', ^Pid, _Reason} ->
                     {error, {node_not_running, node()}}
             after 0 ->
                     Res
@@ -297,7 +297,7 @@ get_mnesia_downs() ->
 %% Check if we have got a mnesia_down from Node
 has_mnesia_down(Node) ->
     case ?ets_lookup(mnesia_decision, Node) of
-	[{mnesia_down, Node, _Date, _Time}] ->
+	[{mnesia_down, ^Node, _Date, _Time}] ->
 	    true;
 	[] ->
 	    false
@@ -329,12 +329,12 @@ log_master_nodes(Args, UseDir, IsRunning) ->
 	    Repair = mnesia:system_info(auto_repair),
 	    OpenArgs = [{file, Fname}, {name, Name}, {repair, Repair}],
 	    case disk_log:open(OpenArgs) of
-		{ok, Name} ->
+		{ok, ^Name} ->
 		    log_master_nodes2(Args, UseDir, IsRunning, ok);
-		{repaired, Name, {recovered,  _R}, {badbytes, _B}}
+		{repaired, ^Name, {recovered,  _R}, {badbytes, _B}}
 		  when Exists == true ->
 		    log_master_nodes2(Args, UseDir, IsRunning, ok);
-		{repaired, Name, {recovered,  _R}, {badbytes, _B}}
+		{repaired, ^Name, {recovered,  _R}, {badbytes, _B}}
 		  when Exists == false ->
 		    mnesia_log:write_trans_log_header(),
 		    log_master_nodes2(Args, UseDir, IsRunning, ok);

@@ -440,7 +440,7 @@ purge_and_load(Mod, File, Opts) ->
     case compile:output_generated(Opts) of
 	true ->
 	    case atom_to_list(Mod) of
-		Base ->
+		^Base ->
 		    code:purge(Mod),
                     %% Note that load_abs() adds the object file suffix
 		    case code:load_abs(OutFile, Mod) of
@@ -876,7 +876,7 @@ get_compile_info(L, Tag) ->
     case lists:keyfind(compile, 1, L) of
 	{compile, I} ->
 	    case lists:keyfind(Tag, 1, I) of
-		{Tag, Val} -> {ok,Val};
+		{^Tag, Val} -> {ok,Val};
 		false -> error
 	    end;
 	false -> error
@@ -1151,7 +1151,7 @@ appcall(App, M, F, Args) ->
     catch
 	error:undef:S ->
 	    case S of
-		[{M,F,Args,_}|_] ->
+		[{^M,^F,^Args,_}|_] ->
 		    Arity = length(Args),
 		    io:format("Call to ~w:~w/~w in application ~w failed.\n",
 			      [M,F,Arity,App]);

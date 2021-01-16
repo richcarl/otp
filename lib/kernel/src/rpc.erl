@@ -490,9 +490,9 @@ do_srv_call(Node, Request, Timeout) ->
 		  exit({self(),Tag,Result})
 	  end),
     receive
-	{'DOWN',Mref,_,_,{Receiver,Tag,Result}} ->
+	{'DOWN',^Mref,_,_,{^Receiver,^Tag,Result}} ->
 	    rpc_check(Result);
-	{'DOWN',Mref,_,_,Reason} ->
+	{'DOWN',^Mref,_,_,Reason} ->
 	    %% The middleman code failed. Or someone did 
 	    %% exit(_, kill) on the middleman process => Reason==killed
 	    rpc_check_t({'EXIT',Reason})
@@ -535,9 +535,9 @@ server_call(Node, Name, ReplyWrapper, Msg)
 	    Ref = erlang:monitor(process, {Name, Node}),
 	    {Name, Node} ! {self(), Msg},
 	    receive
-		{'DOWN', Ref, _, _, _} ->
+		{'DOWN', ^Ref, _, _, _} ->
 		    {error, nodedown};
-		{ReplyWrapper, Node, Reply} ->
+		{^ReplyWrapper, ^Node, Reply} ->
 		    erlang:demonitor(Ref, [flush]),
 		    Reply
 	    end
@@ -805,15 +805,15 @@ mc_fail_requests(Res, [{Node, ReqId} | NRs]) ->
             ok;
         false ->
             receive
-                {{spawn_reply, Res, Node}, ReqId, error, _} ->
+                {{spawn_reply, ^Res, ^Node}, ^ReqId, error, _} ->
                     ok;
-                {{spawn_reply, Res, Node}, ReqId, ok, Pid} ->
+                {{spawn_reply, ^Res, ^Node}, ^ReqId, ok, Pid} ->
                     case erlang:demonitor(ReqId, [info]) of
                         true ->
                             ok;
                         false ->
                             receive
-                                {'DOWN', ReqId, process, Pid, _} ->
+                                {'DOWN', ^ReqId, process, ^Pid, _} ->
                                     ok
                             after
                                 0 ->
@@ -832,7 +832,7 @@ mc_spawn_replies(_Res, 0, ReqMap, _MFA, _Deadline) ->
 mc_spawn_replies(Res, Outstanding, ReqMap, MFA, Deadline) ->
     Timeout = time_left(Deadline),
     receive
-        {{spawn_reply, Res, _}, _, _, _} = Reply ->
+        {{spawn_reply, ^Res, _}, _, _, _} = Reply ->
             NewReqMap = mc_handle_spawn_reply(Reply, ReqMap, MFA, Deadline),
             mc_spawn_replies(Res, Outstanding-1, NewReqMap, MFA, Deadline)
     after
@@ -897,7 +897,7 @@ mc_results(Res, [{N,ReqId}|NRs] = OrigNRs, OkAcc, ErrAcc,
                 false ->
                     %% Reply has been delivered now; handle it...
                     receive
-                        {{spawn_reply, Res, _}, ReqId, _, _} = Reply ->
+                        {{spawn_reply, ^Res, _}, ^ReqId, _, _} = Reply ->
                             NewReqMap = mc_handle_spawn_reply(Reply, ReqMap,
                                                               MFA, Deadline),
                             mc_results(Res, OrigNRs, OkAcc, ErrAcc,
@@ -909,7 +909,7 @@ mc_results(Res, [{N,ReqId}|NRs] = OrigNRs, OkAcc, ErrAcc,
         {spawn, Pid} ->
             Timeout = time_left(Deadline),
             receive
-                {'DOWN', ReqId, process, Pid, Reason} ->
+                {'DOWN', ^ReqId, process, ^Pid, Reason} ->
                     case ?RPCIFY(erpc:call_result(down, ReqId, Res, Reason)) of
                         {badrpc, nodedown} ->
                             mc_results(Res, NRs, OkAcc, [N|ErrAcc],
@@ -926,7 +926,7 @@ mc_results(Res, [{N,ReqId}|NRs] = OrigNRs, OkAcc, ErrAcc,
                                        ReqMap, MFA, Deadline);
                         false ->
                             receive
-                                {'DOWN', ReqId, process, Pid, Reason} ->
+                                {'DOWN', ^ReqId, process, ^Pid, Reason} ->
                                     case ?RPCIFY(erpc:call_result(down,
                                                                   ReqId,
                                                                   Res,
@@ -949,9 +949,9 @@ mc_results(Res, [{N,ReqId}|NRs] = OrigNRs, OkAcc, ErrAcc,
         {spawn_server, Mon, Pid} ->
             %% Old node with timeout on the call...
             Result = receive
-                         {'DOWN', Mon, process, Pid, {Res, CallRes}} ->
+                         {'DOWN', ^Mon, process, ^Pid, {^Res, CallRes}} ->
                              rpc_check(CallRes);
-                         {'DOWN', Mon, process, Pid, Reason} ->
+                         {'DOWN', ^Mon, process, ^Pid, Reason} ->
                              rpc_check_t({'EXIT',Reason})
                      end,
             case Result of
@@ -1045,13 +1045,13 @@ rec_nodes(_Name, [],  Badnodes, Replies) ->
     {Replies, Badnodes};
 rec_nodes(Name, [{N,R} | Tail], Badnodes, Replies) ->
     receive
-	{'DOWN', R, _, _, _} ->
+	{'DOWN', ^R, _, _, _} ->
 	    rec_nodes(Name, Tail, [N|Badnodes], Replies);
-	{?NAME, N, {nonexisting_name, _}} ->  
+	{?NAME, ^N, {nonexisting_name, _}} ->  
 	    %% used by sbcast()
 	    erlang:demonitor(R, [flush]),
 	    rec_nodes(Name, Tail, [N|Badnodes], Replies);
-	{Name, N, Reply} ->  %% Name is bound !!!
+	{^Name, ^N, Reply} ->  %% Name is bound !!!
 	    erlang:demonitor(R, [flush]),
 	    rec_nodes(Name, Tail, Badnodes, [Reply|Replies])
     end.
@@ -1182,9 +1182,9 @@ nb_yield({Proxy, Mon}, Tmo) when is_pid(Proxy),
                                  ?IS_VALID_TMO(Tmo) ->
     Me = self(),
     receive
-        {'DOWN', Mon, process, Proxy, {async_call_result, Me, R}} ->
+        {'DOWN', ^Mon, process, ^Proxy, {async_call_result, ^Me, R}} ->
             {value,R};
-        {'DOWN', Mon, process, Proxy, Reason} ->
+        {'DOWN', ^Mon, process, ^Proxy, Reason} ->
             {value, {badrpc, {'EXIT', Reason}}}
     after Tmo ->
             timeout

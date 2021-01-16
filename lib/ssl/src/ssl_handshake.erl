@@ -412,7 +412,7 @@ verify_signature({3, Minor}, Hash, {HashAlgo, SignAlgo}, Signature, {?rsaEncrypt
 verify_signature({3, Minor}, Hash, _HashAlgo, Signature, {?rsaEncryption, PubKey, _PubKeyParams}) when Minor =< 2 ->
     case public_key:decrypt_public(Signature, PubKey,
 				   [{rsa_pad, rsa_pkcs1_padding}]) of
-	Hash -> true;
+	^Hash -> true;
 	_   -> false
     end;
 verify_signature({3, 4}, Hash, {HashAlgo, _SignAlgo}, Signature, {?'id-ecPublicKey', PubKey, PubKeyParams}) ->
@@ -484,7 +484,7 @@ verify_connection(Version, #finished{verify_data = Data},
 		  Role, PrfAlgo, MasterSecret, {_, Handshake}) ->
     %% use the previous hashes
     case calc_finished(Version, Role, PrfAlgo, MasterSecret, Handshake) of
-	Data ->
+	^Data ->
 	    verified;
 	_ ->
 	    ?ALERT_REC(?FATAL, ?DECRYPT_ERROR)
@@ -2605,7 +2605,7 @@ decode_extensions(<<?UINT16(?RENEGOTIATION_EXT), ?UINT16(Len),
 			      Info; % should be <<0>> will be matched in handle_renegotiation_info
 			  _ ->
 			      VerifyLen = Len - 1,
-			      <<?BYTE(VerifyLen), VerifyInfo/binary>> = Info,
+			      <<?BYTE(^VerifyLen), VerifyInfo/binary>> = Info,
 			      VerifyInfo
 		      end,
     decode_extensions(Rest, Version, MessageType,
@@ -2622,7 +2622,7 @@ decode_extensions(<<?UINT16(?SIGNATURE_ALGORITHMS_EXT), ?UINT16(Len),
 		       ExtData:Len/binary, Rest/binary>>, Version, MessageType, Acc)
   when Version < {3,4} ->
     SignAlgoListLen = Len - 2,
-    <<?UINT16(SignAlgoListLen), SignAlgoList/binary>> = ExtData,
+    <<?UINT16(^SignAlgoListLen), SignAlgoList/binary>> = ExtData,
     HashSignAlgos = [{ssl_cipher:hash_algorithm(Hash), ssl_cipher:sign_algorithm(Sign)} ||
 			<<?BYTE(Hash), ?BYTE(Sign)>> <= SignAlgoList],
     decode_extensions(Rest, Version, MessageType,
@@ -2634,7 +2634,7 @@ decode_extensions(<<?UINT16(?SIGNATURE_ALGORITHMS_EXT), ?UINT16(Len),
 		       ExtData:Len/binary, Rest/binary>>, Version, MessageType, Acc)
   when Version =:= {3,4} ->
     SignSchemeListLen = Len - 2,
-    <<?UINT16(SignSchemeListLen), SignSchemeList/binary>> = ExtData,
+    <<?UINT16(^SignSchemeListLen), SignSchemeList/binary>> = ExtData,
     %% Ignore unknown signature algorithms
     Fun = fun(Elem) ->
                   case ssl_cipher:signature_scheme(Elem) of
@@ -2654,7 +2654,7 @@ decode_extensions(<<?UINT16(?SIGNATURE_ALGORITHMS_EXT), ?UINT16(Len),
 decode_extensions(<<?UINT16(?SIGNATURE_ALGORITHMS_CERT_EXT), ?UINT16(Len),
 		       ExtData:Len/binary, Rest/binary>>, Version, MessageType, Acc) ->
     SignSchemeListLen = Len - 2,
-    <<?UINT16(SignSchemeListLen), SignSchemeList/binary>> = ExtData,
+    <<?UINT16(^SignSchemeListLen), SignSchemeList/binary>> = ExtData,
     %% Ignore unknown signature algorithms
     Fun = fun(Elem) ->
                   case ssl_cipher:signature_scheme(Elem) of

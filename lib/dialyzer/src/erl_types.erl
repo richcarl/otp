@@ -1855,7 +1855,7 @@ map_pairwise_merge(F, As0, ADefK, ADefV, Bs0, BDefK, BDefV) ->
   MK = K1, %% Rename to make clear that we are matching below
   case F(K1, AMNess1, AV1, BMNess1, BV1) of
     false ->         map_pairwise_merge(F,As1,ADefK,ADefV,Bs1,BDefK,BDefV);
-    {MK,_,_}=M -> [M|map_pairwise_merge(F,As1,ADefK,ADefV,Bs1,BDefK,BDefV)]
+    {^MK,_,_}=M -> [M|map_pairwise_merge(F,As1,ADefK,ADefV,Bs1,BDefK,BDefV)]
   end.
 
 %% Folds over the pairs in two maps simultaneously in reverse key order. Missing
@@ -1941,7 +1941,7 @@ map_remove(Key, Map) ->
       ?map(Pairs,DefK,DefV) = Map,
       case lists:keyfind(Key, 1, Pairs) of
         false -> Map;
-        {Key, _, _} ->
+        {^Key, _, _} ->
           Pairs1 = lists:keydelete(Key, 1, Pairs),
           t_map(Pairs1, DefK, DefV)
       end
@@ -2017,9 +2017,9 @@ map_is_key(Key, ?map(Pairs, DefK, _DefV)) ->
   case is_singleton_type(Key) of
     true ->
       case lists:keyfind(Key, 1, Pairs) of
-	{Key, ?mand, _}     -> t_atom(true);
-	{Key, ?opt,  ?none} -> t_atom(false);
-	{Key, ?opt,  _}     -> t_boolean();
+	{^Key, ?mand, _}     -> t_atom(true);
+	{^Key, ?opt,  ?none} -> t_atom(false);
+	{^Key, ?opt,  _}     -> t_boolean();
 	false ->
 	  case t_do_overlap(DefK, Key) of
 	    false -> t_atom(false);
@@ -3137,7 +3137,7 @@ is_compat_opaque_names(Opaque1, Opaque2) ->
   #opaque{mod = Mod2, name = Name2, args = Args2} = Opaque2,
   case {{Mod1, Name1, Args1}, {Mod2, Name2, Args2}} of
     {ModNameArgs, ModNameArgs} -> true;
-    {{Mod, Name, Args1}, {Mod, Name, Args2}} ->
+    {{Mod, Name, ^Args1}, {Mod, Name, ^Args2}} ->
       is_compat_args(Args1, Args2);
     _ -> false
   end.
@@ -3293,7 +3293,7 @@ inf_tuple_sets(L1, L2, Opaques) ->
 inf_tuple_sets([{Arity, Tuples1}|Ts1], [{Arity, Tuples2}|Ts2], Acc, Opaques) ->
   case inf_tuples_in_sets(Tuples1, Tuples2, Opaques) of
     [] -> inf_tuple_sets(Ts1, Ts2, Acc, Opaques);
-    [?tuple_set([{Arity, NewTuples}])] ->
+    [?tuple_set([{^Arity, NewTuples}])] ->
       inf_tuple_sets(Ts1, Ts2, [{Arity, NewTuples}|Acc], Opaques);
     NewTuples -> inf_tuple_sets(Ts1, Ts2, [{Arity, NewTuples}|Acc], Opaques)
   end;
@@ -3837,7 +3837,7 @@ t_subtract(?int_set(Set1), ?int_set(Set2)) ->
 t_subtract(?int_range(From1, To1) = T1, ?int_range(_, _) = T2) ->
   case t_inf(T1, T2) of
     ?none -> T1;
-    ?int_range(From1, To1) -> ?none;
+    ?int_range(^From1, ^To1) -> ?none;
     ?int_range(neg_inf, To) -> t_from_range(To + 1, To1);
     ?int_range(From, pos_inf) -> t_from_range(From1, From - 1);
     ?int_range(From, To) -> t_sup(t_from_range(From1, From - 1),
@@ -4178,7 +4178,7 @@ t_limit_k(?map(Pairs0, DefK0, DefV0), K) ->
   Fun = fun({EK, MNess, EV}, {Exact, DefK1, DefV1}) ->
 	    LV = t_limit_k(EV, K - 1),
 	    case t_limit_k(EK, K - 1) of
-	      EK -> {[{EK,MNess,LV}|Exact], DefK1, DefV1};
+	      ^EK -> {[{EK,MNess,LV}|Exact], DefK1, DefV1};
 	      LK -> {Exact, t_sup(LK, DefK1), t_sup(LV, DefV1)}
 	    end
 	end,
@@ -5212,7 +5212,7 @@ check_fields(RecName, [{type, _, field_type, [{atom, _, Name}, Abstr]}|Left],
   M = site_module(Site0),
   Site = {record, {M, RecName, length(DeclFields)}},
   {Type, C1} = t_from_form(Abstr, ET, Site, MR, V, C),
-  {Name, _, DeclType} = lists:keyfind(Name, 1, DeclFields),
+  {^Name, _, DeclType} = lists:keyfind(Name, 1, DeclFields),
   TypeNoVars = subst_all_vars_to_any(Type),
   case t_is_subtype(TypeNoVars, DeclType) of
     false -> {error, Name};
@@ -5309,9 +5309,9 @@ t_form_to_string({type, _L, binary, [Base, Unit]} = Type) ->
 	{0, 0} -> "<<>>";
 	{8, 0} -> "binary()";
 	{1, 0} -> "bitstring()";
-	{0, B} -> flat_format("<<_:~w>>", [B]);
-	{U, 0} -> flat_format("<<_:_*~w>>", [U]);
-	{U, B} -> flat_format("<<_:~w,_:_*~w>>", [B, U])
+	{0, ^B} -> flat_format("<<_:~w>>", [B]);
+	{^U, 0} -> flat_format("<<_:_*~w>>", [U]);
+	{^U, ^B} -> flat_format("<<_:~w,_:_*~w>>", [B, U])
       end;
     _ -> io_lib:format("Badly formed bitstr type ~w", [Type])
   end;
@@ -5469,7 +5469,7 @@ lookup_record(Tag, Table) when is_atom(Tag) ->
 
 lookup_record(Tag, Arity, Table) when is_atom(Tag) ->
   case maps:find({record, Tag}, Table) of
-    {ok, {_FileLine, [{Arity, Fields}]}} -> {ok, Fields};
+    {ok, {_FileLine, [{^Arity, Fields}]}} -> {ok, Fields};
     {ok, {_FileLine, OrdDict}} -> orddict:find(Arity, OrdDict);
     error -> error
   end.
@@ -5498,7 +5498,7 @@ is_recursive(TypeName, TypeNames) ->
   lists:member(TypeName, TypeNames).
 
 can_unfold_more(TypeName, TypeNames) ->
-  Fun = fun(E, Acc) -> case E of TypeName -> Acc + 1; _ -> Acc end end,
+  Fun = fun(E, Acc) -> case E of ^TypeName -> Acc + 1; _ -> Acc end end,
   lists:foldl(Fun, 0, TypeNames) < ?REC_TYPE_LIMIT.
 
 -spec do_opaque(erl_type(), opaques(), fun((_) -> T)) -> T.

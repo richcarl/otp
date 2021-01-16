@@ -184,7 +184,7 @@ do_find_ticket(#state{db = Db,
 
 iterate_tickets(Iter0, Pid, Hash, SNI, Lifetime) ->
     case gb_trees:next(Iter0) of
-        {Key, #data{hkdf = Hash,
+        {Key, #data{hkdf = ^Hash,
                     sni = TicketSNI,
                     timestamp = Timestamp,
                     lock = Lock}, Iter} when Lock =:= undefined orelse

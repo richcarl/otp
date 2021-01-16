@@ -60,7 +60,7 @@ lookup(Table,Key,Undefined) ->
 
 %% multi_lookup
 
-multi_lookup(Table,Key) ->
+multi_lookup(Table,^Key) ->
     remove_key(ets:lookup(Table,Key)).
 
 remove_key([]) ->

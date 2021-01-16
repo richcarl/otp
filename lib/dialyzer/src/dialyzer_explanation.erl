@@ -29,10 +29,10 @@
 
 expl_loop(Parent, CServer, Plt) ->
   receive
-    {Parent, warning, _Warning} ->
+    {^Parent, warning, _Warning} ->
       send_explanation(Parent, none),
       expl_loop(Parent, CServer, Plt);
-    {Parent, further, _Explanation} -> 
+    {^Parent, further, _Explanation} -> 
       Parent ! {self(), further, none},
       expl_loop(Parent, CServer, Plt);
     Other ->

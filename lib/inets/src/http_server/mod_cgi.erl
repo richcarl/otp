@@ -189,7 +189,7 @@ strip_extention(FileName, []) ->
     FileName;
 strip_extention(FileName, [Extention | Extentions]) ->
     case filename:basename(FileName, Extention) of
-	FileName ->
+	^FileName ->
 	    strip_extention(FileName, Extentions); 
 	NewFileName ->
 	    NewFileName
@@ -212,7 +212,7 @@ exec_script(true, ModData, Script, AfterScript, _RequestURI) ->
     Port = (catch open_port({spawn, Script},[binary, stream,
 					     {cd, Dir}, {env, Env}])),
     case Port of
-	Port when is_port(Port) ->
+	^Port when is_port(Port) ->
 	    send_request_body_to_script(ModData, Port),
 	    deliver_webpage(ModData, Port); % Take care of script output
 	Error ->
@@ -265,7 +265,7 @@ deliver_webpage(#mod{config_db = Db} = ModData, Port) ->
 		    handle_body(Port, ModData, Body, Timeout, size(Body),
 				IsDisableChunkedSend)
 	    end;
-	{'EXIT', Port, Reason} ->
+	{'EXIT', ^Port, Reason} ->
 	    process_flag(trap_exit, false),
 	    {proceed, [{status, {400, none, reason(Reason)}} |
 		       ModData#mod.data]};
@@ -279,7 +279,7 @@ deliver_webpage(#mod{config_db = Db} = ModData, Port) ->
 	    
 receive_headers(Port, Module, Function, Args, Timeout) ->
       receive
-	  {Port, {data, Response}} when is_port(Port) ->
+	  {^Port, {data, Response}} when is_port(Port) ->
 	      case Module:Function([Response | Args]) of
 		  {NewModule, NewFunction, NewArgs} ->
 		      receive_headers(Port, NewModule, 
@@ -287,7 +287,7 @@ receive_headers(Port, Module, Function, Args, Timeout) ->
 		  {ok, {Headers, Body}} ->
 		      {Headers, Body}
 	      end;
-	  {'EXIT', Port, Reason} when is_port(Port) ->
+	  {'EXIT', ^Port, Reason} when is_port(Port) ->
 	      {'EXIT', Port, Reason};
 	  {'EXIT', Pid, Reason} when is_pid(Pid) ->
 	      exit({linked_process_died, Pid, Reason})
@@ -308,15 +308,15 @@ handle_body(Port, #mod{method = "HEAD"} = ModData, _, _, Size, _) ->
 handle_body(Port, ModData, Body, Timeout, Size, IsDisableChunkedSend) ->
     httpd_response:send_chunk(ModData, Body, IsDisableChunkedSend),
     receive 
-	{Port, {data, Data}} when is_port(Port) ->
+	{^Port, {data, Data}} when is_port(Port) ->
 	    handle_body(Port, ModData, Data, Timeout, Size + size(Data),
 			IsDisableChunkedSend);
-	{'EXIT', Port, normal} when is_port(Port) ->
+	{'EXIT', ^Port, normal} when is_port(Port) ->
 	    httpd_response:send_final_chunk(ModData, IsDisableChunkedSend),
 	    process_flag(trap_exit,false),
 	    {proceed, [{response, {already_sent, 200, Size}} |
 		       ModData#mod.data]};
-	{'EXIT', Port, Reason} when is_port(Port) ->
+	{'EXIT', ^Port, Reason} when is_port(Port) ->
 	    process_flag(trap_exit, false),
 	    {proceed, [{status, {400, none, reason(Reason)}} | 
 		       ModData#mod.data]};

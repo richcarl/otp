@@ -2124,7 +2124,7 @@ scan_element(">" ++ T, S0 = #xmerl_scanner{event_fun = Event,
 		   _ ->				SpaceDefault
 	       end,
 
-    E0=processed_whole_element(S,Pos,Name,Attrs1,Lang,Parents,NSI,Namespace),
+    ^E0=processed_whole_element(S,Pos,Name,Attrs1,Lang,Parents,NSI,Namespace),
     S1 = #xmerl_scanner{} = Event(#xmerl_event{event = started,
 					       line = StartL,
 					       col = StartC,
@@ -2493,7 +2493,7 @@ check_att_default_val(Name,'ID',S=#xmerl_scanner{rules_write_fun=Write,
     case Read(id,SName,S) of
 	undeclared -> %% was referenced in IDREF/IDREFS before defined
 	    Delete(id,SName,S);
-	SName -> ?fatal({values_must_be_unique,'ID',SName},S);
+	^SName -> ?fatal({values_must_be_unique,'ID',SName},S);
 	undefined -> ok
     end,
     Write(id,SName,SName,S);
@@ -3968,7 +3968,7 @@ normalize("&"++T,S,IsNorm) ->
     end;
 normalize(T,S,IsNorm) ->
     case strip(T,S) of
-	{_,T,S} ->
+	{_,^T,^S} ->
 	    {T,S,IsNorm};
 	{_,T1,S1} ->
 	    normalize(T1,S1,true)

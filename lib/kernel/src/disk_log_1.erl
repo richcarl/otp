@@ -172,9 +172,9 @@ handle_chunk(B= <<Size:?SIZESZ/unit:8, ?BIGMAGICINT:?MAGICSZ/unit:8,
     MD5 = erlang:md5(<<Size:?SIZESZ/unit:8>>),
     case Tail of
         %% The requested object is always bigger than a chunk.
-        <<MD5:16/binary, Bin:Size/binary>> ->
+        <<^MD5:16/binary, Bin:Size/binary>> ->
             {#continuation{pos = Pos, b = []}, [Bin | Ack]};
-        <<MD5:16/binary, _/binary>> ->
+        <<^MD5:16/binary, _/binary>> ->
             BytesToRead = Size + ?HEADERSZ + 16,
             {#continuation{pos = Pos - byte_size(B), b = BytesToRead}, Ack};
         _ when byte_size(Tail) >= 16 ->
@@ -266,10 +266,10 @@ handle_chunk_ro(B= <<Size:?SIZESZ/unit:8, ?BIGMAGICINT:?MAGICSZ/unit:8,
                 Tail/binary>>, Pos, N, Ack, Bad) -> % when Size>=?MIN_MD5_TERM
     MD5 = erlang:md5(<<Size:?SIZESZ/unit:8>>),
     case Tail of
-        <<MD5:16/binary, Bin:Size/binary>> ->
+        <<^MD5:16/binary, Bin:Size/binary>> ->
             %% The requested object is always bigger than a chunk.
             {#continuation{pos = Pos, b = []}, [Bin | Ack], Bad};
-        <<MD5:16/binary, _/binary>> ->
+        <<^MD5:16/binary, _/binary>> ->
             BytesToRead = Size + ?HEADERSZ + 16,
             {#continuation{pos = Pos - byte_size(B), b = BytesToRead}, Ack, Bad};
         <<_BadMD5:16/binary, _:1/unit:8, Tail2/binary>> ->
@@ -534,14 +534,14 @@ scan_f(B = <<Size:?SIZESZ/unit:8, ?BIGMAGICINT:?MAGICSZ/unit:8, Tail/binary>>,
        FSz, Ack, No, Bad) -> % when Size >= ?MIN_MD5_TERM
     MD5 = erlang:md5(<<Size:?SIZESZ/unit:8>>),
     case Tail of
-        <<MD5:16/binary, BinTerm:Size/binary, Tail2/binary>> ->
+        <<^MD5:16/binary, BinTerm:Size/binary, Tail2/binary>> ->
             case catch binary_to_term(BinTerm) of
                 {'EXIT', _} ->
                     scan_f(Tail2, FSz, Ack, No, Bad+Size);
                 _Term ->
                     scan_f(Tail2, FSz, [BinTerm | Ack], No+1, Bad)
             end;
-        <<MD5:16/binary, _/binary>> ->
+        <<^MD5:16/binary, _/binary>> ->
             {B, Size-byte_size(Tail)+16, Ack, No, Bad};
         _ when byte_size(Tail) < 16 ->
             {B, Size-byte_size(Tail)+16, Ack, No, Bad};
@@ -1366,7 +1366,7 @@ inc_wrap(FName, CurF, MaxF) ->
 		    NewFt = inc(CurF, NewMaxF),
 		    {NewFt, MaxF}
 	    end;
-	MaxF ->
+	^MaxF ->
 	    %% Normal case.
 	    NewFt = inc(CurF, MaxF),
 	    {NewFt, MaxF}
@@ -1409,7 +1409,7 @@ remove_files(FName, N, Max, Reply) ->
 get_wrap_size(#handle{maxB = MaxB, maxF = MaxF}) ->
     case MaxF of
 	{NewMaxF,_} -> {MaxB, NewMaxF};
-	MaxF        -> {MaxB, MaxF}
+	^MaxF        -> {MaxB, MaxF}
     end.
 
 add_ext(Name, Ext) ->

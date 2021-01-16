@@ -152,7 +152,7 @@ monitor_return({Error, Mon}) when is_reference(Mon) ->
     %% Failure; wait for spawned process to terminate
     %% and release resources, then return the error...
     receive
-        {'DOWN', Mon, process, _Pid, _Reason} ->
+        {'DOWN', ^Mon, process, _Pid, _Reason} ->
             ok
     end,
     Error.
@@ -213,10 +213,10 @@ do_call(Process, Label, Request, infinity)
     %% the process being terminated (as opposed to 'noconnection')...
     Process ! {Label, {self(), Mref}, Request},
     receive
-        {Mref, Reply} ->
+        {^Mref, Reply} ->
             erlang:demonitor(Mref, [flush]),
             {ok, Reply};
-        {'DOWN', Mref, _, _, Reason} ->
+        {'DOWN', ^Mref, _, _, Reason} ->
             exit(Reason)
     end;
 do_call(Process, Label, Request, Timeout) when is_atom(Process) =:= false ->
@@ -233,18 +233,18 @@ do_call(Process, Label, Request, Timeout) when is_atom(Process) =:= false ->
     erlang:send(Process, {Label, {self(), Tag}, Request}, [noconnect]),
 
     receive
-        {[alias | Mref], Reply} ->
+        {[alias | ^Mref], Reply} ->
             erlang:demonitor(Mref, [flush]),
             {ok, Reply};
-        {'DOWN', Mref, _, _, noconnection} ->
+        {'DOWN', ^Mref, _, _, noconnection} ->
             Node = get_node(Process),
             exit({nodedown, Node});
-        {'DOWN', Mref, _, _, Reason} ->
+        {'DOWN', ^Mref, _, _, Reason} ->
             exit(Reason)
     after Timeout ->
             erlang:demonitor(Mref, [flush]),
             receive
-                {[alias | Mref], Reply} ->
+                {[alias | ^Mref], Reply} ->
                     {ok, Reply}
             after 0 ->
                     exit(timeout)
@@ -291,10 +291,10 @@ do_send_request(Process, Label, Request) ->
         {reply, Reply::term()} | 'timeout' | {error, {term(), server_ref()}}.
 wait_response(Mref, Timeout) when is_reference(Mref) ->
     receive
-        {[alias|Mref], Reply} ->
+        {[alias|^Mref], Reply} ->
             erlang:demonitor(Mref, [flush]),
             {reply, Reply};
-        {'DOWN', Mref, _, Object, Reason} ->
+        {'DOWN', ^Mref, _, Object, Reason} ->
             {error, {Reason, Object}}
     after Timeout ->
             timeout
@@ -304,15 +304,15 @@ wait_response(Mref, Timeout) when is_reference(Mref) ->
         {reply, Reply::term()} | 'timeout' | {error, {term(), server_ref()}}.
 receive_response(Mref, Timeout) when is_reference(Mref) ->
     receive
-        {[alias|Mref], Reply} ->
+        {[alias|^Mref], Reply} ->
             erlang:demonitor(Mref, [flush]),
             {reply, Reply};
-        {'DOWN', Mref, _, Object, Reason} ->
+        {'DOWN', ^Mref, _, Object, Reason} ->
             {error, {Reason, Object}}
     after Timeout ->
             erlang:demonitor(Mref, [flush]),
             receive
-                {[alias|Mref], Reply} ->
+                {[alias|^Mref], Reply} ->
                     {reply, Reply}
             after 0 ->
                     timeout
@@ -323,10 +323,10 @@ receive_response(Mref, Timeout) when is_reference(Mref) ->
         {reply, Reply::term()} | 'no_reply' | {error, {term(), server_ref()}}.
 check_response(Msg, Mref) when is_reference(Mref) ->
     case Msg of
-        {[alias|Mref], Reply} ->
+        {[alias|^Mref], Reply} ->
             erlang:demonitor(Mref, [flush]),
             {reply, Reply};
-        {'DOWN', Mref, _, Object, Reason} ->
+        {'DOWN', ^Mref, _, Object, Reason} ->
             {error, {Reason, Object}};
         _ ->
             no_reply
@@ -377,7 +377,7 @@ do_for_proc(Process, Fun)
 	    Node = node(Pid),
 	    try Fun(Pid)
 	    catch
-		exit:{nodedown, Node} ->
+		exit:{nodedown, ^Node} ->
 		    %% A nodedown not yet detected by global,
 		    %% pretend that it was.
 		    exit(noproc)
@@ -449,7 +449,7 @@ get_proc_name(Pid) when is_pid(Pid) ->
     Pid;
 get_proc_name({local, Name}) ->
     case process_info(self(), registered_name) of
-	{registered_name, Name} ->
+	{registered_name, ^Name} ->
 	    Name;
 	{registered_name, _Name} ->
 	    exit(process_not_registered);

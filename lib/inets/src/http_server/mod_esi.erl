@@ -346,11 +346,11 @@ handle_body(Pid, ModData, Body, Timeout, Size, StatusCode, IsDisableChunkedSend)
 	{ok, Data} ->
 	    handle_body(Pid, ModData, Data, Timeout, Size + length(Data), StatusCode,
 			IsDisableChunkedSend);
-	{'EXIT', Pid, normal} when is_pid(Pid) ->
+	{'EXIT', ^Pid, normal} when is_pid(Pid) ->
 	    httpd_response:send_final_chunk(ModData, IsDisableChunkedSend),
 	    {proceed, [{response, {already_sent, StatusCode, Size}} | 
 		       ModData#mod.data]};
-	{'EXIT', Pid, Reason} when is_pid(Pid) ->
+	{'EXIT', ^Pid, Reason} when is_pid(Pid) ->
 	    httpd_util:error_log(ModData#mod.config_db,  
                                  httpd_logger:error_report('HTTP', 
                                                            [{mod_esi, Reason}], ModData, ?LOCATION)),
@@ -370,7 +370,7 @@ handle_body(Pid, ModData, Body, Timeout, Size, StatusCode, IsDisableChunkedSend)
 kill_esi_delivery_process(Pid) -> 
     exit(Pid, kill),
     receive 
-	{'EXIT', Pid, killed} ->	
+	{'EXIT', ^Pid, killed} ->	
 	    %% Clean message queue
 	    receive
 		{esi_data, _} ->

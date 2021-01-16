@@ -357,7 +357,7 @@ anno_info(Anno, Item, Default) ->
     try lists:keyfind(Item, 1, Anno) of
         false ->
             Default;
-        {Item, Value} ->
+        {^Item, Value} ->
             Value
     catch
         _:_ ->
@@ -366,7 +366,7 @@ anno_info(Anno, Item, Default) ->
 
 anno_info(Anno, Item) ->
     try lists:keyfind(Item, 1, Anno) of
-        {Item, Value} ->
+        {^Item, Value} ->
             Value;
         false ->
             undefined

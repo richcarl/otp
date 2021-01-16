@@ -155,15 +155,15 @@ test(Server, Tests, Options) ->
 
 test_run(Reference, Listeners) ->
     receive
-	{start, Reference} ->
+	{start, ^Reference} ->
 	    cast(Listeners, {start, Reference})
     end,
     receive
-	{done, Reference} ->
+	{done, ^Reference} ->
 	    cast(Listeners, {stop, Reference, self()}),
             wait_until_listeners_have_terminated(Listeners),
 	    receive
-		{result, Reference, Result} ->
+		{result, ^Reference, Result} ->
 		    Result
 	    end
     end.
@@ -177,7 +177,7 @@ cast([], _Msg) ->
 wait_until_listeners_have_terminated([P | Ps]) ->
     MRef = erlang:monitor(process, P),
     receive
-        {'DOWN', MRef, process, P, _} ->
+        {'DOWN', ^MRef, process, ^P, _} ->
             wait_until_listeners_have_terminated(Ps)
     end;
 wait_until_listeners_have_terminated([]) ->
@@ -240,7 +240,7 @@ event_logger_loop(Reference, FD) ->
 	{status, _Id, _Info}=Msg ->
 	    io:fwrite(FD, "~tp.\n", [Msg]),
 	    event_logger_loop(Reference, FD);
-	{stop, Reference, _ReplyTo} ->
+	{stop, ^Reference, _ReplyTo} ->
 	    %% no need to reply, just exit
 	    file:close(FD),
 	    exit(normal)

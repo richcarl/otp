@@ -363,7 +363,7 @@ timer_timeout(SysTime) ->
 	    erlang:min(Timeout, ?MAX_TIMEOUT);
 	Key ->
 	    case ets:lookup(?TIMER_TAB, Key) of
-		[{Key, timeout, MFA}] ->
+		[{^Key, timeout, MFA}] ->
 		    ets:delete(?TIMER_TAB,Key),
 		    do_apply(MFA),
 		    timer_timeout(SysTime);
@@ -424,7 +424,7 @@ next_timeout() ->
 %% Help functions
 do_apply({M,F,A}) ->
     case {M, F, A} of
-	{?MODULE, send, A} -> 
+	{?MODULE, send, ^A} -> 
 	    %% If send op. send directly, (faster than spawn)
 	    catch send(A);
 	{erlang, exit, [Name, Reason]} ->

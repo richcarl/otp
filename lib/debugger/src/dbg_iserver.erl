@@ -219,13 +219,13 @@ handle_call({load, Mod, Src, Bin}, _From, State) ->
     ModDb = ets:new(Mod, [ordered_set, public]),
     ModDbs = case ets:lookup(Db, {Mod, refs}) of
 		 [] -> [];
-		 [{{Mod, refs}, ModDbs1}] -> ModDbs1
+		 [{{^Mod, refs}, ModDbs1}] -> ModDbs1
 	     end,
     ets:insert(Db, {{Mod, refs}, [ModDb|ModDbs]}),
     ets:insert(Db, {ModDb, []}),
 
     %% Load the code
-    {ok, Mod} = dbg_iload:load_mod(Mod, Src, Bin, ModDb),
+    {ok, ^Mod} = dbg_iload:load_mod(Mod, Src, Bin, ModDb),
 
     %% Inform all subscribers and attached processes
     send_all([subscriber, attached], {interpret, Mod}, State),
@@ -237,8 +237,8 @@ handle_call({get_module_db, Mod, Pid}, _From, State) ->
     Db = State#state.db,
     Reply = case ets:lookup(Db, {Mod, refs}) of
 		[] -> not_found;
-		[{{Mod, refs}, [ModDb|_ModDbs]}] ->
-		    [{ModDb, Pids}] = ets:lookup(Db, ModDb),
+		[{{^Mod, refs}, [ModDb|_ModDbs]}] ->
+		    [{^ModDb, Pids}] = ets:lookup(Db, ModDb),
 		    ets:insert(Db, {ModDb, [Pid|Pids]}),
 		    ModDb
 	    end,
@@ -247,10 +247,10 @@ handle_call({lookup, Mod, Key}, _From, State) ->
     Db = State#state.db,
     Reply = case ets:lookup(Db, {Mod, refs}) of
 		[] -> not_found;
-		[{{Mod, refs}, [ModDb|_ModDbs]}] ->
+		[{{^Mod, refs}, [ModDb|_ModDbs]}] ->
 		    case ets:lookup(ModDb, Key) of
 			[] -> not_found;
-			[{Key, Value}] -> {ok, Value}
+			[{^Key, Value}] -> {ok, Value}
 		    end
 	    end,
     {reply, Reply, State};
@@ -258,19 +258,19 @@ handle_call({functions, Mod}, _From, State) ->
     Db = State#state.db,
     Reply = case ets:lookup(Db, {Mod, refs}) of
 		[] -> [];
-		[{{Mod, refs}, [ModDb|_ModDbs]}] ->
+		[{{^Mod, refs}, [ModDb|_ModDbs]}] ->
 		    Pattern = {{Mod,'$1','$2','_'}, '_'},
 		    ets:match(ModDb, Pattern)
 	    end,
     {reply, Reply, State};
 handle_call({contents, Mod, Pid}, _From, State) ->
     Db = State#state.db,
-    [{{Mod, refs}, ModDbs}] = ets:lookup(Db, {Mod, refs}),
+    [{{^Mod, refs}, ModDbs}] = ets:lookup(Db, {Mod, refs}),
     ModDb = if
 		Pid =:= any -> hd(ModDbs);
 		true ->
 		    lists:foldl(fun(T, not_found) ->
-					[{T, Pids}] = ets:lookup(Db, T),
+					[{^T, Pids}] = ets:lookup(Db, T),
 					case lists:member(Pid, Pids) of
 					    true -> T;
 					    false -> not_found
@@ -285,13 +285,13 @@ handle_call({contents, Mod, Pid}, _From, State) ->
 handle_call({raw_contents, Mod, Pid}, _From, State) ->
     Db = State#state.db,
     case ets:lookup(Db, {Mod, refs}) of
-	[{{Mod, refs}, ModDbs}] ->
+	[{{^Mod, refs}, ModDbs}] ->
 	    ModDb = 
 		if
 		    Pid =:= any -> hd(ModDbs);
 		    true ->
 			lists:foldl(fun(T, not_found) ->
-					    [{T, Pids}] = ets:lookup(Db, T),
+					    [{^T, Pids}] = ets:lookup(Db, T),
 					    case lists:member(Pid, Pids) of
 						true -> T;
 						false -> not_found
@@ -310,7 +310,7 @@ handle_call({is_interpreted, Mod, Name, Arity}, _From, State) ->
     Db = State#state.db,
     Reply = case ets:lookup(Db, {Mod, refs}) of
 		[] -> false;
-		[{{Mod, refs}, [ModDb|_ModDbs]}] ->
+		[{{^Mod, refs}, [ModDb|_ModDbs]}] ->
 		    Pattern = {{Mod,Name,Arity,'_'}, '_'},
 		    case ets:match_object(ModDb, Pattern) of
 			[{_Key, Clauses}] -> {true, Clauses};
@@ -374,7 +374,7 @@ handle_cast({delete_break, Point}, State) ->
     end;
 handle_cast({break_option, Point, Option, Value}, State) ->
     case lists:keyfind(Point, 1, State#state.breaks) of
-	{Point, Options} ->
+	{^Point, Options} ->
 	    N = case Option of
 		    status -> 1;
 		    action -> 2;
@@ -428,11 +428,11 @@ handle_cast({delete, Mod}, State) ->
     case ets:lookup(Db, {Mod, refs}) of
 	[] -> % Mod is not interpreted
 	    {noreply, State};
-	[{{Mod, refs}, ModDbs}] ->
+	[{{^Mod, refs}, ModDbs}] ->
 	    ets:delete(Db, {Mod, refs}),
 	    AllPids = lists:foldl(
 			fun(ModDb, PidsAcc) ->
-				[{ModDb, Pids}] = ets:lookup(Db, ModDb),
+				[{^ModDb, Pids}] = ets:lookup(Db, ModDb),
 				ets:delete(Db, ModDb),
 				ets:delete(ModDb),
 				PidsAcc++Pids

@@ -317,7 +317,7 @@ maybe_load(Mod, Load, Opts) ->
 do_load(Dir, Mod, load) ->
     code:purge(Mod),
     case code:load_abs(filename:join(Dir, Mod),Mod) of
-        {module,Mod} ->
+        {module,^Mod} ->
             {ok,Mod};
         Other ->
             Other
@@ -362,9 +362,9 @@ check_includes(File, IncludePath, ObjMTime) ->
 check_includes2(Epp, File, ObjMTime) ->
     A1 = erl_anno:new(1),
     case epp:parse_erl_form(Epp) of
-	{ok, {attribute, A1, file, {File, A1}}} ->
+	{ok, {attribute, ^A1, file, {^File, ^A1}}} ->
 	    check_includes2(Epp, File, ObjMTime);
-	{ok, {attribute, A1, file, {IncFile, A1}}} ->
+	{ok, {attribute, ^A1, file, {IncFile, ^A1}}} ->
 	    case file:read_file_info(IncFile) of
 		{ok, #file_info{mtime=MTime}} when MTime>ObjMTime ->
 		    epp:close(Epp),

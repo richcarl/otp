@@ -81,9 +81,9 @@ remove(Dbs) ->
                           NormalName = ssl_pem_cache:name(normal),
                           DistName = ssl_pem_cache:name(dist),
                           case Name of
-                              NormalName ->
+                              ^NormalName ->
                                   ok;
-                              DistName -> 
+                              ^DistName -> 
                                   ok;
                               _ ->
                                   true = ets:delete(Name)

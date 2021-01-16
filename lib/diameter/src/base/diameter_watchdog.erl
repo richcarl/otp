@@ -161,9 +161,9 @@ i({Ack, T, Pid, {Opts,
 
 wait(Ref, Pid) ->
     receive
-        Ref ->
+        ^Ref ->
             ok;
-        {'DOWN', _, process, Pid, _} = D ->
+        {'DOWN', _, process, ^Pid, _} = D ->
             exit({shutdown, D})
     end.
 
@@ -307,8 +307,8 @@ event(Msg,
     ?LOG(transition, {From, To}).
 
 data(Msg, TPid, reopen, okay) ->
-    {recv, TPid, _, 'DWA', _Pkt} = Msg,  %% assert
-    {TPid, T} = eraser(open),
+    {recv, ^TPid, _, 'DWA', _Pkt} = Msg,  %% assert
+    {^TPid, T} = eraser(open),
     [T];
 
 data({open, TPid, _Hosts, T}, TPid, _From, To)
@@ -553,7 +553,7 @@ okay({connect, _}, _, _) ->
 
 %% The peer hasn't been connected recently ...
 okay([{_,P}]) ->
-    P = self(),  %% assert
+    ^P = self(),  %% assert
     okay;
 
 %% ... or it has.
@@ -787,7 +787,7 @@ timeout(#watchdog{status = okay,
             S#watchdog{status = suspect};
         0 ->  %% non-standard: never move to suspect
             S;
-        N ->  %% non-standard: more timeouts before moving
+        ^N ->  %% non-standard: more timeouts before moving
             S#watchdog{num_dwa = N-1}
     end;
 

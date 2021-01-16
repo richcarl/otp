@@ -88,7 +88,7 @@ get_option_value(Key, OptionList, Default) ->
     case lists:keyfind(Key, 1, OptionList) of
 	false->
 	     Default;
-	{Key, Value}->
+	{^Key, Value}->
 	     Value
     end.
 
@@ -133,7 +133,7 @@ monitor_master_int(MasterNode) ->
     ct_util:mark_process(),
     erlang:monitor_node(MasterNode, true),
     receive
-        {nodedown, MasterNode}->
+        {nodedown, ^MasterNode}->
 	    init:stop()
     end.
 
@@ -200,9 +200,9 @@ do_start(Host, Node, Options) ->
 	    end,
             call_functions(ENode, Functions2),
 	    receive
-		{node_started, ENode}->
+		{node_started, ^ENode}->
 		    receive
-			{node_ready, ENode}->
+			{node_ready, ^ENode}->
 			    {ok, ENode}
 		    after StartupTimeout*1000->
 			{error, startup_timeout, ENode}
@@ -214,9 +214,9 @@ do_start(Host, Node, Options) ->
 	    {error, boot_timeout, ENode}
     end,
     _ = case Result of
-	{ok, ENode}->
+	{ok, ^ENode}->
 	     ok;
-	{error, Timeout, ENode}
+	{error, Timeout, ^ENode}
 	     when ((Timeout==init_timeout) or (Timeout==startup_timeout)) and
 		  Options#options.kill_if_fail->
 	     do_stop(ENode);
@@ -324,7 +324,7 @@ do_stop(ENode, Options) ->
     spawn(ENode, init, stop, []),
     StopTimeout = Options#options.stop_timeout,
     case wait_for_node_dead(ENode, StopTimeout) of
-	{ok,ENode} ->
+	{ok,^ENode} ->
 	    if Cover ->
 		    %% To avoid that cover is started again if a node
 		    %% with the same name is started later.

@@ -160,7 +160,7 @@ gen_encode_user(Erules, #typedef{}=D, Wrapper) ->
 	{primitive,bif} ->
 	    gen_encode_prim(ber,Type,"TagIn","Val"),
 	    emit([".",nl]);
-	#'Externaltypereference'{module=CurrentMod,type=Etype} ->
+	#'Externaltypereference'{module=^CurrentMod,type=Etype} ->
 	    emit(["   ",{asis,enc_func(Etype)},"(Val, TagIn).",nl]);
 	#'Externaltypereference'{module=Emod,type=Etype} ->
 	    emit(["   ",{asis,Emod},":",{asis,enc_func(Etype)},
@@ -763,7 +763,7 @@ gen_encode_objectfields(ClassName,[{typefield,Name,OptOrMand}|Rest],
 	    {false,{'DEFAULT',DefaultType}} ->
 		EmitFuncClause("Val"),
 		gen_encode_default_call(ClassName,Name,DefaultType);
-	    {{Name,TypeSpec},_} ->
+	    {{^Name,TypeSpec},_} ->
 		%% A specified field owerwrites any 'DEFAULT' or
 		%% 'OPTIONAL' field in the class
 		EmitFuncClause("Val"),
@@ -792,15 +792,15 @@ gen_encode_objectfields(ClassName,[{objectfield,Name,_,_,OptOrMand}|Rest],
 		  "}})"]);
 	{false,{'DEFAULT',_DefaultObject}} ->
 	    exit({error,{asn1,{"not implemented yet",Name}}});
-	{{Name,#'Externalvaluereference'{module=CurrentMod,
+	{{^Name,#'Externalvaluereference'{module=^CurrentMod,
 					 value=TypeName}},_} ->
 	    EmitFuncClause(" Val, [H|T]"),
 	    emit([indent(3),{asis,enc_func(TypeName)},"(H, Val, T)"]);
-	{{Name,#'Externalvaluereference'{module=M,value=TypeName}},_} ->
+	{{^Name,#'Externalvaluereference'{module=M,value=TypeName}},_} ->
 	    EmitFuncClause(" Val, [H|T]"),
 	    emit([indent(3),{asis,M},":",{asis,enc_func(TypeName)},
                   "(H, Val, T)"]);
-	{{Name,#typedef{name=TypeName}},_} when is_atom(TypeName) ->
+	{{^Name,#typedef{name=TypeName}},_} when is_atom(TypeName) ->
 	    EmitFuncClause(" Val, [H|T]"),
             emit([indent(3),{asis,enc_func(TypeName)},"(H, Val, T)"])
     end,
@@ -884,7 +884,7 @@ gen_encode_default_call(ClassName,FieldName,Type) ->
 	{primitive,bif} ->
 	    gen_encode_prim(ber,Type,{asis,lists:reverse(Tag)},"Val"),
 	    [];
-	#'Externaltypereference'{module=CurrentMod,type=Etype} ->
+	#'Externaltypereference'{module=^CurrentMod,type=Etype} ->
 	    emit(["   'enc_",Etype,"'(Val, ",{asis,Tag},")",nl]),
 	    [];
 	#'Externaltypereference'{module=Emod,type=Etype} ->
@@ -911,7 +911,7 @@ gen_decode_objectfields(ClassName,[{typefield,Name,OptOrMand}|Rest],
 		EmitFuncClause("Bytes"),
 		emit_tlv_format("Bytes"),
 		gen_decode_default_call(ClassName,Name,"Tlv",DefaultType);
-	    {{Name,TypeSpec},_} ->
+	    {{^Name,TypeSpec},_} ->
 		%% A specified field owerwrites any 'DEFAULT' or
 		%% 'OPTIONAL' field in the class
 		EmitFuncClause("Bytes"),
@@ -940,15 +940,15 @@ gen_decode_objectfields(ClassName,[{objectfield,Name,_,_,OptOrMand}|Rest],
 		  "}})"]);
 	{false,{'DEFAULT',_DefaultObject}} ->
 	    exit({error,{asn1,{"not implemented yet",Name}}});
-	{{Name,#'Externalvaluereference'{module=CurrentMod,
+	{{^Name,#'Externalvaluereference'{module=^CurrentMod,
 					 value=TypeName}},_} ->
 	    EmitFuncClause("Bytes,[H|T]"),
 	    emit([indent(3),{asis,dec_func(TypeName)},"(H, Bytes, T)"]);
-	{{Name,#'Externalvaluereference'{module=M,value=TypeName}},_} ->
+	{{^Name,#'Externalvaluereference'{module=M,value=TypeName}},_} ->
 	    EmitFuncClause("Bytes,[H|T]"),
 	    emit([indent(3),{asis,M},":",{asis,dec_func(TypeName)},
 		  "(H, Bytes, T)"]);
-	{{Name,#typedef{name=TypeName}},_} when is_atom(TypeName) ->
+	{{^Name,#typedef{name=TypeName}},_} when is_atom(TypeName) ->
             EmitFuncClause("Bytes,[H|T]"),
             emit([indent(3),{asis,dec_func(TypeName)},"(H, Bytes, T)"])
     end,
@@ -971,7 +971,7 @@ emit_tlv_format(Bytes) ->
 notice_tlv_format_gen() ->
     Module = get(currmod),
     case get(tlv_format) of
-	{done,Module} ->
+	{done,^Module} ->
 	    ok;
 	_ ->                                    % true or undefined
 	    put(tlv_format,true)
@@ -1065,7 +1065,7 @@ gen_decode_default_call(ClassName,FieldName,Bytes,Type) ->
 	{primitive,bif} ->
 	    gen_dec_prim(Type, Bytes, Tag),
 	    [];
-	#'Externaltypereference'{module=CurrentMod,type=Etype} ->
+	#'Externaltypereference'{module=^CurrentMod,type=Etype} ->
 	    emit(["   'dec_",Etype,"'(",Bytes, " ,",{asis,Tag},")",nl]),
 	    [];
 	#'Externaltypereference'{module=Emod,type=Etype} ->
@@ -1147,7 +1147,7 @@ gen_objset_enc(Erules, ObjSetName, UniqueName,
 	case ObjName of
 	    {no_mod,no_name} ->
 		gen_inlined_enc_funs(Fields, ClFields, ObjSetName, Val, NthObj);
-	    {CurrMod,Name} ->
+	    {^CurrMod,Name} ->
 		emit([asis_atom(["getenc_",ObjSetName]),
                       "(Id) when Id =:= ",{asis,Val}," ->",nl,
 		      "    fun ",asis_atom(["enc_",Name]),"/3;",nl]),
@@ -1297,7 +1297,7 @@ emit_inner_of_fun(Type,_) when is_record(Type,type) ->
 				  X#tag.form,X#tag.number)||X <- OTag],
 	    emit([indent(9),Def," ->",nl,indent(12)]),
 	    gen_encode_prim(ber,Type,{asis,lists:reverse(Tag)},"Val");
-	#'Externaltypereference'{module=CurrMod,type=T} ->
+	#'Externaltypereference'{module=^CurrMod,type=T} ->
 	    emit([indent(9),T," ->",nl,indent(12),"'enc_",T,
 		  "'(Val)"]);
 	#'Externaltypereference'{module=ExtMod,type=T} ->
@@ -1326,7 +1326,7 @@ gen_objset_dec(Erules, ObjSName, UniqueName, [{ObjName,Val,Fields}|T],
 	case ObjName of
 	    {no_mod,no_name} ->
 		gen_inlined_dec_funs(Fields,ClFields,ObjSName,Val,NthObj);
-	    {CurrMod,Name} ->
+	    {^CurrMod,Name} ->
 		emit([asis_atom(["getdec_",ObjSName]),
                       "(Id) when Id =:= ",{asis,Val}," ->",nl,
 		      "    fun 'dec_",Name,"'/3;", nl]),
@@ -1469,7 +1469,7 @@ emit_inner_of_decfun(#type{}=Type, _Prop, _) ->
 	{primitive,bif} -> 
 	    emit([indent(9),Def," ->",nl,indent(12)]),
 	    gen_dec_prim(Type, "Bytes", Tag);
-	#'Externaltypereference'{module=CurrMod,type=T} ->
+	#'Externaltypereference'{module=^CurrMod,type=T} ->
 	    emit([indent(9),T," ->",nl,indent(12),"'dec_",T,
 		  "'(Bytes)"]);
 	#'Externaltypereference'{module=ExtMod,type=T} ->
@@ -1500,7 +1500,7 @@ decode_class('PRIVATE') ->
 mkfuncname(#'Externaltypereference'{module=Mod,type=EType}, DecOrEnc) ->
     CurrMod = get(currmod),
     case CurrMod of
-	Mod ->
+	^Mod ->
 	    lists:concat(["'",DecOrEnc,"_",EType,"'"]);
 	_ ->
 	    lists:concat(["'",Mod,"':'",DecOrEnc,"_",EType,"'"])

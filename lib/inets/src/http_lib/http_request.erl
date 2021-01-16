@@ -30,7 +30,7 @@ key_value(KeyValueStr) ->
 	{Key, [$: | Value]} when Key =/= [] ->
             %% RFC 7230 - 3.2.4 ... No whitespace is allowed between the header field-name and colon. 
             case string:strip(Key, right) of
-                Key ->
+                ^Key ->
                     {http_util:to_lower(string:strip(Key, left)),  string:strip(Value)};
                  _ ->
                     %% Ignore invalid header

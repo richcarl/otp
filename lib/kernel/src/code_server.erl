@@ -55,7 +55,7 @@ start_link(Args) ->
     Init = fun() -> init(Ref, Parent, Args) end,
     spawn_link(Init),
     receive 
-	{Ref,Res} -> Res
+	{^Ref,Res} -> Res
     end.
 
 
@@ -141,7 +141,7 @@ call(Req) ->
 	{?MODULE, Reply} ->
             erlang:demonitor(Ref,[flush]),
 	    Reply;
-        {'DOWN',Ref,process,_,_} ->
+        {'DOWN',^Ref,process,_,_} ->
             exit({'DOWN',code_server,Req})
     end.
 
@@ -160,7 +160,7 @@ loop(#state{supervisor=Supervisor}=State0) ->
 		{stop, Why, stopped, State} ->
 		    system_terminate(Why, Supervisor, [], State)
 	    end;
-	{'EXIT', Supervisor, Reason} ->
+	{'EXIT', ^Supervisor, Reason} ->
 	    system_terminate(Reason, Supervisor, [], State0);
 	{system, From, Msg} ->
 	    handle_system_msg(running,Msg, From, Supervisor, State0);
@@ -195,7 +195,7 @@ suspend_loop(SysState, Parent, Misc) ->
     receive
 	{system, From, Msg} ->
 	    handle_system_msg(SysState, Msg, From, Parent, Misc);
-	{'EXIT', Parent, Reason} ->
+	{'EXIT', ^Parent, Reason} ->
 	    system_terminate(Reason, Parent, [], Misc)
     end.
 
@@ -867,7 +867,7 @@ del_path(Name0,Path,NameDb) ->
 	    {{error,bad_name},Path};
 	Name ->
 	    case del_path1(Name,Path,NameDb) of
-		Path -> % Nothing has changed
+		^Path -> % Nothing has changed
 		    {false,Path};
 		NewPath ->
 		    {true,NewPath}
@@ -876,7 +876,7 @@ del_path(Name0,Path,NameDb) ->
 
 del_path1(Name,[P|Path],NameDb) ->
     case get_name(P) of
-	Name ->
+	^Name ->
 	    delete_name(Name, NameDb),
 	    insert_old_shadowed(Name, Path, NameDb),
 	    Path;
@@ -894,7 +894,7 @@ del_path1(_,[],_) ->
 
 insert_old_shadowed(Name, [P|Path], NameDb) ->
     case get_name(P) of
-	Name -> insert_name(Name, P, NameDb);
+	^Name -> insert_name(Name, P, NameDb);
 	_    -> insert_old_shadowed(Name, Path, NameDb)
     end;
 insert_old_shadowed(_, [], _) ->
@@ -916,7 +916,7 @@ replace_path(Name,Dir,Path,NameDb) ->
 
 replace_path1(Name,Dir,[P|Path],NameDb) ->
     case get_name(P) of
-	Name ->
+	^Name ->
 	    insert_name(Name, Dir, NameDb),
 	    [Dir|Path];
 	_ ->
@@ -930,7 +930,7 @@ check_pars(Name,Dir) ->
     N = to_list(Name),
     D = filename:join([to_list(Dir)]), % Normalize
     case get_name(Dir) of
-	N ->
+	^N ->
 	    case check_path([D]) of
 		{ok, [NewD]} ->
 		    {ok,N,NewD};
@@ -952,7 +952,7 @@ del_ebin_1([Parent,App,"ebin"]) ->
 	_ ->
 	    Ext = archive_extension(),
 	    case filename:basename(Parent, Ext) of
-		Parent ->
+		^Parent ->
 		    %% Plain directory.
 		    [Parent,App];
 		Archive ->
@@ -971,7 +971,7 @@ del_ebin_1([]) ->
 
 replace_name(Dir, Db) ->
     case get_name(Dir) of
-	Dir ->
+	^Dir ->
 	    false;
 	Name ->
 	    delete_name(Name, Db),
@@ -983,11 +983,11 @@ delete_name(Name, Db) ->
 
 delete_name_dir(Dir, Db) ->
     case get_name(Dir) of
-	Dir  -> false;
+	^Dir  -> false;
 	Name ->
 	    Dir0 = del_ebin(Dir),
 	    case lookup_name(Name, Db) of
-		{ok, Dir0, _Base, _SubDirs} ->
+		{ok, ^Dir0, _Base, _SubDirs} ->
 		    ets:delete(Db, Name), 
 		    true;
 		_ -> false
@@ -996,7 +996,7 @@ delete_name_dir(Dir, Db) ->
 
 lookup_name(Name, Db) ->
     case ets:lookup(Db, Name) of
-	[{Name, Dir, Base, SubDirs}] -> {ok, Dir, Base, SubDirs};
+	[{^Name, Dir, Base, SubDirs}] -> {ok, Dir, Base, SubDirs};
 	_ -> false
     end.
 
@@ -1065,7 +1065,7 @@ stick_mod(M, Stick, St) ->
 
 get_mods([File|Tail], Extension) ->
     case filename:extension(File) of
-	Extension ->
+	^Extension ->
 	    [list_to_atom(filename:basename(File, Extension)) |
 	     get_mods(Tail, Extension)];
 	_ ->
@@ -1162,7 +1162,7 @@ load_file_1(Mod, From, St) ->
     case get_object_code(St, Mod) of
 	error ->
 	    {reply,{error,nofile},St};
-	{Mod,Binary,File} ->
+	{^Mod,Binary,File} ->
 	    try_load_module_1(File, Mod, Binary, From, St)
     end.
 
@@ -1235,7 +1235,7 @@ absname_vr([[X, $:]|Name], _, _AbsBase) ->
 
 is_loaded(M, Db) ->
     case ets:lookup(Db, M) of
-	[{M,File}] -> {file,File};
+	[{^M,File}] -> {file,File};
 	[] -> false
     end.
 
@@ -1329,7 +1329,7 @@ handle_pending_on_load(Action, Mod, From, #state{on_load=OnLoad0}=St) ->
     case lists:keyfind(Mod, 2, OnLoad0) of
 	false ->
 	    Action(ok, St);
-	{{From,_Ref},Mod,_Pids} ->
+	{{^From,_Ref},^Mod,_Pids} ->
 	    %% The on_load function tried to make an external
 	    %% call to its own module. That would be a deadlock.
 	    %% Fail the call. (The call is probably from error_handler,
@@ -1354,7 +1354,7 @@ finish_on_load(PidRef, OnLoadRes, #state{on_load=OnLoad0}=St0) ->
 	    %% it doesn't understand, it should also ignore a 'DOWN'
 	    %% message with an unknown reference.
 	    St0;
-	{PidRef,Mod,Waiting} ->
+	{^PidRef,Mod,Waiting} ->
 	    St = finish_on_load_1(Mod, OnLoadRes, Waiting, St0),
 	    OnLoad = [E || {R,_,_}=E <- OnLoad0, R =/= PidRef],
 	    St#state{on_load=OnLoad}

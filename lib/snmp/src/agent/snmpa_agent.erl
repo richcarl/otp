@@ -1004,10 +1004,10 @@ handle_info({'EXIT', Pid, Reason}, S) ->
     Mib   = get(mibserver),
     NetIf = get(net_if),
     case Pid of
-	Mib ->
+	^Mib ->
 	    error_msg("mib-server exited: ~n~p", [Reason]),
 	    {stop, {mib_server_exit, Reason}, S};
-	NetIf ->
+	^NetIf ->
 	    error_msg("net-if exited: ~n~p", [Reason]),
 	    {stop, {net_if_exit, Reason}, S};
 	_ ->
@@ -1371,7 +1371,7 @@ handle_call({unregister_notification_filter, Id}, _From,
     ?vlog("unregister_notification_filter -> "
 	  "~n   Id: ~p", [Id]),
     case lists:keydelete(Id, 2, NFs) of
-	NFs ->
+	^NFs ->
 	    {reply, {error, {not_found, Id}}, S};
 	NFs2 ->
 	    {reply, ok, S#state{nfilters = NFs2}}
@@ -1642,7 +1642,7 @@ worker_start(SName, Report, Dict) ->
 worker_stop(Pid, Timeout) when is_pid(Pid) ->
     Pid ! ?mk_terminate_wreq(), 
     receive 
-	{'EXIT', Pid, normal} ->
+	{'EXIT', ^Pid, normal} ->
 	    ok
     after Timeout ->
 	    (catch exit(Pid, kill)),
@@ -1670,7 +1670,7 @@ handle_backup(BackupDir, MibServer) ->
     ?vlog("handle_backup -> entry with"
 	  "~n   BackupDir: ~p", [BackupDir]),
     case ets:lookup(snmp_agent_table, db_dir) of
-	[{db_dir, BackupDir}] ->
+	[{db_dir, ^BackupDir}] ->
 	    ?vinfo("handle_backup -> backup dir and db dir the same", []),
 	    {error, db_dir};
 	_ ->
@@ -2078,7 +2078,7 @@ handle_acm_error(Vsn, Reason, Pdu, ACMData, Address, Extra) ->
 
 get_send_opt(Key, Default, SendOpts) ->
     case lists:keysearch(Key, 1, SendOpts) of
-	{value, {Key, Value}} ->
+	{value, {^Key, Value}} ->
 	    Value;
 	false ->
 	    Default

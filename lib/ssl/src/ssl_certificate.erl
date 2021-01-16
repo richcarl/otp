@@ -160,7 +160,7 @@ validate(Cert, valid, UserState) ->
 validate(Cert, valid_peer, UserState = #{role := client, server_name := Hostname, 
                                          customize_hostname_check := Customize}) when Hostname =/= disable ->
     case verify_hostname(Hostname, Customize, Cert, UserState) of
-        {valid, UserState} ->
+        {valid, ^UserState} ->
             validate(Cert, valid, UserState);
         Error ->
             Error
@@ -260,7 +260,7 @@ do_certificate_chain(CertDbHandle, CertsDbRef, Chain, SerialNr, Issuer, _, ListD
     case ssl_manager:lookup_trusted_cert(CertDbHandle, CertsDbRef,
 						SerialNr, Issuer) of
 	{ok, {IssuerCert, ErlCert}} ->
-	    ErlCert = public_key:pkix_decode_cert(IssuerCert, otp),
+	    ^ErlCert = public_key:pkix_decode_cert(IssuerCert, otp),
 	    certificate_chain(ErlCert, IssuerCert, 
 			      CertDbHandle, CertsDbRef, [IssuerCert | Chain], ListDb);
 	_ ->
@@ -300,7 +300,7 @@ find_issuer(OtpCert, BinCert, CertDbHandle, CertsDbRef, ListDb) ->
     case Result of
         issuer_not_found ->
 	    {error, issuer_not_found};
-	Result ->
+	^Result ->
 	    Result
     end.
 
@@ -469,7 +469,7 @@ handle_partial_chain([IssuerCert| Rest] = Path, PartialChainHandler, CertDbHandl
         true -> %% IssuerCert = ROOT
             {ok, {SerialNr, IssuerId}} = public_key:pkix_issuer_id(IssuerCert, self),
             case ssl_manager:lookup_trusted_cert(CertDbHandle, CertDbRef, SerialNr, IssuerId) of
-                {ok, {IssuerCert, _}} ->
+                {ok, {^IssuerCert, _}} ->
                     maybe_shorten_path(Path, PartialChainHandler, {IssuerCert, Rest});
                 _ ->
                     maybe_shorten_path(Path, PartialChainHandler, {unknown_ca, Path})
@@ -516,7 +516,7 @@ new_trusteded_path(_, [], Default) ->
 
 handle_incomplete_chain([PeerCert| _] = Chain0, PartialChainHandler, Default, CertDbHandle, CertDbRef) ->
     case certificate_chain(PeerCert, CertDbHandle, CertDbRef) of
-        {ok, _, [PeerCert | _] = Chain} when Chain =/= Chain0 -> %% Chain candidate found          
+        {ok, _, [^PeerCert | _] = Chain} when Chain =/= Chain0 -> %% Chain candidate found          
             handle_partial_chain(lists:reverse(Chain), PartialChainHandler, CertDbHandle, CertDbRef);
         _  ->
             Default
@@ -535,7 +535,7 @@ extraneous_certs([CA0, CA1 | Certs], Acc) ->
     NormName1 = public_key:pkix_normalize_name(Name1),
     NormName2 = public_key:pkix_normalize_name(Name2),
     case NormName1 of
-        NormName2 ->            
+        ^NormName2 ->            
             extraneous_certs([CA1| Certs], path_alts(CA0, CA1, Certs, Acc)); 
         _ ->
             extraneous_certs([CA1 | Certs], lists:map(fun(Candidate) -> [CA0 | Candidate] end, Acc))

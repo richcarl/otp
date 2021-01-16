@@ -480,7 +480,7 @@ decode_msg(Msg, Parent, Name, State, Mod, Time, HibernateAfterTimeout, Debug, Hi
 	{system, From, Req} ->
 	    sys:handle_system_msg(Req, From, Parent, ?MODULE, Debug,
 				  [Name, State, Mod, Time, HibernateAfterTimeout], Hib);
-	{'EXIT', Parent, Reason} ->
+	{'EXIT', ^Parent, Reason} ->
 	    terminate(Reason, ?STACKTRACE(), Name, undefined, Msg, Mod, State, Debug);
 	_Msg when Debug =:= [] ->
 	    handle_msg(Msg, Parent, Name, State, Mod, HibernateAfterTimeout);
@@ -517,12 +517,12 @@ do_multi_call(Nodes, Name, Req, Timeout) ->
 		  process_flag(trap_exit, true),
 		  Mref = erlang:monitor(process, Caller),
 		  receive
-		      {Caller,Tag} ->
+		      {^Caller,^Tag} ->
 			  Monitors = send_nodes(Nodes, Name, Tag, Req),
 			  TimerId = erlang:start_timer(Timeout, self(), ok),
 			  Result = rec_nodes(Tag, Monitors, Name, TimerId),
 			  exit({self(),Tag,Result});
-		      {'DOWN',Mref,_,_,_} ->
+		      {'DOWN',^Mref,_,_,_} ->
 			  %% Caller died before sending us the go-ahead.
 			  %% Give up silently.
 			  exit(normal)
@@ -531,9 +531,9 @@ do_multi_call(Nodes, Name, Req, Timeout) ->
     Mref = erlang:monitor(process, Receiver),
     Receiver ! {self(),Tag},
     receive
-	{'DOWN',Mref,_,_,{Receiver,Tag,Result}} ->
+	{'DOWN',^Mref,_,_,{^Receiver,^Tag,Result}} ->
 	    Result;
-	{'DOWN',Mref,_,_,Reason} ->
+	{'DOWN',^Mref,_,_,Reason} ->
 	    %% The middleman code failed. Or someone did 
 	    %% exit(_, kill) on the middleman process => Reason==killed
 	    exit(Reason)
@@ -566,13 +566,13 @@ rec_nodes(Tag, Nodes, Name, TimerId) ->
 
 rec_nodes(Tag, [{N,R}|Tail], Name, Badnodes, Replies, Time, TimerId ) ->
     receive
-	{'DOWN', R, _, _, _} ->
+	{'DOWN', ^R, _, _, _} ->
 	    rec_nodes(Tag, Tail, Name, [N|Badnodes], Replies, Time, TimerId);
-	{{Tag, N}, Reply} ->  %% Tag is bound !!!
+	{{^Tag, ^N}, Reply} ->  %% Tag is bound !!!
 	    erlang:demonitor(R, [flush]),
 	    rec_nodes(Tag, Tail, Name, Badnodes, 
 		      [{N,Reply}|Replies], Time, TimerId);
-	{timeout, TimerId, _} ->	
+	{timeout, ^TimerId, _} ->	
 	    erlang:demonitor(R, [flush]),
 	    %% Collect all replies that already have arrived
 	    rec_nodes_rest(Tag, Tail, Name, [N|Badnodes], Replies)
@@ -580,16 +580,16 @@ rec_nodes(Tag, [{N,R}|Tail], Name, Badnodes, Replies, Time, TimerId ) ->
 rec_nodes(Tag, [N|Tail], Name, Badnodes, Replies, Time, TimerId) ->
     %% R6 node
     receive
-	{nodedown, N} ->
+	{nodedown, ^N} ->
 	    monitor_node(N, false),
 	    rec_nodes(Tag, Tail, Name, [N|Badnodes], Replies, 2000, TimerId);
-	{{Tag, N}, Reply} ->  %% Tag is bound !!!
-	    receive {nodedown, N} -> ok after 0 -> ok end,
+	{{^Tag, ^N}, Reply} ->  %% Tag is bound !!!
+	    receive {nodedown, ^N} -> ok after 0 -> ok end,
 	    monitor_node(N, false),
 	    rec_nodes(Tag, Tail, Name, Badnodes,
 		      [{N,Reply}|Replies], 2000, TimerId);
-	{timeout, TimerId, _} ->	
-	    receive {nodedown, N} -> ok after 0 -> ok end,
+	{timeout, ^TimerId, _} ->	
+	    receive {nodedown, ^N} -> ok after 0 -> ok end,
 	    monitor_node(N, false),
 	    %% Collect all replies that already have arrived
 	    rec_nodes_rest(Tag, Tail, Name, [N | Badnodes], Replies)
@@ -599,7 +599,7 @@ rec_nodes(Tag, [N|Tail], Name, Badnodes, Replies, Time, TimerId) ->
 		    rec_nodes(Tag, [N|Tail], Name, Badnodes,
 			      Replies, infinity, TimerId);
 		_ -> % badnode
-		    receive {nodedown, N} -> ok after 0 -> ok end,
+		    receive {nodedown, ^N} -> ok after 0 -> ok end,
 		    monitor_node(N, false),
 		    rec_nodes(Tag, Tail, Name, [N|Badnodes],
 			      Replies, 2000, TimerId)
@@ -609,7 +609,7 @@ rec_nodes(_, [], _, Badnodes, Replies, _, TimerId) ->
     case catch erlang:cancel_timer(TimerId) of
 	false ->  % It has already sent it's message
 	    receive
-		{timeout, TimerId, _} -> ok
+		{timeout, ^TimerId, _} -> ok
 	    after 0 ->
 		    ok
 	    end;
@@ -621,9 +621,9 @@ rec_nodes(_, [], _, Badnodes, Replies, _, TimerId) ->
 %% Collect all replies that already have arrived
 rec_nodes_rest(Tag, [{N,R}|Tail], Name, Badnodes, Replies) ->
     receive
-	{'DOWN', R, _, _, _} ->
+	{'DOWN', ^R, _, _, _} ->
 	    rec_nodes_rest(Tag, Tail, Name, [N|Badnodes], Replies);
-	{{Tag, N}, Reply} -> %% Tag is bound !!!
+	{{^Tag, ^N}, Reply} -> %% Tag is bound !!!
 	    erlang:demonitor(R, [flush]),
 	    rec_nodes_rest(Tag, Tail, Name, Badnodes, [{N,Reply}|Replies])
     after 0 ->
@@ -633,15 +633,15 @@ rec_nodes_rest(Tag, [{N,R}|Tail], Name, Badnodes, Replies) ->
 rec_nodes_rest(Tag, [N|Tail], Name, Badnodes, Replies) ->
     %% R6 node
     receive
-	{nodedown, N} ->
+	{nodedown, ^N} ->
 	    monitor_node(N, false),
 	    rec_nodes_rest(Tag, Tail, Name, [N|Badnodes], Replies);
-	{{Tag, N}, Reply} ->  %% Tag is bound !!!
-	    receive {nodedown, N} -> ok after 0 -> ok end,
+	{{^Tag, ^N}, Reply} ->  %% Tag is bound !!!
+	    receive {nodedown, ^N} -> ok after 0 -> ok end,
 	    monitor_node(N, false),
 	    rec_nodes_rest(Tag, Tail, Name, Badnodes, [{N,Reply}|Replies])
     after 0 ->
-	    receive {nodedown, N} -> ok after 0 -> ok end,
+	    receive {nodedown, ^N} -> ok after 0 -> ok end,
 	    monitor_node(N, false),
 	    rec_nodes_rest(Tag, Tail, Name, [N|Badnodes], Replies)
     end;

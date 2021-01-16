@@ -190,7 +190,7 @@ regexp_match(RegName, D0, Root) ->
 		{ok, MP} ->
 		    FR = fun(F) ->
 				 case re:run(F, MP, [{capture,first,list}]) of
-				     {match,[F]} -> % All of F matches
+				     {match,[^F]} -> % All of F matches
 					 DirF = join(D0, F, Root),
 					 case dir_p(DirF) of
 					     true ->

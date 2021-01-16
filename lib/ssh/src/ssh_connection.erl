@@ -905,7 +905,7 @@ handle_msg(#ssh_msg_global_request{name = <<"tcpip-forward">>,
                                                              undefined,
                                                              "forwarded-tcpip", ssh_tcpip_forward_srv,
                                                              ConnPid) of
-                {ok,ListenPort} when WantReply==true ->
+                {ok,^ListenPort} when WantReply==true ->
                     {[{connection_reply, request_success_msg(<<>>)}], Connection};
 
                 {ok,LPort} when WantReply==true ->
@@ -1065,7 +1065,7 @@ encode_ip(Addr) when is_list(Addr) ->
 	    case inet:getaddr(Addr, inet) of
 		{ok, A} ->
 		    inet_parse:ntoa(A);
-		Error -> false
+		^Error -> false
 	    end
     end.
 
@@ -1136,7 +1136,7 @@ start_subsystem(BinName, #connection{options = Options,
 check_subsystem("sftp"= SsName, Options) ->
     case ?GET_OPT(subsystems, Options) of
 	no_subsys -> 	% FIXME: Can 'no_subsys' ever be matched?
-	    {SsName, {Cb, Opts}} = ssh_sftpd:subsystem_spec([]),
+	    {^SsName, {Cb, Opts}} = ssh_sftpd:subsystem_spec([]),
 	    {Cb, Opts};
 	SubSystems ->
 	    proplists:get_value(SsName, SubSystems, {none, []})
@@ -1531,7 +1531,7 @@ request_reply_or_data(#channel{local_id = ChannelId, user = ChannelPid},
 		      #connection{requests = Requests} = 
 		      Connection, Reply) -> 
     case lists:keysearch(ChannelId, 1, Requests) of
-	{value, {ChannelId, From}} ->
+	{value, {^ChannelId, From}} ->
 	    {[{channel_request_reply, From, Reply}],
 	     Connection#connection{requests = 
 				       lists:keydelete(ChannelId, 1, Requests)}};

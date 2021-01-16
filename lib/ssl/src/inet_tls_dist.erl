@@ -258,11 +258,11 @@ accept_loop(Driver, Listen, Kernel, Socket) ->
                   {accept, self(), DistCtrl,
                    Driver:family(), tls}),
             receive
-                {Kernel, controller, Pid} ->
+                {^Kernel, controller, Pid} ->
                     ok = ssl:controlling_process(SslSocket, Pid),
                     trace(
                       Pid ! {self(), controller});
-                {Kernel, unsupported_protocol} ->
+                {^Kernel, unsupported_protocol} ->
                     exit(trace(unsupported_protocol))
             end,
             accept_loop(Driver, Listen, Kernel);
@@ -414,7 +414,7 @@ do_accept(
   _Driver, AcceptPid, DistCtrl, MyNode, Allowed, SetupTime, Kernel) ->
     {ok, SslSocket} = tls_sender:dist_tls_socket(DistCtrl),
     receive
-	{AcceptPid, controller} ->
+	{^AcceptPid, controller} ->
 	    Timer = dist_util:start_timer(SetupTime),
             NewAllowed = allowed_nodes(SslSocket, Allowed),
             HSData0 = hs_data_common(SslSocket),
@@ -766,7 +766,7 @@ nodelay() ->
 
 get_ssl_options(Type) ->
     try ets:lookup(ssl_dist_opts, Type) of
-        [{Type, Opts}] ->
+        [{^Type, Opts}] ->
             [{erl_dist, true}, {versions, ['tlsv1.2']} | Opts];
         _ ->
             get_ssl_dist_arguments(Type)

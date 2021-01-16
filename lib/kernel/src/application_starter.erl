@@ -95,7 +95,7 @@ run_the_phase(Phase, Type, App, Mod) ->
     case lists:keyfind(Phase, 1, Start_phases) of
 	false ->
 	    ok;
-	{Phase, PhaseArgs} ->
+	{^Phase, PhaseArgs} ->
 	    case catch Mod:start_phase(Phase, Type, PhaseArgs) of
 		ok ->
 		    ok;

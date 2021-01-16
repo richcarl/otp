@@ -214,13 +214,13 @@ slave_started(ReplyTo, Master, Slave, Conn, Level)
 slave_running(Master, MasterRef, Slave, SlaveRef, Conn) ->
     ?DEBUG("await message", []),
     receive
-	{'DOWN', MasterRef, process, _Object, _Info} ->
+	{'DOWN', ^MasterRef, process, _Object, _Info} ->
 	    ?LOG("received DOWN from master", []),
 	    erlang:demonitor(SlaveRef, [flush]),
 	    Slave ! {nodedown, node()},
 	    ssh:close(Conn);
 
-	{'DOWN', SlaveRef, process, Object, _Info} ->
+	{'DOWN', ^SlaveRef, process, Object, _Info} ->
 	    ?LOG("received DOWN from slave (~p)", [Object]),
 	    erlang:demonitor(MasterRef, [flush]),
 	    ssh:close(Conn);
@@ -280,7 +280,7 @@ wait_for_master_to_die(Master, Waiter, Level) ->
 wloop(Master) ->
     ?DEBUG("await message", []),
     receive
-	{nodedown, Master} ->
+	{nodedown, ^Master} ->
 	    ?INFO("received master nodedown", []),
 	    halt();
 	_Other ->

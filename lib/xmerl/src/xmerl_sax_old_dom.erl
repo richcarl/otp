@@ -172,7 +172,7 @@ build_dom({endElement, _Uri, LocalName, QName},
 				   dom=[#xmlElement{name=CName, content=C} = Current, 
 					#xmlElement{content=PC} = Parent | D]} = State) ->
     case convert_qname_to_atom(QName) of
-	CName ->	    
+	^CName ->	    
 	    State#xmerl_sax_old_dom_state{tags=T,
 					  cno=CN,
 					  dom=[Parent#xmlElement{
@@ -288,7 +288,7 @@ convert_qname_to_atom({P,N}) ->
 %%----------------------------------------------------------------------
 find_and_remove_attribute(Key, Data, Default) ->
     case lists:keysearch(Key, 1, Data) of
-	{value, {Key, Value}} ->
+	{value, {^Key, Value}} ->
 	    Data2 = lists:keydelete(Key, 1, Data),
 	    {Value, Data2};
 	false ->

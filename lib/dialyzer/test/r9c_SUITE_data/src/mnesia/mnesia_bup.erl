@@ -1046,9 +1046,9 @@ rec_uninstall(ClientPid, [Pid | Pids], AccRes) ->
 	{'EXIT', Pid, R} ->
 	    Reason = {node_not_running, {node(Pid), R}},
 	    rec_uninstall(ClientPid, Pids, {error, Reason});
-	{Pid, ok} ->
+	{^Pid, ok} ->
 	    rec_uninstall(ClientPid, Pids, AccRes);
-	{Pid, BadRes} ->
+	{^Pid, BadRes} ->
 	    rec_uninstall(ClientPid, Pids, BadRes)
     end;
 rec_uninstall(ClientPid, [], Res) ->
@@ -1092,11 +1092,11 @@ traverse_backup(Source, Target, Fun, Acc) ->
 
 traverse_backup(Source, SourceMod, Target, TargetMod, Fun, Acc) ->
     Args = [self(), Source, SourceMod, Target, TargetMod, Fun, Acc],
-    Pid = spawn_link(?MODULE, do_traverse_backup, Args),
+    ^Pid = spawn_link(?MODULE, do_traverse_backup, Args),
     receive
 	{'EXIT', Pid, Reason} ->
 	    {error, {"Backup traversal crashed", Reason}};
-	{iter_done, Pid, Res} ->
+	{iter_done, ^Pid, Res} ->
 	    Res
     end.
 

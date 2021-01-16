@@ -333,7 +333,7 @@ info() ->
 
 verbosity(Verbosity) ->
     case ?vvalidate(Verbosity) of
-	Verbosity ->
+	^Verbosity ->
 	    call({verbosity, Verbosity});
 	_ ->
 	    {error, {invalid_verbosity, Verbosity}}
@@ -346,7 +346,7 @@ verbosity(note_store = Ref, Verbosity) ->
 
 verbosity2(Ref, Verbosity) ->
     case ?vvalidate(Verbosity) of
-	Verbosity ->
+	^Verbosity ->
 	    call({verbosity, Ref, Verbosity});
 	_ ->
 	    {error, {invalid_verbosity, Verbosity}}
@@ -494,7 +494,7 @@ handle_call({monitor_user, Id, Pid}, _From, State) when is_pid(Pid) ->
     ?vlog("received monitor_user request for ~w [~w]", [Id, Pid]),
     Reply = 
 	case ets:lookup(snmpm_monitor_table, Id) of
-	    [#monitor{proc = Pid}] ->
+	    [#monitor{proc = ^Pid}] ->
 		?vdebug("already monitored", []),
 		ok;
 
@@ -1452,7 +1452,7 @@ handle_cancel_async_request(UserId, ReqId, _State) ->
 	    "~n   UserId: ~p"
 	    "~n   ReqId:  ~p", [UserId, ReqId]),
     case ets:lookup(snmpm_request_table, ReqId) of
-	[#request{user_id = UserId,
+	[#request{user_id = ^UserId,
 		  ref     = Ref}] ->
 	    ?vdebug("handle_cancel_async_request -> demonitor and cancel timer"
 		    "~n   Ref: ~p", [Ref]),
@@ -1491,7 +1491,7 @@ handle_sync_timeout(ReqId, From, State) ->
 	    "~n   ReqId: ~p"
 	    "~n   From:  ~p", [ReqId, From]),
     case ets:lookup(snmpm_request_table, ReqId) of
-	[#request{mon = MonRef, from = From} = Req0] ->
+	[#request{mon = MonRef, from = ^From} = Req0] ->
 	    ?vdebug("handle_sync_timeout -> "
 		    "deliver reply (timeout) and demonitor: "
 		    "~n   Monref: ~p"
@@ -1634,7 +1634,7 @@ handle_snmp_error(Domain, Addr, ReqId, Reason, State) ->
 			{ok, DefUserId, DefMod, DefData} ->
 			    handle_error(DefUserId, DefMod, Reason, 
 					 ReqId, DefData, State);
-			_Error ->
+			^_Error ->
 			    error_msg("failed retreiving the default user "
 				      "info handling snmp error "
 				      "<~p,~p>: ~n~w~n~w",
@@ -1646,7 +1646,7 @@ handle_snmp_error(Domain, Addr, ReqId, Reason, State) ->
 		{ok, DefUserId, DefMod, DefData} ->
 		    handle_error(DefUserId, DefMod, Reason, 
 				 ReqId, DefData, State);
-		_Error ->
+		^_Error ->
 		    error_msg("failed retreiving the default user "
 			      "info handling snmp error "
 			      "<~p,~p>: ~n~w~n~w",
@@ -2629,7 +2629,7 @@ handle_snmp_report(
 				{ok, DefUserId, DefMod, DefData} ->
 				    handle_error(DefUserId, DefMod, Reason, 
 						 ReqId, DefData, State);
-				Error ->
+				^Error ->
 				    error_msg("failed retreiving the "
 					      "default user "
 					      "info handling report from "
@@ -2647,7 +2647,7 @@ handle_snmp_report(
 			{ok, DefUserId, DefMod, DefData} ->
 			    handle_error(DefUserId, DefMod, Reason, ReqId, 
 					 DefData, State);
-			Error ->
+			^Error ->
 			    error_msg("failed retreiving "
 				      "the default user info handling "
 				      "report from "
@@ -2807,7 +2807,7 @@ cbproxy_start(IdleTimeout) ->
 cbproxy_start(Parent, IdleTimeout) ->
     Pid = spawn_link(fun() -> cbproxy_init(Parent, IdleTimeout) end),
     receive
-	{?MODULE, Pid, ready} ->
+	{?MODULE, ^Pid, ready} ->
 	    Pid
     end.
 
@@ -2827,7 +2827,7 @@ cbproxy_info() ->
 	Pid when is_pid(Pid) ->
 	    Pid ! {?MODULE, self(), info},
 	    receive
-		{?MODULE, Pid, {info, Info}} ->
+		{?MODULE, ^Pid, {info, Info}} ->
 		    Info
 	    after 5000 ->
 		    %% If a callback function takes a long time,
@@ -2859,24 +2859,24 @@ cbproxy_init(Parent, _IdleTimeout) ->
 %% 
 cbproxy_loop(#{parent := Pid} = State) ->
     receive
-        {?MODULE, Pid, stop} ->
+        {?MODULE, ^Pid, stop} ->
 	    cbp_handle_stop(State),
             exit(normal);
 
 
-        {?MODULE, Pid, info} ->
+        {?MODULE, ^Pid, info} ->
 	    Info = cbp_handle_info(State),
 	    Pid ! {?MODULE, self(), {info, Info}},
             ?MODULE:cbproxy_loop(State);
 
 
         %% And this is what we are here for:
-        {?MODULE, Pid, {callback, {Mod, Func, Args}}} ->
+        {?MODULE, ^Pid, {callback, {Mod, Func, Args}}} ->
 	    F = fun() -> apply(Mod, Func, Args) end,
 	    ?MODULE:cbproxy_loop(cbp_handle_callback(State, F));
 
         %% And this is what we are here for:
-        {?MODULE, Pid, {callback, F}} when is_function(F, 0) ->
+        {?MODULE, ^Pid, {callback, F}} when is_function(F, 0) ->
 	    ?MODULE:cbproxy_loop(cbp_handle_callback(State, F))
 
 
@@ -3425,24 +3425,24 @@ gct_init(#gct{parent = Parent, timeout = Timeout} = State) ->
 gct(#gct{parent = Parent, state = active} = State, Timeout) ->
     T = snmp_misc:now(ms),
     receive
-	{stop, Parent} ->
+	{stop, ^Parent} ->
 	    ok;
 
 	%% This happens when a new request is received.
-	{activate, Parent}  ->
+	{activate, ^Parent}  ->
 	    ?MODULE:gct(State, new_timeout(Timeout, T)); 
 
-	{deactivate, Parent} ->
+	{deactivate, ^Parent} ->
 	    %% Timeout is of no consequence in the idle state, 
 	    %% but just to be sure
 	    NewTimeout = State#gct.timeout,
 	    ?MODULE:gct(State#gct{state = idle}, NewTimeout);
 
-	{code_change, Parent} ->
+	{code_change, ^Parent} ->
 	    %% Let the server take care of this
 	    exit(normal);
 
-	{'EXIT', Parent, _Reason} ->
+	{'EXIT', ^Parent, _Reason} ->
 	    ok;
 
 	_ -> % Crap
@@ -3456,21 +3456,21 @@ gct(#gct{parent = Parent, state = active} = State, Timeout) ->
 
 gct(#gct{parent = Parent, state = idle} = State, Timeout) ->
     receive
-	{stop, Parent} ->
+	{stop, ^Parent} ->
 	    ok;
 
-	{deactivate, Parent} ->
+	{deactivate, ^Parent} ->
 	    ?MODULE:gct(State, Timeout);
 
-	{activate, Parent} ->
+	{activate, ^Parent} ->
 	    NewTimeout = State#gct.timeout,
 	    ?MODULE:gct(State#gct{state = active}, NewTimeout);
 
-	{code_change, Parent} ->
+	{code_change, ^Parent} ->
 	    %% Let the server take care of this
 	    exit(normal);
 
-	{'EXIT', Parent, _Reason} ->
+	{'EXIT', ^Parent, _Reason} ->
 	    ok;
 
 	_ -> % Crap
@@ -3524,7 +3524,7 @@ nis_stop(_) ->
 nis_info(NIS) when is_pid(NIS) ->
     NIS ! {?MODULE, self(), info},
     receive
-        {?MODULE, NIS, {info, Info}} ->
+        {?MODULE, ^NIS, {info, Info}} ->
             Info
     after 1000 ->
             []
@@ -3560,7 +3560,7 @@ nis_loop(#{parent    := Parent,
            ping_tref := undefined,
            pong_tref := undefined} = State) ->
     receive
-        {?MODULE, Parent, stop} ->
+        {?MODULE, ^Parent, stop} ->
             ?vlog("[idle] stop received"),
             nis_handle_stop(State),
             exit(normal);
@@ -3571,7 +3571,7 @@ nis_loop(#{parent    := Parent,
 	    Pid ! {?MODULE, self(), {info, Info}},
             ?MODULE:nis_loop(State);
 
-        {?MODULE, Parent, {netif, NetIF}} ->
+        {?MODULE, ^Parent, {netif, NetIF}} ->
             ?vlog("[idle] (new) netif started: ~p => start ping timer", [NetIF]),
             MRef   = erlang:monitor(process, NetIF),
             PingTO = maps:get(ping_to, State),
@@ -3597,14 +3597,14 @@ nis_loop(#{parent     := Parent,
            pong_tref  := undefined} = State) when is_pid(NetIF) andalso
                                                  (PingTRef =/= undefined) ->
     receive
-        {'DOWN', MRef, process, NetIF, _} ->
+        {'DOWN', ^MRef, process, ^NetIF, _} ->
             ?vlog("[ping] netif died => cancel ping timer"),
             erlang:cancel_timer(PingTRef),            
             ?MODULE:nis_loop(State#{netif_pid  => undefined,
                                     netif_mref => undefined,
                                     ping_tref  => undefined});
 
-        {?MODULE, Parent, stop} ->
+        {?MODULE, ^Parent, stop} ->
             ?vlog("[ping] stop received"),
             nis_handle_stop(State),
             exit(normal);
@@ -3616,7 +3616,7 @@ nis_loop(#{parent     := Parent,
             ?MODULE:nis_loop(State);
 
         %% Time to ping NetIF
-        {timeout, PingTRef, ping_timeout} ->
+        {timeout, ^PingTRef, ping_timeout} ->
             ?vlog("[ping] (ping-) timer timeout => send ping and start pong timer"),
             NetIF ! {ping, self()},
             PongTO = maps:get(pong_to, State),
@@ -3641,14 +3641,14 @@ nis_loop(#{parent     := Parent,
            pong_tref  := PongTRef} = State) when is_pid(NetIF) andalso
                                                  (PongTRef =/= undefined) ->
     receive
-        {'DOWN', MRef, process, NetIF, _} ->
+        {'DOWN', ^MRef, process, ^NetIF, _} ->
             ?vlog("[pong] netif died => cancel pong timer"),
             erlang:cancel_timer(PongTRef),            
             ?MODULE:nis_loop(State#{netif_pid  => undefined,
                                     netif_mref => undefined,
                                     pong_tref  => undefined});
 
-        {?MODULE, Parent, stop} ->
+        {?MODULE, ^Parent, stop} ->
             ?vlog("[pong] stop received"),
             nis_handle_stop(State),
             exit(normal);
@@ -3659,7 +3659,7 @@ nis_loop(#{parent     := Parent,
 	    Pid ! {?MODULE, self(), {info, Info}},
             ?MODULE:nis_loop(State);
 
-        {pong, NetIF} ->
+        {pong, ^NetIF} ->
             ?vlog("[pong] received pong => cancel pong timer, start ping timer"),
             T = us(),
             erlang:cancel_timer(PongTRef),
@@ -3685,7 +3685,7 @@ nis_loop(#{parent     := Parent,
                                     pong_tref  => undefined});
 
         %% Time to kill NetIF
-        {timeout, PongTRef, pong_timeout} ->
+        {timeout, ^PongTRef, pong_timeout} ->
             ?vinfo("[pong] (pong-) timer timeout => kill NetIF (~p)", [NetIF]),
             nis_handle_pong_timeout(NetIF, MRef),
             KCnt = maps:get(kill_cnt, State),

@@ -346,7 +346,7 @@ sig_update_args(Callee, Types, #sig_st{committed=Committed}=State) ->
     case Committed of
         #{ Callee := Current } ->
             case parallel_join(Current, Types) of
-                Current ->
+                ^Current ->
                     %% We've already processed this function with these
                     %% arguments, so there's no need to visit it again.
                     State;
@@ -800,7 +800,7 @@ simplify(#b_set{op={bif,is_function},args=[Fun,#b_literal{val=Arity}]}=I, Ts)
     case normalized_type(Fun, Ts) of
         #t_fun{arity=any} ->
             I;
-        #t_fun{arity=Arity} ->
+        #t_fun{arity=^Arity} ->
             #b_literal{val=true};
         any ->
             I;
@@ -1064,7 +1064,7 @@ will_succeed_1(#b_set{op=wait}, _Src, _Ts, _Sub) ->
 
 will_succeed_1(#b_set{}, Src, Ts, Sub) ->
     case simplify_arg(Src, Ts, Sub) of
-        #b_var{}=Src ->
+        #b_var{}=Src1 when Src1 =:= Src ->
             %% No substitution; might fail at runtime.
             maybe;
         _ ->
@@ -1078,7 +1078,7 @@ simplify_is_record(I, #t_tuple{exact=Exact,
                    RecSize, #b_literal{val=TagVal}=RecTag, Ts) ->
     TagType = maps:get(1, Es, any),
     TagMatch = case beam_types:get_singleton_value(TagType) of
-                   {ok, TagVal} -> yes;
+                   {ok, ^TagVal} -> yes;
                    {ok, _} -> no;
                    error ->
                        %% Is it at all possible for the tag to match?
@@ -1369,7 +1369,7 @@ is_inequality_op(_) -> false.
 
 eval_type_test_bif_1(I, ArgType, Required) ->
     case beam_types:meet(ArgType, Required) of
-        ArgType -> #b_literal{val=true};
+        ^ArgType -> #b_literal{val=true};
         none -> #b_literal{val=false};
         _ -> I
     end.
@@ -1482,7 +1482,7 @@ update_success_types(#b_ret{arg=Arg}, Ts, Ds, Meta, SuccTypes) ->
                params=Params } = Meta,
 
     RetType = case Ds of
-                  #{ Arg := #b_set{op=call,args=[FuncId | Args]} } ->
+                  #{ Arg := #b_set{op=call,args=[^FuncId | Args]} } ->
                       {call_self, argument_types(Args, Ts)};
                   #{} ->
                       argument_type(Arg, Ts)
@@ -2079,7 +2079,7 @@ meet_types([{V,T0}|Vs], Ts) ->
     #{V:=T1} = Ts,
     case beam_types:meet(T0, T1) of
         none -> none;
-        T1 -> meet_types(Vs, Ts);
+        ^T1 -> meet_types(Vs, Ts);
         T -> meet_types(Vs, Ts#{V:=T})
     end;
 meet_types([], Ts) -> Ts.
@@ -2088,7 +2088,7 @@ subtract_types([{V,T0}|Vs], Ts) ->
     #{V:=T1} = Ts,
     case beam_types:subtract(T1, T0) of
         none -> none;
-        T1 -> subtract_types(Vs, Ts);
+        ^T1 -> subtract_types(Vs, Ts);
         T -> subtract_types(Vs, Ts#{V:=T})
     end;
 subtract_types([], Ts) -> Ts.
@@ -2141,7 +2141,7 @@ init_metadata_1([], RetCounter, Uses) ->
 used_once_2([#b_set{dst=Dst}=I|Is], L, Uses0) ->
     Uses = used_once_uses(beam_ssa:used(I), L, Uses0),
     case Uses of
-        #{Dst:=[L]} ->
+        #{Dst:=[^L]} ->
             used_once_2(Is, L, Uses);
         #{} ->
             %% Used more than once or used once in
@@ -2244,6 +2244,6 @@ wl_next(#worklist{elements=Es,indexes=Is}) when Is =/= #{} ->
 %% Removes the front of the worklist.
 wl_pop(Element, #worklist{counter=Counter0,elements=Es0,indexes=Is0}=Wl) ->
     Counter = Counter0 + 1,
-    {_Key, Element, Es} = gb_trees:take_largest(Es0), %Assertion.
+    {_Key, ^Element, Es} = gb_trees:take_largest(Es0), %Assertion.
     Is = maps:remove(Element, Is0),
     Wl#worklist{counter=Counter,elements=Es,indexes=Is}.

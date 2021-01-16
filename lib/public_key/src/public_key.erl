@@ -1508,7 +1508,7 @@ pkix_crls_validate(OtpCert, [{DP, CRL, DeltaCRL} | Rest],  All, Options, Revoked
 							       CurrCRL
 						       end),
     case pubkey_crl:fresh_crl(DP, CRL, CallBack) of
-	{fresh, CRL} ->
+	{fresh, ^CRL} ->
 	    do_pkix_crls_validate(OtpCert, [{DP, CRL, DeltaCRL} | Rest],
 				  All, Options, RevokedState0);
 	{fresh, NewCRL} ->
@@ -1685,7 +1685,7 @@ normalise_attribute([#'AttributeTypeAndValue'{
                         type = _Type,
                         value = Binary} = ATV]) when is_binary(Binary) ->
     case pubkey_cert_records:transform(ATV, decode) of
-	#'AttributeTypeAndValue'{value = Binary} ->
+	#'AttributeTypeAndValue'{value = ^Binary} ->
 	    %% Cannot decode attribute; return original.
 	    [ATV];
 	DecodedATV = #'AttributeTypeAndValue'{} ->

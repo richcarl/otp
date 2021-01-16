@@ -399,9 +399,9 @@ store_contracts(Mod, SpecMap, CallbackMap, CS) ->
 
 get_temp_contracts(Mod, #codeserver{temp_contracts = TempContDict,
                                     temp_callbacks = TempCallDict}) ->
-  [{Mod, Contracts}] = ets:lookup(TempContDict, Mod),
+  [{^Mod, Contracts}] = ets:lookup(TempContDict, Mod),
   true = ets:delete(TempContDict, Mod),
-  [{Mod, Callbacks}] = ets:lookup(TempCallDict, Mod),
+  [{^Mod, Callbacks}] = ets:lookup(TempCallDict, Mod),
   true = ets:delete(TempCallDict, Mod),
   {Contracts, Callbacks}.
 
@@ -440,7 +440,7 @@ finalize_contracts(#codeserver{temp_contracts = TempContDict,
 
 translate_fake_file(#codeserver{code = Code}, Module, FakeFile) ->
   Files = ets:lookup_element(Code, {mod, Module}, 2),
-  {FakeFile, File} = lists:keyfind(FakeFile, 1, Files),
+  {^FakeFile, File} = lists:keyfind(FakeFile, 1, Files),
   File.
 
 table__lookup(TablePid, M) when is_atom(M) ->
@@ -461,7 +461,7 @@ compress_file_anno({file, F}, Fs) when is_list(F) ->
       FileI = {file, I},
       NFs = [{F, FileI}|Fs],
       {NFs, FileI};
-    {F, FileI} -> {Fs, FileI}
+    {^F, FileI} -> {Fs, FileI}
   end;
 compress_file_anno(T, Fs) when is_tuple(T) ->
   {NFs, NL} = compress_file_anno(tuple_to_list(T), Fs),

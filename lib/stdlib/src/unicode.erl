@@ -438,7 +438,7 @@ characters_to_binary_int(ML, InEncoding, OutEncoding) ->
 		       case OutTrans([Part]) of
 			   Binary when is_binary(Binary) ->
 			       <<Accum/binary, Binary/binary>>;
-			   {error, _, [Part]} ->
+			   {error, _, [^Part]} ->
 			       {error,Accum,[Part]}
 		       end;
 		  (Part, Accum) ->

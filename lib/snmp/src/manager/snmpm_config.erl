@@ -565,7 +565,7 @@ update_agent_info(UserId, Addr, Port, Item, Val)  ->
 
 is_known_engine_id(EngineID, TargetName) ->
     case agent_info(TargetName, engine_id) of
-	{ok, EngineID} ->
+	{ok, ^EngineID} ->
 	    true;
 	{ok, _OtherEngineID} ->
 	    false;
@@ -865,7 +865,7 @@ get_usm_user_from_sec_name(EngineID, SecName) ->
     %% loop through the entire table.
     Key = usm_key(EngineID, SecName),
     case ets:lookup(snmpm_usm_table, Key) of
-	[{Key, #usm_user{sec_name = SecName} = User}] ->
+	[{^Key, #usm_user{sec_name = ^SecName} = User}] ->
 	    {ok, User};
 	_ ->
 	    %% That did not work, so we have to search
@@ -974,7 +974,7 @@ reset_stats_counter(Counter) ->
     
 get_stats_counter(Counter) ->
     case ets:lookup(snmpm_stats_table, Counter) of
-	[{Counter, Value}] ->
+	[{^Counter, Value}] ->
 	    {ok, Value};
 	_ ->
 	    {error, not_found}
@@ -1031,7 +1031,7 @@ info() ->
 
 verbosity(Verbosity) ->
     case ?vvalidate(Verbosity) of
-	Verbosity ->
+	^Verbosity ->
 	    call({verbosity, Verbosity});
 	_ ->
 	    {error, {invalid_verbosity, Verbosity}}
@@ -1651,7 +1651,7 @@ verify_dir(Dir) ->
 
 verify_verbosity(Verbosity) ->
     case snmp_verbosity:validate(Verbosity) of
-	Verbosity ->
+	^Verbosity ->
 	    ok;
 	_ ->
 	    error({invalid_verbosity, Verbosity})
@@ -1671,7 +1671,7 @@ verify_mandatory_option(Opts, {Mand, MandSubOpts}) ->
        "~n   Mand:        ~p"
        "~n   MandSubObjs: ~p", [Mand, MandSubOpts]),
     case lists:keysearch(Mand, 1, Opts) of
-	{value, {Mand, SubOpts}} ->
+	{value, {^Mand, SubOpts}} ->
 	    verify_mandatory_options(SubOpts, MandSubOpts);
 	false ->
 	    ?d("missing mandatory option: ~w [~p]", [Mand, MandSubOpts]),
@@ -2717,7 +2717,7 @@ handle_backup(D, BackupDir) ->
         Filename ->
             ?vinfo("handle_backup -> file to backup: ~n   ~p", [Filename]),
             case filename:dirname(Filename) of
-                BackupDir ->
+                ^BackupDir ->
                     ?vinfo("handle_backup -> backup dir and db dir the same",
                            []),
                     {error, db_dir};
@@ -2864,7 +2864,7 @@ handle_register_agent(UserId, TargetName, Config) ->
 		_ ->
 		    {error, {not_found, UserId}}
 	    end;
-	{ok, UserId} ->
+	{ok, ^UserId} ->
 	    ?vinfo("[~w] Agent (~p) already registered"
 		   "~nwhen"
 		   "~n   Agents: ~p", 
@@ -2908,7 +2908,7 @@ handle_unregister_agent(UserId, TargetName) ->
 	    "~n   UserId:     ~p"
 	    "~n   TargetName: ~p", [UserId, TargetName]),
     case (catch agent_info(TargetName, user_id)) of
-	{ok, UserId} ->
+	{ok, ^UserId} ->
 	    {ok, EngineID} = agent_info(TargetName, engine_id),
 	    reset_usm_cache(EngineID),
 	    %% <DIRTY-BACKWARD-COMPATIBILLITY>
@@ -2934,7 +2934,7 @@ handle_update_agent_info(UserId, TargetName, Info) ->
 	    "~n   Info:       ~p", [UserId, TargetName, Info]),
     %% Verify ownership
     case (catch agent_info(TargetName, user_id)) of
-	{ok, UserId} -> 
+	{ok, ^UserId} -> 
 	    handle_update_agent_info(TargetName, Info);
 	{ok, OtherUserId} ->
 	    {error, {not_owner, OtherUserId}};
@@ -3246,7 +3246,7 @@ update_mini_mib([]) ->
 update_mini_mib([{Oid, Name, Type, MibName}|Elems]) ->
     Key = {mini_mib, Oid},
     case ets:lookup(snmpm_mib_table, Key) of
-	[{Key, _Name, _Type, _AnotherMibName}] ->
+	[{^Key, _Name, _Type, _AnotherMibName}] ->
 	    %% Already loaded from another mib
 	    update_mini_mib(Elems);
 	[] ->
@@ -3261,7 +3261,7 @@ update_mini_mib([{Oid, Name, Type, MibName}|Elems]) ->
 handle_unload_mib(Mib) ->
     Key = {mib, Mib},
     case ets:lookup(snmpm_mib_table, Key) of
-	[{Key, MibName, _MibFile}] ->
+	[{^Key, MibName, _MibFile}] ->
 	    do_unload_mib(MibName),
 	    [{mibs, Mibs0}] = ets:lookup(snmpm_config_table, mibs),
 	    Mibs = lists:delete(Mib, Mibs0),
@@ -3298,7 +3298,7 @@ do_load_mib(MibFile) ->
 		    init_mini_mib_elems(Name1, MEs++Traps, []);
 
 		%% This means that the mib has already been loaded
-		[[ActualFileName]] ->
+		[[^ActualFileName]] ->
 		    [];
 
 		%% This means that the mib was loaded before,

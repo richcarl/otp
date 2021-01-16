@@ -27,6 +27,8 @@
 -compile({no_auto_import,[error/1]}).
 %% Avoid warning for local function error/2 clashing with autoimported BIF.
 -compile({no_auto_import,[error/2]}).
+%% Avoid warning for local function error/3 clashing with autoimported BIF.
+-compile({no_auto_import,[error/3]}).
 -export([
 	 process_incoming_msg/4, process_incoming_msg/5, 
 	 generate_outgoing_msg/5, generate_outgoing_msg/6,
@@ -86,7 +88,7 @@ process_incoming_msg(Packet, Data, SecParams, SecLevel, LocalEngineID) ->
 	end,
     case UsmSecParams of
 	#usmSecurityParameters{msgAuthoritativeEngineID = MsgAuthEngineID,
-			       msgUserName              = TermTriggerUsername} when TermDiscoEnabled =:= true ->
+			       msgUserName              = ^TermTriggerUsername} when TermDiscoEnabled =:= true ->
 	    %% Step 1 discovery message
 	    ?vtrace("process_incoming_msg -> [~p] discovery step 1", 
 		    [TermTriggerUsername]),
@@ -353,13 +355,13 @@ is_auth(AuthProtocol, AuthKey, AuthParams, Packet, SecName,
 	    SnmpEngineID = LocalEngineID,
 	    ?vtrace("is_auth -> SnmpEngineID: ~p", [SnmpEngineID]),
 	    case MsgAuthEngineID of
-		SnmpEngineID when ((MsgAuthEngineBoots =:= 0) andalso 
+		^SnmpEngineID when ((MsgAuthEngineBoots =:= 0) andalso 
 				   (MsgAuthEngineTime =:= 0) andalso 
 				   (TermDiscoEnabled =:= true) andalso 
 				   (TermDiscoStage2 =:= discovery)) -> %% 3.2.7a
 		    ?vtrace("is_auth -> terminating discovery stage 2 - discovery",[]),
 		    discovery;
-		SnmpEngineID when ((MsgAuthEngineBoots =:= 0) andalso 
+		^SnmpEngineID when ((MsgAuthEngineBoots =:= 0) andalso 
 				   (MsgAuthEngineTime =:= 0) andalso 
 				   (TermDiscoEnabled =:= true) andalso 
 				   (TermDiscoStage2 =:= plain)) -> %% 3.2.7a
@@ -370,7 +372,7 @@ is_auth(AuthProtocol, AuthKey, AuthParams, Packet, SecName,
 				  MsgAuthEngineBoots, MsgAuthEngineTime, 
 				  LocalEngineID);
 
-		SnmpEngineID -> %% 3.2.7a
+		^SnmpEngineID -> %% 3.2.7a
 		    ?vtrace("is_auth -> we are authoritative: 3.2.7a", []),
 		    authoritative(SecName, 
 				  MsgAuthEngineBoots, MsgAuthEngineTime, 

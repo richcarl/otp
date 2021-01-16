@@ -94,18 +94,18 @@ do_start(Spawn, Owner, FileName, ModeList) ->
     erlang:dt_restore_tag(Utag),
     Mref = erlang:monitor(process, Pid),
     receive
-	{Ref, {error, _Reason} = Error} ->
+	{^Ref, {error, _Reason} = Error} ->
 	    erlang:demonitor(Mref, [flush]),
 	    Error;
-	{Ref, ok} ->
+	{^Ref, ok} ->
 	    erlang:demonitor(Mref),
 	    receive
-		{'DOWN', Mref, _, _, Reason} ->
+		{'DOWN', ^Mref, _, _, Reason} ->
 		    {error, Reason}
 	    after 0 ->
 		    {ok, Pid}
 	    end;
-	{'DOWN', Mref, _, _, Reason} ->
+	{'DOWN', ^Mref, _, _, Reason} ->
 	    {error, Reason}
     end.
 
@@ -208,7 +208,7 @@ server_loop(#state{mref = Mref} = State) ->
 		    _ = io_reply(From, ReplyAs, Reply),
 		    exit(Reason)
 	    end;
-	{'DOWN', Mref, _, _, Reason} ->
+	{'DOWN', ^Mref, _, _, Reason} ->
 	    exit(Reason);
 	_ ->
 	    server_loop(State)

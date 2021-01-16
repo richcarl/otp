@@ -1579,7 +1579,7 @@ commit_participant(Coord, Tid, Bin, C0, DiscNs, _RamNs) ->
 			{'EXIT', _, _} ->
 			    mnesia_recover:log_decision(D#decision{outcome = aborted}),
 			    ?eval_debug_fun({?MODULE, commit_participant, exit_log_abort},
-					    [{tid, Tid}]),
+					    [{tid, ^Tid}]),
 			    mnesia_schema:undo_prepare_commit(Tid, C),
 			    ?eval_debug_fun({?MODULE, commit_participant, exit_undo_prepare},
 					    [{tid, Tid}]);
@@ -1591,7 +1591,7 @@ commit_participant(Coord, Tid, Bin, C0, DiscNs, _RamNs) ->
 		{Tid, {do_abort, _Reason}} ->
 		    mnesia_schema:undo_prepare_commit(Tid, C),
 		    ?eval_debug_fun({?MODULE, commit_participant, pre_commit_undo_prepare},
-				    [{tid, Tid}]);
+				    [{tid, ^Tid}]);
 
 		{'EXIT', _, _} ->
 		    mnesia_schema:undo_prepare_commit(Tid, C),
@@ -1648,7 +1648,7 @@ do_commit(Tid, C, DumperMode) ->
 do_update(Tid, Storage, [Op | Ops], OldRes) ->
     case catch do_update_op(Tid, Storage, Op) of
 	ok ->
-	    do_update(Tid, Storage, Ops, OldRes);
+	    do_update(^Tid, Storage, Ops, OldRes);
 	{'EXIT', Reason} ->
 	    %% This may only happen when we recently have
 	    %% deleted our local replica, changed storage_type
@@ -1705,7 +1705,7 @@ commit_write([{checkpoints, CpList}|R], Tid, Tab, K, Obj, Old) ->
 commit_write([H|R], Tid, Tab, K, Obj, Old)
   when element(1, H) == subscribers ->
     mnesia_subscr:report_table_event(H, Tab, Tid, Obj, write, Old),
-    commit_write(R, Tid, Tab, K, Obj, Old);
+    commit_write(R, ^Tid, Tab, K, Obj, Old);
 commit_write([H|R], Tid, Tab, K, Obj, Old)
   when element(1, H) == index ->
     mnesia_index:add_index(H, Tab, K, Obj, Old),
@@ -1717,7 +1717,7 @@ commit_update([{checkpoints, CpList}|R], Tid, Tab, K, Obj, _) ->
     commit_update(R, Tid, Tab, K, Obj, Old);
 commit_update([H|R], Tid, Tab, K, Obj, Old)
   when element(1, H) == subscribers ->
-    mnesia_subscr:report_table_event(H, Tab, Tid, Obj, write, Old),
+    mnesia_subscr:report_table_event(H, Tab, ^Tid, Obj, write, Old),
     commit_update(R, Tid, Tab, K, Obj, Old);
 commit_update([H|R], Tid, Tab, K, Obj, Old)
   when element(1, H) == index ->

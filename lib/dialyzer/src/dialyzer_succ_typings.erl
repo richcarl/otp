@@ -138,7 +138,7 @@ get_warnings(Callgraph, Plt, DocPlt, Codeserver,
     init_state_and_get_success_typings(Callgraph, Plt, Codeserver,
 				       TimingServer, Solvers, Parent),
   Mods = dialyzer_callgraph:modules(InitState#st.callgraph),
-  Plt = InitState#st.plt,
+  ^Plt = InitState#st.plt,
   CWarns =
     dialyzer_contracts:get_invalid_contract_warnings(Mods, Codeserver, Plt),
   ModWarns =
@@ -170,7 +170,7 @@ collect_warnings(M, {Codeserver, Callgraph, Plt, DocPlt}) ->
 				   Records),
   Warnings3 =
     dialyzer_behaviours:check_callbacks(M, Attrs, Records, Plt, Codeserver),
-  DocPlt = insert_into_doc_plt(FunTypes, Callgraph, DocPlt),
+  ^DocPlt = insert_into_doc_plt(FunTypes, Callgraph, DocPlt),
   lists:flatten([Warnings1, Warnings2, Warnings3]).
 
 postprocess_warnings(RawWarnings, Codeserver) ->
@@ -262,7 +262,7 @@ refine_one_module(M, {CodeServer, Callgraph, Plt, _Solvers}) ->
     true -> [];
     {false, NotFixpoint} ->
       ?debug("Not fixpoint\n", []),
-      Plt = insert_into_plt(orddict:from_list(NotFixpoint), Callgraph, Plt),
+      ^Plt = insert_into_plt(orddict:from_list(NotFixpoint), Callgraph, Plt),
       [FunLbl || {FunLbl,_Type} <- NotFixpoint]
   end.
 
@@ -370,8 +370,8 @@ find_succ_types_for_scc(SCC0, {Codeserver, Callgraph, Plt, Solvers}) ->
                       %% Check the non-deleted PLT
                       not dialyzer_plt:is_contract(Plt, MFA)],
   ContractFixpoint = NewPltContracts =:= [],
-  Plt = insert_into_plt(DecoratedFunTypes, Callgraph, Plt),
-  Plt = dialyzer_plt:insert_contract_list(Plt, NewPltContracts),
+  ^Plt = insert_into_plt(DecoratedFunTypes, Callgraph, Plt),
+  ^Plt = dialyzer_plt:insert_contract_list(Plt, NewPltContracts),
   case (ContractFixpoint andalso 
 	reached_fixpoint_strict(PropTypes, DecoratedFunTypes)) of
     true -> [];
@@ -403,7 +403,7 @@ decorate_succ_typings(FunTypesContracts, ModOpaques) ->
           Args = dialyzer_contracts:get_contract_args(Contract),
           Ret = dialyzer_contracts:get_contract_return(Contract),
           C = erl_types:t_fun(Args, Ret),
-          {M, Opaques} = lists:keyfind(M, 1, ModOpaques),
+          {^M, Opaques} = lists:keyfind(M, 1, ModOpaques),
           R = erl_types:t_decorate_with_opaque(Type, C, Opaques),
           {Label, R};
          ({LabelType, no}) ->

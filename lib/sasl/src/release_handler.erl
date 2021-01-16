@@ -452,7 +452,7 @@ upgrade_script(App, NewDir) ->
 downgrade_script(App, OldVsn, OldDir) ->
     NewVsn = ensure_running(App),
     NewDir = code:lib_dir(App),
-    {NewVsn, Script} = find_script(App, NewDir, OldVsn, down),
+    {^NewVsn, Script} = find_script(App, NewDir, OldVsn, down),
     OldAppl = read_app(App, OldVsn, OldDir),
     NewAppl = read_app(App, NewVsn, NewDir),
     case systools_rc:translate_scripts(dn,
@@ -1396,7 +1396,7 @@ do_remove_release(Root, RelDir, Vsn, Releases) ->
     case lists:keysearch(Vsn, #release.vsn, Releases) of
 	{value, #release{status = permanent}} ->
 	    {error, {permanent, Vsn}};
-	{value, #release{libs = RemoveLibs, vsn = Vsn, erts_vsn = EVsn}} ->
+	{value, #release{libs = RemoveLibs, vsn = ^Vsn, erts_vsn = EVsn}} ->
 	    case os:type() of
 		{win32, nt} ->
 		    do_remove_service(Vsn);
@@ -1498,7 +1498,7 @@ do_get_rh_script(CurrentVsn, ToVsn, RelDir, Masters) ->
 
 try_upgrade(ToVsn, CurrentVsn, Relup, Masters) ->
     case consult(Relup, Masters) of
-	{ok, [{ToVsn, ListOfRhScripts, _}]} ->
+	{ok, [{^ToVsn, ListOfRhScripts, _}]} ->
 	    case lists:keysearch(CurrentVsn, 1, ListOfRhScripts) of
 		{value, RhScript} -> 
 		    {ok, RhScript};
@@ -1517,7 +1517,7 @@ try_upgrade(ToVsn, CurrentVsn, Relup, Masters) ->
 
 try_downgrade(ToVsn, CurrentVsn, Relup, Masters) ->
     case consult(Relup, Masters) of
-	{ok, [{CurrentVsn, _, ListOfRhScripts}]} ->
+	{ok, [{^CurrentVsn, _, ListOfRhScripts}]} ->
 	    case lists:keysearch(ToVsn, 1, ListOfRhScripts) of
 		{value, RhScript} ->
 		    {ok, RhScript};
@@ -1772,7 +1772,7 @@ transform_release(ReleaseDir, Releases, Masters) ->
 		   (Release) -> Release
 		end,
 	    case lists:map(F, Releases) of
-		Releases ->
+		^Releases ->
 		    Releases;
 		DReleases ->
 		    write_releases(ReleaseDir, DReleases, Masters),
@@ -2281,7 +2281,7 @@ safe_write_file_m(File, Data, FileOpts, Masters) ->
 %% -----------------------------------------------------------------
 get_new_libs([{App,Vsn,_LibDir}|CurrentLibs], NewLibs) ->
     case lists:keyfind(App,1,NewLibs) of
-	{App,NewVsn,_} = LibInfo when NewVsn =/= Vsn ->
+	{^App,NewVsn,_} = LibInfo when NewVsn =/= Vsn ->
 	    [LibInfo | get_new_libs(CurrentLibs,NewLibs)];
 	_ ->
 	    get_new_libs(CurrentLibs,NewLibs)

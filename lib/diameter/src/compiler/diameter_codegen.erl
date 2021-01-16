@@ -908,7 +908,7 @@ remod(_, T) ->
 
 include({attribute, _, include_lib, Path}, Files) ->
     Inc = filename:basename(Path),
-    [{Inc, Forms}] = [T || {F, _} = T <- Files, F == Inc], %% expect one
+    [{^Inc, Forms}] = [T || {F, _} = T <- Files, F == Inc], %% expect one
     lists:flatmap(fun filter/1, Forms);
 
 include(T, _) ->

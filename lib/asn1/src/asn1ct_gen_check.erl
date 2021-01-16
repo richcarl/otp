@@ -307,7 +307,7 @@ pre_process_oid([H|T]=Tail, Res0, Acc) ->
     case lists:keyfind(H, 2, Res0) of
 	false ->
 	    {lists:reverse(Acc),Tail};
-	{Names0,H,Res} ->
+	{Names0,^H,Res} ->
 	    Names = case is_list(Names0) of
 			false -> [Names0];
 			true -> Names0

@@ -470,8 +470,8 @@ get_row(Table, Item, Column) ->
     Ref = erlang:monitor(process, Table),
     Table ! {get_row, self(), Item, Column},
     receive
-	{'DOWN', Ref, _, _, _} -> "";
-	{Table, Res} ->
+	{'DOWN', ^Ref, _, _, _} -> "";
+	{^Table, Res} ->
 	    erlang:demonitor(Ref),
 	    Res
     end.
@@ -480,8 +480,8 @@ get_attr(Table, Item) ->
     Ref = erlang:monitor(process, Table),
     Table ! {get_attr, self(), Item},
     receive
-	{'DOWN', Ref, _, _, _} -> wx:null();
-	{Table, Res} ->
+	{'DOWN', ^Ref, _, _, _} -> wx:null();
+	{^Table, Res} ->
 	    erlang:demonitor(Ref),
 	    Res
     end.
@@ -490,8 +490,8 @@ search(Table, Str, Row, Dir, Case) ->
     Ref = erlang:monitor(process, Table),
     Table ! {search, [Str, Row, Dir, Case]},
     receive
-	{'DOWN', Ref, _, _, _} -> "";
-	{Table, Res} ->
+	{'DOWN', ^Ref, _, _, _} -> "";
+	{^Table, Res} ->
 	    erlang:demonitor(Ref),
 	    Res
     end.
@@ -527,7 +527,7 @@ table_holder(S0 = #holder{parent=Parent, pid=Pid, table=Table}) ->
 	{get_row, From, Row, Col} ->
 	    get_row(From, Row, Col, Table),
 	    table_holder(S0);
-	{Pid, Data} ->
+	{^Pid, Data} ->
 	    S1 = handle_new_data_chunk(Data, S0),
 	    table_holder(S1);
 	{sort, Col} ->

@@ -347,7 +347,7 @@ validate2([List|Rest]) when is_list(List) ->
 
 get_data(Port, MonRef, Eot, Sofar, Size, Max) ->
     receive
-	{Port, {data, Bytes}} ->
+	{^Port, {data, Bytes}} ->
             case eot(Bytes, Eot, Size, Max) of
                 more ->
                     get_data(Port, MonRef, Eot, [Sofar, Bytes],
@@ -357,7 +357,7 @@ get_data(Port, MonRef, Eot, Sofar, Size, Max) ->
                     flush_until_down(Port, MonRef),
                     iolist_to_binary([Sofar, Last])
             end;
-        {'DOWN', MonRef, _, _, _} ->
+        {'DOWN', ^MonRef, _, _, _} ->
 	    flush_exit(Port),
 	    iolist_to_binary(Sofar)
     end.
@@ -379,9 +379,9 @@ eot(Bs, Eot, Size, Max) ->
 %% DOWN message is after them all.
 flush_until_down(Port, MonRef) ->
     receive
-        {Port, {data, _Bytes}} ->
+        {^Port, {data, _Bytes}} ->
             flush_until_down(Port, MonRef);
-        {'DOWN', MonRef, _, _, _} ->
+        {'DOWN', ^MonRef, _, _, _} ->
             flush_exit(Port)
     end.
 
@@ -391,7 +391,7 @@ flush_until_down(Port, MonRef) ->
 %% mailbox now.
 flush_exit(Port) ->
     receive
-        {'EXIT',  Port,  _} ->
+        {'EXIT',  ^Port,  _} ->
             ok
     after 0 ->
             ok

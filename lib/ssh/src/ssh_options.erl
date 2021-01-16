@@ -92,7 +92,7 @@ get_value(Class, Key, Opts, DefFun, CallerMod, CallerLine) when is_map(Opts) ->
         undefined -> DefFun();
         Value -> Value
     catch
-        error:{badkey,Key} -> DefFun()
+        error:{badkey,^Key} -> DefFun()
     end;
 get_value(Class, Key, Opts, _DefFun, _CallerMod, _CallerLine) ->
     error({bad_options,Class, Key, Opts, _CallerMod, _CallerLine}).
@@ -316,7 +316,7 @@ save({Key,Value}, Defs, OptMap) when is_map(OptMap) ->
         error:{badkey,inet} ->
             %% atomic (= non-tuple) options 'inet' and 'inet6':
             OptMap#{socket_options := [Value | maps:get(socket_options,OptMap)]};
-        error:{badkey,Key} ->
+        error:{badkey,^Key} ->
             OptMap#{socket_options := [{Key,Value} | maps:get(socket_options,OptMap)]};
 
         %% But a Key that is known but the value does not validate
@@ -885,7 +885,7 @@ check_pref_public_key_algs(V) ->
              (X, Ack) -> CHK(X, Ack)
           end, [], V)
     of
-        V -> true;
+        ^V -> true;
         [] -> false;
         V1 -> {true,V1}
     end.
@@ -1039,7 +1039,7 @@ normalize_mod_algs([K|Ks], KVs0, Acc, UseDefaultAlgs) ->
     %% Pick the expected keys in order and check if they are in the user's list
     {Vs1, KVs} =
         case lists:keytake(K, 1, KVs0) of
-            {value, {K,Vs0}, KVs1} ->
+            {value, {^K,Vs0}, KVs1} ->
                 {Vs0, KVs1};
             false ->
                 {[], KVs0}

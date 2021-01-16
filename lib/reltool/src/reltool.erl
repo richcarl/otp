@@ -90,9 +90,9 @@ stop(Pid) when is_pid(Pid) ->
     unlink(Pid),
     exit(Pid, shutdown),
     receive
-        {'DOWN', Ref, _, _, shutdown} ->
+        {'DOWN', ^Ref, _, _, shutdown} ->
             ok;
-        {'DOWN', Ref, _, _, Reason} ->
+        {'DOWN', ^Ref, _, _, Reason} ->
             {error, lists:flatten(io_lib:format("~tp", [Reason]))}
     end.
 

@@ -115,7 +115,7 @@ check_config(_Name,SetOrUpdate,OldHConfig,NewHConfig0) ->
 
     %% Fail if write-once fields are changed
     case maps:with([type,file,max_no_files,max_no_bytes],NewHConfig) of
-        WriteOnce ->
+        ^WriteOnce ->
             check_config(NewHConfig);
         Other ->
             {Old,New} = logger_server:diff_maps(WriteOnce,Other),
@@ -213,7 +213,7 @@ open_disk_log(Name, File, Type, MaxNoBytes, MaxNoFiles) ->
                     {quiet,  true},
                     {mode,   read_write}],            
             case disk_log:open(Opts) of
-                {ok,Name} ->
+                {ok,^Name} ->
                     ok;
                 Error = {error,_Reason} ->            
                     Error

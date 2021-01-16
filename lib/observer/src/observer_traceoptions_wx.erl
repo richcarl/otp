@@ -319,9 +319,9 @@ check_selector(Parent, ParsedChoices) ->
 
 get_checked(ListBox, Acc) ->
     receive
-	{ListBox, true, FA} ->
+	{^ListBox, true, FA} ->
 	    get_checked(ListBox, [FA|lists:delete(FA,Acc)]);
-	{ListBox, false, FA} ->
+	{^ListBox, false, FA} ->
 	    get_checked(ListBox, lists:delete(FA,Acc))
     after 0 ->
 	    lists:reverse(Acc)
@@ -330,7 +330,7 @@ get_checked(ListBox, Acc) ->
 select_matchspec(Pid, Parent, AllMatchSpecs, Key) ->
     {MatchSpecs,RestMS} =
 	case lists:keytake(Key,1,AllMatchSpecs) of
-	    {value,{Key,MSs0},Rest} -> {MSs0,Rest};
+	    {value,{^Key,MSs0},Rest} -> {MSs0,Rest};
 	    false -> {[],AllMatchSpecs}
 	end,
     Scale = observer_wx:get_scale(),

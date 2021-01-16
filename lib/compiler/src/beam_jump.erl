@@ -273,7 +273,7 @@ value_to_literal(Other) -> {literal,Other}.
 update_value_dict([Lit,{f,Lbl}|T], Reg, D0) ->
     D = case D0 of
             #{Lbl:=unsafe} -> D0;
-            #{Lbl:={Reg,Lit}} -> D0;
+            #{Lbl:={^Reg,^Lit}} -> D0;
             #{Lbl:=_} -> D0#{Lbl:=unsafe};
             #{} -> D0#{Lbl=>{Reg,Lit}}
         end,
@@ -467,7 +467,7 @@ classify_labels([I|Is], Scope, Safe0) ->
     Labels = instr_labels(I),
     Safe = foldl(fun(L, A) ->
                          case A of
-                             #{L := [Scope]} -> A;
+                             #{L := [^Scope]} -> A;
                              #{L := Other} -> A#{L => ordsets:add_element(Scope, Other)};
                              #{} -> A#{L => [Scope]}
                          end
@@ -560,7 +560,7 @@ opt(Is0, CLabel) ->
 
 find_fixpoint(OptFun, Is0) ->
     case OptFun(Is0) of
-	Is0 -> Is0;
+	^Is0 -> Is0;
 	Is -> find_fixpoint(OptFun, Is)
     end.
 

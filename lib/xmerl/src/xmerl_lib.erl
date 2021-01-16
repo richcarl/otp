@@ -446,7 +446,7 @@ detect_charset(ExtCharset,Content) ->
 	    {external,'iso-10646-utf-1',Content1};
 	{undefined,_} ->
 	    {undefined,undefined,Content};
-	{ExtCharset, Content} ->
+	{^ExtCharset, ^Content} ->
 	    {external,ExtCharset,Content}
     end.
 

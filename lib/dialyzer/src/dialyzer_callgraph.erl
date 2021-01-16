@@ -215,7 +215,7 @@ add_edges(Edges, MFAs, #callgraph{digraph = DG} = CG) ->
 -spec remove_external(callgraph()) -> {callgraph(), [tuple()]}.
 
 remove_external(#callgraph{digraph = DG} = CG) ->
-  {DG, External} = digraph_remove_external(DG),
+  {^DG, External} = digraph_remove_external(DG),
   {CG, External}.
 
 -spec non_local_calls(callgraph()) -> mfa_calls().
@@ -548,11 +548,11 @@ digraph_add_edges([], _DG) ->
 digraph_add_edge(From, To, DG) ->
   case digraph:vertex(DG, From) of
     false -> digraph:add_vertex(DG, From);
-    {From, _} -> ok
+    {^From, _} -> ok
   end,
   case digraph:vertex(DG, To) of
     false -> digraph:add_vertex(DG, To);
-    {To, _} -> ok
+    {^To, _} -> ok
   end,
   check_add_edge(DG, {From, To}, From, To, []),
   ok.
@@ -585,8 +585,8 @@ remove_unconfirmed(Vertexes, DG) ->
 
 remove_unconfirmed([V|Left], DG, Unconfirmed) ->
   case digraph:vertex(DG, V) of
-    {V, confirmed} -> remove_unconfirmed(Left, DG, Unconfirmed);
-    {V, []} -> remove_unconfirmed(Left, DG, [V|Unconfirmed])
+    {^V, confirmed} -> remove_unconfirmed(Left, DG, Unconfirmed);
+    {^V, []} -> remove_unconfirmed(Left, DG, [V|Unconfirmed])
   end;
 remove_unconfirmed([], DG, Unconfirmed) ->
   BadCalls = lists:append([digraph:in_edges(DG, V) || V <- Unconfirmed]),
@@ -779,7 +779,7 @@ to_ps(#callgraph{} = CG, File, Args) ->
 
 condensation(G) ->
   {Pid, Ref} = erlang:spawn_monitor(do_condensation(G, self())),
-  receive {'DOWN', Ref, process, Pid, Result} ->
+  receive {'DOWN', ^Ref, process, ^Pid, Result} ->
       {SCCInts, OutETS, InETS, MapsETS} = Result,
       NewSCCs = [ets:lookup_element(MapsETS, SCCInt, 2) || SCCInt <- SCCInts],
       {{'e', OutETS, InETS, MapsETS}, NewSCCs}

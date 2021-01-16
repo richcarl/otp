@@ -51,12 +51,12 @@ loop(S0 = #s{gfx = Gfx, v=Vs}) ->
     receive 
 	quit -> 
 	    halt;
-	{'EXIT', Gfx, Reason} ->
+	{'EXIT', ^Gfx, Reason} ->
 	    io:format("The GUI crashed: ~p~n", [Reason]);
 	{validate, Butt, Val} ->
 	    Ix = indx(Butt),
 	    case element(Ix,Vs) of
-		Val -> loop(S0);
+		^Val -> loop(S0);
 		0 -> 
 		    S = validate(rcm(Butt),Val,true,S0),
 		    loop(S);

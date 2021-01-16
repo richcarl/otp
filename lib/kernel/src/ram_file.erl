@@ -375,16 +375,16 @@ call_port(Port, Command) ->
 
 get_response(Port) ->
     receive
-	{Port, {data, [Response|Rest]}} ->
+	{^Port, {data, [Response|Rest]}} ->
 	    translate_response(Response, Rest);
-	{'EXIT', Port, _Reason} ->
+	{'EXIT', ^Port, _Reason} ->
 	    {error, port_died}
     end.
 
 ll_close(Port) ->
     try erlang:port_close(Port) catch error:_ -> ok end,
     receive %% In case the caller is the owner and traps exits
-	{'EXIT', Port, _} ->
+	{'EXIT', ^Port, _} ->
 	    ok
     after 0 ->
 	    ok

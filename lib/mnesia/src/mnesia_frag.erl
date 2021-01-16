@@ -77,7 +77,7 @@
 
 lock(ActivityId, Opaque, {table , Tab}, LockKind) ->
     case frag_names(Tab) of
-	[Tab] ->
+	[^Tab] ->
 	    mnesia:lock(ActivityId, Opaque, {table, Tab}, LockKind);
 	Frags ->
 	    DeepNs = [mnesia:lock(ActivityId, Opaque, {table, F}, LockKind) ||
@@ -450,17 +450,17 @@ do_remote_select(_ReplyTo, _Ref, [], _MatchSpec) ->
 
 local_collect(Ref, Pid, Type, LocalMatch, OldSelectFun) ->
     receive
-	{local_select, Ref, ok} ->
+	{local_select, ^Ref, ok} ->
 	    remote_collect_ok(Ref, Type, LocalMatch, OldSelectFun);
-	{local_select, Ref, {error, Reason}} ->
+	{local_select, ^Ref, {error, Reason}} ->
 	    remote_collect_error(Ref, Type, Reason, OldSelectFun);
-	{'EXIT', Pid, Reason} ->
+	{'EXIT', ^Pid, Reason} ->
 	    remote_collect_error(Ref, Type, Reason, OldSelectFun)
     end.
     
 remote_collect_ok(Ref, Type, Acc, OldSelectFun) ->
     receive
-	{remote_select, Ref, Node, RemoteRes} ->
+	{remote_select, ^Ref, Node, RemoteRes} ->
 	    case RemoteRes of
 		{ok, RemoteMatch} ->
 		    Matches = case Type of
@@ -478,7 +478,7 @@ remote_collect_ok(Ref, Type, Acc, OldSelectFun) ->
 
 remote_collect_error(Ref, Type, Reason, OldSelectFun) ->
     receive
-	{remote_select, Ref, _Node, _RemoteRes} ->
+	{remote_select, ^Ref, _Node, _RemoteRes} ->
 	    remote_collect_error(Ref, Type, Reason, OldSelectFun)
     after 0 ->
 	    mnesia:abort({error, Reason})
@@ -1197,7 +1197,7 @@ props_to_frag_hash(Tab, Props) ->
 lookup_prop(Tab, Prop) ->
     Props = val({Tab, frag_properties}),
     case lists:keysearch(Prop, 1,  Props) of
-	{value, {Prop, Val}} ->
+	{value, {^Prop, Val}} ->
 	    Val;
 	false ->
 	    mnesia:abort({no_exists, Tab, Prop, {frag_properties, Props}})

@@ -137,7 +137,7 @@ prepare([H | T], S) ->
 	  when is_list(ZipFiles), is_list(ZipOptions) ->
 	    File = "dummy.zip",
 	    case zip:create(File, ZipFiles, ZipOptions ++ [memory]) of
-		{ok, {File, ZipBin}} ->
+		{ok, {^File, ZipBin}} ->
 		    prepare(T, S#sections{type = Type, body = ZipBin});
 		{error, Reason} ->
 		    throw({Reason, H})
@@ -317,16 +317,16 @@ parse_and_run(File, Args, Options) ->
                     interpret(FormsOrBin, HasRecs, File, Args);
                 compile ->
                     case compile:forms(FormsOrBin, [report]) of
-                        {ok, Module, BeamBin} ->
-                            {module, Module} = code:load_binary(Module, File, BeamBin),
+                        {ok, ^Module, BeamBin} ->
+                            {module, ^Module} = code:load_binary(Module, File, BeamBin),
                             run(Module, Args);
                         _Other ->
                             fatal("There were compilation errors.")
                     end;
                 debug ->
                     case compile:forms(FormsOrBin, [report, debug_info]) of
-                        {ok,Module,BeamBin} ->
-                            {module, Module} = code:load_binary(Module, File, BeamBin),
+                        {ok,^Module,BeamBin} ->
+                            {module, ^Module} = code:load_binary(Module, File, BeamBin),
                             debug(Module, {Module, File, File, BeamBin}, Args);
                         _Other ->
                             fatal("There were compilation errors.")
@@ -367,7 +367,7 @@ parse_and_run(File, Args, Options) ->
                 beam ->
                     case Mode2 of
                         run ->
-                            {module, Module} = code:load_binary(Module, File, FormsOrBin),
+                            {module, ^Module} = code:load_binary(Module, File, FormsOrBin),
                             run(Module, Args);
                         debug ->
 			    [Base | Rest] = lists:reverse(filename:split(File)),
@@ -921,7 +921,7 @@ hidden_apply(App, M, F, Args) ->
     catch
 	error:undef:StackTrace ->
 	    case StackTrace of
-		[{M,F,Args,_} | _] ->
+		[{^M,^F,^Args,_} | _] ->
 		    Arity = length(Args),
 		    Text = io_lib:format("Call to ~w:~w/~w in application ~w failed.\n",
 					 [M, F, Arity, App]),

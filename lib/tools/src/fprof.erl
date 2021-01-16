@@ -184,46 +184,46 @@ apply_start_stop(Function, Args, Procs, Options) ->
 	  fun() ->
 		  MRef = erlang:monitor(process, Parent),
 		  receive
-		      {Parent, Ref, start_trace} ->
+		      {^Parent, ^Ref, start_trace} ->
 			  case trace([start, 
 				      {procs, [Parent | Procs]} 
 				      | Options]) of
 			      ok ->
 				  catch Parent ! {self(), Ref, trace_started},
 				  receive
-				      {Parent, Ref, stop_trace} ->
+				      {^Parent, ^Ref, stop_trace} ->
 					  trace([stop]),
 					  catch Parent 
 					      ! {self(), Ref, trace_stopped},
 					  done;
-				      {'DOWN', MRef, _, _, _} ->
+				      {'DOWN', ^MRef, _, _, _} ->
 					  trace([stop])
 				  end;
 			      {error, Reason} ->
 				  exit(Reason)
 			  end;
-		      {'DOWN', MRef, _, _, _} ->
+		      {'DOWN', ^MRef, _, _, _} ->
 			  done
 		  end
 	  end),
     MRef = erlang:monitor(process, Child),
     catch Child ! {self(), Ref, start_trace},
     receive
-	{Child, Ref, trace_started} ->
+	{^Child, ^Ref, trace_started} ->
 	    try erlang:apply(Function, Args)
 	    after
 		catch Child ! {self(), Ref, stop_trace},
 	        receive
-		    {Child, Ref, trace_stopped} ->
+		    {^Child, ^Ref, trace_stopped} ->
 			receive
-			    {'DOWN', MRef, _, _, _} ->
+			    {'DOWN', ^MRef, _, _, _} ->
 				ok
 			end;
-		    {'DOWN', MRef, _, _, _} ->
+		    {'DOWN', ^MRef, _, _, _} ->
 			trace([stop])
 		end
 	    end;
-	{'DOWN', MRef, _, _, Reason} ->
+	{'DOWN', ^MRef, _, _, Reason} ->
 	    exit(Reason)
     end.
 
@@ -235,7 +235,7 @@ apply_continue(Function, Args, Procs, Options) ->
 	  fun() ->
 		  MRef = erlang:monitor(process, Parent),
 		  receive
-		      {Parent, Ref, start_trace} ->
+		      {^Parent, ^Ref, start_trace} ->
 			  case trace([start, 
 				      {procs, [Parent | Procs]} 
 				      | Options]) of
@@ -244,16 +244,16 @@ apply_continue(Function, Args, Procs, Options) ->
 			      {error, Reason} ->
 				  exit(Reason)
 			  end;
-		      {'DOWN', MRef, _, _, _} ->
+		      {'DOWN', ^MRef, _, _, _} ->
 			  done
 		  end
 	  end),
     MRef = erlang:monitor(process, Child),
     catch Child ! {self(), Ref, start_trace},
     receive
-	{'DOWN', MRef, _, _, {Ref, trace_started}} ->
+	{'DOWN', ^MRef, _, _, {^Ref, trace_started}} ->
 	    erlang:apply(Function, Args);
-	{'DOWN', MRef, _, _, Reason} ->
+	{'DOWN', ^MRef, _, _, Reason} ->
 	    exit(Reason)
     end.
 
@@ -913,7 +913,7 @@ just_call(undefined, _) ->
 just_call(Pid, Request) ->
     Mref = erlang:monitor(process, Pid),
     receive
-	{'DOWN', Mref, _, _, Reason} ->
+	{'DOWN', ^Mref, _, _, Reason} ->
 	    {'EXIT', Pid, Reason}
     after 0 ->
 	    Tag = {Mref, self()},
@@ -926,15 +926,15 @@ just_call(Pid, Request) ->
 	    %% io:format("~p request: ~p~n", [?MODULE, Request]),
 	    catch Pid ! {?FPROF_SERVER, Tag, Request},
 	    receive
-		{?FPROF_SERVER, Mref, Reply} ->
+		{?FPROF_SERVER, ^Mref, Reply} ->
 		    case Demonitor of
 			true -> erlang:demonitor(Mref);
 			false -> ok
 		    end,
-		    receive {'DOWN', Mref, _, _, _} -> ok after T -> ok end,
+		    receive {'DOWN', ^Mref, _, _, _} -> ok after T -> ok end,
 		    Reply;
-		{'DOWN', Mref, _, _, Reason} ->
-		    receive {?FPROF_SERVER, Mref, _} -> ok after T -> ok end,
+		{'DOWN', ^Mref, _, _, Reason} ->
+		    receive {?FPROF_SERVER, ^Mref, _} -> ok after T -> ok end,
 		    {'EXIT', Pid, Reason}
 	    after ?FPROF_SERVER_TIMEOUT ->
 		    timeout
@@ -1065,7 +1065,7 @@ handle_req(#trace_stop{}, Tag, State) ->
 		    put(trace_state, idle),
 		    case {get(profile_state), get(profile_type), 
 			  get(profile_pid)} of
-			{running, tracer, TracePid} ->
+			{running, tracer, ^TracePid} ->
 			    exit(TracePid, normal),
 			    put(profile_tag, Tag),
 			    State;
@@ -1146,7 +1146,7 @@ handle_req(#profile_stop{}, Tag, State) ->
 	{running, tracer} ->
 	    ProfilePid = get(profile_pid),
 	    case {get(trace_state), get(trace_type), get(trace_pid)} of
-		{running, tracer, ProfilePid} ->
+		{running, tracer, ^ProfilePid} ->
 		    trace_off(),
 		    erase(trace_type),
 		    erase(trace_pid),
@@ -1271,7 +1271,7 @@ handle_req(Request, Tag, State) ->
 
 handle_other({'EXIT', Pid, Reason} = Other, State) when is_pid(Pid); is_port(Pid) ->
     case {get(trace_state), get(trace_pid)} of
-	{running, Pid} ->
+	{running, ^Pid} ->
 	    trace_off(),
 	    io:format("~n~p:handle_other, unexpected ~p (trace_pid)~n",
 		      [?MODULE, Other]),
@@ -1279,14 +1279,14 @@ handle_other({'EXIT', Pid, Reason} = Other, State) when is_pid(Pid); is_port(Pid
 	    erase(trace_type),
 	    erase(trace_pid),
 	    try_pending_stop(State);
-	{stopping, Pid} ->
+	{stopping, ^Pid} ->
 	    put(trace_state, idle),
 	    erase(trace_pid),
 	    reply(erase(trace_tag), result(Reason)),
 	    try_pending_stop(State);
 	_ ->
 	    case {get(profile_state), get(profile_pid)} of
-		{running, Pid} ->
+		{running, ^Pid} ->
 		    Result = result(Reason),
 		    put(profile_state, {idle, Result}),
 		    erase(profile_type),
@@ -1417,16 +1417,16 @@ spawn_3step(Spawn, FunPrelude, FunAck, FunBody)
 		  catch Parent ! {self(), Ref, Ack},
 		  MRef = erlang:monitor(process, Parent),
 		  receive
-		      {Parent, Ref, Go} ->
+		      {^Parent, ^Ref, Go} ->
 			  erlang:demonitor(MRef, [flush]),
 			  FunBody(Go);
-		      {'DOWN', MRef, _, _, _} ->
+		      {'DOWN', ^MRef, _, _, _} ->
 			  ok
 		  end
 	  end),
     MRef = erlang:monitor(process, Child),
     receive
-	{Child, Ref, Ack} ->
+	{^Child, ^Ref, Ack} ->
 	    erlang:demonitor(MRef, [flush]),
 	    try FunAck(Ack) of
 		{Result, Go} ->
@@ -1437,11 +1437,11 @@ spawn_3step(Spawn, FunPrelude, FunAck, FunBody)
 		    catch exit(Child, kill),
 		    erlang:raise(Class, Reason, Stacktrace)
 	    end;
-	{'DOWN', MRef, _, _, Reason} ->
-	    receive {Child, Ref, _Ack} -> ok after 0 -> ok end,
+	{'DOWN', ^MRef, _, _, Reason} ->
+	    receive {^Child, ^Ref, _Ack} -> ok after 0 -> ok end,
 	    case Spawn of 
 		spawn_link ->
-		    receive {'EXIT', Reason} -> ok after 0 -> ok end;
+		    receive {'EXIT', ^Reason} -> ok after 0 -> ok end;
 		spawn ->
 		    ok
 	    end,
@@ -1456,7 +1456,7 @@ spawn_3step(Spawn, FunPrelude, FunAck, FunBody)
 
 trace_off() ->
     try erlang:trace_delivered(all) of
-	Ref -> receive {trace_delivered, all, Ref} -> ok end
+	Ref -> receive {trace_delivered, all, ^Ref} -> ok end
     catch
 	error:undef -> ok
     end,
@@ -1553,7 +1553,7 @@ tracer_loop(Parent, Handler, State) ->
 	    tracer_loop(Parent, Handler, Handler(Trace, State));
 	Trace when element(1, Trace) =:= trace_ts ->
 	    tracer_loop(Parent, Handler, Handler(Trace, State));
-	{'EXIT', Parent, Reason} ->
+	{'EXIT', ^Parent, Reason} ->
 	    _ = handler(end_of_trace, State),
 	    exit(Reason);
 	_ ->
@@ -1977,7 +1977,7 @@ trace_call(Table, Pid, Func, TS, CP) ->
 			[[{CP, TS}]]
 		end,
 	    put(Pid, trace_call_push(Table, Pid, Func, TS, OldStack));
-	[[{Func, FirstInTS}]] when InitCnt=:=2 ->
+	[[{^Func, FirstInTS}]] when InitCnt=:=2 ->
 	    %% First call on this process. Take the timestamp for first
 	    %% time the process was scheduled in.
 	    init_log(Table, Proc, Func),
@@ -1994,7 +1994,7 @@ trace_call(Table, Pid, Func, TS, CP) ->
 	[[{garbage_collect, _} | _] | _] ->
 	    throw({inconsistent_trace_data, ?MODULE, ?LINE,
 		  [Pid, Func, TS, CP, Stack]});
-	[[{CP, _} | _], [{CP, _} | _] | _] ->
+	[[{^CP, _} | _], [{^CP, _} | _] | _] ->
 	    %% This is a difficult case - current function becomes
 	    %% new stack top but is already pushed. It might be that
 	    %% this call is actually tail recursive, or maybe not.
@@ -2006,15 +2006,15 @@ trace_call(Table, Pid, Func, TS, CP) ->
 	    %% recursive stack cykle.
 	    init_log(Table, Proc, Func),
 	    put(Pid, trace_call_shove(Table, Pid, Func, TS, Stack));
-	[[{CP, _} | _] | _] ->
+	[[{^CP, _} | _] | _] ->
 	    %% Current function becomes new stack top -> stack push
 	    init_log(Table, Proc, Func),
 	    put(Pid, trace_call_push(Table, Pid, Func, TS, Stack));
-	[_, [{CP, _} | _] | _] ->
+	[_, [{^CP, _} | _] | _] ->
 	    %% Stack top unchanged -> no push == tail recursive call
 	    init_log(Table, Proc, Func),
 	    put(Pid, trace_call_shove(Table, Pid, Func, TS, Stack));
-	[[{Func0, _} | _], [{Func0, _} | _], [{CP, _} | _] | _] ->
+	[[{Func0, _} | _], [{Func0, _} | _], [{^CP, _} | _] | _] ->
 	    %% Artificial case that only should happen when 
 	    %% stack recursive short cycle collapsing has been done,
 	    %% otherwise CP should not occur so far from the stack front.
@@ -2157,7 +2157,7 @@ trace_return_to_int(Table, Pid, Func, TS, Stack) ->
     case trace_return_to_2(Table, Pid, Func, TS, Stack) of
 	{undefined, _} ->
 	    [[{Func, TS}] | Stack];
-	{[[{Func, _} | Level0] | Stack1], _} ->
+	{[[{^Func, _} | Level0] | Stack1], _} ->
 	    [[{Func, TS} | Level0] | Stack1];
 	{NewStack, _} ->
 	    NewStack
@@ -2251,7 +2251,7 @@ trace_exit(Table, Pid, TS) ->
 	    ok;
 	[] ->
 	    ok;
-	[_ | _] = Stack ->
+	[_ | _] ->
 	    _ = trace_return_to_int(Table, Pid, undefined, TS, Stack),
 	    ok
     end,

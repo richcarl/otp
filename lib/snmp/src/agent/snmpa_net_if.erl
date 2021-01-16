@@ -531,7 +531,7 @@ gen_udp_ranges_open([PortNo|Ranges], Opts) when is_integer(PortNo) andalso
                                                 (PortNo > 0) ->
     ?vtrace("gen_udp_ranges_open(~w) -> entry", [PortNo]),
     try gen_udp_open(PortNo, Opts) of
-        {_Sock, PortNo} = SUCCESS when is_integer(PortNo) ->
+        {_Sock, ^PortNo} = SUCCESS when is_integer(PortNo) ->
             SUCCESS
     catch
         throw:{udp_open, _} ->
@@ -556,7 +556,7 @@ loop(#state{transports = Transports,
 	{udp, Socket, IpAddr, IpPort, Packet} = Msg when is_port(Socket) ->
 	    ?vlog("got paket from ~w:~w on ~w", [IpAddr, IpPort, Socket]),
 	    case lists:keyfind(Socket, #transport.socket, Transports) of
-		#transport{socket = Socket, domain = Domain} = Transport ->
+		#transport{socket = ^Socket, domain = Domain} = Transport ->
 		    From =
 			case Domain of
 			    snmpUDPDomain ->
@@ -573,7 +573,7 @@ loop(#state{transports = Transports,
 	{udp_error, Socket, Error} when is_port(Socket) ->
 	    ?vinfo("got udp-error on ~p: ~w", [Socket, Error]),
 	    case lists:keyfind(Socket, #transport.socket, Transports) of
-		#transport{socket = Socket} = Transport ->
+		#transport{socket = ^Socket} = Transport ->
 		    loop(handle_udp_error(S, Transport, Error));
 		false ->
 		    loop(handle_udp_error_unknown(S, Socket, Error))
@@ -743,7 +743,7 @@ loop(#state{transports = Transports,
 	    reset_counters(),
 	    loop(S);
 
-	{'EXIT', Parent, Reason} ->
+	{'EXIT', ^Parent, Reason} ->
 	    ?vlog("parent (~p) exited: "
 		  "~n   ~p", [Parent, Reason]),
 	    exit(Reason);
@@ -753,7 +753,7 @@ loop(#state{transports = Transports,
 	{'EXIT', Socket, Reason} when is_port(Socket) ->
 	    case lists:keyfind(Socket, #transport.socket, Transports) of
 		#transport{
-                   socket    = Socket,
+                   socket    = ^Socket,
                    domain    = Domain,
                    port_info = PortInfo,
                    opts      = SocketOpts,
@@ -1007,7 +1007,7 @@ handle_discovery_response(
   ManagerEngineId) ->
     active_once(Socket),
     case lists:keyfind(ReqId, 1, S#state.reqs) of
-	{ReqId, Pid} ->
+	{^ReqId, Pid} ->
 	    Pid ! {snmp_discovery_response_received, Pdu, ManagerEngineId},
 	    %% XXX Strange... Reqs from this Pid should be reaped
 	    %% at process exit by clear_reqs/2 so the following
@@ -1079,7 +1079,7 @@ handle_recv_pdu(
   _PduMS, _ACMData) ->
     active_once(Socket),
     case lists:keyfind(ReqId, 1, Reqs) of
-	{ReqId, Pid} ->
+	{^ReqId, Pid} ->
 	    ?vdebug("handle_recv_pdu -> "
 		    "~n   send response to receiver ~p", [Pid]),
 	    Pid ! {snmp_response_received, Vsn, Pdu, From};
@@ -2135,7 +2135,7 @@ call(Pid, Req) ->
     ReplyRef = make_ref(),
     Pid ! {Req, ReplyRef, self()},
     receive 
-	{ReplyRef, Reply, Pid} ->
+	{^ReplyRef, Reply, ^Pid} ->
 	    Reply
     after 5000 ->
 	    {error, timeout}

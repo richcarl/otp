@@ -116,7 +116,7 @@ stop_service({Address, Port, Profile}) ->
     MonitorRef = erlang:monitor(process, Pid),
     Result = httpd_sup:stop_child(Address, Port, Profile),
     receive
-        {'DOWN', MonitorRef, _, _, _} ->
+        {'DOWN', ^MonitorRef, _, _, _} ->
             Result
     end;     
 stop_service(Pid) when is_pid(Pid) ->

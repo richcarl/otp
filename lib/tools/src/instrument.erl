@@ -67,7 +67,7 @@ alloc_hist_receive_1(0, _Ref, Unscanned, Result) ->
     {Unscanned, Result};
 alloc_hist_receive_1(MsgCount, Ref, Unscanned0, Result0) ->
     receive
-        {Ref, Unscanned, Tags} ->
+        {^Ref, Unscanned, Tags} ->
             Result = lists:foldl(fun alloc_hist_fold_result/2, Result0, Tags),
             alloc_hist_receive_1(MsgCount - 1, Ref, Unscanned0 + Unscanned, Result)
     end.
@@ -138,7 +138,7 @@ carrier_info_receive_1(0, _Ref, Result) ->
     lists:flatten(Result);
 carrier_info_receive_1(MsgCount, Ref, Result0) ->
     receive
-        {Ref, Carriers} ->
+        {^Ref, Carriers} ->
             carrier_info_receive_1(MsgCount - 1, Ref, [Carriers, Result0])
     end.
 

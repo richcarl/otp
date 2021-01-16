@@ -58,10 +58,10 @@ req(Request) ->
     Ref = erlang:monitor(process,DbPid),
     get(?MODULE) ! {{Ref, self()}, Request},
     receive 
-	{{Ref,?MODULE}, Reply} ->
+	{{^Ref,?MODULE}, Reply} ->
 	    erlang:demonitor(Ref,[flush]),
 	    Reply; 
-	{'DOWN',Ref,_,_,Info} -> 
+	{'DOWN',^Ref,_,_,Info} -> 
 	    exit({db_error,Info}) 
     end.
 
@@ -133,13 +133,13 @@ loop(#state{parent = Parent, monitor = MRef, table = Table,
 	    loop(State);
         {From, stop} ->
             reply(From, stopped); %% Nothing to store
-        {'DOWN', MRef, process, Parent, Reason} ->
+        {'DOWN', ^MRef, process, ^Parent, Reason} ->
             exit(Reason)
     end.
 
 get_table(Table, Mod, Includes) ->
     case ets:lookup(Table, Mod) of
-	[{Mod,Tab}] ->
+	[{^Mod,Tab}] ->
 	    {ok,Tab};
 	[] ->
 	    load_table(Mod, any, {{0,0,0},{0,0,0}}, Includes)
@@ -148,7 +148,7 @@ get_table(Table, Mod, Includes) ->
 lookup(Tab, K) ->
     case ets:lookup(Tab, K) of
         []      -> undefined;
-        [{K,V}] -> V
+        [{^K,V}] -> V
     end.
 
 info(EruleMaps) ->
@@ -164,7 +164,7 @@ load_table(Mod, EruleMaps, Mtime, Includes) ->
 	{ok,ModTab} ->
 	    Vsn = asn1ct:vsn(),
 	    case ets:lookup(ModTab, ?MAGIC_KEY) of
-		[{_,{Vsn,EruleMaps}}] ->
+		[{_,{^Vsn,^EruleMaps}}] ->
 		    %% Correct version and encoding rule.
 		    {ok,ModTab};
 		_ ->

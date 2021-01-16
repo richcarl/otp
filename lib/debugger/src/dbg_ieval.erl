@@ -248,11 +248,11 @@ meta_loop(Debugged, Bs, #ieval{level=Le} = Ieval) ->
 	%% The following messages can only be received when Meta is
 	%% waiting for Debugged to evaluate non-interpreted code
 	%% or a Bif. Le>1
-	{sys, Debugged, {value,Val}} ->
+	{sys, ^Debugged, {value,Val}} ->
 	    {value, Val, Bs};
-	{sys, Debugged, {value,Val,Bs2}} ->
+	{sys, ^Debugged, {value,Val,Bs2}} ->
 	    {value, Val, merge_bindings(Bs2, Bs, Ieval)};
-	{sys, Debugged, {exception,{Class,Reason,Stk}}} ->
+	{sys, ^Debugged, {exception,{Class,Reason,Stk}}} ->
 	    case get(exit_info) of
 
 		%% Error occurred outside of interpreted code.
@@ -271,7 +271,7 @@ meta_loop(Debugged, Bs, #ieval{level=Le} = Ieval) ->
 	    end;
 
 	%% Re-entry to Meta from non-interpreted code
-	{re_entry, Debugged, {eval,{M,F,As}}} when Le =:= 1 ->
+	{re_entry, ^Debugged, {eval,{M,F,As}}} when Le =:= 1 ->
 	    %% Reset process dictionary
 	    %% This is really only necessary if the process left
 	    %% interpreted code at a call level > 1
@@ -294,7 +294,7 @@ meta_loop(Debugged, Bs, #ieval{level=Le} = Ieval) ->
 
 	%% Evaluation in Debugged results in call to interpreted
 	%% function (probably? a fun)
-	{re_entry, Debugged, {eval,{M,F,As}}} when Le>1 ->
+	{re_entry, ^Debugged, {eval,{M,F,As}}} when Le>1 ->
 	    Ieval2 = Ieval#ieval{module=undefined, line=-1},
 	    Debugged ! {sys,self(),eval_mfa(Debugged,M,F,As,Ieval2)},
 	    meta_loop(Debugged, Bs, Ieval);
@@ -411,9 +411,9 @@ eval_mfa(Debugged, M, F, As, #ieval{level=Le}=Ieval0) ->
 	    trace(return, {Le,Val}),
 	    {ready, Val}
     catch
-	exit:{Debugged, Reason} ->
+	exit:{^Debugged, Reason} ->
 	    exit(Reason);
-	exit:{Int, Reason} ->
+	exit:{^Int, Reason} ->
 	    exit(Reason);
 	Class:Reason ->
 	    {exception, {Class, Reason, get_stacktrace()}}
@@ -529,7 +529,7 @@ get_function(Mod, Name, Args, local) ->
 	false ->
 	    DbRef = db_ref(Mod),
 	    case dbg_idb:match_object(DbRef, {{Mod,Name,Arity,'_'},'_'}) of
-		[{{Mod,Name,Arity,Exp},Clauses}] ->
+		[{{^Mod,^Name,^Arity,Exp},Clauses}] ->
 		    cache(Key, {Exp,Clauses}),
 		    Clauses;
 		_ -> undef
@@ -584,7 +584,7 @@ cache(Key, Data) ->
 	    
 cached(Key) ->
     case lists:keyfind(Key, 1, get(cache))  of
-	{Key,Data} -> Data;
+	{^Key,Data} -> Data;
 	false -> false
     end.
 
@@ -1166,7 +1166,7 @@ safe_bif(M, F, As, Bs, Ieval0) ->
 
 eval_send(To, Msg, Bs, Ieval) ->
     try To ! Msg of
-	Msg -> 
+	^Msg -> 
 	    trace(send, {To,Msg}),
 	    {value,Msg,Bs}
     catch
@@ -1261,7 +1261,7 @@ eval_receive(Debugged, Cs, ToVal, ToExprs, ToBs, Bs0,
 
 do_receive(Debugged, Bs, Ieval) ->
     receive
-	{trace,Debugged,'receive',Msg} ->
+	{trace,^Debugged,'receive',Msg} ->
 	    [Msg];
 	Msg ->
 	    check_exit_msg(Msg, Bs, Ieval),
@@ -1271,7 +1271,7 @@ do_receive(Debugged, Bs, Ieval) ->
 
 do_receive(Debugged, Time, Stamp, Bs, Ieval) ->
     receive
-	{trace,Debugged,'receive',Msg} ->
+	{trace,^Debugged,'receive',Msg} ->
 	    [Msg];
 	{user, timeout} ->
 	    timeout;
@@ -1311,7 +1311,7 @@ rec_mess_no_trace(Debugged, Msg, Bs, Ieval) ->
 
 rec_ack(Debugged, Bs, Ieval) ->
     receive
-	{Debugged,rec_acked} ->
+	{^Debugged,rec_acked} ->
 	    true;
 	Msg ->
 	    check_exit_msg(Msg, Bs, Ieval),
@@ -1321,7 +1321,7 @@ rec_ack(Debugged, Bs, Ieval) ->
 
 flush_traces(Debugged) ->
     receive
-	{trace,Debugged,'receive',_} ->
+	{trace,^Debugged,'receive',_} ->
 	    flush_traces(Debugged)
     after 0 ->
 	    true
@@ -1550,7 +1550,7 @@ match1({var,_,'_'}, Term, Bs,_BBs) -> % Anonymous variable matches
     {match,add_anon(Term, Bs)};   % everything,save it anyway
 match1({var,_,Name}, Term, Bs, _BBs) ->
     case binding(Name, Bs) of
-	{value,Term} ->
+	{value,^Term} ->
 	    {match,Bs};
 	{value,_} ->
 	    throw(nomatch);
@@ -1680,7 +1680,7 @@ merge_bindings(Bs, Bs, _Ieval) ->
     Bs; % Identical bindings
 merge_bindings([{Name,V}|B1s], B2s, Ieval) ->
     case binding(Name, B2s) of
-	{value,V} -> % Already there, and the same
+	{value,^V} -> % Already there, and the same
 	    merge_bindings(B1s, B2s, Ieval);
 	{value,_} when Name =:= '_' -> % Already there, but anonymous
 	    B2s1 = lists:keydelete('_', 1, B2s),

@@ -678,7 +678,7 @@ incr_reply_counter(ConnHandle, TransId) ->
 
 get_reply_counter(ConnHandle, TransId) ->
     Counter = {reply_counter, ConnHandle, TransId},
-    [{Counter, Val}] = ets:lookup(megaco_config, Counter),
+    [{^Counter, Val}] = ets:lookup(megaco_config, Counter),
     Val.
 
 del_reply_counter(ConnHandle, TransId) ->
@@ -711,7 +711,7 @@ get_pending_counter(TransId) ->
 
 get_pending_counter(Direction, TransId) ->
     Counter = {pending_counter, Direction, TransId},
-    [{Counter, Val}] = ets:lookup(megaco_config, Counter),
+    [{^Counter, Val}] = ets:lookup(megaco_config, Counter),
     Val.
 
 del_pending_counter(TransId) ->
@@ -802,7 +802,7 @@ do_init_trans_id_counter(ConnHandle, Item, Incr) ->
 		    MS ->
 			MS
 		end,
-	    Item     = ?TID_CNT(LocalMid),
+	    ^Item     = ?TID_CNT(LocalMid),
 	    Incr2    = {2, Incr, Max, Min}, 
 	    case (catch ets:update_counter(megaco_config, Item, Incr2)) of
 		{'EXIT', _} ->
@@ -1355,7 +1355,7 @@ new_conn_data({conn_data, CH, Serial, MaxSerial, ReqTmr, LongReqTmr,
 
 
 get_default(Key, Defaults) ->
-    {value, {Key, Default}} = lists:keysearch(Key, 1, Defaults),
+    {value, {^Key, Default}} = lists:keysearch(Key, 1, Defaults),
     Default.
 
 
@@ -2149,7 +2149,7 @@ update_snmp_counters(_CH, _PrelCH, []) ->
 update_snmp_counters(CH, PrelCH, [Counter|Counters]) ->
     PrelKey = {PrelCH, Counter},
     Key     = {CH, Counter},
-    [{PrelKey,PrelVal}] = ets:lookup(megaco_stats, PrelKey),
+    [{^PrelKey,PrelVal}] = ets:lookup(megaco_stats, PrelKey),
     ets:update_counter(megaco_stats, Key, PrelVal),
     ets:delete(megaco_stats, PrelKey),
     update_snmp_counters(CH, PrelCH, Counters).

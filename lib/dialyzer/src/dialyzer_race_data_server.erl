@@ -59,7 +59,7 @@ call(Query, Server) ->
   Ref = make_ref(),
   Server ! {call, self(), Ref, Query},
   receive
-    {Ref, Reply} -> Reply
+    {^Ref, Reply} -> Reply
   end.
 
 -spec cast(atom() | {atom(), term()}, pid()) -> ok.

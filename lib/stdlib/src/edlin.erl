@@ -139,7 +139,7 @@ edit([C|Cs], P, {Bef,Aft}, Prefix, Rs0) ->
 %% 			    edit([redraw_line|Cs], P, {Bef,Aft}, none, [Rs0])
 %% 		    end
 %% 	    end;
-	{undefined,C} ->
+	{undefined,^C} ->
 	    {undefined,{none,Prefix,C},Cs,{line,P,{Bef,Aft},none},
 	     reverse(Rs0)};
 	Op ->

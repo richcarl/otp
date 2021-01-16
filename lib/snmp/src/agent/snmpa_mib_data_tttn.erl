@@ -267,7 +267,7 @@ do_load_mib(MibData, ActualFileName, MibName, MeOverride, TeOverride) ->
 
 verify_not_loaded(Mod, Tab, Name) ->
     case Mod:read(Tab, Name) of
-        {value, #mib_info{name = Name}} -> 
+        {value, #mib_info{name = ^Name}} -> 
             throw({error, already_loaded});
         false ->
             ok
@@ -344,14 +344,14 @@ check_notifications([]) -> true;
 check_notifications([#trap{trapname = Key} = Trap | Traps]) ->
     ?vtrace("check notification [trap] with Key: ~p",[Key]),
     case snmpa_symbolic_store:get_notification(Key) of
-	{value, Trap} -> check_notifications(Traps);
+	{value, ^Trap} -> check_notifications(Traps);
 	{value,    _} -> throw({error, {'trap already defined', Key}});
 	undefined     -> check_notifications(Traps)
     end;
 check_notifications([#notification{trapname = Key} = Notif | Traps]) ->
     ?vtrace("check notification [notification] with Key: ~p",[Key]),
     case snmpa_symbolic_store:get_notification(Key) of
-	{value, Notif} -> 
+	{value, ^Notif} -> 
 	    check_notifications(Traps);
 	{value,     _} -> 
 	    throw({error, {'notification already defined', Key}});
@@ -372,7 +372,7 @@ check_mes([]) -> true;
 check_mes([#me{aliasname = Name, oid = Oid1} | MEs]) ->
     ?vtrace("check mib entries with aliasname: ~p",[Name]),
     case snmpa_symbolic_store:aliasname_to_oid(Name) of
-	{value, Oid1} -> 
+	{value, ^Oid1} -> 
 	    check_mes(MEs);
 	{value, Oid2} -> 
 	    ?vinfo("~n   expecting '~p'~n   but found '~p'",[Oid1, Oid2]),
@@ -467,11 +467,11 @@ whereis_mib(#mib_data{module = Mod, mib_db = Db}, Name) ->
 %%----------------------------------------------------------------------
 unregister_subagent(#mib_data{subagents = SAs} = MibData, Pid) 
   when is_pid(Pid) ->
-    SAs = MibData#mib_data.subagents,
+    ^SAs = MibData#mib_data.subagents,
     case lists:keysearch(Pid, 1, SAs) of
 	false -> 
 	    {ok, MibData};
-	{value, {Pid, Oid}} ->
+	{value, {^Pid, Oid}} ->
 	    % we should never get an error since Oid is found in MibData.
 	    {ok, NewMibData, _DeletedSA} = unregister_subagent(MibData, Oid),
 	    % continue if the same Pid handles other mib subtrees.
@@ -760,7 +760,7 @@ find_node(D, {node, subagent}, _RestOfOid, SARevOid) ->
     #mib_data{subagents = SAs} = D,
     SAOid = lists:reverse(SARevOid),
     case lists:keysearch(SAOid, 2, SAs) of
-	{value, {SubAgentPid, SAOid}} ->
+	{value, {SubAgentPid, ^SAOid}} ->
 	    {subagent, SubAgentPid, SAOid};
 	false ->
 	    ?vinfo("find_node -> could not find subagent with"
@@ -877,7 +877,7 @@ next_node(D, {node, subagent}, Oid, RevOidSoFar, MibView) ->
 	_ -> 
 	    #mib_data{subagents = SAs} = D,
 	    case lists:keysearch(OidSoFar, 2, SAs) of
-		{value, {SubAgentPid, OidSoFar}} ->
+		{value, {SubAgentPid, ^OidSoFar}} ->
 		    {subagent, SubAgentPid, OidSoFar};
 		_ ->
 		    ?vinfo("next_node -> could not find subagent with"
@@ -978,7 +978,7 @@ find_next(D, {node, subagent}, _Idx, RevOidSoFar, MibView) ->
 	_ -> 
 	    #mib_data{subagents = SAs} = D,
 	    case lists:keysearch(OidSoFar, 2, SAs) of
-		{value, {SubAgentPid, OidSoFar}} ->
+		{value, {SubAgentPid, ^OidSoFar}} ->
 		    {subagent, SubAgentPid, OidSoFar};
 		false ->
 		    ?vinfo("find_node -> could not find subagent with"

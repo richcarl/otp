@@ -86,7 +86,7 @@ break_p(Mod, Line, Le, Bs) ->
     case lists:keysearch({Mod, Line}, 1, get(breakpoints)) of
 	{value, {_Point, [active, Action, _, Cond]}} ->
 	    case get(user_eval) of
-		[{Line, Le}|_] -> false;
+		[{^Line, ^Le}|_] -> false;
 		_ ->
 		    Bool = case Cond of
 			       null -> true;
@@ -209,7 +209,7 @@ set(Meta, Tag, Args) ->
 get(Meta, Tag, Args) ->
     Meta ! {user, {get, Tag, self(), Args}},
     receive
-	{Meta, Tag, Reply} -> Reply
+	{^Meta, ^Tag, Reply} -> Reply
     end.
 
 %%--------------------------------------------------------------------
@@ -426,14 +426,14 @@ eval_nonrestricted({From, _Mod, Cmd, _SP}, Bs,
 eval_nonrestricted_1({match,_,{var,_,Var},Expr}, Bs, Ieval) ->
     {Res,Bs2} = eval_expr(Expr, Bs, Ieval),
     Bs3 = case lists:keyfind(Var, 1, Bs) of
-	      {Var,_Value} ->
+	      {^Var,_Value} ->
 		  lists:keyreplace(Var, 1, Bs2, {Var,Res});
 	      false -> [{Var,Res} | Bs2]
 	  end,
     {Res,Bs3};
 eval_nonrestricted_1({var,_,Var}, Bs, _Ieval) ->
     Res = case lists:keyfind(Var, 1, Bs) of
-	      {Var, Value} -> Value;
+	      {^Var, Value} -> Value;
 	      false -> unbound
 	  end,
     {Res,Bs};
@@ -488,6 +488,6 @@ tell_attached(Msg) ->
 
 get_binding(Var, Bs) ->
     case lists:keyfind(Var, 1, Bs) of
-	{Var, Value} -> {value, Value};
+	{^Var, Value} -> {value, Value};
 	false -> unbound
     end.

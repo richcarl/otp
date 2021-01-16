@@ -23,7 +23,7 @@
 
 %% Callbacks for cdv_detail_wx
 get_details({Type, {T,Key}}, _) ->
-    [{Key,Term}] = ets:lookup(T,Key),
+    [{^Key,Term}] = ets:lookup(T,Key),
     {ok,{"Expanded Term", {Type,[Term, T]}, []}}.
 
 detail_pages() ->

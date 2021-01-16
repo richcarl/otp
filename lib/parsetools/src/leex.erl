@@ -196,7 +196,7 @@ assure_extension(File, Ext) ->
 %% Assumes File is a filename.
 strip_extension(File, Ext) ->
     case filename:extension(File) of
-        Ext -> filename:rootname(File);
+        ^Ext -> filename:rootname(File);
         _Other -> File
     end.
 
@@ -599,7 +599,7 @@ parse_rule(S, Line, Atoks, Ms, N, St) ->
 
 var_used(Name, Toks) ->
     case lists:keyfind(Name, 3, Toks) of
-        {var,_,Name} -> true;                   %It's the var we want
+        {var,_,^Name} -> true;                   %It's the var we want
         _ -> false
     end.
 
@@ -793,7 +793,7 @@ re_single([C|Cs0], Sn, St) ->
     case special_char(C, St) of
         true -> parse_error({illegal_char,[C]});
         false ->
-            {C,Cs1} = re_char(C, Cs0),
+            {^C,Cs1} = re_char(C, Cs0),
             {{lit,[C]},Sn,Cs1}
     end.
 

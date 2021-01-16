@@ -292,10 +292,10 @@ start(M, F, A, Timeout, SpawnOpts) when is_atom(M), is_atom(F), is_list(A) ->
 
 sync_start({Pid, Ref}, Timeout) ->
     receive
-	{ack, Pid, Return} ->
+	{ack, ^Pid, Return} ->
 	    erlang:demonitor(Ref, [flush]),
             Return;
-	{'DOWN', Ref, process, Pid, Reason} ->
+	{'DOWN', ^Ref, process, ^Pid, Reason} ->
             {error, Reason}
     after Timeout ->
 	    erlang:demonitor(Ref, [flush]),
@@ -336,9 +336,9 @@ start_link(M,F,A,Timeout,SpawnOpts) when is_atom(M), is_atom(F), is_list(A) ->
 
 sync_start_link(Pid, Timeout) ->
     receive
-	{ack, Pid, Return} ->
+	{ack, ^Pid, Return} ->
             Return;
-	{'EXIT', Pid, Reason} ->
+	{'EXIT', ^Pid, Reason} ->
             {error, Reason}
     after Timeout ->
             kill_flush(Pid),
@@ -384,9 +384,9 @@ start_monitor(M,F,A,Timeout,SpawnOpts) when is_atom(M),
 
 sync_start_monitor({Pid, Ref}, Timeout) ->
     receive
-	{ack, Pid, Return} ->
+	{ack, ^Pid, Return} ->
             {Return, Ref};
-	{'DOWN', Ref, process, Pid, Reason} = Down ->
+	{'DOWN', ^Ref, process, ^Pid, Reason} = Down ->
             self() ! Down,
             {{error, Reason}, Ref}
     after Timeout ->
@@ -400,7 +400,7 @@ sync_start_monitor({Pid, Ref}, Timeout) ->
 kill_flush(Pid) ->
     unlink(Pid),
     exit(Pid, kill),
-    receive {'EXIT', Pid, _} -> ok after 0 -> ok end,
+    receive {'EXIT', ^Pid, _} -> ok after 0 -> ok end,
     ok.
 
 -spec init_ack(Parent, Ret) -> 'ok' when
@@ -989,7 +989,7 @@ to_string(A, _) ->
     io_lib:write_atom(A).
 
 pp_fun(Extra, Enc) ->
-    #{encoding:=Enc,depth:=Depth, single_line:=Single} = Extra,
+    #{encoding:=^Enc,depth:=Depth, single_line:=Single} = Extra,
     {P,Tl} = p(Enc, Depth),
     Width = if Single -> "0";
                true -> ""
@@ -1064,16 +1064,16 @@ stop(Process) ->
 stop(Process, Reason, Timeout) ->
     {Pid, Mref} = erlang:spawn_monitor(do_stop(Process, Reason)),
     receive
-	{'DOWN', Mref, _, _, Reason} ->
+	{'DOWN', ^Mref, _, _, ^Reason} ->
 	    ok;
-	{'DOWN', Mref, _, _, {noproc,{sys,terminate,_}}} ->
+	{'DOWN', ^Mref, _, _, {noproc,{sys,terminate,_}}} ->
 	    exit(noproc);
-	{'DOWN', Mref, _, _, CrashReason} ->
+	{'DOWN', ^Mref, _, _, CrashReason} ->
 	    exit(CrashReason)
     after Timeout ->
 	    exit(Pid, kill),
 	    receive
-		{'DOWN', Mref, _, _, _} ->
+		{'DOWN', ^Mref, _, _, _} ->
 		    exit(timeout)
 	    end
     end.
@@ -1088,7 +1088,7 @@ do_stop(Process, Reason) ->
 	    Mref = erlang:monitor(process, Process),
 	    ok = sys:terminate(Process, Reason, infinity),
 	    receive
-		{'DOWN', Mref, _, _, ExitReason} ->
+		{'DOWN', ^Mref, _, _, ExitReason} ->
 		    exit(ExitReason)
 	    end
     end.

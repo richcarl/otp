@@ -61,14 +61,14 @@
         ((fun () ->
             __T = is_process_alive(self()),  % cheap source of truth
             case (BoolExpr) of
-                __T -> ok;
+                ^__T -> ok;
                 __V -> erlang:error({assert,
                                      [{module, ?MODULE},
                                       {line, ?LINE},
                                       {expression, (??BoolExpr)},
                                       {expected, true},
                                       case not __T of
-                                          __V -> {value, false};
+                                          ^__V -> {value, false};
                                           _ -> {not_boolean, __V}
                                       end]})
             end
@@ -79,7 +79,7 @@
         ((fun () ->
             __T = is_process_alive(self()),  % cheap source of truth
             case (BoolExpr) of
-                __T -> ok;
+                ^__T -> ok;
                 __V -> erlang:error({assert,
                                      [{module, ?MODULE},
                                       {line, ?LINE},
@@ -87,7 +87,7 @@
                                       {expression, (??BoolExpr)},
                                       {expected, true},
                                       case not __T of
-                                          __V -> {value, false};
+                                          ^__V -> {value, false};
                                           _ -> {not_boolean, __V}
                                       end]})
             end
@@ -105,14 +105,14 @@
         ((fun () ->
             __F = not is_process_alive(self()),
             case (BoolExpr) of
-                __F -> ok;
+                ^__F -> ok;
                 __V -> erlang:error({assert,
                                      [{module, ?MODULE},
                                       {line, ?LINE},
                                       {expression, (??BoolExpr)},
                                       {expected, false},
                                       case not __F of
-                                          __V -> {value, true};
+                                          ^__V -> {value, true};
                                           _ -> {not_boolean, __V}
                                       end]})
             end
@@ -123,7 +123,7 @@
         ((fun () ->
             __F = not is_process_alive(self()),
             case (BoolExpr) of
-                __F -> ok;
+                ^__F -> ok;
                 __V -> erlang:error({assert,
                                      [{module, ?MODULE},
                                       {line, ?LINE},
@@ -131,7 +131,7 @@
                                       {expression, (??BoolExpr)},
                                       {expected, false},
                                       case not __F of
-                                          __V -> {value, true};
+                                          ^__V -> {value, true};
                                           _ -> {not_boolean, __V}
                                       end]})
             end
@@ -225,7 +225,7 @@
         ((fun () ->
             __X = (Expect),
             case (Expr) of
-                __X -> ok;
+                ^__X -> ok;
                 __V -> erlang:error({assertEqual,
                                      [{module, ?MODULE},
                                       {line, ?LINE},
@@ -240,7 +240,7 @@
         ((fun () ->
             __X = (Expect),
             case (Expr) of
-                __X -> ok;
+                ^__X -> ok;
                 __V -> erlang:error({assertEqual,
                                      [{module, ?MODULE},
                                       {line, ?LINE},
@@ -263,7 +263,7 @@
         ((fun () ->
             __X = (Unexpected),
             case (Expr) of
-                __X -> erlang:error({assertNotEqual,
+                ^__X -> erlang:error({assertNotEqual,
                                      [{module, ?MODULE},
                                       {line, ?LINE},
                                       {expression, (??Expr)},
@@ -277,7 +277,7 @@
         ((fun () ->
             __X = (Unexpected),
             case (Expr) of
-                __X -> erlang:error({assertNotEqual,
+                ^__X -> erlang:error({assertNotEqual,
                                      [{module, ?MODULE},
                                       {line, ?LINE},
                                       {comment, (Comment)},

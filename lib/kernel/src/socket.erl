@@ -1117,9 +1117,9 @@ connect_deadline(SockRef, SockAddr, Deadline) ->
             %% Connecting...
             Timeout = timeout(Deadline),
             receive
-                ?socket_msg(_Socket, select, Ref) ->
+                ?socket_msg(_Socket, select, ^Ref) ->
                     prim_socket:connect(SockRef);
-                ?socket_msg(_Socket, abort, {Ref, Reason}) ->
+                ?socket_msg(_Socket, abort, {^Ref, Reason}) ->
                     {error, Reason}
             after Timeout ->
                     cancel(SockRef, connect, Ref),
@@ -1246,9 +1246,9 @@ accept_deadline(LSockRef, Deadline) ->
             %% the receive.
 	    Timeout = timeout(Deadline),
             receive
-                ?socket_msg(?socket(LSockRef), select, AccRef) ->
+                ?socket_msg(?socket(^LSockRef), select, ^AccRef) ->
                     accept_deadline(LSockRef, Deadline);
-                ?socket_msg(_Socket, abort, {AccRef, Reason}) ->
+                ?socket_msg(_Socket, abort, {^AccRef, Reason}) ->
                     {error, Reason}
             after Timeout ->
                     cancel(LSockRef, accept, AccRef),
@@ -1552,7 +1552,7 @@ send_common_nowait_result(SelectHandle, Op, Result) ->
         {select, Data, Cont} ->
             {ok, {Data, ?SELECT_INFO({Op, Cont}, SelectHandle)}};
         %%
-        Result ->
+        ^Result ->
             Result
     end.
 
@@ -1566,9 +1566,9 @@ send_common_deadline_result(
             %% Would block, wait for continuation
             Timeout = timeout(Deadline),
             receive
-                ?socket_msg(_Socket, select, SelectHandle) ->
+                ?socket_msg(_Socket, select, ^SelectHandle) ->
                     Fun(SockRef, Data, Cont, Deadline, HasWritten);
-                ?socket_msg(_Socket, abort, {SelectHandle, Reason}) ->
+                ?socket_msg(_Socket, abort, {^SelectHandle, Reason}) ->
                     send_common_error(Reason, Data, HasWritten)
             after Timeout ->
                     _ = cancel(SockRef, Op, SelectHandle),
@@ -1578,9 +1578,9 @@ send_common_deadline_result(
             %% Partial send success, wait for continuation
             Timeout = timeout(Deadline),
             receive
-                ?socket_msg(_Socket, select, SelectHandle) ->
+                ?socket_msg(_Socket, select, ^SelectHandle) ->
                     Fun(SockRef, Data_1, Cont, Deadline, true);
-                ?socket_msg(_Socket, abort, {SelectHandle, Reason}) ->
+                ?socket_msg(_Socket, abort, {^SelectHandle, Reason}) ->
                     send_common_error(Reason, Data_1, true)
             after Timeout ->
                     _ = cancel(SockRef, Op, SelectHandle),
@@ -2476,7 +2476,7 @@ recv_deadline(SockRef, Length, Flags, Deadline, Acc) ->
             %% We got less than requested
 	    Timeout = timeout(Deadline),
             receive
-                ?socket_msg(?socket(SockRef), select, SelectHandle) ->
+                ?socket_msg(?socket(^SockRef), select, ^SelectHandle) ->
                     if
                         0 < Timeout ->
                             %% Recv more
@@ -2486,7 +2486,7 @@ recv_deadline(SockRef, Length, Flags, Deadline, Acc) ->
                         true ->
                             {error, {timeout, bincat(Acc, Bin)}}
                     end;
-                ?socket_msg(_Socket, abort, {SelectHandle, Reason}) ->
+                ?socket_msg(_Socket, abort, {^SelectHandle, Reason}) ->
                     {error, {Reason, bincat(Acc, Bin)}}
             after Timeout ->
                     cancel(SockRef, recv, SelectHandle),
@@ -2504,7 +2504,7 @@ recv_deadline(SockRef, Length, Flags, Deadline, Acc) ->
             %% is something to read (a select message).
             Timeout = timeout(Deadline),
             receive
-                ?socket_msg(?socket(SockRef), select, SelectHandle) ->
+                ?socket_msg(?socket(^SockRef), select, ^SelectHandle) ->
                     if
                         0 < Timeout ->
                             %% Retry
@@ -2513,7 +2513,7 @@ recv_deadline(SockRef, Length, Flags, Deadline, Acc) ->
                         true ->
                             recv_error(Acc, timeout)
                     end;
-                ?socket_msg(_Socket, abort, {SelectHandle, Reason}) ->
+                ?socket_msg(_Socket, abort, {^SelectHandle, Reason}) ->
                     recv_error(Acc, Reason)
             after Timeout ->
                     cancel(SockRef, recv, SelectHandle),
@@ -2774,9 +2774,9 @@ recvfrom_deadline(SockRef, BufSz, Flags, Deadline) ->
             %% is something to read (a select message).
             Timeout = timeout(Deadline),
             receive
-                ?socket_msg(?socket(SockRef), select, SelectHandle) ->
+                ?socket_msg(?socket(^SockRef), select, ^SelectHandle) ->
                     recvfrom_deadline(SockRef, BufSz, Flags, Deadline);
-                ?socket_msg(_Socket, abort, {SelectHandle, Reason}) ->
+                ?socket_msg(_Socket, abort, {^SelectHandle, Reason}) ->
                     {error, Reason}
             after Timeout ->
                     cancel(SockRef, recvfrom, SelectHandle),
@@ -3039,10 +3039,10 @@ recvmsg_deadline(SockRef, BufSz, CtrlSz, Flags, Deadline)  ->
             %% is something to read (a select message).
             Timeout = timeout(Deadline),
             receive
-                ?socket_msg(?socket(SockRef), select, SelectHandle) ->
+                ?socket_msg(?socket(^SockRef), select, ^SelectHandle) ->
                     recvmsg_deadline(
                       SockRef, BufSz, CtrlSz, Flags, Deadline);
-                ?socket_msg(_Socket, abort, {SelectHandle, Reason}) ->
+                ?socket_msg(_Socket, abort, {^SelectHandle, Reason}) ->
                     {error, Reason}
             after Timeout ->
                     cancel(SockRef, recvmsg, SelectHandle),
@@ -3088,7 +3088,7 @@ close(?socket(SockRef))
             %% We must wait for the socket_stop callback function to 
             %% complete its work
             receive
-                ?socket_msg(?socket(SockRef), close, CloseRef) ->
+                ?socket_msg(?socket(^SockRef), close, ^CloseRef) ->
                     prim_socket:finalize_close(SockRef)
             end;
         {error, _} = ERROR ->
@@ -3331,7 +3331,7 @@ cancel(SockRef, Op, OpRef) ->
 
 flush_select_msg(SockRef, Ref) ->
     receive
-        ?socket_msg(?socket(SockRef), select, Ref) ->
+        ?socket_msg(?socket(^SockRef), select, ^Ref) ->
             ok
     after 0 ->
             ok
@@ -3339,7 +3339,7 @@ flush_select_msg(SockRef, Ref) ->
 
 flush_abort_msg(SockRef, Ref) ->
     receive
-        ?socket_msg(?socket(SockRef), abort, {Ref, Reason}) ->
+        ?socket_msg(?socket(^SockRef), abort, {^Ref, Reason}) ->
             Reason
     after 0 ->
             ok

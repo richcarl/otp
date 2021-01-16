@@ -116,14 +116,14 @@ encode_chars_compact_map(Val, NumBits, {Lb,Limit}) ->
 encode_chars_16bit(Val) ->
     L = [case C of
 	     {0,0,A,B} -> [A,B];
-	     C when is_integer(C) -> [0,C]
+	     ^C when is_integer(C) -> [0,C]
 	 end || C <- Val],
     iolist_to_binary(L).
 
 encode_big_chars(Val) ->
     L = [case C of
 	     {_,_,_,_} -> tuple_to_list(C);
-	     C when is_integer(C) -> [<<0,0,0>>,C]
+	     ^C when is_integer(C) -> [<<0,0,0>>,C]
 	 end || C <- Val],
     iolist_to_binary(L).
 
@@ -290,7 +290,7 @@ is_default_bitstring(Bs, _, Bs) ->
 is_default_bitstring(Val, _, Def) when is_bitstring(Val) ->
     Sz = bit_size(Def),
     case Val of
-	<<Def:Sz/bitstring,T/bitstring>> ->
+	<<^Def:Sz/bitstring,T/bitstring>> ->
 	    NumZeroes = bit_size(T),
 	    case T of
 		<<0:NumZeroes>> -> true;
@@ -318,7 +318,7 @@ is_default_bitstring(Int, _, _, _, Int) ->
 is_default_bitstring(Val, _, Def, _, _) when is_bitstring(Val) ->
     Sz = bit_size(Def),
     case Val of
-	<<Def:Sz/bitstring,T/bitstring>> ->
+	<<^Def:Sz/bitstring,T/bitstring>> ->
 	    NumZeroes = bit_size(T),
 	    case T of
 		<<0:NumZeroes>> -> true;
@@ -471,7 +471,7 @@ adjust_trailing_zeroes(Bs0, Lb) ->
 	Sz when Sz < Lb ->
 	    %% Too short - pad with zeroes.
 	    <<Bs0:Sz/bits,0:(Lb-Sz)>>;
-	Lb ->
+	^Lb ->
 	    %% Exactly the right size - nothing to do.
 	    Bs0;
 	_ ->

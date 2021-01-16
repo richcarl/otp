@@ -277,7 +277,7 @@ delete_group(Name) ->
     ok.
 
 member_died(Ref) ->
-    [{{ref, Ref}, Pid}] = ets:lookup(pg2_table, {ref, Ref}),
+    [{{ref, ^Ref}, Pid}] = ets:lookup(pg2_table, {ref, Ref}),
     Names = member_groups(Pid),
     _ = [leave_group(Name, P) || 
             Name <- Names,
@@ -320,7 +320,7 @@ leave_group(Name, Pid) ->
             Ref_Pid = {ref, Pid}, 
             case ets:update_counter(pg2_table, Ref_Pid, {4, -1}) of
                 0 ->
-                    [{Ref_Pid,RPid,Ref,0}] = ets:lookup(pg2_table, Ref_Pid),
+                    [{^Ref_Pid,RPid,Ref,0}] = ets:lookup(pg2_table, Ref_Pid),
                     true = ets:delete(pg2_table, {ref, Ref}),
                     true = ets:delete(pg2_table, Ref_Pid),
                     true = erlang:demonitor(Ref, [flush]),
@@ -348,7 +348,7 @@ local_group_members(Name) ->
 member_in_group(Pid, Name) ->
     case ets:lookup(pg2_table, {member, Name, Pid}) of
         [] -> [];
-        [{{member, Name, Pid}, N}] ->
+        [{{member, ^Name, ^Pid}, N}] ->
             lists:duplicate(N, Pid)
     end.
 
@@ -383,7 +383,7 @@ do_monitor(Pid) ->
             F = fun() -> 
                         Ref = erlang:monitor(process, Pid),
                         receive 
-                            {'DOWN', Ref, process, Pid, _Info} ->
+                            {'DOWN', ^Ref, process, ^Pid, _Info} ->
                                 exit(normal)
                         end
                 end,

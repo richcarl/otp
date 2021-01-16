@@ -465,7 +465,7 @@ ois_is([#b_set{op={bif,'=:='},
                dst=Dst,
                args=[LHS,#b_literal{val=RHS}]} | Is], Ts0) ->
     Type = case beam_types:get_singleton_value(ois_get_type(LHS, Ts0)) of
-               {ok, RHS} -> beam_types:make_atom(true);
+               {ok, ^RHS} -> beam_types:make_atom(true);
                {ok, _Other} -> beam_types:make_atom(false);
                error -> beam_types:make_boolean()
            end,
@@ -479,7 +479,7 @@ ois_is([], Ts) ->
 ois_type_test(Src, Dst, RequiredType, Is, Ts0) ->
     GivenType = ois_get_type(Src, Ts0),
     Type = case beam_types:meet(GivenType, RequiredType) of
-               GivenType -> beam_types:make_atom(true);
+               ^GivenType -> beam_types:make_atom(true);
                none -> beam_types:make_atom(false);
                _Other -> beam_types:make_boolean()
            end,

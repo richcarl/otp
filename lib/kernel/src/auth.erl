@@ -158,7 +158,7 @@ handle_call({get_cookie, Node}, {_From,_Tag}, State) when Node =:= node() ->
     {reply, State#state.our_cookie, State};
 handle_call({get_cookie, Node}, {_From,_Tag}, State) ->
     case ets:lookup(State#state.other_cookies, Node) of
-	[{Node, Cookie}] ->
+	[{^Node, Cookie}] ->
 	    {reply, Cookie, State};
 	[] ->
 	    {reply, State#state.our_cookie, State}

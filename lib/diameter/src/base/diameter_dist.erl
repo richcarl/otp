@@ -492,7 +492,7 @@ handle_cast({attach, Node}, S)
 handle_cast({attach, Node, ServiceNames}, S) ->
     ets:insert(?SERVICE_TABLE, [{N, Node} || N <- ServiceNames]),
     {noreply, case node() of
-                  Node ->
+                  ^Node ->
                       sets:union(S, sets:from_list(ServiceNames));
                   _ ->
                       S
@@ -505,7 +505,7 @@ handle_cast({detach, Node, ServiceNames}, S) ->
                                                   || N <- ServiceNames])],
                                         [true]}]),
     {noreply, case node() of
-                  Node ->
+                  ^Node ->
                       sets:subtract(S, sets:from_list(ServiceNames));
                   _ ->
                       S

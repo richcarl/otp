@@ -423,7 +423,7 @@ get_rc([], Ls) ->
 
 get_rc(Name, Key, Default, Ks, Ls) ->
     case db_get(Key) of
-	Default -> get_rc(Ks, Ls);
+	^Default -> get_rc(Ks, Ls);
 	Value -> get_rc(Ks, [{Name, Value} | Ls])
     end.
 
@@ -1235,7 +1235,7 @@ handle_set_file(
     %% Maybe update file content
     %%
     try ets:lookup_element(Db, TagTm, 2) of
-        Tm ->
+        ^Tm ->
             %% Current update request
             File = ets:lookup_element(Db, res_optname(Option), 2),
             Finfo = ets:lookup_element(Db, TagInfo, 2),
@@ -1290,7 +1290,7 @@ handle_update_file(
     %% Update file content if file has been updated
     %%
     case erl_prim_loader:read_file_info(File) of
-        {ok, Finfo} ->
+        {ok, ^Finfo} ->
             %% No file update - we are done
             {reply, ok, State};
         {ok, Finfo_1} ->
@@ -1356,7 +1356,7 @@ add_ip_bynms(Byname, Fam, IP, Nms, Names) ->
       fun (Nm) ->
               Key = {Fam, Nm},
               case ets:lookup(Byname, Key) of
-                  [{_Key, [IP | _] = IPs, _Names_1}] ->
+                  [{_Key, [^IP | _] = IPs, _Names_1}] ->
                       %% Replace names in the byname entry
                       true =
                           ets:insert(
@@ -1385,7 +1385,7 @@ del_ip_bynms(Byname, Fam, IP, Nms) ->
       fun (Nm) ->
               Key = {Fam, Nm},
               case ets:lookup(Byname, Key) of
-                  [{_Key, [IP], _Names}] ->
+                  [{_Key, [^IP], _Names}] ->
                       %% Delete whole entry
                       true = ets:delete(Byname, Key);
                   [{_Key, IPs_0, Names_0}] ->
@@ -1781,7 +1781,7 @@ alloc_entry(Db, CacheDb, TM) ->
 alloc_entry(CacheDb, OldSize, TM, N) ->
     OldestTM = do_refresh_cache(CacheDb),     % Delete timedout entries
     case ets:info(CacheDb, size) of
-	OldSize ->
+	^OldSize ->
 	    %% No entrys timedout
 	    delete_n_oldest(CacheDb, TM, OldestTM, N);
 	_ ->

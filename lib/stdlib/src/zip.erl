@@ -1167,7 +1167,7 @@ server_loop(Parent, OpenZip) ->
 	{From, get_state} ->
 	    From ! {self(), OpenZip},
 	    server_loop(Parent, OpenZip);
-        {'EXIT', Parent, Reason} ->
+        {'EXIT', ^Parent, Reason} ->
             _ = openzip_close(OpenZip),
             exit({parent_died, Reason});
 	_ ->
@@ -1233,7 +1233,7 @@ zip_get_state(Pid) when is_pid(Pid) ->
 request(Self, Pid, Req) ->
     Pid ! {Self, Req},
     receive
-	{Pid, R} -> R
+	{^Pid, R} -> R
     end.
 
 zip_t(Pid) when is_pid(Pid) ->
@@ -1646,7 +1646,7 @@ binary_to_chars(B, GPFlag) ->
 
 heuristic_to_string(B) when is_binary(B) ->
     case unicode:characters_to_binary(B) of
-	B ->
+	^B ->
             unicode:characters_to_list(B);
 	_ ->
             binary_to_list(B)

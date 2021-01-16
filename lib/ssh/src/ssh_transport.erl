@@ -863,7 +863,7 @@ extract_public_key(#{engine:=_, key_id:=_, algorithm:=Alg} = M) ->
 
 verify_host_key(#ssh{algorithms=Alg}=SSH, PublicKey, Digest, {AlgStr,Signature}) ->
     case atom_to_list(Alg#alg.hkey) of
-        AlgStr ->
+        ^AlgStr ->
             case verify(Digest, sha(Alg#alg.hkey), Signature, PublicKey, SSH) of
                 false ->
                     {error, bad_signature};

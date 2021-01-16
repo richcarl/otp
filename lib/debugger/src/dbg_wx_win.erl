@@ -280,7 +280,7 @@ verify(Type, Str) ->
 		_Error -> 
 		    ignore
 	    end;
-	{ok, [{Type, _Line, Value}], _EndLine} when Type/=term ->
+	{ok, [{^Type, _Line, Value}], _EndLine} when Type/=term ->
 	    {edit, Value};
 	_Err ->
 	    ignore

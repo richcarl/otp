@@ -295,7 +295,7 @@ cast(Op, Args) ->
 rec(Op) ->
     receive
         {'_egl_result_', Res} -> Res;
-        {'_egl_error_',  Op, Res} -> error({error,Res,Op});
+        {'_egl_error_', ^Op, Res} -> error({error,Res,Op});
         {'_egl_error_', Other, Res} ->
                 Err = io_lib:format("~p in op: ~p", [Res, Other]),
                error_logger:error_report([{gl, error}, {message, lists:flatten(Err)}]),

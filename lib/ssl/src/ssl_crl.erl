@@ -103,7 +103,7 @@ find_issuer(IsIssuerFun, Db, _) ->
 verify_crl_issuer(CRL, ErlCertCandidate, Issuer, NotIssuer) ->
     TBSCert =  ErlCertCandidate#'OTPCertificate'.tbsCertificate,
     case public_key:pkix_normalize_name(TBSCert#'OTPTBSCertificate'.subject) of
-	Issuer ->
+	^Issuer ->
 	    case public_key:pkix_crl_verify(CRL, ErlCertCandidate) of
 		true ->
 		    throw({ok, ErlCertCandidate});

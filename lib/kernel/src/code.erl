@@ -433,7 +433,7 @@ ensure_modules_loaded_1(Ms0) ->
 
 ensure_modules_loaded_2([{M,_}|Ms], Errors) ->
     case ensure_loaded(M) of
-	{module,M} ->
+	{module,^M} ->
 	    ensure_modules_loaded_2(Ms, Errors);
 	{error,Err} ->
 	    ensure_modules_loaded_2(Ms, [{M,Err}|Errors])
@@ -660,7 +660,7 @@ prepare_loading_fun() ->
 do_par(Fun, L) ->
     {_,Ref} = spawn_monitor(do_par_fun(Fun, L)),
     receive
-	{'DOWN',Ref,process,_,Res} ->
+	{'DOWN',^Ref,process,_,Res} ->
 	    Res
     end.
 
@@ -747,7 +747,7 @@ load_code_server_prerequisites() ->
 	      lists,
 	      os,
 	      unicode],
-    _ = [M = M:module_info(module) || M <- Needed],
+    _ = [^M = M:module_info(module) || M <- Needed],
     ok.
 
 maybe_stick_dirs(interactive) ->
@@ -879,12 +879,12 @@ get_doc_chunk(Filename, Mod) when is_atom(Mod) ->
             end;
         {error,beam_lib,{file_error,_Filename,enoent}} ->
             get_doc_chunk(Filename, atom_to_list(Mod));
-        {ok, {Mod, [{"Docs",Bin}]}} ->
+        {ok, {^Mod, [{"Docs",Bin}]}} ->
             {ok,binary_to_term(Bin)}
     end;
 get_doc_chunk(Filename, Mod) ->
     case filename:dirname(Filename) of
-        Filename ->
+        ^Filename ->
             {error,missing};
         Dir ->
             ChunkFile = filename:join([Dir,"doc","chunks",Mod ++ ".chunk"]),
@@ -977,7 +977,7 @@ search([{Dir, File} | Tail]) ->
     case lists:keyfind(File, 2, Tail) of
 	false -> 
 	    search(Tail);
-	{Dir2, File} ->
+	{Dir2, ^File} ->
 	    io:format("** ~ts hides ~ts~n",
 		      [filename:join(Dir, File),
 		       filename:join(Dir2, File)]),
@@ -1009,7 +1009,7 @@ filter2(Ext, Extlen, [File|Tail]) ->
 has_ext(Ext, Extlen, File) ->
     L = length(File),
     case catch lists:nthtail(L - Extlen, File) of
-	Ext -> true;
+	^Ext -> true;
 	_ -> false
     end.
 

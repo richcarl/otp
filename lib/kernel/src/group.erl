@@ -122,16 +122,16 @@ server_loop(Drv, Shell, Buf0) ->
 	{driver_id,ReplyTo} ->
 	    ReplyTo ! {self(),driver_id,Drv},
 	    server_loop(Drv, Shell, Buf0);
-	{Drv, echo, Bool} ->
+	{^Drv, echo, Bool} ->
 	    put(echo, Bool),
 	    server_loop(Drv, Shell, Buf0);
-	{'EXIT',Drv,interrupt} ->
+	{'EXIT',^Drv,interrupt} ->
 	    %% Send interrupt to the shell.
 	    exit_shell(interrupt),
 	    server_loop(Drv, Shell, Buf0);
-	{'EXIT',Drv,R} ->
+	{'EXIT',^Drv,R} ->
 	    exit(R);
-	{'EXIT',Shell,R} ->
+	{'EXIT',^Shell,R} ->
 	    exit(R);
 	%% We want to throw away any term that we don't handle (standard
 	%% practice in receive loops), but not any {Drv,_} tuples which are
@@ -152,7 +152,7 @@ exit_shell(Reason) ->
 get_tty_geometry(Drv) ->
     Drv ! {self(),tty_geometry},
     receive
-	{Drv,tty_geometry,Geometry} ->
+	{^Drv,tty_geometry,Geometry} ->
 	    Geometry
     after 2000 ->
 	    timeout
@@ -160,9 +160,9 @@ get_tty_geometry(Drv) ->
 get_unicode_state(Drv) ->
     Drv ! {self(),get_unicode_state},
     receive
-	{Drv,get_unicode_state,UniState} ->
+	{^Drv,get_unicode_state,UniState} ->
 	    UniState;
-	{Drv,get_unicode_state,error} ->
+	{^Drv,get_unicode_state,error} ->
 	    {error, internal}
     after 2000 ->
 	    {error,timeout}
@@ -170,7 +170,7 @@ get_unicode_state(Drv) ->
 set_unicode_state(Drv,Bool) ->
     Drv ! {self(),set_unicode_state,Bool},
     receive
-	{Drv,set_unicode_state,_OldUniState} ->
+	{^Drv,set_unicode_state,_OldUniState} ->
 	    ok
     after 2000 ->
 	    timeout
@@ -664,9 +664,9 @@ get_line1({What,Cont0,Rs}, Drv, Shell, Ls, Encoding) ->
 
 more_data(What, Cont0, Drv, Shell, Ls, Encoding) ->
     receive
-	{Drv,{data,Cs}} ->
+	{^Drv,{data,Cs}} ->
 	    get_line1(edlin:edit_line(Cs, Cont0), Drv, Shell, Ls, Encoding);
-	{Drv,eof} ->
+	{^Drv,eof} ->
 	    get_line1(edlin:edit_line(eof, Cont0), Drv, Shell, Ls, Encoding);
 	{io_request,From,ReplyAs,Req} when is_pid(From) ->
 	    {more_chars,Cont,_More} = edlin:edit_line([], Cont0),
@@ -678,11 +678,11 @@ more_data(What, Cont0, Drv, Shell, Ls, Encoding) ->
             %% We take care of replies from puts here as well
             io_reply(From, ReplyAs, Reply),
             more_data(What, Cont0, Drv, Shell, Ls, Encoding);
-	{'EXIT',Drv,interrupt} ->
+	{'EXIT',^Drv,interrupt} ->
 	    interrupted;
-	{'EXIT',Drv,_} ->
+	{'EXIT',^Drv,_} ->
 	    terminated;
-	{'EXIT',Shell,R} ->
+	{'EXIT',^Shell,R} ->
 	    exit(R)
     after
 	get_line_timeout(What)->
@@ -695,9 +695,9 @@ get_line_echo_off(Chars, Pbs, Drv, Shell) ->
 
 get_line_echo_off1({Chars,[]}, Drv, Shell) ->
     receive
-	{Drv,{data,Cs}} ->
+	{^Drv,{data,Cs}} ->
 	    get_line_echo_off1(edit_line(Cs, Chars), Drv, Shell);
-	{Drv,eof} ->
+	{^Drv,eof} ->
 	    get_line_echo_off1(edit_line(eof, Chars), Drv, Shell);
 	{io_request,From,ReplyAs,Req} when is_pid(From) ->
 	    io_request(Req, From, ReplyAs, Drv, Shell, []),
@@ -706,11 +706,11 @@ get_line_echo_off1({Chars,[]}, Drv, Shell) ->
             %% We take care of replies from puts here as well
             io_reply(From, ReplyAs, Reply),
             get_line_echo_off1({Chars,[]},Drv, Shell);
-	{'EXIT',Drv,interrupt} ->
+	{'EXIT',^Drv,interrupt} ->
 	    interrupted;
-	{'EXIT',Drv,_} ->
+	{'EXIT',^Drv,_} ->
 	    terminated;
-	{'EXIT',Shell,R} ->
+	{'EXIT',^Shell,R} ->
 	    exit(R)
     end;
 get_line_echo_off1({Chars,Rest}, _Drv, _Shell) ->
@@ -722,9 +722,9 @@ get_chars_echo_off(Pbs, Drv, Shell) ->
 
 get_chars_echo_off1(Drv, Shell) ->
     receive
-        {Drv, {data, Cs}} ->
+        {^Drv, {data, Cs}} ->
             Cs;
-	{Drv, eof} ->
+	{^Drv, eof} ->
             eof;
 	{io_request,From,ReplyAs,Req} when is_pid(From) ->
 	    io_request(Req, From, ReplyAs, Drv, Shell, []),
@@ -733,11 +733,11 @@ get_chars_echo_off1(Drv, Shell) ->
             %% We take care of replies from puts here as well
             io_reply(From, ReplyAs, Reply),
             get_chars_echo_off1(Drv, Shell);
-	{'EXIT',Drv,interrupt} ->
+	{'EXIT',^Drv,interrupt} ->
 	    interrupted;
-	{'EXIT',Drv,_} ->
+	{'EXIT',^Drv,_} ->
 	    terminated;
-	{'EXIT',Shell,R} ->
+	{'EXIT',^Shell,R} ->
 	    exit(R)
     end.
 
@@ -868,7 +868,7 @@ get_password_line(Chars, Drv, Shell) ->
 
 get_password1({Chars,[]}, Drv, Shell) ->
     receive
-	{Drv,{data,Cs}} ->
+	{^Drv,{data,Cs}} ->
 	    get_password1(edit_password(Cs,Chars),Drv,Shell);
 	{io_request,From,ReplyAs,Req} when is_pid(From) ->
 	    %send_drv_reqs(Drv, [{delete_chars, -length(Pbs)}]),
@@ -881,11 +881,11 @@ get_password1({Chars,[]}, Drv, Shell) ->
             %% We take care of replies from puts here as well
             io_reply(From, ReplyAs, Reply),
             get_password1({Chars, []},Drv, Shell);
-	{'EXIT',Drv,interrupt} ->
+	{'EXIT',^Drv,interrupt} ->
 	    interrupted;
-	{'EXIT',Drv,_} ->
+	{'EXIT',^Drv,_} ->
 	    terminated;
-	{'EXIT',Shell,R} ->
+	{'EXIT',^Shell,R} ->
 	    exit(R)
     end;
 get_password1({Chars,Rest},Drv,_Shell) ->

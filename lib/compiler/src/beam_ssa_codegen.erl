@@ -538,7 +538,7 @@ do_prefer_xreg(A, _, _) -> A.
 merge_copies(Copies0, Copies1) when map_size(Copies0) =< map_size(Copies1) ->
     maps:filter(fun(K, V) ->
                         case Copies1 of
-                            #{K:=V} -> true;
+                            #{K:=^V} -> true;
                             #{} -> false
                         end
                 end, Copies0);
@@ -950,7 +950,7 @@ cg_block([#cg_set{op=wait}], #cg_br{succ=Lr0}, _Next, St0) ->
     {[{wait,Lr}],St};
 cg_block(Is0, Last, Next, St0) ->
     case Last of
-        #cg_br{succ=Next,fail=Next} ->
+        #cg_br{succ=^Next,fail=^Next} ->
             cg_block(Is0, none, St0);
         #cg_br{succ=Same,fail=Same} when Same =:= ?EXCEPTION_BLOCK ->
             %% An expression in this block *always* throws an exception, so we
@@ -962,7 +962,7 @@ cg_block(Is0, Last, Next, St0) ->
             {Fail,St1} = use_block_label(Same, St0),
             {Is,St} = cg_block(Is0, none, St1),
             {Is++[jump(Fail)],St};
-        #cg_br{bool=Bool,succ=Next,fail=Fail0} ->
+        #cg_br{bool=Bool,succ=^Next,fail=Fail0} ->
             {Fail,St1} = use_block_label(Fail0, St0),
             {Is,St} = cg_block(Is0, {Bool,Fail}, St1),
             {Is,St};
@@ -989,7 +989,7 @@ cg_switch(Is0, Last, St0) ->
                      end, St1, List0),
     {Is1,St} = cg_block(Is0, none, St2),
     case reverse(Is1) of
-        [{bif,tuple_size,_,[Tuple],{z,_}=Src}|More] ->
+        [{bif,tuple_size,_,[Tuple],{z,_}=Src1}|More] when Src1 =:= Src ->
             List = map(fun({integer,Arity}) -> Arity;
                           ({f,_}=F) -> F
                        end, List1),
@@ -1219,7 +1219,7 @@ cg_block([#cg_set{op=call}=Call], {_Bool,_Fail}=Context, St0) ->
 cg_block([#cg_set{op=call,dst=Dst0}=Call], Context, St) ->
     Dst = beam_arg(Dst0, St),
     case Context of
-        {return,Dst,_} ->
+        {return,^Dst,_} ->
             cg_call(Call, tail, Context, St);
         _ ->
             cg_call(Call, body, Context, St)
@@ -1427,7 +1427,7 @@ opt_call_moves_1([{move,Src,{x,_}=Tmp}=M1,
     %% There could be a {move,Tmp,{x,0}} instruction after the
     %% init_yreg/1 instruction (moved to there by opt_move_to_x0/1).
     case Is of
-        [{move,{x,_}=Tmp,{x,0}}=M2] ->
+        [{move,{x,_}=Tmp1,{x,0}}=M2] when Tmp1 =:= Tmp ->
             %% The two move/2 instructions (M1 and M2) can be combined
             %% to one. The question is, though, is it safe to place
             %% them after the kill/1 instructions?
@@ -1825,7 +1825,7 @@ cg_try(Agg, Tag, T0, Context, St0) ->
     {[{try_case,Tag}|Moves++T],St}.
 
 cg_extract([#cg_set{op=extract,dst=Dst0,args=Args0}|Is0], Agg, St) ->
-    [Dst,Agg,{integer,X}] = beam_args([Dst0|Args0], St),
+    [Dst,^Agg,{integer,X}] = beam_args([Dst0|Args0], St),
     {Ds,Is} = cg_extract(Is0, Agg, St),
     case keymember(Dst, 3, Ds) of
         true ->
@@ -1926,7 +1926,7 @@ translate_phis(L, #cg_br{succ=Target,fail=Target}, Blocks) ->
     case Phis of
         [] ->
             [];
-        [#b_set{op=phi,dst=NopDst}|_]=Phis ->
+        [#b_set{op=phi,dst=NopDst}|_] ->
             %% In rare cases (so far only seen in unoptimized code),
             %% copy instructions can be combined like this:
             %%

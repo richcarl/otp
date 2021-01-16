@@ -317,7 +317,7 @@ passes_1(Ps, Opts0) ->
          true ->
              P;
          false ->
-             {NoName,Name} = keyfind(Name, 2, Negations),
+             {NoName,^Name} = keyfind(Name, 2, Negations),
              {NoName,fun(S) -> S end}
      end || {Name,_}=P <- Ps].
 
@@ -552,7 +552,7 @@ c_phis_args_1([], _Blocks) -> none.
 
 c_get_pred_vars(Var, Pred, Blocks) ->
     case map_get(Pred, Blocks) of
-        #b_blk{is=[#b_set{op=phi,dst=Var,args=Args}]} ->
+        #b_blk{is=[#b_set{op=phi,dst=^Var,args=Args}]} ->
             {Var,Pred,Args};
         #b_blk{} ->
             none
@@ -839,7 +839,7 @@ is_tagged_tuple(#b_var{}=Tuple, Bool,
                 Blocks) ->
     #b_blk{is=Is,last=Last} = map_get(Succ, Blocks),
     case is_tagged_tuple_1(Is, Last, Blocks) of
-        {yes,Fail,Tuple,Arity,Tag} ->
+        {yes,^Fail,^Tuple,Arity,Tag} ->
             {yes,Arity,Tag};
         _ ->
             no
@@ -939,7 +939,7 @@ cse_successors_1([L|Ls], Es0, M) ->
             %% Both keys and values must match.
             Es = maps:filter(fun(Key, Value) ->
                                      case Es1 of
-                                         #{Key:=Value} -> true;
+                                         #{Key:=^Value} -> true;
                                          #{} -> false
                                      end
                              end, Es0),
@@ -952,7 +952,7 @@ cse_successors_1([], _, M) -> M.
 cse_is([#b_set{op={succeeded,_},dst=Bool,args=[Src]}=I0|Is], Es, Sub0, Acc) ->
     I = sub(I0, Sub0),
     case I of
-        #b_set{args=[Src]} ->
+        #b_set{args=[^Src]} ->
             cse_is(Is, Es, Sub0, [I|Acc]);
         #b_set{} ->
             %% The previous instruction has been eliminated. Eliminate the
@@ -1593,13 +1593,13 @@ coalesce_skips_is([#b_set{op=bs_match,
                   #b_br{succ=L2,fail=Fail}=Br0,
                   Bs0) when is_integer(Size0) ->
     case Bs0 of
-        [{L2,#b_blk{is=[#b_set{op=bs_match,
+        [{^L2,#b_blk{is=[#b_set{op=bs_match,
                                dst=SkipDst,
                                args=[#b_literal{val=skip},_,_,_,
                                      #b_literal{val=Size1},
                                      #b_literal{val=Unit1}]},
                         #b_set{op={succeeded,guard}}=Succeeded],
-                    last=#b_br{fail=Fail}=Br}}|Bs] when is_integer(Size1) ->
+                    last=#b_br{fail=^Fail}=Br}}|Bs] when is_integer(Size1) ->
             SkipBits = Size0 * Unit0 + Size1 * Unit1,
             Skip = Skip0#b_set{dst=SkipDst,
                                args=[#b_literal{val=skip},Ctx0,
@@ -1608,9 +1608,9 @@ coalesce_skips_is([#b_set{op=bs_match,
                                      #b_literal{val=1}]},
             Is = [Skip,Succeeded],
             {Is,Br,Bs};
-        [{L2,#b_blk{is=[#b_set{op=bs_test_tail,
+        [{^L2,#b_blk{is=[#b_set{op=bs_test_tail,
                                args=[_Ctx,#b_literal{val=TailSkip}]}],
-                    last=#b_br{succ=NextSucc,fail=Fail}}}|Bs] ->
+                    last=#b_br{succ=NextSucc,fail=^Fail}}}|Bs] ->
             SkipBits = Size0 * Unit0,
             TestTail = Skip0#b_set{op=bs_test_tail,
                                    args=[Ctx0,#b_literal{val=SkipBits+TailSkip}]},
@@ -1948,7 +1948,7 @@ opt_tup_size([], _NonGuards, Count, Acc) ->
 opt_tup_size_1(Size, EqL, NonGuards, Count0, [{L,Blk0}|Acc]) ->
     #b_blk{is=Is0,last=Last} = Blk0,
     case Last of
-        #b_br{bool=Bool,succ=EqL,fail=Fail} ->
+        #b_br{bool=Bool,succ=^EqL,fail=Fail} ->
             case gb_sets:is_member(Fail, NonGuards) of
                 true ->
                     {[{L,Blk0}|Acc],Count0};
@@ -2159,11 +2159,11 @@ ssa_opt_ne({#opt_st{ssa=Linear0}=St, FuncDb}) ->
 
 opt_ne([{L,#b_blk{is=[_|_]=Is0,last=#b_br{bool=#b_var{}=Bool}}=Blk0}|Bs], Uses0) ->
     case last(Is0) of
-        #b_set{op={bif,'=/='},dst=Bool}=I0 ->
+        #b_set{op={bif,'=/='},dst=^Bool}=I0 ->
             I = I0#b_set{op={bif,'=:='}},
             {Blk,Uses} = opt_ne_replace(I, Blk0, Uses0),
             [{L,Blk}|opt_ne(Bs, Uses)];
-        #b_set{op={bif,'/='},dst=Bool}=I0 ->
+        #b_set{op={bif,'/='},dst=^Bool}=I0 ->
             I = I0#b_set{op={bif,'=='}},
             {Blk,Uses} = opt_ne_replace(I, Blk0, Uses0),
             [{L,Blk}|opt_ne(Bs, Uses)];
@@ -2608,7 +2608,7 @@ common_dominator(Ls0, Dom, Numbering, Unsuitable) ->
             %% It is not allowed to place the instruction here. Try
             %% to find another suitable dominating block by going up
             %% one step in the dominator tree.
-            [Common,OneUp|_] = map_get(Common, Dom),
+            [^Common,OneUp|_] = map_get(Common, Dom),
             common_dominator([OneUp], Dom, Numbering, Unsuitable);
         false ->
             Common
@@ -2934,7 +2934,7 @@ unfold_arg(#b_literal{val=Val}=Lit, LitMap, X) ->
             %% in a `move` instruction.
             case keyfind(X, 1, Vars) of
                 false -> Lit;
-                {X,Var} -> Var
+                {^X,Var} -> Var
             end;
         #{} -> Lit
     end;
@@ -3077,7 +3077,7 @@ is_tail_call_is([#b_set{op=call,dst=Dst}=Call,
                 %% `call` instruction returns.
                 Type = beam_ssa:get_anno(result_type, Call, any),
                 case beam_types:get_singleton_value(Type) of
-                    {ok,Val} ->
+                    {ok,^Val} ->
                         %% Same value.
                         true;
                     {ok,_} ->

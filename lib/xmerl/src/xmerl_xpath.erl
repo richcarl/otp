@@ -730,20 +730,20 @@ node_test({wildcard, _}, #xmlNode{type=ElAt}, _Context)
     true;
 node_test({prefix_test, Prefix}, #xmlNode{node = N}, Context) ->
     case N of
-	#xmlElement{nsinfo = {Prefix, _}} ->
+	#xmlElement{nsinfo = {^Prefix, _}} ->
             true;
         #xmlElement{expanded_name = {Uri, _}} ->
             case expanded_name(Prefix, "_", Context) of
-                {Uri, _} ->
+                {^Uri, _} ->
                     true;
                 _ ->
                     false
             end;
-	#xmlAttribute{nsinfo = {Prefix, _}} ->
+	#xmlAttribute{nsinfo = {^Prefix, _}} ->
             true;
         #xmlAttribute{expanded_name = {Uri, _}} ->
             case expanded_name(Prefix, "_", Context) of
-                {Uri, _} ->
+                {^Uri, _} ->
                     true;
                 _ ->
                     false

@@ -111,9 +111,9 @@ start(Mode, LogDir, Verbosity) ->
 	    S = self(),
 	    Pid = spawn_link(fun() -> do_start(S, Mode, LogDir, Verbosity) end),
 	    receive 
-		{Pid,started} -> Pid;
-		{Pid,Error} -> exit(Error);
-		{_Ref,{Pid,Error}} -> exit(Error)
+		{^Pid,started} -> Pid;
+		{^Pid,Error} -> exit(Error);
+		{_Ref,{^Pid,Error}} -> exit(Error)
 	    end;
 	Pid ->
 	    case get_mode() of
@@ -311,7 +311,7 @@ set_verbosity(Elem = {_Category,_Level}) ->
 	
 get_verbosity(Category) ->
     try ets:lookup(?verbosity_table, Category) of
-	[{Category,Level}] -> 
+	[{^Category,Level}] -> 
 	    Level;
 	_ ->
 	    undefined
@@ -334,9 +334,9 @@ loop(Mode,TestData,StartDir) ->
 	    loop(Mode,TestData,StartDir);
 	{{read_suite_data,Key},From} ->
 	    case ets:lookup(?suite_table, Key) of
-		[#suite_data{key=Key,name=undefined,value=Value}] ->
+		[#suite_data{key=^Key,name=undefined,value=Value}] ->
 		    return(From,Value);
-		[#suite_data{key=Key,name=Name,value=Value}] ->
+		[#suite_data{key=^Key,name=Name,value=Value}] ->
 		    return(From,{Name,Value});
 		_ ->
 		    return(From,undefined)
@@ -390,7 +390,7 @@ loop(Mode,TestData,StartDir) ->
 	    loop(From, TestData, StartDir);
 	{{get_testdata,Key},From} ->
 	    case lists:keysearch(Key,1,TestData) of
-		{value,{Key,Val}} ->
+		{value,{^Key,Val}} ->
 		    return(From,Val);
 		_ ->
 		    return(From,undefined)
@@ -399,7 +399,7 @@ loop(Mode,TestData,StartDir) ->
 	{{update_testdata,Key,Fun,Opts},From} ->
 	    TestData1 =
 		case lists:keysearch(Key,1,TestData) of
-		    {value,{Key,Val}} ->
+		    {value,{^Key,Val}} ->
 			try Fun(Val) of
 			    '$delete' ->
 				return(From,deleted),
@@ -640,10 +640,10 @@ get_connections(ConnPid) ->
 			    callback=Callback,
 			    address=Address}) ->
 			  case ct_gen_conn:get_conn_pid(Handle) of
-			      ConnPid when is_atom(TargetName) ->
+			      ^ConnPid when is_atom(TargetName) ->
 				  [{TargetName,Handle,
 				    Callback,Address}];
-			      ConnPid ->
+			      ^ConnPid ->
 				  [{undefined,Handle,
 				   Callback,Address}];
 			      _ ->
@@ -716,7 +716,7 @@ is_silenced(Conn, Timeout) ->
     case get_testdata(silent_connections, Timeout) of
 	Conns when is_list(Conns) ->
 	    case lists:keysearch(Conn,1,Conns) of
-		{value,{Conn,true}} ->
+		{value,{^Conn,true}} ->
 		    true;
 		_ ->
 		    false
@@ -746,7 +746,7 @@ stop(Info) ->
 	    Ref = monitor(process, CtUtilPid),
 	    call({stop,Info}),
 	    receive
-		{'DOWN',Ref,_,_,_} -> ok
+		{'DOWN',^Ref,_,_,_} -> ok
 	    end
     end.
 
@@ -937,7 +937,7 @@ remaining_test_procs() ->
                       true ->
                           if not is_pid(Shared) ->
                                   case test_server_io:get_gl(true) of
-                                      Pid ->
+                                      ^Pid ->
                                           {Pid,Other,
                                            lists:delete(Pid,Procs1)};
                                       _ ->
@@ -1060,10 +1060,10 @@ call(Msg, Timeout) ->
 	    Ref = make_ref(),
 	    ct_util_server ! {Msg,{Self,Ref}},
 	    receive
-		{Ref, Result} -> 
+		{^Ref, Result} -> 
 		    erlang:demonitor(MRef, [flush]),
 		    Result;
-		{'DOWN',MRef,process,_,Reason}  -> 
+		{'DOWN',^MRef,process,_,Reason}  -> 
 		    {error,{ct_util_server_down,Reason}}
 	    after
 		Timeout -> {error,timeout}

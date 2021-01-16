@@ -505,7 +505,7 @@ measurement_server_loop(State) ->
 		State#internal.util)});
 	{Pid, {?util, D, PC, Client}} ->
 	    {Monitor, OldCpuUtil, Utils2} = case keysearchdelete(Client, 1, State#internal.util) of
-		{{value, {Client, Mon, U}}, Us} -> {Mon, U, Us};
+		{{value, {^Client, Mon, U}}, Us} -> {Mon, U, Us};
 		{false, Us} -> {erlang:monitor(process, Client), [], Us}
 	    end,
 	    try get_util_measurement(?util, State) of
@@ -539,8 +539,8 @@ measurement_server_loop(State) ->
 port_server_call(Pid, Command) ->
     Pid ! {self(), Command},
     receive
-	{Pid, {data, Result}} -> Result;
-	{Pid, {error, Reason}} -> {error, Reason}
+	{^Pid, {data, Result}} -> Result;
+	{^Pid, {error, Reason}} -> {error, Reason}
     end.
     
 port_server_start_link() ->
@@ -548,7 +548,7 @@ port_server_start_link() ->
     Pid = spawn_link(fun() -> port_server_init(Timeout) end),
     Pid ! {self(), ?ping},
     receive
-	{Pid, {data,4711}} -> {ok, Pid};
+	{^Pid, {data,4711}} -> {ok, Pid};
 	{error,Reason} -> {error, Reason}
     after Timeout -> 
 	{error, timeout}
@@ -562,7 +562,7 @@ port_server_loop(Port, Timeout) ->
     receive
 
 	% Adjust timeout
-	{Pid, {timeout, Timeout}} ->
+	{Pid, {timeout, ^Timeout}} ->
 	    Pid ! {data, Timeout},
 	    port_server_loop(Port, Timeout);
 	% Number of processors
@@ -622,19 +622,19 @@ port_receive_uint32(_Port, _Timeout, [D3,D2,D1,D0]) -> ?INT32(D3,D2,D1,D0);
 port_receive_uint32(_Port, _Timeout, [_,_,_,_ | G]) -> exit({port_garbage, G});
 port_receive_uint32(Port, Timeout, D) ->
     receive
-	{'EXIT', Port, Reason} -> exit({port_exit, Reason});
-	{Port, {data, ND}} -> port_receive_uint32(Port, Timeout, D ++ ND)
+	{'EXIT', ^Port, Reason} -> exit({port_exit, Reason});
+	{^Port, {data, ND}} -> port_receive_uint32(Port, Timeout, D ++ ND)
     after Timeout -> exit(timeout_uint32) end.
 
 port_receive_util(Port, Timeout) ->
     receive
-	{Port, {data, [ NP3,NP2,NP1,NP0,  % Number of processors
+	{^Port, {data, [ NP3,NP2,NP1,NP0,  % Number of processors
 		        NE3,NE2,NE1,NE0   % Number of entries per processor
 		      | CpuData]}} ->
 	    port_receive_cpu_util( ?INT32(NP3,NP2,NP1,NP0),
 				   ?INT32(NE3,NE2,NE1,NE0),
 				   CpuData, []);
-	{'EXIT', Port, Reason} -> exit({port_exit, Reason})
+	{'EXIT', ^Port, Reason} -> exit({port_exit, Reason})
     after Timeout -> exit(timeout_util) end.
 
 % per processor receive loop

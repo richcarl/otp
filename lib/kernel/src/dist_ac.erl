@@ -226,12 +226,12 @@ wait_dacs([Node | Nodes], KnownNodes, Appls, RStarted) ->
 	%% older versions of the protocol.  As we don't have any older
 	%% versions (that are supposed to work with this version), we
 	%% don't handle version mismatch here.
-	{dist_ac_new_node, _Vsn, Node, HisAppls, HisStarted} ->
+	{dist_ac_new_node, _Vsn, ^Node, HisAppls, HisStarted} ->
 	    monitor_node(Node, false),
 	    NRStarted = RStarted ++ HisStarted,
 	    NAppls = dist_merge(Appls, HisAppls, Node),
 	    wait_dacs(Nodes, [Node | KnownNodes], NAppls, NRStarted);
-	{nodedown, Node} ->
+	{nodedown, ^Node} ->
 	    monitor_node(Node, false),
 	    wait_dacs(Nodes, KnownNodes, Appls, RStarted)
     end;
@@ -834,7 +834,7 @@ start_distributed(Appl, Name, Nodes, PermittedNodes, S, Type) ->
 	    {{distributed, Node}, false};
 	{ok, Node} ->
 	    case keysearch(Name, #appl.name, S#state.appls) of
-		{value, #appl{id = {distributed, Node}}} ->
+		{value, #appl{id = {distributed, ^Node}}} ->
 		    _ = ac_started(Type, Name, Node),
 		    {{distributed, Node}, false};
 		_ ->
@@ -851,15 +851,15 @@ start_distributed(Appl, Name, Nodes, PermittedNodes, S, Type) ->
 wait_dist_start(Node, Appl, Name, Nodes, PermittedNodes, S, Type) ->
     monitor_node(Node, true),
     receive
-	{dist_ac_app_started, Node, Name, ok} ->
+	{dist_ac_app_started, ^Node, ^Name, ok} ->
 	    _ = ac_started(Type, Name, Node),
 	    monitor_node(Node, false),
 	    {{distributed, Node}, false};
-	{dist_ac_app_started, Node, Name, {error, R}} ->
+	{dist_ac_app_started, ^Node, ^Name, {error, R}} ->
 	    _ = ac_error(Type, Name, {Node, R}),
 	    monitor_node(Node, false),
 	    {Appl#appl.id, false};
-	{dist_ac_weight, Name, _Weigth, Node} ->
+	{dist_ac_weight, ^Name, _Weigth, ^Node} ->
 	    %% This is the situation: {Name, [RNode, {Node}, node()]}
 	    %% and permit(false) is called on RNode, and we sent the
 	    %% weigth first.  Node handled it in handle_info, and
@@ -869,7 +869,7 @@ wait_dist_start(Node, Appl, Name, Nodes, PermittedNodes, S, Type) ->
 	    {?DIST_AC, Node} !
 		{dist_ac_weight, Name, get_cached_weight(Name, S), node()},
 	    wait_dist_start(Node, Appl, Name, Nodes, PermittedNodes, S, Type);
-	{nodedown, Node} ->
+	{nodedown, ^Node} ->
 	    monitor_node(Node, false),
 	    TmpLocals =
 		filter(fun({Name2, _Weight, Node2}) when Node2 =:= Node,
@@ -884,10 +884,10 @@ wait_dist_start(Node, Appl, Name, Nodes, PermittedNodes, S, Type) ->
 
 wait_dist_start2(Appl, Name, Nodes, PermittedNodes, S, Type) ->
     receive
-	{dist_ac_app_started, Node, Name, ok} ->
+	{dist_ac_app_started, Node, ^Name, ok} ->
 	    _ = ac_started(Type, Name, Node),
 	    {{distributed, Node}, false};
-	{dist_ac_app_started, Node, Name, {error, R}} ->
+	{dist_ac_app_started, Node, ^Name, {error, R}} ->
 	    _ = ac_error(Type, Name, {Node, R}),
 	    {Appl#appl.id, false};
 	{nodedown, Node} ->
@@ -1058,11 +1058,11 @@ find_start_node([Node | Nodes], Name, S, Weight, AllNodes) ->
     case lists:member(Node, AllNodes) of
 	true ->
 	    case keysearch(Name, #appl.name, S#state.appls) of
-		{value, #appl{id = {distributed, Node}}} ->
+		{value, #appl{id = {distributed, ^Node}}} ->
 		    {already_started, Node};
 		_ ->
 		    case keysearch(Name, 2, S#state.remote_started) of
-			{value, {Node, _Name}} ->
+			{value, {^Node, _Name}} ->
 			    {already_started, Node};
 			_ ->
 			    {ok, Node}
@@ -1132,15 +1132,15 @@ find_alive_node([], _AliveNodes) ->
 %%-----------------------------------------------------------------
 collect_answers([Node | Nodes], Name, S, Res) when Node =/= node() ->
     case keysearch(Node, 3, S#state.tmp_locals) of
-	{value, {Name, Weight, Node}} ->
+	{value, {^Name, Weight, ^Node}} ->
 	    collect_answers(Nodes, Name, S, [{Weight, Node} | Res]);
 	_ ->
 	    monitor_node(Node, true),
 	    receive
-		{dist_ac_weight, Name, Weight, Node} ->
+		{dist_ac_weight, ^Name, Weight, ^Node} ->
 		    monitor_node(Node, false),
 		    collect_answers(Nodes, Name, S, [{Weight, Node} | Res]);
-		{nodedown, Node} ->
+		{nodedown, ^Node} ->
 		    monitor_node(Node, false),
 		    collect_answers(Nodes, Name, S, Res)
 	    end

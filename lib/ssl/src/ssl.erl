@@ -787,7 +787,7 @@ handshake(Socket, SslOptions, Timeout) when is_port(Socket),
     {ok, SocketValues} = tls_socket:getopts(Transport, Socket, EmulatedOptions),
     ConnetionCb = connection_cb(SslOptions),
     try handle_options(SslOptions ++ SocketValues, server) of
-	{ok, #config{transport_info = CbInfo, ssl = SslOpts, emulated = EmOpts}} ->
+	{ok, #config{transport_info = ^CbInfo, ssl = SslOpts, emulated = EmOpts}} ->
 	    ok = tls_socket:setopts(Transport, Socket, tls_socket:internal_inet_values()),
 	    {ok, Port} = tls_socket:port(Transport, Socket),
             {ok, SessionIdHandle} = tls_socket:session_id_tracker(SslOpts),

@@ -174,7 +174,7 @@ build_dom({endElement, _Uri, LocalName, _QName},
                  dom=[{CName, CAttributes, CContent},
                       {PName, PAttributes, PContent} = _Parent | D]} = State) ->
     case list_to_atom(LocalName) of
-	CName ->
+	^CName ->
             SectionDepth = length([E || E <- T, E =:= section]),
             MappedCName =
                 case CName of
@@ -182,7 +182,7 @@ build_dom({endElement, _Uri, LocalName, _QName},
                         lists:nth(SectionDepth+1,[h1,h2,h3]);
                     section when SectionDepth > 0 ->
                         'div';
-                    CName -> CName
+                    ^CName -> CName
                 end,
 
             State#state{tags=T,
@@ -550,7 +550,7 @@ func2func({func,Attr,Contents}) ->
                                   MakeFunc(FA, MD, [])
                           end, tl(SortedFAs)),
                 [Base | Equiv];
-            NameList ->
+            ^NameList ->
                 %% Manual style function docs
                 FAs = lists:foldl(
                         fun({name,_,NameString}, Acc) ->
@@ -759,7 +759,7 @@ docs_v1_entry(Kind, Anno, Name, Arity, Signature, Metadata, DocContents) ->
         case DocContents of
               [] ->
                   #{};
-              DocContents ->
+              ^DocContents ->
                   #{ <<"en">> => shell_docs:normalize(DocContents) }
           end,
 

@@ -110,7 +110,7 @@ stop_system(server, Address, Port, Profile) ->
 
 get_options(Sup, Address, Port, Profile) ->
     try
-       {ok, #{start:=?START(Address,Port,Profile,Options)}} =
+       {ok, #{start:=?START(^Address,^Port,^Profile,Options)}} =
            supervisor:get_childspec(Sup, id(ssh_acceptor_sup,Address,Port,Profile)),
        {ok, Options}
     catch

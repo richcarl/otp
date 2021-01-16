@@ -43,7 +43,7 @@ msg_loop(Meta, Mref) ->
     receive
 
 	%% Evaluated function has returned a value
-	{sys, Meta, {ready, Val}} ->
+	{sys, ^Meta, {ready, Val}} ->
 	    erlang:demonitor(Mref, [flush]),
             case Val of
                 {dbg_apply,M,F,A} ->
@@ -53,7 +53,7 @@ msg_loop(Meta, Mref) ->
 	    end;
 
 	%% Evaluated function raised an (uncaught) exception
-	{sys, Meta, {exception,{Class,Reason,Stacktrace}}} ->
+	{sys, ^Meta, {exception,{Class,Reason,Stacktrace}}} ->
 	    erlang:demonitor(Mref, [flush]),
 
 	    %% ...raise the same exception
@@ -62,22 +62,22 @@ msg_loop(Meta, Mref) ->
 
 	%% Meta is evaluating a receive, must be done within context
 	%% of real (=this) process
-	{sys, Meta, {'receive',Msg}} ->
-	    receive Msg ->
+	{sys, ^Meta, {'receive',Msg}} ->
+	    receive ^Msg ->
 		Meta ! {self(), rec_acked},
 		ok
 	    end,
 	    msg_loop(Meta, Mref);
 
 	%% Meta needs something evaluated within context of real process
-	{sys, Meta, {command,Command}} ->
+	{sys, ^Meta, {command,Command}} ->
 	    Reply = handle_command(Command),
 	    Meta ! {sys, self(), Reply},
 	    msg_loop(Meta, Mref);
 
 	%% Meta has terminated
 	%% Must be due to int:stop() (or -heaven forbid- a debugger bug)
-	{'DOWN', Mref, _, _, Reason} ->
+	{'DOWN', ^Mref, _, _, Reason} ->
             {interpreter_terminated, Reason}
     end.
 

@@ -115,7 +115,7 @@ connect_lookup(Address, Port, Opts, Timer) ->
             connect_open(
               Addrs, Domain, ConnectOpts, StartOpts, Fd, Timer, BindAddr)
     catch
-        throw : {ErrRef, Reason} ->
+        throw : {^ErrRef, Reason} ->
             ?badarg_exit({error, Reason})
     end.
 
@@ -156,7 +156,7 @@ connect_open(Addrs, Domain, ConnectOpts, Opts, Fd, Timer, BindAddr) ->
                         connect_loop(Addrs, Server, DefaultError, Timer)),
                 {ok, ?module_socket(Server, Socket)}
             catch
-                throw : {ErrRef, Reason} ->
+                throw : {^ErrRef, Reason} ->
                     close_server(Server),
                     ?badarg_exit({error, Reason})
             end;
@@ -264,7 +264,7 @@ listen_open(Domain, ListenOpts, Opts, Fd, Backlog, BindAddr) ->
                 Socket = val(ErrRef, call(Server, {listen, Backlog})),
                 {ok, ?module_socket(Server, Socket)}
             catch
-                throw : {ErrRef, Reason} ->
+                throw : {^ErrRef, Reason} ->
                     close_server(Server),
                     ?badarg_exit({error, Reason})
             end;
@@ -293,10 +293,10 @@ accept(?module_socket(ListenServer, ListenSocket), Timeout) ->
                 call(Server, {accept, ListenSocket, inet:timeout(Timer)})),
         {ok, ?module_socket(Server, Socket)}
     catch
-        throw : {{ErrRef, Srv}, Reason} ->
+        throw : {{^ErrRef, Srv}, Reason} ->
             stop_server(Srv),
             ?badarg_exit({error, Reason});
-        throw : {ErrRef, Reason} ->
+        throw : {^ErrRef, Reason} ->
             ?badarg_exit({error, Reason})
     after
         _ = inet:stop_timer(Timer)
@@ -403,11 +403,11 @@ controlling_process(?module_socket(Server, _Socket) = S, NewOwner)
 %% Transfer all queued socket messages to new owner
 controlling_process(S, NewOwner, Server) ->
     receive
-        {tcp, S, _Data} = Msg ->
+        {tcp, ^S, _Data} = Msg ->
             controlling_process(S, NewOwner, Server, Msg);
-        {tcp_closed, S} = Msg ->
+        {tcp_closed, ^S} = Msg ->
             controlling_process(S, NewOwner, Server, Msg);
-        {S, {data, _Data}} = Msg ->
+        {^S, {data, _Data}} = Msg ->
             controlling_process(S, NewOwner, Server, Msg)
     after 0 ->
             call(Server, controlling_process)
@@ -1022,10 +1022,10 @@ handle_event(
   State, {P, _D} = P_D) ->
     %%
     case P of
-        #params{owner = NewOwner} ->
+        #params{owner = ^NewOwner} ->
             {keep_state_and_data,
              [{reply, From, ok}]};
-        #params{owner = Caller} ->
+        #params{owner = ^Caller} ->
             {next_state,
              #controlling_process{owner = NewOwner, state = State},
              P_D,
@@ -1590,7 +1590,7 @@ handle_recv_error_decode(
               P, D#{buffer := Buffer}, ActionsR, Reason, Decoded);
         {more, _} ->
             handle_recv_error(P, D#{buffer := Data}, ActionsR, Reason);
-        {error, Reason} ->
+        {error, ^Reason} ->
             handle_recv_error(
               P, D#{buffer := Data}, ActionsR,
               case Reason of
@@ -1726,7 +1726,7 @@ decode_packet(#{packet := Packet} = D) ->
     case D of
         #{packet := http, recv_httph := true} -> httph;
         #{packet := http_bin, recv_httph := true} -> httph_bin;
-        #{packet := Packet} -> Packet
+        #{packet := ^Packet} -> Packet
     end.
 
 %% Deliver data and update the active state
@@ -2056,7 +2056,7 @@ socket_info_counters(Socket) ->
 
 receive_counter_wrap(Socket, D, Wrapped) ->
     receive
-        ?socket_counter_wrap(Socket, Counter) ->
+        ?socket_counter_wrap(^Socket, Counter) ->
             receive_counter_wrap(
               Socket, wrap_counter(Counter, D) , [Counter | Wrapped])
     after 0 ->

@@ -549,7 +549,7 @@ add1(#reader{}=Reader, Name, NameInArchive, #add_opts{read_info=ReadInfo}=Opts)
                   Header = fileinfo_to_header(NameInArchive, Fi, false),
                   {ok, Reader2} = add_header(Reader, Header, Opts),
                   FileSize = Header#tar_header.size,
-                  {ok, FileSize, Reader3} = do_copy(Reader2, Name, Opts),
+                  {ok, ^FileSize, Reader3} = do_copy(Reader2, Name, Opts),
                   Padding = skip_padding(FileSize),
                   Pad = <<0:Padding/unit:8>>,
                   do_write(Reader3, Pad);
@@ -628,7 +628,7 @@ add_files(Reader, [Name|Rest], Dir, DirInArchive, #add_opts{read_info=Info}=Opts
                   Header = fileinfo_to_header(NameInArchive, Fi, false),
                   {ok, Reader2} = add_header(Reader, Header, Opts),
                   FileSize = Header#tar_header.size,
-                  {ok, FileSize, Reader3} = do_copy(Reader2, FullName, Opts),
+                  {ok, ^FileSize, Reader3} = do_copy(Reader2, FullName, Opts),
                   Padding = skip_padding(FileSize),
                   Pad = <<0:Padding/unit:8>>,
                   do_write(Reader3, Pad);

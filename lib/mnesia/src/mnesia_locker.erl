@@ -115,9 +115,9 @@ l_request(Node, X, Store) ->
 l_req_rec(Node, Store) ->
     ?ets_insert(Store, {nodes, Node}),
     receive
-	{?MODULE, Node, Reply} ->
+	{?MODULE, ^Node, Reply} ->
 	    Reply;
-	{mnesia_down, Node} ->
+	{mnesia_down, ^Node} ->
 	    {not_granted, {node_not_running, Node}}
     end.
 
@@ -132,13 +132,13 @@ send_release_tid(Nodes, Tid) ->
 
 receive_release_tid_acc([Node | Nodes], Tid) ->
     receive
-	{?MODULE, Node, {tid_released, Tid}} ->
+	{?MODULE, ^Node, {tid_released, ^Tid}} ->
 	    receive_release_tid_acc(Nodes, Tid)
     after 0 ->
 	    receive
-		{?MODULE, Node, {tid_released, Tid}} ->
+		{?MODULE, ^Node, {tid_released, ^Tid}} ->
 		    receive_release_tid_acc(Nodes, Tid);
-		{mnesia_down, Node} ->
+		{mnesia_down, ^Node} ->
 		    receive_release_tid_acc(Nodes, Tid)
 	    end
     end;
@@ -152,7 +152,7 @@ mnesia_down(Node, Pending) ->
 	    Ref = make_ref(),
 	    Pid ! {{self(), Ref}, {release_remote_non_pending, Node, Pending}},
 	    receive   %% No need to wait for anything else if process dies we die soon
-		{Ref,ok} -> ok
+		{^Ref,ok} -> ok
 	    end
     end.
 
@@ -457,7 +457,7 @@ check_queue(Tid, Tab, X, AlreadyQ) ->
     Greatest = max(TabLocks),
     case Greatest of
 	empty ->  X;
-	Tid ->    X;
+	^Tid ->    X;
 	WaitForTid ->
 	    case allowed_to_be_queued(WaitForTid,Tid) of
 		true ->
@@ -562,7 +562,7 @@ release_lock({_Tid, Oid, write}) ->
     ?ets_delete(mnesia_held_locks, Oid);
 release_lock({Tid, Oid, read}) ->
     case ?ets_lookup(mnesia_held_locks, Oid) of
-	[{Oid, Prev, Locks0}] ->
+	[{^Oid, Prev, Locks0}] ->
 	    case remove_tid(Locks0, Tid, []) of
 		[] -> ?ets_delete(mnesia_held_locks, Oid);
 		Locks -> ?ets_insert(mnesia_held_locks, {Oid, Prev, Locks})
@@ -773,12 +773,12 @@ do_sticky_lock(Tid, Store, {Tab, Key} = Oid, Lock) ->
     ?MODULE ! {self(), {test_set_sticky, Tid, Oid, Lock}},
     N = node(),
     receive
-	{?MODULE, N, granted} ->
+	{?MODULE, ^N, granted} ->
             ?ets_insert(Store, {sticky, true}),
 	    ?ets_insert(Store, {{locks, Tab, Key}, write}),
 	    [?ets_insert(Store, {nodes, Node}) || Node <- WNodes],
 	    granted;
-	{?MODULE, N, {granted, Val}} -> %% for rwlocks
+	{?MODULE, ^N, {granted, Val}} -> %% for rwlocks
             ?ets_insert(Store, {sticky, true}),
 	    case opt_lookup_in_client(Val, Oid, write) of
 		C = #cyclic{} ->
@@ -788,15 +788,15 @@ do_sticky_lock(Tid, Store, {Tab, Key} = Oid, Lock) ->
 		    [?ets_insert(Store, {nodes, Node}) || Node <- WNodes],
 		    Val2
 	    end;
-	{?MODULE, N, {not_granted, Reason}} ->
+	{?MODULE, ^N, {not_granted, Reason}} ->
 	    exit({aborted, Reason});
-	{?MODULE, N, not_stuck} ->
+	{?MODULE, ^N, not_stuck} ->
 	    not_stuck(Tid, Store, Tab, Key, Oid, Lock, N),
 	    dirty_sticky_lock(Tab, Key, [N], Lock);
 	{mnesia_down, Node} ->
 	    EMsg = {aborted, {node_not_running, Node}},
 	    flush_remaining([N], Node, EMsg);
-	{?MODULE, N, {stuck_elsewhere, _N2}} ->
+	{?MODULE, ^N, {stuck_elsewhere, _N2}} ->
 	    stuck_elsewhere(Tid, Store, Tab, Key, Oid, Lock),
 	    dirty_sticky_lock(Tab, Key, [N], Lock)
     end.
@@ -911,7 +911,7 @@ get_wlocks_on_nodes([Node | Tail], Orig, Store, Request, Oid) ->
     ?ets_insert(Store, {nodes, Node}),
     receive_wlocks([Node], undefined, Store, Oid),
     case node() of
-	Node -> %% Local done try one more
+	^Node -> %% Local done try one more
 	    get_wlocks_on_nodes(Tail, Orig, Store, Request, Oid);
 	_ ->    %% The first succeded cont with the rest
 	    get_wlocks_on_nodes(Tail, Store, Request),
@@ -932,7 +932,7 @@ get_rwlocks_on_nodes([ReadNode|Tail], Ref, Store, Tid, Oid) ->
     {?MODULE, ReadNode} ! Op,
     ?ets_insert(Store, {nodes, ReadNode}),
     case receive_wlocks([ReadNode], Ref, Store, Oid) of
-	Ref ->
+	^Ref ->
 	    get_rwlocks_on_nodes(Tail, Ref, Store, Tid, Oid);
 	Res ->
 	    get_wlocks_on_nodes(Tail, Res, Store, {self(), {write, Tid, Oid}}, Oid)
@@ -970,7 +970,7 @@ receive_wlocks(Nodes = [This|Ns], Res, Store, Oid) ->
 		    sticky_flush(Nonstuck,Store),
 		    Res
 	    end;
-	{mnesia_down, This} ->  % Only look for down from Nodes in list
+	{mnesia_down, ^This} ->  % Only look for down from Nodes in list
 	    Reason1 = {aborted, {node_not_running, This}},
 	    flush_remaining(Ns, This, Reason1)
     end.
@@ -981,9 +981,9 @@ sticky_flush([], _) ->
 sticky_flush(Ns=[Node | Tail], Store) ->
     add_debug(Ns),
     receive
-	{?MODULE, Node, _} ->
+	{?MODULE, ^Node, _} ->
 	    sticky_flush(Tail, Store);
-	{mnesia_down, Node} ->
+	{mnesia_down, ^Node} ->
 	    Reason1 = {aborted, {node_not_running, Node}},
 	    flush_remaining(Tail, Node, Reason1)
     end.
@@ -994,7 +994,7 @@ flush_remaining([], _SkipNode, Res) ->
 flush_remaining(Ns=[SkipNode | Tail ], SkipNode, Res) ->
     add_debug(Ns),
     receive
-	{?MODULE, SkipNode, _} ->
+	{?MODULE, ^SkipNode, _} ->
 	    flush_remaining(Tail, SkipNode, Res)
     after 0 ->
 	    flush_remaining(Tail, SkipNode, Res)
@@ -1002,9 +1002,9 @@ flush_remaining(Ns=[SkipNode | Tail ], SkipNode, Res) ->
 flush_remaining(Ns=[Node | Tail], SkipNode, Res) ->
     add_debug(Ns),
     receive
-	{?MODULE, Node, _} ->
+	{?MODULE, ^Node, _} ->
 	    flush_remaining(Tail, SkipNode, Res);
-	{mnesia_down, Node} ->
+	{mnesia_down, ^Node} ->
 	    flush_remaining(Tail, SkipNode, {aborted, {node_not_running, Node}})
     end.
 
@@ -1063,7 +1063,7 @@ dirty_rpc(Node, Tab, Key, Lock) ->
     case rpc:call(Node, mnesia_lib, db_get, Args) of
 	{badrpc, Reason} ->
 	    case val({Tab, where_to_read}) of
-		Node ->
+		^Node ->
 		    ErrorTag = mnesia_lib:dirty_rpc_error_tag(Reason),
 		    mnesia:abort({ErrorTag, Args});
 		_NewNode ->
@@ -1167,7 +1167,7 @@ get_held_locks(Tab) when is_atom(Tab) ->
 	{?MODULE, _Node, Locks} ->
 	    case Locks of
 		[] -> [];
-		[{Oid, _Prev, What}] -> What
+		[{^Oid, _Prev, What}] -> What
 	    end
     end.
 

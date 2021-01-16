@@ -119,7 +119,7 @@ pre_transform([H | T], Acc, S) ->
 				   [Name, Val, NewVal],
 				   S),
 		    New = {attribute, Line, Name, NewVal},
-		    Pre = lists:keydelete(Name, 2, S#state.pre_ops),
+		    Pre = lists:keydelete(^Name, 2, S#state.pre_ops),
 		    Post = lists:keydelete(Name, 2, S#state.post_ops),
 		    S2 = S#state{pre_ops = Pre, post_ops = Post},
 		    if

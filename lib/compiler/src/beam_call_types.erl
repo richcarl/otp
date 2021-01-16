@@ -121,7 +121,7 @@ fails_on_conflict([], []) ->
 
 succeeds_if_type(ArgType, Required) ->
     case beam_types:meet(ArgType, Required) of
-        ArgType -> yes;
+        ^ArgType -> yes;
         none -> no;
         _ -> maybe
     end.

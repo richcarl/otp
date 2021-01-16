@@ -697,7 +697,7 @@ handle_cast({lock_is_set, Node, MyTag, LockId}, S) ->
     %% Sent from the_locker at node().
     ?trace({'####', lock_is_set , {node,Node}}),
     case get({sync_tag_my, Node}) of
-	MyTag ->
+	^MyTag ->
             lock_is_set(Node, S#state.resolvers, LockId),
             {noreply, S};
 	_ -> %% Illegal tag, delete the old sync session.
@@ -713,7 +713,7 @@ handle_cast({lock_is_set, Node, MyTag, LockId}, S) ->
 handle_cast({exchange, Node, NameList, _NameExtList, MyTag}, S) ->
     %% Sent from global_name_server at Node.
     case get({sync_tag_my, Node}) of
-	MyTag ->
+	^MyTag ->
 	    exchange(Node, NameList, S#state.resolvers),
 	    {noreply, S};
 	_ -> %% Illegal tag, delete the old sync session.
@@ -733,7 +733,7 @@ handle_cast({exchange_ops, Node, MyTag, Ops, Resolved}, S0) ->
             {mytag,MyTag}}),
     S = trace_message(S0, {exit_resolver, Node}, [MyTag]),
     case get({sync_tag_my, Node}) of
-	MyTag ->
+	^MyTag ->
             Known = S#state.known,
 	    gen_server:cast({global_name_server, Node},
 			    {resolved, node(), Resolved, Known,
@@ -762,7 +762,7 @@ handle_cast({resolved, Node, HisResolved, HisKnown, _HisKnown_v2,
     %% Sent from global_name_server at Node.
     ?trace({'####', resolved, {his_resolved,HisResolved}, {node,Node}}),
     case get({sync_tag_my, Node}) of
-	MyTag -> 
+	^MyTag -> 
             %% See the comment at handle_case({exchange_ops, ...}).
             case get({save_ops, Node}) of
                 Ops when is_list(Ops) ->
@@ -924,7 +924,7 @@ handle_info(high_level_trace, S) ->
             CNode = node(),
             CNodes = nodes(),
             case {CNode, CNodes} of
-                {Node, Nodes} ->
+                {^Node, ^Nodes} ->
                     {noreply, S};
                 _ ->
                     {New, _, Old} = 
@@ -1057,8 +1057,8 @@ init_connect(Vsn, Node, InitMsg, HisTag, Resolvers, S) ->
     put({prot_vsn, Node}, Vsn),
     put({sync_tag_his, Node}, HisTag),
     case lists:keyfind(Node, 1, Resolvers) of
-        {Node, MyTag, _Resolver} ->
-            MyTag = get({sync_tag_my, Node}), % assertion
+        {^Node, MyTag, _Resolver} ->
+            ^MyTag = get({sync_tag_my, Node}), % assertion
 	    {locker, _NoLongerAPid, _HisKnown0, HisTheLocker} = InitMsg,
 	    ?trace({init_connect,{histhelocker,HisTheLocker}}),
 	    HisKnown = [],
@@ -1102,7 +1102,7 @@ exchange(Node, NameList, Resolvers) ->
             {resolvers, Resolvers}}),
     case erase({wait_lock, Node}) of
 	lock_is_set ->
-            {Node, _Tag, Resolver} = lists:keyfind(Node, 1, Resolvers),
+            {^Node, _Tag, Resolver} = lists:keyfind(Node, 1, Resolvers),
             Resolver ! {resolve, NameList, Node};
 	undefined ->
 	    put({wait_lock, Node}, {exchange, NameList})
@@ -1195,7 +1195,7 @@ start_resolver(Node, MyTag) ->
 
 resolver(Node, Tag) ->
     receive 
-        {resolve, NameList, Node} ->
+        {resolve, NameList, ^Node} ->
             ?trace({resolver, {me,self()}, {node,Node}, {namelist,NameList}}),
             {Ops, Resolved} = exchange_names(NameList, Node, [], []),
             Exchange = {exchange_ops, Node, Tag, Ops, Resolved},
@@ -1258,9 +1258,9 @@ handle_set_lock(Id, Pid, S) ->
 
 can_set_lock({ResourceId, LockRequesterId}) ->
     case ets:lookup(global_locks, ResourceId) of
-	[{ResourceId, LockRequesterId, PidRefs}] ->
+	[{^ResourceId, ^LockRequesterId, PidRefs}] ->
             {true, PidRefs};
-	[{ResourceId, _LockRequesterId2, _PidRefs}] ->
+	[{^ResourceId, _LockRequesterId2, _PidRefs}] ->
             false;
 	[] ->
             {true, []}
@@ -1283,7 +1283,7 @@ is_lock_set(ResourceId) ->
 handle_del_lock({ResourceId, LockReqId}, Pid, S0) ->
     ?trace({handle_del_lock, {pid,Pid},{id,{ResourceId, LockReqId}}}),
     case ets:lookup(global_locks, ResourceId) of
-	[{ResourceId, LockReqId, PidRefs}]->
+	[{^ResourceId, ^LockReqId, PidRefs}]->
             remove_lock(ResourceId, LockReqId, Pid, PidRefs, false, S0);
 	_ -> S0
     end.
@@ -1303,7 +1303,7 @@ remove_lock(ResourceId, LockRequesterId, Pid, [{Pid,Ref}], Down, S0) ->
 remove_lock(ResourceId, LockRequesterId, Pid, PidRefs0, _Down, S) ->
     ?trace({remove_lock_2, {id,ResourceId},{pid,Pid}}),
     PidRefs = case lists:keyfind(Pid, 1, PidRefs0) of
-                  {Pid, Ref} ->
+                  {^Pid, Ref} ->
                       true = erlang:demonitor(Ref, [flush]),
                       true = ets:delete_object(global_pid_ids, 
                                                {Ref, ResourceId}),
@@ -1368,9 +1368,9 @@ sync_others(Nodes) ->
 sync_other(Node, N) ->
     erlang:monitor_node(Node, true, [allow_passive_connect]),
     receive
-        {nodedown, Node} when N > 0 ->
+        {nodedown, ^Node} when N > 0 ->
             sync_other(Node, N - 1);
-        {nodedown, Node} ->
+        {nodedown, ^Node} ->
             ?trace({missing_nodedown, {node, Node}}),
             error_logger:warning_msg("global: ~w failed to connect to ~w\n",
                                      [node(), Node]),
@@ -1416,7 +1416,7 @@ lock_still_set(PidOrNode, ExtraInfo, S) ->
 extra_info(Tag, ExtraInfo) ->
     %% ExtraInfo used to be a list of nodes (vsn 2).
     case catch lists:keyfind(Tag, 1, ExtraInfo) of
-        {Tag, Info} ->
+        {^Tag, Info} ->
             Info;
         _ ->
             undefined
@@ -1438,7 +1438,7 @@ del_name(Ref, S) ->
 %% Keeps the entry in global_names for whereis_name/1.
 delete_global_name_keep_pid(Name, S) ->
     case ets:lookup(global_names, Name) of
-        [{Name, Pid, _Method, Ref}] ->
+        [{^Name, Pid, _Method, Ref}] ->
             delete_global_name2(Name, Pid, Ref, S);
         [] ->
             S
@@ -1446,7 +1446,7 @@ delete_global_name_keep_pid(Name, S) ->
 
 delete_global_name2(Name, S) ->
     case ets:lookup(global_names, Name) of
-        [{Name, Pid, _Method, Ref}] ->
+        [{^Name, Pid, _Method, Ref}] ->
             true = ets:delete(global_names, Name),
             delete_global_name2(Name, Pid, Ref, S);
         [] ->
@@ -1460,7 +1460,7 @@ delete_global_name2(Name, Pid, Ref, S) ->
     true = ets:delete_object(global_pid_names, {Pid, Name}),
     true = ets:delete_object(global_pid_names, {Ref, Name}),
     case ets:lookup(global_names_ext, Name) of
-	[{Name, Pid, RegNode}] ->
+	[{^Name, ^Pid, RegNode}] ->
             true = ets:delete(global_names_ext, Name),
             ?trace({delete_global_name, {name,Name,{pid,Pid},{RegNode,Pid}}}),
 	    dounlink_ext(Pid, RegNode);
@@ -1586,7 +1586,7 @@ the_locker_message({cancel, _Node, undefined, no_fun}, S) ->
 the_locker_message({cancel, Node, Tag, no_fun}, S) ->
     ?trace({the_locker, cancel, {multi,S}, {tag,Tag},{node,Node}}),
     receive
-        {nodeup, Node, Tag} ->
+        {nodeup, ^Node, ^Tag} ->
             ?trace({cancelnodeup2, {node,Node},{tag,Tag}}),
             ok
     after 0 ->
@@ -1618,7 +1618,7 @@ the_locker_message({lock_set, Pid, true, _HisKnown}, S) ->
                     %% global_name_server will receive nodedown, and
                     %% then send {cancel, Node, Tag}.
                     receive
-                        {cancel, Node, _Tag, Fun} ->
+                        {cancel, ^Node, _Tag, Fun} ->
                             ?trace({cancel_the_lock,{node,Node}}),
                             call_fun(Fun),
                             delete_global_lock(LockId, Known2)
@@ -1785,7 +1785,7 @@ lock_is_set(S, Him, MyTag, Known1, LockId) ->
             %% other locker's node die, global_name_server will
             %% receive nodedown, and then send {cancel, Node, Tag, Fun}.
 	    receive
-		{cancel, Node, _, Fun} ->
+		{cancel, ^Node, _, Fun} ->
                     ?trace({lock_set_loop, {known1,Known1}}),
                     call_fun(Fun),
 		    delete_global_lock(LockId, Known1)
@@ -1798,7 +1798,7 @@ lock_is_set(S, Him, MyTag, Known1, LockId) ->
             _ = locker_trace(S, rejected, Known1),
 	    delete_global_lock(LockId, Known1),
 	    S;
-	{cancel, Node, _, Fun} ->
+	{cancel, ^Node, _, Fun} ->
 	    ?trace({the_locker, cancel2, {node,Node}}),
             call_fun(Fun),
             _ = locker_trace(S, rejected, Known1),
@@ -1873,7 +1873,7 @@ add_node(Him, S) ->
 is_node_local(Node) ->
     {ok, Host} = inet:gethostname(),
     case catch split_node(atom_to_list(Node), $@, []) of
-	[_, Host] -> 
+	[_, ^Host] -> 
             true;
 	_ ->
             false
@@ -1892,7 +1892,7 @@ cancel_locker(Node, S, Tag, ToBeRunOnLockerF) ->
     ?trace({cancel_locker, {node,Node},{tag,Tag},
             {sync_tag_my, get({sync_tag_my, Node})},{resolvers,Resolvers}}),
     case lists:keyfind(Node, 1, Resolvers) of
-	{_, Tag, Resolver} ->
+	{_, ^Tag, Resolver} ->
             ?trace({{resolver, Resolver}}),
             exit(Resolver, kill),
             S1 = trace_message(S, {kill_resolver, Node}, [Tag, Resolver]),
@@ -1916,19 +1916,19 @@ reset_node_state(Node) ->
 %% from the same partition.
 exchange_names([{Name, Pid, Method} | Tail], Node, Ops, Res) ->
     case ets:lookup(global_names, Name) of
-	[{Name, Pid, _Method, _Ref2}] ->
+	[{^Name, ^Pid, _Method, _Ref2}] ->
 	    exchange_names(Tail, Node, Ops, Res);
-	[{Name, Pid2, Method2, _Ref2}] when node() < Node ->
+	[{^Name, Pid2, Method2, _Ref2}] when node() < Node ->
 	    %% Name clash!  Add the result of resolving to Res(olved).
 	    %% We know that node(Pid) =/= node(), so we don't
 	    %% need to link/unlink to Pid.
 	    Node2 = node(Pid2), %% Node2 is connected to node().
 	    case rpc:call(Node2, ?MODULE, resolve_it,
 			  [Method2, Name, Pid, Pid2]) of
-		Pid ->
+		^Pid ->
 		    Op = {insert, {Name, Pid, Method}},
 		    exchange_names(Tail, Node, [Op | Ops], Res);
-		Pid2 ->
+		^Pid2 ->
 		    Op = {insert, {Name, Pid2, Method2}},
 		    exchange_names(Tail, Node, Ops, [Op | Res]);
 		none ->
@@ -1947,7 +1947,7 @@ exchange_names([{Name, Pid, Method} | Tail], Node, Ops, Res) ->
 		    Op = {delete, Name},
 		    exchange_names(Tail, Node, [Op | Ops], [Op | Res])
 	    end;
-	[{Name, _Pid2, _Method, _Ref}] ->
+	[{^Name, _Pid2, _Method, _Ref}] ->
 	    %% The other node will solve the conflict.
 	    exchange_names(Tail, Node, Ops, Res);
 	_ ->
@@ -2023,7 +2023,7 @@ pid_is_locking(Pid, PidRefs) ->
 delete_lock(Ref, S0) ->
     Locks = pid_locks(Ref),
     F = fun({ResourceId, LockRequesterId, PidRefs}, S) -> 
-                {Pid, Ref} = lists:keyfind(Ref, 2, PidRefs),
+                {Pid, ^Ref} = lists:keyfind(Ref, 2, PidRefs),
                 remove_lock(ResourceId, LockRequesterId, Pid, PidRefs, true, S)
         end,
     lists:foldl(F, S0, Locks).

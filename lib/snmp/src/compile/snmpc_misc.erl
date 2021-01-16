@@ -41,7 +41,7 @@
 %%--------------------------------------------------
 assq(Key, List) ->
     case lists:keysearch(Key, 1, List) of
-	{value, {Key, Val}} -> {value, Val};
+	{value, {^Key, Val}} -> {value, Val};
 	_ -> false
     end.
 

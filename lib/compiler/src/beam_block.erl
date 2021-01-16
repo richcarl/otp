@@ -72,8 +72,8 @@ is_unused(X, [{make_fun3,_,_,_,Dst,{list,Env}}|Is]) ->
     (not lists:member({x,X}, Env)) andalso ({x,X} =:= Dst orelse is_unused(X, Is));
 is_unused(X, [{move,Src,Dst}|Is]) ->
     case {Src,Dst} of
-        {{x,X},_} -> false;
-        {_,{x,X}} -> true;
+        {{x,^X},_} -> false;
+        {_,{x,^X}} -> true;
         {_,_} -> is_unused(X, Is)
     end;
 is_unused(X, [{line,_}|Is]) -> is_unused(X, Is);

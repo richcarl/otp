@@ -107,7 +107,7 @@ pread(Fd, LocNums) ->
         {ok, LocResults} ->
             TranslatedResults =
                 [ case Result of
-                      Result when is_binary(Result) -> binary_to_list(Result);
+                      ^Result when is_binary(Result) -> binary_to_list(Result);
                       eof -> eof
                   end || Result <- LocResults ],
             {ok, TranslatedResults};

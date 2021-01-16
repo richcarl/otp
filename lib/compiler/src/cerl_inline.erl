@@ -190,7 +190,7 @@ main(Tree, Ctxt, Opts) ->
     Reply = self(),
     Pid = spawn_link(fun () -> start(Reply, Tree, Ctxt, Opts1) end),
     receive
-        {Pid, Tree1} -> Tree1
+        {^Pid, Tree1} -> Tree1
     end.
 
 start(Reply, Tree, Ctxt, Opts) ->

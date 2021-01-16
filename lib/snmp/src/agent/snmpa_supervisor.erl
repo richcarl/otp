@@ -116,7 +116,7 @@ stop(Pid, Timeout) ->
     MRef = erlang:monitor(process, Pid),
     sys:terminate(Pid, shutdown),
     receive
-        {'DOWN', MRef, process, Pid, _} ->
+        {'DOWN', ^MRef, process, ^Pid, _} ->
             ok
     after Timeout ->
             erlang:demonitor(MRef, [flush]),

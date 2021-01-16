@@ -579,7 +579,7 @@ start(File, Opts) ->
 		      true, Opts)},
          {unpinned_vars,
 	  bool_option(warn_unpinned_vars, nowarn_unpinned_vars,
-		      false, Opts)},
+		      true, Opts)},
 	 {export_all,
 	  bool_option(warn_export_all, nowarn_export_all,
 		      true, Opts)},
@@ -1928,7 +1928,7 @@ pat_bit_size({var,Lv,V}, Vt0, New0, St0) ->
 pat_bit_size(Size, Vt0, New0, St0) ->
     Line = element(2, Size),
     case erl_eval:partial_eval(Size) of
-        {integer,Line,I} -> {I,[],[],St0};
+        {integer,^Line,I} -> {I,[],[],St0};
         Expr ->
             %% The size is an expression using operators
             %% and/or guard BIFs calls. If the expression
@@ -3116,7 +3116,7 @@ spec_decl(Line, MFA0, TypeSpecs, St00 = #lint{specs = Specs, module = Mod}) ->
 	true -> add_error(Line, {redefine_spec, MFA0}, St1);
 	false ->
             case MFA of
-                {Mod, _, _} ->
+                {^Mod, _, _} ->
                     check_specs(TypeSpecs, spec_wrong_arity, Arity, St1);
                 _ ->
                     add_error(Line, {bad_module, MFA}, St1)
@@ -3269,7 +3269,7 @@ check_unused_types_1(Forms, #lint{usage=Usage, types=Ts, exp_types=ExpTs}=St) ->
                         AccSt; % Before Erlang/OTP 19.0
                    (Type, #typeinfo{line = FileLine}, AccSt) ->
                         case loc(FileLine, AccSt) of
-			    {FirstFile, _} ->
+			    {^FirstFile, _} ->
 				case gb_sets:is_member(Type, UsedTypes) of
 				    true -> AccSt;
 				    false ->
@@ -3464,7 +3464,7 @@ icrt_export([{V,_}|_]=Vs0, Vt, In, I, Acc) ->
     %% Initial state is exported from the current expression.
     {Count,S1,Ls} = foldl(F, {0,{export,In},[]}, VVs),
     S = case Count of
-            I ->
+            ^I ->
                 %% V was found in all clauses, keep computed state.
                 S1;
             _ ->

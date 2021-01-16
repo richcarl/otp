@@ -93,7 +93,7 @@ receive_all(_Ref, 0, All) ->
     All;
 receive_all(Ref, N, All) ->
     receive
-        {Ref, SchedAll} ->
+        {^Ref, SchedAll} ->
             receive_all(Ref, N-1, SchedAll ++ All)
     end.
 
@@ -680,7 +680,7 @@ from_dets(EtsTable, DetsTable) ->
 	    erlang:error(Reason1,[EtsTable,DetsTable]);
 	{'EXIT', EReason} ->
 	    erlang:error(EReason,[EtsTable,DetsTable]);
-	EtsTable ->
+	^EtsTable ->
 	    true;
 	Unexpected -> %% Dets bug?
 	    erlang:error(Unexpected,[EtsTable,DetsTable])
@@ -825,7 +825,7 @@ tab2file(Tab, File, Options) ->
 	end,
 	Name = make_ref(),
 	case disk_log:open([{name, Name}, {file, File}]) of
-	    {ok, Name} ->
+	    {ok, ^Name} ->
 		ok;
 	    {error, Reason} ->
 		throw(Reason)
@@ -1005,13 +1005,13 @@ file2tab(File, Opts) ->
     try
 	{ok,Verify,TabArg} = parse_f2t_opts(Opts,false,[]),
 	Name = make_ref(),
-        {ok, Name} =
+        {ok, ^Name} =
 	    case disk_log:open([{name, Name}, 
 				{file, File}, 
 				{mode, read_only}]) of
-		{ok, Name} ->
+		{ok, ^Name} ->
                     {ok, Name};
-		{repaired, Name, _,_} -> %Uh? cannot happen?
+		{repaired, ^Name, _,_} -> %Uh? cannot happen?
 		    case Verify of
 			true ->
 			    _ = disk_log:close(Name),
@@ -1114,7 +1114,7 @@ do_read_and_verify(ReadFun,InitState,Tab,FtOptions,HeadCount,Verify) ->
 			    ok;
 			true ->
 			    case FinalCount of
-				HeadCount ->
+				^HeadCount ->
 				    ok;
 				_ ->
 				    throw(invalid_object_count)
@@ -1140,7 +1140,7 @@ do_read_and_verify(ReadFun,InitState,Tab,FtOptions,HeadCount,Verify) ->
 	    case FtOptions#filetab_options.md5sum of
 		true ->
 		    case erlang:md5_final(FinalMD5State) of
-			EMD5 ->
+			^EMD5 ->
 			    ok;
 			_MD5MisM ->
 			    throw(checksum_error)
@@ -1151,7 +1151,7 @@ do_read_and_verify(ReadFun,InitState,Tab,FtOptions,HeadCount,Verify) ->
 	    case FtOptions#filetab_options.object_count of
 		true ->
 		    case FinalCount of
-			ECount ->
+			^ECount ->
 			    ok;
 			_Other ->
 			    throw(invalid_object_count)
@@ -1162,7 +1162,7 @@ do_read_and_verify(ReadFun,InitState,Tab,FtOptions,HeadCount,Verify) ->
 		    case {Verify,FtOptions#filetab_options.md5sum} of
 			{true,false} ->
 			    case FinalCount of
-				HeadCount ->
+				^HeadCount ->
 				    ok;
 				_Other2 ->
 				     throw(invalid_object_count)
@@ -1423,13 +1423,13 @@ create_tab(I, TabArg) ->
 tabfile_info(File) when is_list(File) ; is_atom(File) ->
     try
 	Name = make_ref(),
-        {ok, Name} =
+        {ok, ^Name} =
 	    case disk_log:open([{name, Name}, 
 				{file, File}, 
 				{mode, read_only}]) of
-		{ok, Name} ->
+		{ok, ^Name} ->
                     {ok, Name};
-		{repaired, Name, _,_} -> %Uh? cannot happen?
+		{repaired, ^Name, _,_} -> %Uh? cannot happen?
 		    {ok, Name};
 		{error, Other1} ->
 		    throw({read_error, Other1});
@@ -1584,7 +1584,7 @@ options(Options, [Key | Keys], L) when is_list(Options) ->
                 {ok, first_next};
             {traverse, last_prev} ->
                 {ok, last_prev};
-	    {Key, _} ->
+	    {^Key, _} ->
 		badarg;
 	    false ->
 		Default = default_option(Key),

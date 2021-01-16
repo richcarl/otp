@@ -1692,7 +1692,7 @@ check_record_tag(Tag, Y, Opaques) ->
       case t_atom_vals(Tag, Opaques) of
         [RealTag] ->
           case t_atom_vals(Y, Opaques) of
-            [RealTag] -> t_atom('true');
+            [^RealTag] -> t_atom('true');
             _ -> t_boolean()
           end;
         _ -> t_boolean()

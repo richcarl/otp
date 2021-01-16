@@ -233,9 +233,9 @@ do_wait_for_tables(Tabs, 0) ->
 do_wait_for_tables(Tabs, Timeout) ->
     Pid = spawn_link(?MODULE, wait_for_tables_init, [self(), Tabs]),
     receive
-	{?SERVER_NAME, Pid, Res} ->
+	{?SERVER_NAME, ^Pid, Res} ->
 	    Res;
-	{'EXIT', Pid, _} ->
+	{'EXIT', ^Pid, _} ->
 	    reply_wait(Tabs)
     after Timeout ->
 	    unlink(Pid),
@@ -276,15 +276,15 @@ sync_reply(Waiter, Tab) ->
 
 rec_tabs([Tab | Tabs], AllTabs, From, Init) ->
     receive
-	{?SERVER_NAME, {tab_synced, Tab}} ->
+	{?SERVER_NAME, {tab_synced, ^Tab}} ->
 	    rec_tabs(Tabs, AllTabs, From, Init);
 
-	{'EXIT', From, _} ->
+	{'EXIT', ^From, _} ->
 	    %% This will trigger an exit signal
 	    %% to mnesia_init
 	    exit(wait_for_tables_timeout);
 
-	{'EXIT', Init, _} ->
+	{'EXIT', ^Init, _} ->
 	    %% Oops, mnesia_init stopped,
 	    exit(mnesia_stopped)
     end;
@@ -350,7 +350,7 @@ get_network_copy(Tid, Tab, Cs) ->
             call({del_other, self()}),
             case Res of
                 #loader_done{is_loaded = true} ->
-                    Tab = Res#loader_done.table_name,
+                    ^Tab = Res#loader_done.table_name,
                     case Res#loader_done.needs_announce of
                         true ->
                             i_have_tab(Tab);
@@ -466,7 +466,7 @@ connect_nodes(Ns, UserFun) ->
 	yes ->
 	    Pid = spawn_link(?MODULE,connect_nodes2,[self(),Ns, UserFun]),
 	    receive
-		{?MODULE, Pid, Res, New} ->
+		{?MODULE, ^Pid, Res, New} ->
 		    case Res of
 			ok ->
 			    mnesia_lib:add_list(extra_db_nodes, New),
@@ -477,7 +477,7 @@ connect_nodes(Ns, UserFun) ->
 			Else ->
 			    {error, Else}
 		    end;
-		{'EXIT', Pid, Reason} ->
+		{'EXIT', ^Pid, Reason} ->
 		    {error, Reason}
 	    end
     end.
@@ -591,7 +591,7 @@ call(Msg) ->
 
 	    %% We get an exit signal if server dies
             receive
-                {'EXIT', Pid, _Reason} ->
+                {'EXIT', ^Pid, _Reason} ->
                     {error, {node_not_running, node()}}
             after 0 ->
                     Res
@@ -929,7 +929,7 @@ handle_cast({release_schema_commit_lock, _Owner}, State) ->
 	true ->
 	    case State#state.dumper_queue of
 		[#schema_commit_lock{}|Rest] ->
-		    [_Worker | Rest] = State#state.dumper_queue,
+		    [_Worker | ^Rest] = State#state.dumper_queue,
 		    State2 = State#state{dumper_pid = undefined,
 					 dumper_queue = Rest},
 		    State3 = opt_start_worker(State2),
@@ -963,7 +963,7 @@ handle_cast({mnesia_down, Node}, State) ->
 
     %% Fix if we are late_merging against the node that went down
     case State#state.schema_is_merged of
-	{false, Node} ->
+	{false, ^Node} ->
 	    spawn(?MODULE, call, [{schema_is_merged, [], late_merge, []}]);
 	_ ->
 	    ignore
@@ -1235,7 +1235,7 @@ handle_info(Done = #loader_done{worker_pid=WPid, table_name=Tab}, State0) ->
 
 handle_info(#sender_done{worker_pid=Pid, worker_res=Res}, State)  ->
     Senders = get_senders(State),
-    {value, {Pid,_Worker}} = lists:keysearch(Pid, 1, Senders),
+    {value, {^Pid,_Worker}} = lists:keysearch(Pid, 1, Senders),
     if
 	Res == ok ->
 	    State2 = State#state{sender_pid = lists:keydelete(Pid, 1, Senders)},
@@ -1648,7 +1648,7 @@ last_consistent_replica(Cs, Tab, Downs) ->
 reconfigure_tables(N, [Tab |Tail]) ->
     del_active_replica(Tab, N),
     case val({Tab, where_to_read}) of
-	N ->  mnesia_lib:set_remote_where_to_read(Tab);
+	^N ->  mnesia_lib:set_remote_where_to_read(Tab);
 	_ ->  ignore
     end,
     reconfigure_tables(N, Tail);
@@ -1683,7 +1683,7 @@ drop_loaders(Tab, Node, LLQ) ->
 	{value, H} ->
 	    %% Check if it is time to issue a disc_load request
 	    case H#late_load.loaders of
-		[Node] ->
+		[^Node] ->
 		    Reason = {H#late_load.reason, last_loader_down, Node},
 		    cast({disc_load, Tab, Reason});  % Ugly cast
 		_ ->
@@ -1779,7 +1779,7 @@ update_where_to_wlock(Tab) ->
 %% when it has *not* released it's table lock
 unannounce_add_table_copy(Tab, To) ->
     ?SAFE(del_active_replica(Tab, To)),
-    try To = val({Tab , where_to_read}),
+    try ^To = val({Tab , where_to_read}),
 	 mnesia_lib:set_remote_where_to_read(Tab)
     catch _:_ -> ignore
     end.

@@ -507,7 +507,7 @@ compute_new_md5(Md5, RemoveFiles0, AddFiles0) ->
 
 compute_new_md5_1([{File, Md5} = Entry|Entries], NewList, Diff) ->
   case compute_md5_from_file(File) of
-    Md5 -> compute_new_md5_1(Entries, [Entry|NewList], Diff);
+    ^Md5 -> compute_new_md5_1(Entries, [Entry|NewList], Diff);
     NewMd5 ->
       ModName = beam_file_to_module(File),
       compute_new_md5_1(Entries, [{File, NewMd5}|NewList], [{differ, ModName}|Diff])
@@ -602,7 +602,7 @@ tab2list(Tab) ->
 subproc(Fun) ->
   F = fun() -> exit(Fun()) end,
   {Pid, Ref} = erlang:spawn_monitor(F),
-  receive {'DOWN', Ref, process, Pid, Return} ->
+  receive {'DOWN', ^Ref, process, ^Pid, Return} ->
       Return
   end.
 

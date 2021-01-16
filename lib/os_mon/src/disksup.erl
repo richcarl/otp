@@ -215,12 +215,12 @@ my_cmd(Cmd0, Port) ->
 
 get_reply(Port, O) ->
     receive 
-        {Port, {data, N}} -> 
+        {^Port, {data, N}} -> 
             case newline(N, O) of
                 {ok, Str} -> Str;
                 {more, Acc} -> get_reply(Port, Acc)
             end;
-        {'EXIT', Port, Reason} ->
+        {'EXIT', ^Port, Reason} ->
 	    exit({port_died, Reason})
     end.
 

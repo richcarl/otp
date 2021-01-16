@@ -173,10 +173,10 @@ publickey_msg([SigAlg, #ssh{user = User,
             SigData = build_sig_data(SessionId, User, Service, PubKeyBlob, SigAlgStr),
 
             Sig = case Key of
-                {ssh2_pubkey, PubKeyBlob} ->
+                {ssh2_pubkey, ^PubKeyBlob} ->
                   ssh_transport:call_KeyCb(sign, [PubKeyBlob, SigData], Opts);
 
-                {PrivKey, PubKeyBlob} ->
+                {PrivKey, ^PubKeyBlob} ->
                   Hash = ssh_transport:sha(SigAlg),
                   ssh_transport:sign(SigData, Hash, PrivKey)
               end,
@@ -496,7 +496,7 @@ check_password(User, Password, #ssh{opts=Opts} = Ssh) ->
         undefined when Password==pubkey ->
             %% Just check the User name
             case lists:keysearch(User, 1, ?GET_OPT(user_passwords,Opts)) of
-                {value, {User, _}} -> {true, Ssh};
+                {value, {^User, _}} -> {true, Ssh};
                 false -> {false, Ssh}
             end;
 
@@ -529,7 +529,7 @@ check_password(User, Password, #ssh{opts=Opts} = Ssh) ->
 get_password_option(Opts, User) ->
     Passwords = ?GET_OPT(user_passwords, Opts),
     case lists:keysearch(User, 1, Passwords) of
-	{value, {User, Pw}} -> Pw;
+	{value, {^User, Pw}} -> Pw;
 	false -> ?GET_OPT(password, Opts)
     end.
 	    

@@ -152,7 +152,7 @@ on_tc_skip(Suite,Tc, Res, State0) ->
     TcStr = atom_to_list(Tc),
     State =
 	case State0#state.test_cases of
-	    [#testcase{name=TcStr}|TCs] ->
+	    [#testcase{name=^TcStr}|TCs] ->
 		State0#state{test_cases=TCs};
 	    _ ->
 		State0

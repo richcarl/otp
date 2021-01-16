@@ -104,7 +104,7 @@ do_tracer(Clients,PI,Traci) ->
 				 H
 			 end,
 		  case catch dbg:tracer(N,port,dbg:trace_port(ip,IpPortSpec)) of
-		      {ok,N} ->
+		      {ok,^N} ->
 			  {ok,Port} = dbg:trace_port_control(N,get_listen_port),
 			  {ok,T} = dbg:get_tracer(N),
 			  rpc:call(N,seq_trace,set_system_tracer,[T]),
@@ -119,7 +119,7 @@ do_tracer(Clients,PI,Traci) ->
 		  end;
 	     ({N,C,_}=Client,{CS,S}) -> 
 		  case catch dbg:tracer(N,port,dbg:trace_port(file,C)) of
-		      {ok,N} -> 
+		      {ok,^N} -> 
 			  {ok,T} = dbg:get_tracer(N),
 			  rpc:call(N,seq_trace,set_system_tracer,[T]),
 			  {[Client|CS], [N|S]};
@@ -297,7 +297,7 @@ run_history([]) ->
     ok;
 run_history(N) ->
     case catch ets:lookup(?history_table,N) of
-	[{N,{M,F,A}}] -> 
+	[{^N,{M,F,A}}] -> 
             run_printed({M,F,A},true);
 	_ -> 
 	    {error, not_found}
@@ -379,7 +379,7 @@ run_config(ConfigFile,N) ->
     case list_config(ConfigFile) of
 	Config when is_list(Config) ->
 	    case lists:keysearch(N,1,Config) of
-		{value,{N,{M,F,A}}} -> 
+		{value,{^N,{M,F,A}}} -> 
 		    print_func(M,F,A),
 		    apply(M,F,A);
 		false -> 
@@ -557,7 +557,7 @@ ensure_no_overloaded_nodes() ->
                  end,
     case Overloaded of
         [] -> ok;
-        Overloaded -> exit({error, overload_protection_active, Overloaded})
+        ^Overloaded -> exit({error, overload_protection_active, Overloaded})
     end.
 
 -spec string2ms(string()) -> {ok, list()} | {error, fun_format}.
@@ -584,7 +584,7 @@ fix_dot(FunStr) ->
     case H of
 	$. ->
 	    FunStr;
-	H ->
+	^H ->
 	    lists:reverse([$., H | Rest])
     end.
 
@@ -659,7 +659,7 @@ stop_opts(Opts) ->
 		    false -> {fetch, FetchDir};
 		    true -> nofetch
 	    end;
-    {FormatData, _} ->
+    {^FormatData, _} ->
             {FormatData, FetchDir}
     end.
 
@@ -691,7 +691,7 @@ start(SessionInfo) ->
 	undefined ->
 	    Parent = self(),
 	    Pid = spawn(fun() -> init(Parent, SessionInfo) end),
-	    receive {started,Pid} -> ok end,
+	    receive {started,^Pid} -> ok end,
             Pid;
 	Pid when is_pid(Pid) ->
 	    Pid
@@ -1005,7 +1005,7 @@ write_info(Nodes,PI,Traci) ->
 			  MetaFile = case F of
                                          none ->
                                              none;
-                                         F ->
+                                         ^F ->
                                              AbsFile = filename:join(Cwd, F) ++ ".ti",
                                              file:delete(AbsFile),
                                              AbsFile
@@ -1124,7 +1124,7 @@ read_traci(File) ->
 
 get_metafile(File) ->
     case filename:rootname(File,".wrp") of
-	File -> File++".ti";
+	^File -> File++".ti";
 	Wrap -> filename:rootname(Wrap)++".ti"
     end.
 
@@ -1283,9 +1283,9 @@ get_procinfo({Name,Node}) when is_atom(Name) ->
 get_first([Client|Clients]) ->
     Client ! {get,self()},
     receive
-	{Client,{end_of_trace,_}} ->
+	{^Client,{end_of_trace,_}} ->
 	    get_first(Clients);
-	{Client,{Trace,_}}=Next ->
+	{^Client,{Trace,_}}=Next ->
 	    [{timestamp(Trace),Next}|get_first(Clients)]
     end;
 get_first([]) -> [].
@@ -1293,9 +1293,9 @@ get_first([]) -> [].
 get_next(Client) when is_pid(Client) ->
     Client ! {get,self()},
     receive
-	{Client,{end_of_trace,_}} ->
+	{^Client,{end_of_trace,_}} ->
 	    end_of_trace;
-	{Client,{Trace, Traci}} ->
+	{^Client,{Trace, Traci}} ->
 	    {timestamp(Trace),{Client,{Trace,Traci}}}
     end.
 
@@ -1356,7 +1356,7 @@ ip_to_file(Trace,{{file,File}, ShellOutput}) ->
     receive {?MODULE,ok} -> ok end,
     case Trace of
         {metadata, _, _} -> ok;
-        Trace            -> show_trace(Trace, ShellOutput)
+        ^Trace            -> show_trace(Trace, ShellOutput)
     end,
     ip_to_file(Trace,{Port,ShellOutput});
 ip_to_file({metadata,MetaFile,MetaData},State) ->

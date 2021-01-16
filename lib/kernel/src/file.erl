@@ -1471,11 +1471,11 @@ eval_stream2({eof,EndLine}, _Fd, H, Last, E, _Bs) ->
     case {H, Last, E} of
 	{return, {Val}, []} ->
 	    {ok, Val};
-	{return, undefined, E} ->
+	{return, undefined, ^E} ->
 	    {error, hd(lists:reverse(E, [{EndLine,?MODULE,undefined_script}]))};
 	{ignore, _, []} ->
 	    ok;
-	{_, _, [_|_] = E} ->
+	{_, _, [_|_]} ->
 	    {error, hd(lists:reverse(E))}
     end.
 
@@ -1591,9 +1591,9 @@ file_request(Io, Request) ->
     Ref = erlang:monitor(process, Io),
     Io ! {file_request,self(),Ref,Request},
     receive
-	{file_reply,Ref,Reply} ->
+	{file_reply,^Ref,Reply} ->
 	    erlang:demonitor(Ref, [flush]),
 	    Reply;
-	{'DOWN', Ref, _, _, _} ->
+	{'DOWN', ^Ref, _, _, _} ->
 	    {error, terminated}
     end.

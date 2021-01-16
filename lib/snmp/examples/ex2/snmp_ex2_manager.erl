@@ -369,7 +369,7 @@ cast(Msg) ->
 
 get_opt(Key, Opts, Def) ->
     case lists:keysearch(Key, 1, Opts) of
-        {value, {Key, Val}} ->
+        {value, {^Key, Val}} ->
             Val;
         false ->
             Def

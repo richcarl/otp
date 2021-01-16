@@ -570,7 +570,7 @@ break(TestCase, Comment) ->
 			false ->
 			    {error,'test case not running'}
 		    end;
-		{ok,{_,TestCase}} ->
+		{ok,{_,^TestCase}} ->
 		    test_server:break(?MODULE, TestCase, Comment);
 		Error = {error,_} -> 
 		    Error;

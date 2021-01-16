@@ -184,7 +184,7 @@ get_socket_info(Addr, Port, Fd, BaseOpts) ->
     case Fd of
 	undefined ->
 	    {Port, sock_opts(Addr, BaseOpts)};
-	Fd -> 
+	^Fd -> 
 	    {0, sock_opts([{fd, Fd} | BaseOpts])}
     end.
 	    

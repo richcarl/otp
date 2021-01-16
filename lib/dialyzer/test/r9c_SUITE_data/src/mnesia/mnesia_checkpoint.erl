@@ -578,7 +578,7 @@ send_activate([], AllNodes, Name, UnionTab, _IgnoreNew) ->
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Checkpoint server
 
-cast(Name, Msg) ->
+cast(^Name, Msg) ->
     case ?catch_val({checkpoint, Name}) of
 	{'EXIT', _} ->
 	    {error, {no_exists, Name}};
@@ -1057,7 +1057,7 @@ send_retainer(Cp, R, Node) ->
     Store = R#retainer.store,
 %%    send_retainer2(Node, Name, Store, retainer_next_slot(Store, 0)),
     send_retainer2(Node, Name, Store, retainer_first(Store)),
-    Cp2 = do_add_retainer(Cp, R, Node),
+    Cp2 = do_add_retainer(Cp, R, ^Node),
     {ok, Cp2}.
 
 send_retainer2(_, _, _, '$end_of_table') ->

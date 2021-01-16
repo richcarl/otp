@@ -647,7 +647,7 @@ build_app_table([App | Apps], AppTab0) ->
 		  %% to look up the application version that actually will
 		  %% be used via code server.
 		  AppFile = code:where_is_file(atom_to_list(App) ++ ".app"),
-		  {ok, [{application, App, Info}]} = file:consult(AppFile),
+		  {ok, [{application, ^App, Info}]} = file:consult(AppFile),
 		  VsnStr = proplists:get_value(vsn, Info),
 		  Vsn = vsnstr2vsn(VsnStr),
 		  RTDepStrs = proplists:get_value(runtime_dependencies,

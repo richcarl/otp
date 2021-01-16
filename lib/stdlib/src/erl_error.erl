@@ -365,7 +365,7 @@ sep(_, S) -> [$\n | S].
 
 origin(1, M, F, A) ->
     case is_op({M, F}, n_args(A)) of
-        {yes, F} -> <<"in operator ">>;
+        {yes, ^F} -> <<"in operator ">>;
         no -> <<"in function ">>
     end;
 origin(_N, _M, _F, _A) ->
@@ -462,7 +462,7 @@ mf_to_string({M, F}, A, Enc) ->
             case is_op({M, F}, A) of
                 {yes, '/'} ->
                     io_lib:fwrite(<<"~w">>, [F]);
-                {yes, F} ->
+                {yes, ^F} ->
                     atom_to_list(F);
                 no ->
                     FS = to_string(F, Enc),

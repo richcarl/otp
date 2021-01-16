@@ -265,7 +265,7 @@ store_race_call(Fun, ArgTypes, Args, FileLine, State) ->
             Callgraph = dialyzer_dataflow:state__get_callgraph(State),
             case digraph:vertex(dialyzer_callgraph:get_digraph(Callgraph),
                                 Fun) of
-              {Fun, confirmed} ->
+              {^Fun, confirmed} ->
                 {[#fun_call{caller = CurrFun, callee = Fun,
                             arg_types = ArgTypes, vars = Args}|RaceList],
 		 RaceListSize + 1, RaceTags, no_t};
@@ -398,7 +398,7 @@ fixup_race_forward_pullout(CurrFun, CurrFunLabel, Calls, Code, RaceList,
   dialyzer_dataflow:dispose_state(TState),
   case NewCode of
     [] -> DepList;
-    [#fun_call{caller = NewCurrFun, callee = Call, arg_types = FunTypes,
+    [#fun_call{caller = ^NewCurrFun, callee = Call, arg_types = FunTypes,
                vars = FunArgs}|Tail] ->
       Callgraph = dialyzer_dataflow:state__get_callgraph(State),
       OkCall = {ok, Call},
@@ -529,9 +529,9 @@ fixup_race_forward(CurrFun, CurrFunLabel, Calls, Code, RaceList,
               _Other ->
                 {RaceList, [], NestingLevel, false}
             end;
-          #fun_call{caller = CurrFun, callee = InitFun} ->
+          #fun_call{caller = ^CurrFun, callee = ^InitFun} ->
             {RaceList, [], NestingLevel, false};
-	  #fun_call{caller = CurrFun} ->
+	  #fun_call{caller = ^CurrFun} ->
             {RaceList, [], NestingLevel - 1, false};
           beg_case ->
             {[Head|RaceList], [], NestingLevel, false};
@@ -543,7 +543,7 @@ fixup_race_forward(CurrFun, CurrFunLabel, Calls, Code, RaceList,
             {[Head|RaceList], [], NestingLevel, false};
           #let_tag{} ->
             {RaceList, [], NestingLevel, false};
-          #curr_fun{status = in, mfa = InitFun,
+          #curr_fun{status = in, mfa = ^InitFun,
                     label = _InitFunLabel, var_map = _NewRVM,
                     def_vars = NewFDV, call_vars = NewFCV,
                     arg_types = _NewFAT} ->
@@ -604,7 +604,7 @@ fixup_race_forward(CurrFun, CurrFunLabel, Calls, Code, RaceList,
        NewFunDefVars, NewFunCallVars, NewFunArgTypes, NewNestingLevel,
        PullOut} =
         case Head of
-          #fun_call{caller = CurrFun} ->
+          #fun_call{caller = ^CurrFun} ->
             case NewNL =:= 0 of
               true ->
                 {CurrFun, CurrFunLabel, Tail, NewRL, RaceVarMap,
@@ -960,7 +960,7 @@ fixup_race_forward_helper(CurrFun, CurrFunLabel, Fun, FunLabel,
        NewNestingLevel};
     [Head|Tail] ->
       case Head of
-        {InitFun, InitFun} when CurrFun =:= InitFun, Fun =:= InitFun ->
+        {^^InitFun, InitFun} when CurrFun =:= InitFun, Fun =:= InitFun ->
           NewCallsToAnalyze = lists:delete(Head, CallsToAnalyze),
           NewRaceVarMap =
             race_var_map(Args, NewFunArgs, RaceVarMap, bind),
@@ -987,12 +987,12 @@ fixup_race_forward_helper(CurrFun, CurrFunLabel, Fun, FunLabel,
             RetC, NewRaceVarMap),
           {InitFun, FunLabel, NewCallsToAnalyze, NewCode, RaceList,
            NewRaceVarMap, Args, NewFunArgs, NewFunTypes, NestingLevel};
-        {CurrFun, Fun} ->
+        {^Curr^Fun, Fun} ->
           NewCallsToAnalyze = lists:delete(Head, CallsToAnalyze),
           NewRaceVarMap = race_var_map(Args, NewFunArgs, RaceVarMap, bind),
           RetC =
             case Fun of
-              InitFun ->
+              ^InitFun ->
                 fixup_all_calls(CurrFun, Fun, FunLabel, Args,
                   lists:reverse(StateRaceList) ++
                   [#curr_fun{status = out, mfa = CurrFun,
@@ -1011,7 +1011,7 @@ fixup_race_forward_helper(CurrFun, CurrFunLabel, Fun, FunLabel,
             end,
           NewCode =
             case Fun of
-              InitFun ->
+              ^InitFun ->
                 [#curr_fun{status = in, mfa = Fun,
                            label = FunLabel, var_map = NewRaceVarMap,
                            def_vars = Args, call_vars = NewFunArgs,
@@ -1233,7 +1233,7 @@ cleanup_clause_code(#curr_fun{mfa = CurrFun} = CurrTuple, Code,
               false ->
                 {LocalNestingLevel, NestingLevel, CurrTuple, false}
             end;
-          #fun_call{caller = CurrFun} ->
+          #fun_call{caller = ^CurrFun} ->
             {LocalNestingLevel - 1, NestingLevel, CurrTuple, false};
           #curr_fun{status = in} ->
             {LocalNestingLevel - 1, NestingLevel, Head, false};
@@ -1331,7 +1331,7 @@ fixup_all_calls(CurrFun, NextFun, NextFunLabel, Args, CodeToReplace,
     [Head|Tail] ->
       NewCode =
         case Head of
-          #fun_call{caller = CurrFun, callee = Callee,
+          #fun_call{caller = ^CurrFun, callee = Callee,
                     arg_types = FunArgTypes, vars = FunArgs}
           when Callee =:= NextFun orelse Callee =:= NextFunLabel ->
             RaceVarMap1 = race_var_map(Args, FunArgs, RaceVarMap, bind),
@@ -1352,7 +1352,7 @@ is_last_race(RaceTag, InitFun, Code, Callgraph) ->
     [] -> true;
     [Head|Tail] ->
       case Head of
-        RaceTag -> false;
+        ^RaceTag -> false;
         #fun_call{callee = Fun} ->
           FunName =
             case is_integer(Fun) of
@@ -1379,7 +1379,7 @@ lists_key_member(Member, List, N) when is_integer(Member) ->
     [Head|Tail] ->
       NewN = N + 1,
       case Head of
-        Member -> NewN;
+        ^Member -> NewN;
         _Other -> lists_key_member(Member, Tail, NewN)
       end
   end;

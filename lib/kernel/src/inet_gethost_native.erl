@@ -117,10 +117,10 @@ init([]) -> % Called by supervisor_bridge:start_link
     SaveTE = process_flag(trap_exit,true),
     Pid = spawn_link(?MODULE,server_init,[self(),Ref]),
     receive
-	Ref ->
+	^Ref ->
 	    process_flag(trap_exit,SaveTE),
 	    {ok, Pid, Pid};
-	{'EXIT', Pid, Message} ->
+	{'EXIT', ^Pid, Message} ->
 	    process_flag(trap_exit,SaveTE),
 	    {error, Message}
     after 10000 ->
@@ -152,7 +152,7 @@ run_once() ->
 	end,
     (catch port_command(Port, Request)),
     receive
-	{Port, {data, <<1:32, BinReply/binary>>}} ->
+	{^Port, {data, <<1:32, BinReply/binary>>}} ->
 	    Pid ! {R, {ok, BinReply}}
     after Timeout ->
 	    Pid ! {R, {error, timeout}}
@@ -310,7 +310,7 @@ do_handle_call(R,Client0,State,RData) ->
 
 find_request(State, R = {Op, Proto, Data}) ->
     case ets:lookup(State#state.req_index,R) of
-	[{R, Rid}] ->
+	[{^R, Rid}] ->
 	    [Ret] = ets:lookup(State#state.requests,Rid),
 	    Ret;
 	[] ->
@@ -326,7 +326,7 @@ pick_request(State, RID) ->
     case ets:lookup(State#state.requests, RID) of
 	[] ->
 	    false;
-	[#request{rid = RID, op = Op, proto = Proto, rdata = Data}=R] ->
+	[#request{rid = ^RID, op = Op, proto = Proto, rdata = Data}=R] ->
 	    ets:delete(State#state.requests,RID),
 	    ets:delete(State#state.req_index,{Op,Proto,Data}),
 	    put(num_requests,get(num_requests) - 1),
@@ -489,19 +489,19 @@ getit(Req, DefaultName) ->
     Ref = make_ref(),
     Pid ! {{self(),Ref}, Req},
     receive
-	{Ref, {ok,BinHostent}} ->
+	{^Ref, {ok,BinHostent}} ->
 	    parse_address(BinHostent, DefaultName);
-	{Ref, Result} ->
+	{^Ref, Result} ->
 	    Result
     after 5000 ->
 	    Ref2 = erlang:monitor(process,Pid),
 	    Res2 = receive
-		       {Ref, {ok,BinHostent}} ->
+		       {^Ref, {ok,BinHostent}} ->
 			   parse_address(BinHostent, DefaultName);
-		       {Ref, Result} ->
+		       {^Ref, Result} ->
 			   Result;
-		       {'DOWN', Ref2, process, 
-			Pid, Reason} ->
+		       {'DOWN', ^Ref2, process, 
+			^Pid, Reason} ->
 			   {error, Reason}
 		   end,
 	    catch erlang:demonitor(Ref2, [flush]),
@@ -623,7 +623,7 @@ ndx(_,N,N,_) ->
     undefined;
 ndx(Ch,I,N,Bin) ->
     case Bin of
-	<<_:I/binary,Ch,_/binary>> ->
+	<<_:I/binary,^Ch,_/binary>> ->
 	    I;
 	_ ->
 	    ndx(Ch,I+1,N,Bin)

@@ -260,7 +260,7 @@ expand_messages([], _, EMessages) ->
     lists:reverse(EMessages);
 expand_messages([{Id, Codec, Conf, Count} | ECodecs], Messages, EMessages) ->
     case lists:keysearch(Id, 1, Messages) of
-	{value, {Id, Msgs}} ->
+	{value, {^Id, Msgs}} ->
 	    expand_messages(ECodecs, Messages, 
 			    [{Id, Codec, Conf, Count, Msgs}|EMessages]);
 	false ->
@@ -401,9 +401,9 @@ measure_codec(Codec, Func, Conf, Version, Bin, MCount) ->
     Pid = spawn_link(?MODULE, do_measure_codec, 
                      [self(), Codec, Func, Conf, Version, Bin, MCount]),
     receive
-	{measure_result, Pid, Func, Res} ->
+	{measure_result, ^Pid, ^Func, Res} ->
 	    {ok, Res};
-	{error, Pid, Error} ->
+	{error, ^Pid, Error} ->
 	    {error, Error};
 	Else ->
 	    {error, {unexpected_result, Else}}
@@ -584,7 +584,7 @@ store_excel_tab_row(Fd, [Value|Values]) ->
 start_flex_scanner() ->
     Pid = proc_lib:spawn(?MODULE, flex_scanner_handler, [self()]),
     receive
-        {flex_scanner_started, Pid, Conf} ->
+        {flex_scanner_started, ^Pid, Conf} ->
             {Pid, [Conf]};
         {flex_scanner_error, {failed_loading_flex_scanner_driver, Reason}} ->
             throw({error, {failed_loading_flex_scanner_driver, Reason}});

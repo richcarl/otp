@@ -206,7 +206,7 @@ handle_call({list_auth_users, Addr, Port, Profile, Dir}, _From, Tables) ->
 
 handle_call({new_table, Addr, Port, Profile, Name}, _From, Tables) ->
     case lists:keysearch(Name, 1, Tables) of
-	{value, {Name, {Ets, Dets}}} ->
+	{value, {^Name, {Ets, Dets}}} ->
 	    {reply, {ok, {Ets, Dets}}, Tables};
 	false ->
 	    TName = make_name(Addr,Port, Profile, length(Tables)),
@@ -387,7 +387,7 @@ find_dirdata([], _Dir) ->
     false;
 find_dirdata([{security_directory, {_, DirData}}|SDirs], Dir) ->
     case lists:keysearch(path, 1, DirData) of
-	{value, {path, Dir}} ->
+	{value, {path, ^Dir}} ->
 	    {value, {data_file, {ETS, DETS}}} =
 		lists:keysearch(data_file, 1, DirData),
 	    {ok, DirData, {ETS, DETS}};

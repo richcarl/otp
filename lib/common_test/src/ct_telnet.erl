@@ -121,7 +121,7 @@ close(Connection) ->
 	{ok,Pid} ->
 	    log(undefined,close,"Connection closed, handle: ~w",[Pid]),
 	    case ct_gen_conn:stop(Pid) of
-		{error,{process_down,Pid,_}} ->
+		{error,{process_down,^Pid,_}} ->
 		    {error,already_closed};
 		Result ->
 		    Result
@@ -1037,7 +1037,7 @@ seq_expect1(Name,Pid,Data,[{prompt,PromptType}|Patterns],Acc,Rest,EO) ->
 	    LastLine = log_lines_not_last(Name,Pid,Data),
 	    %% Rest==[] because no prompt is found
 	    {continue,[{prompt,PromptType}|Patterns],Acc,LastLine};
-	PromptType ->
+	^PromptType ->
 	    log_lines(Name,Pid,Data),
 	    log(name_or_pid(Name,Pid),"PROMPT: ~ts", [PromptType]),
 	    seq_expect(Name,Pid,Rest,Patterns,[{prompt,PromptType}|Acc],EO);

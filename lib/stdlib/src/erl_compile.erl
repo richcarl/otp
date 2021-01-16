@@ -71,7 +71,7 @@ compile_cmdline1(Args) ->
     {ok, Cwd} = file:get_cwd(),
     {Pid,Ref} = spawn_monitor(fun() -> exit(compile(Args, Cwd)) end),
     receive
-        {'DOWN', Ref, process, Pid, Result} ->
+        {'DOWN', ^Ref, process, ^Pid, Result} ->
             case Result of
                 ok ->
                     halt(0);

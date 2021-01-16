@@ -85,7 +85,7 @@ expand_function_name(ModStr, FuncPrefix, CompleteChar) ->
                         Mod:module_info(exports);
                     false ->
                         case beam_lib:chunks(code:which(Mod), [exports]) of
-                            {ok, {Mod, [{exports,E}]}} ->
+                            {ok, {^Mod, [{exports,E}]}} ->
                                 E;
                             _ ->
                                 {no, [], []}
@@ -94,7 +94,7 @@ expand_function_name(ModStr, FuncPrefix, CompleteChar) ->
             case Exports of
                 {no, [], []} ->
                     {no, [], []};
-                Exports ->
+                ^Exports ->
                     match(FuncPrefix, Exports, CompleteChar)
             end;
 	error ->
@@ -127,7 +127,7 @@ match(Prefix, Alts, Extra0) ->
  	    end;
  	{complete, Str} ->
 	    Extra = case {Extra0,Matches} of
-			{"(",[{Str,0}]} -> "()";
+			{"(",[{^Str,0}]} -> "()";
 			{_,_} -> Extra0
 		    end,
 	    {yes, string:slice(Str, Len) ++ Extra, []};

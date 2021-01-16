@@ -513,9 +513,9 @@ expand_groups({group,Name,ORProps,SubORSpec}, ConfTests, Mod) ->
     FindConf =
 	fun(Conf = {conf,Props,Init,Ts,End}) ->
 		case ?val(name, Props) of
-		    Name when ORProps == default ->
+		    ^Name when ORProps == default ->
 			[Conf];
-		    Name ->
+		    ^Name ->
 			Props1 = case ?val(suite, Props) of
 				     undefined ->
 					 ORProps;
@@ -549,15 +549,15 @@ search_and_override([Conf = {conf,Props,Init,Tests,End}], ORSpec, Mod) ->
     Name = ?val(name, Props),
     Suite = ?val(suite, Props),
     case lists:keysearch(Name, 1, ORSpec) of
-	{value,{Name,default}} ->
+	{value,{^Name,default}} ->
 	    [Conf];
-	{value,{Name,ORProps}} ->
+	{value,{^Name,ORProps}} ->
 	    [{conf,InsProps(Name,Suite,ORProps),Init,Tests,End}];
-	{value,{Name,default,[]}} ->
+	{value,{^Name,default,[]}} ->
 	    [Conf];
-	{value,{Name,default,SubORSpec}} ->
+	{value,{^Name,default,SubORSpec}} ->
 	    override_props([Conf], SubORSpec, Name,Mod);
-	{value,{Name,ORProps,SubORSpec}} ->
+	{value,{^Name,ORProps,SubORSpec}} ->
 	    override_props([{conf,InsProps(Name,Suite,ORProps),
 			    Init,Tests,End}], SubORSpec, Name,Mod);
 	_ ->

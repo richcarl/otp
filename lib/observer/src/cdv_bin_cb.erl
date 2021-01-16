@@ -23,7 +23,7 @@
 
 %% Callbacks for cdv_detail_wx
 get_details({Type, {T,Key}}, _) ->
-    [{Key,Term}] = ets:lookup(T,Key),
+    [{^Key,Term}] = ets:lookup(T,Key),
     {ok,{"Expanded Binary", {Type, Term}, []}};
 get_details({cdv, Id}, _) ->
     {ok,Bin} = crashdump_viewer:expand_binary(Id),

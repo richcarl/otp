@@ -227,7 +227,7 @@ format_msg({Format0,Args},Depth,Opts,Single) ->
             P = p(Single),
             FormatError = "FORMAT ERROR: "++P++" - "++P,
             case Format0 of
-                FormatError ->
+                ^FormatError ->
                     %% already been here - avoid failing cyclically
                     erlang:raise(C,R,S);
                 _ ->

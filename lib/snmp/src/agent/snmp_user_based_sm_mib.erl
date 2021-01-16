@@ -456,7 +456,7 @@ usmUserSpinLock(get) ->
 
 usmUserSpinLock(is_set_ok, NewVal) ->
     case snmp_generic:variable_func(get, {usmUserSpinLock, volatile}) of
-	{value, NewVal} -> noError;
+	{value, ^NewVal} -> noError;
 	_ -> inconsistentValue
     end;
 usmUserSpinLock(set, NewVal) ->
@@ -929,7 +929,7 @@ validate_requester(RowIndex, Cols, KeyChangeCol) ->
 		    _ -> get_user_name(RowIndex)
 		end,
 	    case get(sec_name) of % Check the securityName in the request
-		SecNameForUser -> ok;
+		^SecNameForUser -> ok;
 		_ -> noAccess(KeyChangeCol)
 	    end;
 	false ->

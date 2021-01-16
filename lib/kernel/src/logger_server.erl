@@ -509,7 +509,7 @@ check_formatter({Mod,Config}) ->
     catch
         C:R:S ->
             case {C,R,S} of
-                {error,undef,[{Mod,check_config,[Config],_}|_]} ->
+                {error,undef,[{^Mod,check_config,[^Config],_}|_]} ->
                     ok;
                 _ ->
                     throw({callback_crashed,
@@ -536,12 +536,12 @@ call_h(Module, Function, Args, DefRet) ->
     catch
         C:R:S ->
             case {C,R,S} of
-                {error,undef,[{Module,Function=changing_config,Args,_}|_]}
+                {error,undef,[{^Module,changing_config,^Args,_}|_]}
                   when length(Args)=:=3 ->
                     %% Backwards compatible call, if changing_config/3
                     %% did not exist.
                     call_h(Module, Function, tl(Args), DefRet);
-                {error,undef,[{Module,Function,Args,_}|_]} ->
+                {error,undef,[{^Module,^Function,^Args,_}|_]} ->
                     DefRet;
                 _ ->
                     ST = logger:filter_stacktrace(?MODULE,S),

@@ -362,7 +362,7 @@ handle_call({logfile, File}, _From, #state{ fd = OldFd } = S) ->
 	{ok, Fd} ->
 	    case OldFd of
 		undefined -> ok;
-		OldFd -> ok = file:close(OldFd)
+		^OldFd -> ok = file:close(OldFd)
 	    end,
 	    {reply, ok, S#state{fd = Fd}};
 	Error ->

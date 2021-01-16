@@ -446,12 +446,12 @@ command(Cmd, Dir, Env) ->
 
 get_data(P, D) ->
     receive
-	{P, {data, D1}} ->
+	{^P, {data, D1}} ->
 	    get_data(P, [D1|D]);
-	{P, eof} ->
+	{^P, eof} ->
 	    port_close(P),    
 	    receive
-		{P, {exit_status, N}} ->
+		{^P, {exit_status, N}} ->
 		    {N, normalize(lists:flatten(lists:reverse(D)))}
 	    end
     end.

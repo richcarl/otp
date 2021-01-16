@@ -2665,7 +2665,7 @@ setfun(T, Fun, Type, NType) ->
 	NS when ?IS_ORDSET(NS) ->
 	    case unify_types(NType, NT = ?ORDTYPE(NS)) of
 		[] -> type_mismatch;
-		NT -> {?ORDDATA(NS), NT}
+		^NT -> {?ORDDATA(NS), NT}
 	    end;
 	_ ->
 	    badarg

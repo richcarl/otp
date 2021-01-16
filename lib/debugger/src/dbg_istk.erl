@@ -152,7 +152,7 @@ stacktrace(N, [E|T], []) ->
     stacktrace(N-1, T, [normalize(E)]);
 stacktrace(N, [E|T], [{P,_}|_]=Acc) when N > 0 ->
     case normalize(E) of
-	{P,_} ->
+	{^P,_} ->
 	    stacktrace(N, T, Acc);
 	New ->
 	    stacktrace(N-1, T, [New|Acc])

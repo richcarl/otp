@@ -503,8 +503,8 @@ is_valid_tag(TDomain, TAddress, Tag, Key) ->
 						    ?snmpTargetAddrTAddress,
 						    ?snmpTargetAddrTagList,
 						    ?snmpTargetAddrTMask]) of
-		[{value, TDomain},  % must match exactly
-		 {value, TAddress}, % RFC2576: chapters 5.2.1 & 5.3
+		[{value, ^TDomain},  % must match exactly
+		 {value, ^TAddress}, % RFC2576: chapters 5.2.1 & 5.3
 		 {value, TagList}, 
 		 {value, []}] ->
 		    ?vtrace("is_valid_tag -> found with exact match"
@@ -520,7 +520,7 @@ is_valid_tag(TDomain, TAddress, Tag, Key) ->
 			    is_valid_tag(TDomain, TAddress,
 					 Tag, NextKey)
 		    end;
-		[{value, TDomain},   % must match exactly
+		[{value, ^TDomain},   % must match exactly
 		 {value, TAddress2},
 		 {value, TagList}, 
 		 {value, TMask}] when TMask =/= [] ->
@@ -690,7 +690,7 @@ snmpTargetSpinLock(get) ->
 
 snmpTargetSpinLock(is_set_ok, NewVal) ->
     case snmp_generic:variable_func(get, {snmpTargetSpinLock, volatile}) of
-	{value, NewVal} -> noError;
+	{value, ^NewVal} -> noError;
 	_ -> inconsistentValue
     end;
 snmpTargetSpinLock(set, NewVal) ->

@@ -94,11 +94,11 @@ terminate(_Reason, State) ->
 start_portprogram() ->
     Port = os_mon:open_port("win32sysinfo.exe", [{packet,1}]),
     receive
-	{Port, {data, [?OK]}} ->
+	{^Port, {data, [?OK]}} ->
 	    Port;
-	{Port, {data, Data}} ->
+	{^Port, {data, Data}} ->
 	    exit({port_error, Data});
-	{'EXIT', Port, Reason} ->
+	{'EXIT', ^Port, Reason} ->
 	    exit({port_died, Reason})
     after 5000 ->
 	    exit({port_error, timeout})
@@ -118,11 +118,11 @@ get_mem_info1(Port) ->
 
 get_data(Port, Sofar) ->
     receive
-	{Port, {data, [?OK]}} ->
+	{^Port, {data, [?OK]}} ->
 	    lists:reverse(Sofar);
-	{Port, {data, Bytes}} ->
+	{^Port, {data, Bytes}} ->
 	    get_data(Port, [Bytes|Sofar]);
-	{'EXIT', Port, Reason} ->
+	{'EXIT', ^Port, Reason} ->
 	    exit({port_died, Reason})
     after 5000 ->
 	    lists:reverse(Sofar)

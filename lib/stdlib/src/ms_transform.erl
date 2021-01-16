@@ -374,7 +374,7 @@ copy({'fun',Line,{clauses,Clauses}},Bound) -> % Dont export bindings from funs
 copy({named_fun,Line,Name,Clauses},Bound) -> % Dont export bindings from funs
     Bound1 = case Name of
                  '_' -> Bound;
-                 Name -> gb_sets:add(Name,Bound)
+                 ^Name -> gb_sets:add(Name,Bound)
              end,
     {NewClauses,_IgnoredBindings} = copy_list(Clauses,Bound1),
     {{named_fun,Line,Name,NewClauses},Bound};
@@ -500,14 +500,14 @@ tg({match,Line,_,_},B) ->
     throw({error,Line,?ERR_GENMATCH+B#tgd.eb});
 tg({op, Line, Operator, O1, O2}=Expr, B) ->
     case erl_eval:partial_eval(Expr) of
-        Expr ->
+        ^Expr ->
             {tuple, Line, [{atom, Line, Operator}, tg(O1, B), tg(O2, B)]};
         Value ->
             Value
     end;
 tg({op, Line, Operator, O1}=Expr, B) ->
     case erl_eval:partial_eval(Expr) of
-        Expr ->
+        ^Expr ->
             {tuple, Line, [{atom, Line, Operator}, tg(O1, B)]};
         Value ->
             Value
@@ -520,7 +520,7 @@ tg({call, Line, {atom, _, is_record}=Call,[Object, {atom,Line3,RName}=R]},B) ->
     MSObject = tg(Object,B),
     RDefs = get_records(),
     case lists:keysearch(RName,1,RDefs) of
-	{value, {RName, FieldList}} ->
+	{value, {^RName, FieldList}} ->
 	    RSize = length(FieldList)+1,
 	    {tuple, Line, [Call, MSObject, R, {integer, Line3, RSize}]};
 	_ ->
@@ -584,9 +584,9 @@ tg({var,Line,VarName},B) ->
 tg({record_field,Line,Object,RName,{atom,_Line1,KeyName}},B) ->
     RDefs = get_records(),
     case lists:keysearch(RName,1,RDefs) of
-	{value, {RName, FieldList}} ->
+	{value, {^RName, FieldList}} ->
 	    case lists:keysearch(KeyName,1, FieldList) of
-		{value, {KeyName,Position,_}} ->
+		{value, {^KeyName,Position,_}} ->
 		    NewObject = tg(Object,B),
 		    {tuple, Line, [{atom, Line, 'element'}, 
 				   {integer, Line, Position}, NewObject]};
@@ -629,11 +629,11 @@ tg({record,Line,RName,RFields},B) ->
 	    ok
     end,
     case lists:keysearch(RName,1,RDefs) of
-	{value, {RName, FieldList0}} ->
+	{value, {^RName, FieldList0}} ->
 	    FieldList1 = lists:foldl(
 			   fun({FN,_,Def},Acc) ->
 				   El = case lists:keysearch(FN,1,KeyList) of
-					    {value, {FN, X0}} ->
+					    {value, {^FN, X0}} ->
 						X0;
 					    _ ->
 						case DefValue of 
@@ -659,9 +659,9 @@ tg({record,Line,RName,RFields},B) ->
 tg({record_index,Line,RName,{atom,Line2,KeyName}},B) ->
     RDefs = get_records(), 
     case lists:keysearch(RName,1,RDefs) of
-	{value, {RName, FieldList}} ->
+	{value, {^RName, FieldList}} ->
 	    case lists:keysearch(KeyName,1, FieldList) of
-		{value, {KeyName,Position,_}} ->
+		{value, {^KeyName,Position,_}} ->
 		    {integer, Line2, Position};
 		_ ->
 		    throw({error,Line2,{?ERR_GENBADFIELD+B#tgd.eb, RName, 
@@ -684,11 +684,11 @@ tg({record,Line,{var,Line2,_VName}=AVName, RName,RFields},B) ->
 				 [],
 				 RFields),
     case lists:keysearch(RName,1,RDefs) of
-	{value, {RName, FieldList0}} ->
+	{value, {^RName, FieldList0}} ->
 	    FieldList1 = lists:foldl(
 			   fun({FN,Pos,_},Acc) ->
 				   El = case lists:keysearch(FN,1,KeyList) of
-					    {value, {FN, X0}} ->
+					    {value, {^FN, X0}} ->
 						X0;
 					    _ ->
 						{tuple, Line2, 
@@ -779,11 +779,11 @@ th({record,Line,RName,RFields},B,OB) ->
 	    ok
     end,
     case lists:keysearch(RName,1,RDefs) of
-	{value, {RName, FieldList0}} ->
+	{value, {^RName, FieldList0}} ->
 	    FieldList1 = lists:foldl(
 			   fun({FN,_,_},Acc) ->
 				   El = case lists:keysearch(FN,1,KeyList) of
-					    {value, {FN, X0}} ->
+					    {value, {^FN, X0}} ->
 						X0;
 					    _ ->
 						DefValue
@@ -870,7 +870,7 @@ cre_bind() ->
 
 lkup_bind(Name,{_,List}) ->
     case lists:keysearch(Name,1,List) of
-	{value, {Name, Trans}} ->
+	{value, {^Name, Trans}} ->
 	    Trans;
 	_ ->
 	    undefined
@@ -896,7 +896,7 @@ translate_language_element(Atom) ->
 		{remote, "external function call"}
 	       ],
     case lists:keysearch(Atom,1,Transtab) of
-	{value,{Atom, String}} ->
+	{value,{^Atom, String}} ->
 	    String;
 	_ ->
 	    atom_to_list(Atom)
@@ -1059,7 +1059,7 @@ fixup_environment(L,B) when is_list(L) ->
 	      L);
 fixup_environment({var,Line,Name},B) ->
     case lists:keysearch(Name,1,B) of
-	{value,{Name,Value}} -> 
+	{value,{^Name,Value}} -> 
 	    freeze(Line,Value);
 	_ ->
 	    throw({error,Line,{?ERR_UNBOUND_VARIABLE,atom_to_list(Name)}})

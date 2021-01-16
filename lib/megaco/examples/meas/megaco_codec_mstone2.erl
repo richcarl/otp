@@ -172,9 +172,9 @@ mstone_init(MessagePackage, DrvInclude) ->
 				       loader(MessagePackage, DrvInclude) 
 			       end)),
     receive
-	{'DOWN', Ref, process, _Pid, {done, Result}} ->
+	{'DOWN', ^Ref, process, _Pid, {done, Result}} ->
 	    display_result(Result);
-	{'DOWN', Ref, process, _Pid, Result} ->
+	{'DOWN', ^Ref, process, _Pid, Result} ->
 	    io:format("Unexpected result:~n~p~n", [Result]),
 	    ok
     end.

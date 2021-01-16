@@ -667,7 +667,7 @@ proxy_request(Proxy, Req) ->
     Ref = make_ref(),
     Proxy ! {proxy_request, Ref, self(), Req},
     receive
-	{proxy_reply, Ref, Proxy, Rep} ->
+	{proxy_reply, ^Ref, ^Proxy, Rep} ->
 	    Rep
     end.
 
@@ -809,7 +809,7 @@ proxy_loop(#proxy{mode = operational,
 	    %% And wait for the node death to be reported
 	    Reason = 
 		receive 
-		    {nodedown, Node} when State#proxy.node =:= Node ->
+		    {nodedown, ^Node} when State#proxy.node =:= Node ->
 			ok
 		after 10000 ->
 			?INFO("Node did not die within expected time frame", 
@@ -820,7 +820,7 @@ proxy_loop(#proxy{mode = operational,
 	    proxy_reply(From, Ref, Reason),
 	    exit(normal);
 
-	{nodedown, Node} when State#proxy.node =:= Node ->
+	{nodedown, ^Node} when State#proxy.node =:= Node ->
 	    ?INFO("[operational] received unexpected nodedoen message", []),
 	    exit({node_died, Node});
 
@@ -1183,7 +1183,7 @@ save_results_to_file(AnalysedTab,
 save_result_to_file(NofSchedulers,
 		    FdReps, FdReqs, FdDecay, AnalysedTab) ->
 
-    [{NofSchedulers, NofRepsPerSec, NofReqs, MaxFinalResponseTime}] = 
+    [{^NofSchedulers, NofRepsPerSec, NofReqs, MaxFinalResponseTime}] = 
 	ets:lookup(AnalysedTab, NofSchedulers),
     
     file:write(FdReps, io_lib:format("~p,~p~n", 

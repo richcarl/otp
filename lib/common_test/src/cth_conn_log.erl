@@ -99,7 +99,7 @@ pre_init_per_testcase(_Suite,TestCase,Config,CthState) ->
 	  fun({ConnMod,{LogType,Hosts}}) ->		  
 		  ct_util:set_testdata({{?MODULE,ConnMod},LogType}),
 		  case LogType of
-		      LogType when LogType==raw; LogType==pretty ->
+		      ^LogType when LogType==raw; LogType==pretty ->
 			  Dir = ?config(priv_dir,Config),
 			  TCStr = atom_to_list(TestCase),
 			  ConnModStr = atom_to_list(ConnMod),
@@ -137,7 +137,7 @@ pre_init_per_testcase(_Suite,TestCase,Config,CthState) ->
 	   (PrevUsers) ->
 		error_logger:info_report(update,{GL,Logs}),
 		receive
-		    {updated,GL} ->
+		    {updated,^GL} ->
 			[TestCase|PrevUsers]
 		after
 		    5000 ->

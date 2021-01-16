@@ -53,7 +53,7 @@ is_own_port(_Port, 0, _Ports) ->
     false;
 is_own_port(Port, N, Ports) when (N > 0) ->
     case element(N, Ports) of
-	Port ->
+	^Port ->
 	    true;
 	_ ->
 	    is_own_port(Port, N-1, Ports)

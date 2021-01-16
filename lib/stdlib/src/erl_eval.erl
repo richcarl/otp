@@ -1103,29 +1103,29 @@ string_to_conses([E|Rest], Line, Tail) ->
 
 match1({atom,_,A0}, A, Bs, _BBs) ->
     case A of
-	A0 -> {match,Bs};
+	^A0 -> {match,Bs};
 	_ -> throw(nomatch)
     end;
 match1({integer,_,I0}, I, Bs, _BBs) ->
     case I of
-	I0 -> {match,Bs};
+	^I0 -> {match,Bs};
 	_ -> throw(nomatch)
     end;
 match1({float,_,F0}, F, Bs, _BBs) ->
     case F of
-	F0 -> {match,Bs};
+	^F0 -> {match,Bs};
 	_ -> throw(nomatch)
     end;
 match1({char,_,C0}, C, Bs, _BBs) ->
     case C of
-	C0 -> {match,Bs};
+	^C0 -> {match,Bs};
 	_ -> throw(nomatch)
     end;
 match1({var,_,'_'}, _, Bs, _BBs) ->		%Anonymous variable matches
     {match,Bs};					% everything, no new bindings
 match1({var,_,Name}, Term, Bs, _BBs) ->
     case binding(Name, Bs) of
-	{value,Term} ->
+	{value,^Term} ->
 	    {match,Bs};
 	{value,_} ->
 	    throw(nomatch);
@@ -1137,7 +1137,7 @@ match1({match,_,Pat1,Pat2}, Term, Bs0, BBs) ->
     match1(Pat2, Term, Bs1, BBs);
 match1({string,_,S0}, S, Bs, _BBs) ->
     case S of
-	S0 -> {match,Bs};
+	^S0 -> {match,Bs};
 	_ -> throw(nomatch)
     end;
 match1({nil,_}, Nil, Bs, _BBs) ->
@@ -1185,14 +1185,14 @@ match1({op,_,'++',{string,Li,L},R}, Term, Bs, BBs) ->
     match1(string_to_conses(L, Li, R), Term, Bs, BBs);
 match1({op,Line,Op,A}, Term, Bs, BBs) ->
     case partial_eval({op,Line,Op,A}) of
-	{op,Line,Op,A} ->
+	{op,^Line,^Op,^A} ->
 	    throw(invalid);
 	X ->
 	    match1(X, Term, Bs, BBs)
     end;
 match1({op,Line,Op,L,R}, Term, Bs, BBs) ->
     case partial_eval({op,Line,Op,L,R}) of
-	{op,Line,Op,L,R} ->
+	{op,^Line,^Op,^L,^R} ->
 	    throw(invalid);
 	X ->
 	    match1(X, Term, Bs, BBs)
@@ -1281,7 +1281,7 @@ add_bindings(Bs1, Bs2) ->
 merge_bindings(Bs1, Bs2) ->
     foldl(fun ({Name,Val}, Bs) ->
 		  case orddict:find(Name, Bs) of
-		      {ok,Val} -> Bs;		%Already with SAME value
+		      {ok,^Val} -> Bs;		%Already with SAME value
 		      {ok,V1} -> 
 			  erlang:raise(error, {badmatch,V1}, ?STACKTRACE);
 		      error -> orddict:store(Name, Val, Bs)

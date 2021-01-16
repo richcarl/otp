@@ -240,7 +240,7 @@ alloc_instance_mem_info(InstanceInfo) ->
 
 alloc_instance_mem_info(Key, InstanceInfo) ->
     case lists:keysearch(Key, 1, InstanceInfo) of
-        {value, {Key, Info}} ->
+        {value, {^Key, Info}} ->
             case lists:keysearch(blocks_size, 1, Info) of
                 {value, {blocks_size, Mem, _, _}} ->
                     Mem;
@@ -301,7 +301,7 @@ expanded_messages2([], _Messages, EMessages) ->
     lists:reverse(EMessages);
 expanded_messages2([{Codec, Mod, Conf}|ECodecs], Messages, EMessages) ->
     case lists:keysearch(Codec, 1, Messages) of
-	{value, {Codec, Msgs}} ->
+	{value, {^Codec, Msgs}} ->
 	    expanded_messages2(ECodecs, Messages, 
 			       [{Codec, Mod, Conf, Msgs}|EMessages]);
 	false ->
@@ -442,7 +442,7 @@ expand_codec(Codec, _) ->
 start_flex_scanner() ->
     Pid = proc_lib:spawn(?MODULE, flex_scanner_handler, [self()]),
     receive
-        {flex_scanner_started, Pid, Conf} ->
+        {flex_scanner_started, ^Pid, Conf} ->
             {Pid, [Conf]};
         {flex_scanner_error, {failed_loading_flex_scanner_driver, Reason}} ->
             error({failed_loading_flex_scanner_driver, Reason});

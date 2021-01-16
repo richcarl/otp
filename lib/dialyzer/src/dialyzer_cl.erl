@@ -184,7 +184,7 @@ plt_common(#options{init_plts = [InitPlt]} = Opts, RemoveFiles, AddFiles) ->
     ok ->
       case Opts#options.output_plt of
 	none -> ok;
-	InitPlt -> ok;
+	^InitPlt -> ok;
 	OutPlt ->
 	  {ok, Binary} = file:read_file(InitPlt),
 	  ok = file:write_file(OutPlt, Binary)
@@ -525,28 +525,28 @@ cl_loop(State) ->
 cl_loop(State, LogCache) ->
   BackendPid = State#cl_state.backend_pid,
   receive
-    {BackendPid, log, LogMsg} ->
+    {^BackendPid, log, LogMsg} ->
       %%io:format(State#cl_state.output ,"Log: ~s\n", [LogMsg]),
       cl_loop(State, lists:sublist([LogMsg|LogCache], ?LOG_CACHE_SIZE));
-    {BackendPid, warnings, Warnings} ->
+    {^BackendPid, warnings, Warnings} ->
       NewState = store_warnings(State, Warnings),
       cl_loop(NewState, LogCache);
-    {BackendPid, cserver, CodeServer, _Plt} -> % Plt is ignored
+    {^BackendPid, cserver, CodeServer, _Plt} -> % Plt is ignored
       NewState = State#cl_state{code_server = CodeServer},
       cl_loop(NewState, LogCache);
-    {BackendPid, done, NewPlt, _NewDocPlt} ->
+    {^BackendPid, done, NewPlt, _NewDocPlt} ->
       return_value(State, NewPlt);
-    {BackendPid, ext_calls, ExtCalls} ->
+    {^BackendPid, ext_calls, ExtCalls} ->
       cl_loop(State#cl_state{external_calls = ExtCalls}, LogCache);
-    {BackendPid, ext_types, ExtTypes} ->
+    {^BackendPid, ext_types, ExtTypes} ->
       cl_loop(State#cl_state{external_types = ExtTypes}, LogCache);
-    {BackendPid, mod_deps, ModDeps} ->
+    {^BackendPid, mod_deps, ModDeps} ->
       NewState = State#cl_state{mod_deps = ModDeps},
       cl_loop(NewState, LogCache);
-    {'EXIT', BackendPid, {error, Reason}} ->
+    {'EXIT', ^BackendPid, {error, Reason}} ->
       Msg = failed_anal_msg(Reason, LogCache),
       cl_error(State, Msg);
-    {'EXIT', BackendPid, Reason} when Reason =/= 'normal' ->
+    {'EXIT', ^BackendPid, Reason} when Reason =/= 'normal' ->
       Msg = failed_anal_msg(io_lib:format("~p", [Reason]), LogCache),
       cl_error(State, Msg);
     _Other ->

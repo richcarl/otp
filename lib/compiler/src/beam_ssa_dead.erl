@@ -102,7 +102,7 @@ shortcut_opt(#st{bs=Blocks}=St) ->
 shortcut_opt([L|Ls], #st{bs=Blocks0}=St) ->
     #b_blk{is=Is,last=Last0} = Blk0 = get_block(L, St),
     case shortcut_terminator(Last0, Is, L, St) of
-        Last0 ->
+        ^Last0 ->
             %% No change. No need to update the block.
             shortcut_opt(Ls, St);
         Last ->
@@ -258,7 +258,7 @@ shortcut_unsafe_br(Br, From, Bs, UnsetVars, #st{target=Target}=St) ->
     case Br of
         #b_br{bool=#b_literal{val=true},succ=L} ->
             case Target of
-                L ->
+                ^L ->
                     %% We have reached the forced target, and it
                     %% is unsafe. Give up.
                     none;
@@ -269,13 +269,13 @@ shortcut_unsafe_br(Br, From, Bs, UnsetVars, #st{target=Target}=St) ->
             end;
         #b_br{bool=#b_var{},succ=Succ,fail=Fail} ->
             case {Succ,Fail} of
-                {L,Target} ->
+                {L,^Target} ->
                     %% The failure label is the forced target.
                     %% Try following the success label to see
                     %% whether it also ultimately ends up at the
                     %% forced target.
                     shortcut_2(L, From, Bs, UnsetVars, St);
-                {Target,L} ->
+                {^Target,L} ->
                     %% The success label is the forced target.
                     %% Try following the failure label to see
                     %% whether it also ultimately ends up at the
@@ -315,7 +315,7 @@ shortcut_safe_br(Br, From, Bs, UnsetVars, #st{target=Target}=St) ->
                     %% The target must be a one-way branch, which this
                     %% `br` is. Success!
                     {Br,Bs,UnsetVars};
-                L when is_integer(Target) ->
+                ^L when is_integer(Target) ->
                     %% The forced target is L. Success!
                     {Br,Bs,UnsetVars};
                 _ when is_integer(Target) ->
@@ -388,12 +388,12 @@ update_unset_vars(L, Is, Br, UnsetVars, #st{skippable=Skippable}) ->
 
 shortcut_two_way(#b_br{succ=Succ,fail=Fail}, From, Bs0, UnsetVars0, St0) ->
     case shortcut_2(Succ, From, Bs0, UnsetVars0, St0#st{target=Fail}) of
-        {#b_br{bool=#b_literal{},succ=Fail},_,_}=Res ->
+        {#b_br{bool=#b_literal{},succ=^Fail},_,_}=Res ->
             Res;
         none ->
             St = St0#st{target=Succ},
             case shortcut_2(Fail, From, Bs0, UnsetVars0, St) of
-                {#b_br{bool=#b_literal{},succ=Succ},_,_}=Res ->
+                {#b_br{bool=#b_literal{},succ=^Succ},_,_}=Res ->
                     Res;
                 none ->
                     none
@@ -599,7 +599,7 @@ get_lit_args(_) -> none.
 
 get_rel_op(Bool, [_|_]=Is) ->
     case last(Is) of
-        #b_set{op=Op,dst=Bool,args=Args} ->
+        #b_set{op=Op,dst=^Bool,args=Args} ->
             normalize_op(Op, Args);
         #b_set{} ->
             none
@@ -906,7 +906,7 @@ combine_eqs_1([L|Ls], #st{bs=Blocks0}=St0) ->
         {_,Arg,_,Fail0,List0} ->
             %% Look for a switch instruction at the fail label
             case comb_get_sw(Fail0, St0) of
-                {true,Arg,Fail1,Fail,List1} ->
+                {true,^Arg,Fail1,Fail,List1} ->
                     %% Another switch/br with the same arguments was
                     %% found at the fail label. Try combining them.
                     case combine_lists(Fail1, List0, List1, Blocks0) of
@@ -926,7 +926,7 @@ combine_eqs_1([L|Ls], #st{bs=Blocks0}=St0) ->
                     %% fail label. Look for a switch at the first success label.
                     [{_,Succ}|_] = List0,
                     case comb_get_sw(Succ, St0) of
-                        {true,Arg,_,_,_} ->
+                        {true,^Arg,_,_,_} ->
                             %% Since we found a switch at the success
                             %% label, the switch for this block (L)
                             %% must have been constructed out of a

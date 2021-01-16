@@ -175,7 +175,7 @@ check_old_code(Mod,Procs,PrePurgeMethod) ->
 	    do_check_old_code(Mod,Procs);
 	true when PrePurgeMethod==brutal_purge ->
 	    case catch do_check_old_code(Mod,Procs) of
-		{error,Mod} -> [];
+		{error,^Mod} -> [];
 		R -> R
 	    end;
 	false ->
@@ -308,7 +308,7 @@ syntax_check_script([]) ->
 %%-----------------------------------------------------------------
 eval({load_object_code, {Lib, LibVsn, Modules}}, EvalState) ->
     case lists:keysearch(Lib, 1, EvalState#eval_state.libdirs) of
-	{value, {Lib, LibVsn, LibDir} = LibInfo} ->
+	{value, {^Lib, ^LibVsn, LibDir} = LibInfo} ->
 	    Ext = code:objfile_extension(),
 	    {NewBins, NewVsns} = 
 		lists:foldl(fun(Mod, {Bins, Vsns}) ->
@@ -329,7 +329,7 @@ eval({load_object_code, {Lib, LibVsn, Modules}}, EvalState) ->
 	    EvalState#eval_state{bins = NewBins,
 				 newlibs = NewLibs,
 				 vsns = NewVsns};
-	{value, {Lib, LibVsn2, _LibDir}} ->
+	{value, {^Lib, LibVsn2, _LibDir}} ->
 	    throw({error, {bad_lib_vsn, Lib, LibVsn2}})
     end;
 eval(point_of_no_return, EvalState) ->
@@ -411,9 +411,9 @@ eval({code_change, Mode, Modules}, EvalState) ->
     lists:foreach(fun({Mod, Extra}) ->
 			  Vsn =
 			      case lists:keysearch(Mod, 1, Vsns) of
-				  {value, {Mod, OldVsn, _NewVsn}}
+				  {value, {^Mod, OldVsn, _NewVsn}}
 				    when Mode == up -> OldVsn;
-				  {value, {Mod, _OldVsn, NewVsn}}
+				  {value, {^Mod, _OldVsn, NewVsn}}
 				    when Mode == down -> {down, NewVsn};
 				  _ when Mode == up -> undefined;
 				  _ -> {down, undefined}
@@ -659,7 +659,7 @@ get_proc_state(Proc) ->
         {status, _, {module, _}, [_, State, _, _, _]} when State == running ;
                                                            State == suspended ->
             State
-    catch exit:{Reason, {sys, get_status, [Proc]}}
+    catch exit:{Reason, {sys, get_status, [^Proc]}}
                 when Reason =/= timeout andalso
                      not (is_tuple(Reason) andalso
                           element(1,Reason) =:= nodedown) ->
@@ -732,9 +732,9 @@ sync_nodes(Id, Nodes) ->
 		  NNodes),
     lists:foreach(fun(Node) ->
 			  receive
-			      {sync_nodes, Id, Node} ->
+			      {sync_nodes, ^Id, ^Node} ->
 				  ok;
-			      {nodedown, Node} ->
+			      {nodedown, ^Node} ->
 				  throw({sync_error, {nodedown, Node}})
 			  end
 		  end,
@@ -744,7 +744,7 @@ add_vsns(Mod, NewBin, Vsns) ->
     OldVsn = get_current_vsn(Mod),
     NewVsn = get_vsn(NewBin),
     case lists:keysearch(Mod, 1, Vsns) of
-	{value, {Mod, OldVsn0, NewVsn0}} ->
+	{value, {^Mod, OldVsn0, NewVsn0}} ->
 	    lists:keyreplace(Mod, 1, Vsns, {Mod,
 					    replace_undefined(OldVsn0,OldVsn),
 					    replace_undefined(NewVsn0,NewVsn)});

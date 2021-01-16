@@ -650,10 +650,10 @@ start_trace_client(CollectorPid, Type, FileName) when Type =:= file ->
     unlink(Pid),
     Ref = erlang:monitor(process, Pid),
     receive
-        WaitFor -> 
+        ^WaitFor -> 
 	    erlang:demonitor(Ref, [flush]),
 	    file_loaded;
-        {'DOWN', Ref, _, _, Reason} ->
+        {'DOWN', ^Ref, _, _, Reason} ->
             exit(Reason)
     end;
 start_trace_client(CollectorPid, Type, Parameters) ->
@@ -683,7 +683,7 @@ monitor_trace_port(CollectorPid, Parameters) ->
     spawn(fun() ->
 		  MonitorRef = erlang:monitor(process, CollectorPid),
 		  receive
-		      {'DOWN', MonitorRef, _, _, _} ->
+		      {'DOWN', ^MonitorRef, _, _, _} ->
 			  dbg:stop_clear()
 		  end
 	  end),

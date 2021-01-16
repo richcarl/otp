@@ -258,7 +258,7 @@ basename(Name, Ext) when is_binary(Name), is_binary(Ext) ->
 	Pos ->
 	    StartLen = LAll - Pos - LE,
 	    case Name of
-		<<_:StartLen/binary,Part:Pos/binary,Ext/binary>> ->
+		<<_:StartLen/binary,Part:Pos/binary,^Ext/binary>> ->
 		    Part;
 		_Other ->
 		    BName
@@ -303,7 +303,7 @@ dirname(Name) when is_binary(Name) ->
     {XPart0,Dirs} = case Drivesep of
 		       X when is_integer(X) ->
 			   case Name of
-			       <<DL,X,Rest/binary>> when ?IS_DRIVELETTER(DL) ->
+			       <<DL,^X,Rest/binary>> when ?IS_DRIVELETTER(DL) ->
 				   {<<DL,X>>,Rest};
 			       _ ->
 				   {<<>>,Name}
@@ -736,7 +736,7 @@ win32_splitb(<<Letter0,$:,Rest/binary>>) when ?IS_DRIVELETTER(Letter0) ->
     Letter = fix_driveletter(Letter0),
     L = binary:split(Rest,[<<"/">>,<<"\\">>],[global]),
     [<<Letter,$:>> | [ X || X <- L, X =/= <<>> ]];
-win32_splitb(<<Slash,Slash,Rest/binary>>) when ((Slash =:= $\\) orelse (Slash =:= $/)) ->
+win32_splitb(<<Slash,Slash1,Rest/binary>>) when ((Slash =:= $\\) orelse (Slash =:= $/)), Slash1 =:= Slash ->
     L = binary:split(Rest,[<<"/">>,<<"\\">>],[global]),
     [<<"//">> | [ X || X <- L, X =/= <<>> ]];
 win32_splitb(<<Slash,Rest/binary>>) when ((Slash =:= $\\) orelse (Slash =:= $/)) ->
@@ -927,7 +927,7 @@ basedir(Type,Application,Opts) when is_atom(Type), is_map(Opts),
             filename:join([Base,Name,"Logs"]);
         {user_cache,windows} ->
             filename:join([Base,Name,"Cache"]);
-        {Type,_} when Type =:= site_config orelse Type =:= site_data ->
+        {^Type,_} when Type =:= site_config orelse Type =:= site_data ->
             [filename:join([B,Name]) || B <- Base];
         _ ->
             filename:join([Base,Name])

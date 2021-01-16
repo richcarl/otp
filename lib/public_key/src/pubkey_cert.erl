@@ -943,7 +943,7 @@ is_valid_name([{Type, Name} | Rest], Constraints, Default) ->
     case type_subtree_names(Type, Constraints) of
 	[_|_] = ConstraintNames ->
 	    case match_name(Type, Name, ConstraintNames) of
-		Default ->
+		^Default ->
 		    is_valid_name(Rest, Constraints, Default);
 		Fail ->
 		    Fail

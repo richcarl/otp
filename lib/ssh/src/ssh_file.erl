@@ -189,9 +189,9 @@ find_key(KeyType, Key, [Line | Lines]) ->
         [E1,E2|Es] = binary:split(Line, <<" ">>, [global,trim_all]),
         [normalize_alg(E1), normalize_alg(E2) | Es] % KeyType is in first or second element
     of
-        [_Options, KeyType, Key | _Comment] ->
+        [_Options, ^KeyType, ^Key | _Comment] ->
             true;
-        [KeyType, Key | _Comment] ->
+        [^KeyType, ^Key | _Comment] ->
             true;
         _ ->
             find_key(KeyType, Key, Lines)
@@ -249,7 +249,7 @@ add_ip(Host) ->
 	{ok, Addr} ->
 	    case ssh_connection:encode_ip(Addr) of
 		false -> [Host];
-                Host -> [Host];
+                ^Host -> [Host];
 		IPString -> [Host,IPString]
 	    end;
 	_ -> [Host]
@@ -364,7 +364,7 @@ find_host_key(_, _, _, []) ->
 
 revoked_key(Hosts, KeyType, EncKey, [<<"@revoked ",RestLine/binary>> | Lines]) ->
     case binary:split(RestLine, <<" ">>, [global,trim_all]) of
-        [Patterns, KeyType, EncKey|_Comment] ->
+        [Patterns, ^KeyType, ^EncKey|_Comment] ->
             %% Very likeley to be a revoked key,
             %% but does any of the hosts match the pattern?
             case host_match(Hosts, Patterns) of
@@ -479,7 +479,7 @@ assure_file_mode(File, Mode) ->
     case file:read_file_info(File) of
         {ok,#file_info{mode=FileMode}} ->
             case (FileMode band Mode) of % is the wanted Mode set?
-                Mode -> 
+                ^Mode -> 
                     %% yes
                     ok;
                 _ ->
@@ -720,7 +720,7 @@ get_key_part(RawBin) when is_binary(RawBin) ->
 get_hdr_lines(Lines, Acc) ->
     Line1 = hd(Lines),
     case binary:split(Line1, <<":">>) of
-        [Line1] ->
+        [^Line1] ->
             {lists:reverse(Acc), Lines};
         [Key,Value] ->
             get_hdr_lines(tl(Lines), [{trim(Key),trim(Value)}|Acc])
@@ -728,7 +728,7 @@ get_hdr_lines(Lines, Acc) ->
 
 
 get_body(Lines, ExpectedEndLine) ->
-    {KeyPart, [ExpectedEndLine]} = lists:split(length(Lines)-1, Lines),
+    {KeyPart, [^ExpectedEndLine]} = lists:split(length(Lines)-1, Lines),
     base64:mime_decode(iolist_to_binary(KeyPart)).
 
 trim(<<" ",B/binary>>) -> trim(B);

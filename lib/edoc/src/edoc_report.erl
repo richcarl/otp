@@ -30,8 +30,9 @@
 
 -module(edoc_report).
 
-%% Avoid warning for local function error/2 clashing with autoimported BIF.
+%% Avoid warning for local functions error/2/3 clashing with autoimported BIFs.
 -compile({no_auto_import,[error/2]}).
+-compile({no_auto_import,[error/3]}).
 -export([error/1,
 	 error/2,
 	 error/3,

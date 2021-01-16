@@ -298,7 +298,7 @@ do_start_slave(start_link, Filer, Name) ->
     Token = make_ref(),
     Slave = spawn_link(fun() -> relay_start(Self, Token, Filer, Name) end),
     receive
-	{started, Token} ->
+	{started, ^Token} ->
 	    {ok, Slave}
     end;
 do_start_slave(start, Filer, Name) ->
@@ -307,10 +307,10 @@ do_start_slave(start, Filer, Name) ->
     Slave = spawn(fun() -> relay_start(Self, Token, Filer, Name) end),
     SlaveMonitor = erlang:monitor(process, Slave),
     receive
-	{started, Token} ->
+	{started, ^Token} ->
 	    erlang:demonitor(SlaveMonitor, [flush]),
 	    {ok, Slave};
-	{'DOWN', SlaveMonitor, _, _, Reason} ->
+	{'DOWN', ^SlaveMonitor, _, _, Reason} ->
 	    exit(Reason)
     end.
 			  
@@ -335,15 +335,15 @@ relay_start(Parent, Token, undefined, _Name) ->
     process_flag(trap_exit, true),
     Parent ! {started, Token},
     receive
-	{'EXIT', Parent, Reason} ->
+	{'EXIT', ^Parent, Reason} ->
 	    exit(Reason)
     end.
 
 relay_loop(Parent, Filer, FilerMonitor) ->
     receive
-	{'DOWN', FilerMonitor, _, _, Reason} ->
+	{'DOWN', ^FilerMonitor, _, _, Reason} ->
 	    exit(Reason);
-	{'EXIT', Parent, Reason} ->
+	{'EXIT', ^Parent, Reason} ->
 	    exit(Reason);
         Msg ->
             Filer ! Msg

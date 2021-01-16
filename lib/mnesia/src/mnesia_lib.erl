@@ -516,7 +516,7 @@ ensure_loaded(Appl) ->
 	    case application:load(Appl) of
 		ok ->
 		    ok;
-		{error, {already_loaded, Appl}} ->
+		{error, {already_loaded, ^Appl}} ->
 		    ok;
 		{error, Reason} ->
 		    {error, {application_load_error, Reason}}
@@ -765,14 +765,14 @@ workers({workers, Loaders, Senders, Dumper}) ->
     Info = fun({Pid, {send_table, Tab, _Receiver, _St}}) ->
 		   case Pid of
 		       undefined -> false;
-		       Pid -> {true, {Pid, Tab, proc_dbg_info(Pid)}}
+		       ^Pid -> {true, {Pid, Tab, proc_dbg_info(Pid)}}
 		   end;
 	      ({Pid, What}) when is_pid(Pid) ->
 		   {true, {Pid, What, proc_dbg_info(Pid)}};
 	      ({Name, Pid}) ->
 		   case Pid of
 		       undefined -> false;
-		       Pid -> {true, {Name, Pid, proc_dbg_info(Pid)}}
+		       ^Pid -> {true, {Name, Pid, proc_dbg_info(Pid)}}
 		   end
 	   end,
     SInfo = lists:zf(Info, Senders),
@@ -1013,7 +1013,7 @@ report_system_event({'EXIT', Reason}, Event) ->
 	    unlink(Pid),
 
             %% We get an exit signal if server dies
-            receive {'EXIT', Pid, _Reason} -> ok
+            receive {'EXIT', ^Pid, _Reason} -> ok
             after 0 -> gen_event:stop(mnesia_event)
             end;
 
@@ -1308,7 +1308,7 @@ dets_to_ets(Tabname, Tab, File, Type, Rep, Lock) ->
     {Open, Close} = mkfuns(Lock),
     case Open(Tabname, [{file, File}, {type, disk_type(Tab, Type)},
 			{keypos, 2}, {repair, Rep}]) of
-	{ok, Tabname} ->
+	{ok, ^Tabname} ->
 	    Res = dets:to_ets(Tabname, Tab),
 	    ok = Close(Tabname),
 	    trav_ret(Res, Tab);
@@ -1352,7 +1352,7 @@ unlock_table(Tab) ->
 dets_sync_open(Tab, Args) ->
     lock_table(Tab),
     case dets:open_file(Tab, Args) of
-	{ok, Tab} ->
+	{ok, ^Tab} ->
 	    {ok, Tab};
 	Other ->
 	    dets_sync_close(Tab),
@@ -1439,7 +1439,7 @@ eval_debug_fun(FunId, EvalContext, EvalFile, EvalLine) ->
 		NewContext = Fun(OldContext, EvalContext),
 
 		case ?ets_lookup(?DEBUG_TAB, FunId) of
-		    [Info] when NewContext /= OldContext ->
+		    [^Info] when NewContext /= OldContext ->
 			NewInfo = Info#debug_info{context = NewContext},
 			update_debug_info(NewInfo);
 		    _ ->

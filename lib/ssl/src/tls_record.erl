@@ -553,7 +553,7 @@ validate_tls_record_version(Versions, Q, MaxFragLen, SslOpts, Acc, Type, Version
             end;
         {3, 4} when Version =:= {3, 3} ->
             validate_tls_record_length(Versions, Q, MaxFragLen, SslOpts, Acc, Type, Version, Length);
-        Version ->
+        ^Version ->
             %% Exact version match
             validate_tls_record_length(Versions, Q, MaxFragLen, SslOpts, Acc, Type, Version, Length);
         _ ->

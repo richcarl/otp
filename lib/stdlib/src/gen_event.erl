@@ -333,7 +333,7 @@ fetch_msg(Parent, ServerName, MSL, HibernateAfterTimeout, Debug, Hib) ->
 	{system, From, Req} ->
 	    sys:handle_system_msg(Req, From, Parent, ?MODULE, Debug,
 				  [ServerName, MSL, HibernateAfterTimeout, Hib],Hib);
-	{'EXIT', Parent, Reason} ->
+	{'EXIT', ^Parent, Reason} ->
 	    terminate_server(Reason, Parent, MSL, ServerName);
 	Msg when Debug =:= [] ->
 	    handle_msg(Msg, Parent, ServerName, MSL, HibernateAfterTimeout, []);
@@ -483,7 +483,7 @@ system_replace_state(StateFun, [ServerName, MSL, HibernateAfterTimeout, Hib]) ->
 		lists:unzip([begin
 				 Cur = {Mod,Id,State},
 				 try
-				     NState = {Mod,Id,NS} = StateFun(Cur),
+				     NState = {^Mod,^Id,NS} = StateFun(Cur),
 				     {HS#handler{state=NS}, NState}
 				 catch
 				     _:_ ->
@@ -639,7 +639,7 @@ server_update(Handler1, Func, Event, SName) ->
 	    do_terminate(Mod1, Handler1, remove_handler, State,
 			 remove, SName, normal),
 	    no;
-        {'EXIT', {undef, [{Mod1, handle_info, [_,_], _}|_]}} ->
+        {'EXIT', {undef, [{^Mod1, handle_info, [_,_], _}|_]}} ->
             ?LOG_WARNING(#{label=>{gen_event,no_handle_info},
                            module=>Mod1,
                            message=>Event},

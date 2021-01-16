@@ -164,7 +164,7 @@ handle_cast({register_session, #session{session_id = SessionId} = Session},
     TimeStamp = erlang:monotonic_time(),
     Id = {TimeStamp, erlang:unique_integer([monotonic])},
     State = case size(Cb, Store0) of
-                Max ->
+                ^Max ->
                     {#session{session_id = OldSessionId}, Store1}
                         = oldest_session(Cb, Store0),
                     %% Throw away oldest session table may not grow larger than max

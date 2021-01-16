@@ -378,7 +378,7 @@ close_log(Log) ->
 %%    io:format("mnesia_log:close_log ~p~n", [Log]),
     case disk_log:sync(Log) of
 	ok -> ok;
-	{error, {read_only_mode, Log}} ->
+	{error, {read_only_mode, ^Log}} ->
 	    ok;
 	{error, Reason} ->
 	    mnesia_lib:important("Failed syncing ~tp to_disk reason ~tp ~n",
@@ -569,7 +569,7 @@ view(File) ->
 	    N = view_only,
 	    Args = [{file, File}, {name, N}, {mode, read_only}],
 	    case disk_log:open(Args) of
-		{ok, N} ->
+		{ok, ^N} ->
 		    view_file(start, N);
 		{repaired, _, _, _} ->
 		    view_file(start, N);
@@ -640,7 +640,7 @@ backup_checkpoint(Name, Opaque, Args) when is_list(Args) ->
 	    Self = self(),
 	    Pid = spawn_link(?MODULE, backup_master, [Self, B2]),
 	    receive
-		{Pid, Self, Res} -> Res
+		{^Pid, ^Self, Res} -> Res
 	    end;
 	{error, Reason} ->
 	    {error, Reason}
@@ -859,7 +859,7 @@ copy_records(RecName, Tab, Recs, {Count, B}) ->
 
 send_records(Pid, Tab, Recs, Pass, {Count, B}) ->
     receive
-	{Pid, more, Count} ->
+	{^Pid, more, ^Count} ->
 	    if
 		Pass == last, Recs == [] ->
 		    {Count, B};
@@ -875,18 +875,18 @@ send_records(Pid, Tab, Recs, Pass, {Count, B}) ->
 tab_receiver(Pid, B, Tab, RecName, Slot) ->
     Pid ! {self(), more, Slot},
     receive
-	{Pid, {more, Next, Recs}} ->
+	{^Pid, {more, Next, Recs}} ->
 	    Recs2 = rec_filter(B, Tab, RecName, Recs),
 	    B2 = safe_write(B, Recs2),
 	    tab_receiver(Pid, B2, Tab, RecName, Next);
 
-	{Pid, {last, {ok,_}}} ->
+	{^Pid, {last, {ok,_}}} ->
 	    B;
 
-	{'EXIT', Pid, {error, R}} ->
+	{'EXIT', ^Pid, {error, R}} ->
 	    Reason = {error, {"Tab copier crashed", R}},
 	    abort_write(B, {?MODULE, remote_tab_sender}, [self(), B, Tab], Reason);
-	{'EXIT', Pid, R} ->
+	{'EXIT', ^Pid, R} ->
 	    Reason = {error, {"Tab copier crashed", {'EXIT', R}}},
 	    abort_write(B, {?MODULE, remote_tab_sender}, [self(), B, Tab], Reason);
 	Msg ->

@@ -1163,7 +1163,7 @@ units(Val) ->
 
 ensure_ver(Ver, Line, What) ->
     case get(snmp_version) of
-	Ver -> ok;
+	^Ver -> ok;
 	_Other ->
 	    snmpc_lib:print_error(
 	      "~s is only allowed in SNMPv~p.",[What,Ver],Line)

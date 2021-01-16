@@ -81,7 +81,7 @@ handle_call({close, Pid}, _From, State) ->
     {reply, Reply, State}.
 
 handle_info({pending_reply, Pid, Result0}, State) ->
-    {value, #pending{log = Name, pid = Pid, from = From, 
+    {value, #pending{log = Name, pid = ^Pid, from = From, 
                      req = Request, attach = Attach,
                      clients = Clients}} = 
         lists:keysearch(Pid, #pending.pid, State#state.pending),
@@ -208,7 +208,7 @@ do_internal_open(Name, Pid, From, {open, A}=Req, Attach, State) ->
 
 check_pending(Name, From, State, Req) ->
     case lists:keysearch(Name, #pending.log, State#state.pending) of
-        {value, #pending{log = Name, clients = Clients}=P} ->
+        {value, #pending{log = ^Name, clients = Clients}=P} ->
             NP = lists:keyreplace(Name, #pending.log, State#state.pending, 
                                P#pending{clients = Clients++[{Req,From}]}),
             {pending, State#state{pending = NP}};
@@ -230,7 +230,7 @@ erase_log(Name, Pid) ->
     case do_get_log_pid(Name) of
         undefined ->
             ok;
-        Pid ->
+        ^Pid ->
             true = ets:delete(?DISK_LOG_NAME_TABLE, Name),            
             true = ets:delete(?DISK_LOG_PID_TABLE, Pid)
     end,
@@ -244,7 +244,7 @@ do_all() ->
 %% Inlined.
 do_get_log_pid(LogName) ->
     try ets:lookup(?DISK_LOG_NAME_TABLE, LogName) of
-	[{LogName, Pid}] ->
+	[{^LogName, Pid}] ->
 	    Pid;
         [] ->
             undefined

@@ -317,9 +317,9 @@ wait(Keys, S) ->
 
 i({K, Ref}, #transport{mode = {accept, _}} = S) ->
     receive
-        {Ref, Pid} when K == parent ->  %% transport process started
+        {^Ref, Pid} when K == parent ->  %% transport process started
             S#transport{parent = Pid};
-        {K, T, Opts} when K == peeloff ->  %% association
+        {^K, T, Opts} when K == peeloff ->  %% association
             {sctp, Sock, _RA, _RP, _Data} = T,
             [Matches, Packet, Sender, CB, Unordered] = Opts,
             ok = accept_peer(Sock, Matches),

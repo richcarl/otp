@@ -236,7 +236,7 @@ wait_for_slave(Parent, Host, Name, Node, Args, LinkTo, Prog) ->
 	    after 32000 ->
 		    %% If it seems that the node was partially started,
 		    %% try to kill it.
-		    Node = list_to_atom(lists:concat([Name, "@", Host])),
+		    ^Node = list_to_atom(lists:concat([Name, "@", Host])),
 		    case net_adm:ping(Node) of
 			pong ->
 			    spawn(Node, erlang, halt, []),
@@ -265,10 +265,10 @@ slave_started(ReplyTo, Master, Slave) when is_pid(Master), is_pid(Slave) ->
 
 one_way_link(Master, Slave) ->
     receive
-	{'EXIT', Master, _Reason} ->
+	{'EXIT', ^Master, _Reason} ->
 	    unlink(Slave),
 	    Slave ! {nodedown, node()};
-	{'EXIT', Slave, _Reason} ->
+	{'EXIT', ^Slave, _Reason} ->
 	    unlink(Master);
 	_Other ->
 	    one_way_link(Master, Slave)
@@ -296,7 +296,7 @@ mk_cmd(Host, Name, Args, Waiter, Prog0) ->
 			     " ", Waiter,
 			     " ", Args]),
     case after_char($@, atom_to_list(node())) of
-	Host ->
+	^Host ->
 	    {ok, BasicCmd};
 	_ ->
 	    case rsh() of
@@ -380,7 +380,7 @@ wait_for_master_to_die(Master, Waiter) ->
 
 wloop(Master) ->
     receive
-	{nodedown, Master} ->
+	{nodedown, ^Master} ->
 	    ?dbg({?MODULE, wloop}, 
 		 [[Master], {received, {nodedown, Master}}, halting_node] ),
 	    halt();

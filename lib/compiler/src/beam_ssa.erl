@@ -1039,7 +1039,7 @@ is_merge_allowed_1(L, #b_blk{last=#b_br{}}=Blk, #b_blk{is=Is}) ->
     %% The predecessor block must have exactly one successor (L) for
     %% the merge to be safe.
     case successors(Blk) of
-        [L] ->
+        [^L] ->
             case Is of
                 [#b_set{op=phi,args=[_]}|_] ->
                     %% The type optimizer pass must have been

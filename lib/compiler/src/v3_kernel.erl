@@ -399,7 +399,7 @@ letrec_goto([{#c_var{name={Label,0}},Cfail}], Cb, Sub0,
     #c_fun{body=FailBody} = Cfail,
     {Kfail,Fb,St2} = body(FailBody, Sub0, St1),
     case {Kb,Kfail,Fb} of
-        {#k_goto{label=Label},#k_goto{}=InnerGoto,[]} ->
+        {#k_goto{label=^Label},#k_goto{}=InnerGoto,[]} ->
             {InnerGoto,Pb,St2};
         {_,_,_} ->
             St3 = St2#kern{labels=Labels0},
@@ -579,7 +579,7 @@ flatten_seq(#iset{anno=A,vars=Vs,arg=Arg,body=B}) ->
 flatten_seq(Ke) -> [Ke].
 
 pre_seq([#iset{anno=A,vars=Vs,arg=Arg,body=B}|Ps], K) ->
-    B = undefined,				%Assertion.
+    ^B = undefined,				%Assertion.
     #iset{anno=A,vars=Vs,arg=Arg,body=pre_seq(Ps, K)};
 pre_seq([P|Ps], K) ->
     #iset{vars=[],arg=P,body=pre_seq(Ps, K)};
@@ -784,7 +784,7 @@ build_bin_seg_integer(A, Bits, Val, Next) ->
 integer_fits_and_is_expandable(Int, Size) when is_integer(Int), is_integer(Size),
                                                0 < Size, Size =< ?EXPAND_MAX_SIZE_SEGMENT ->
     case <<Int:Size>> of
-	<<Int:Size>> -> true;
+	<<^Int:Size>> -> true;
 	_ -> false
     end;
 integer_fits_and_is_expandable(_Int, _Size) ->
@@ -865,7 +865,7 @@ bm_update_inv_lookup(Key, Val, Map, InvMap0) ->
 bm_cleanup_inv_lookup(Key, Map, InvMap) when is_map_key(Key, Map) ->
     #{ Key := Old } = Map,
     case InvMap of
-        #{ Old := [Key] } ->
+        #{ Old := [^Key] } ->
             maps:remove(Old, InvMap);
         #{ Old := [_|_]=Keys } ->
             InvMap#{ Old := ordsets:del_element(Key, Keys) }
@@ -1379,7 +1379,7 @@ select_assert_match_possible(Sz, Val, Fs)
     MatchFun = match_fun(Val),
     EvalFun = fun({integer,_,S}, B) -> {value,S,B} end,
     Expr = [{bin_element,0,{integer,0,Val},{integer,0,Sz},[{unit,1}|Fs]}],
-    {value,Bin,EmptyBindings} = eval_bits:expr_grp(Expr, EmptyBindings, EvalFun),
+    {value,Bin,^EmptyBindings} = eval_bits:expr_grp(Expr, EmptyBindings, EvalFun),
     try
 	{match,_} = eval_bits:match_bits(Expr, Bin,
 					 EmptyBindings,

@@ -378,9 +378,9 @@ handle_call({registered_names, {group, Group}}, From, S) ->
     case lists:keysearch(Group, 1, S#state.other_grps) of
 	false ->
 	    {reply, [], S};
-	{value, {Group, []}} ->
+	{value, {^Group, []}} ->
 	    {reply, [], S};
-	{value, {Group, Nodes}} ->
+	{value, {^Group, Nodes}} ->
 	    Pid = global_search:start(names, {group, Nodes, From}),
 	    Wait = get(registered_names),
 	    put(registered_names, [{Pid, From} | Wait]),
@@ -434,9 +434,9 @@ handle_call({send, {group, Group}, Name, Msg}, From, S) ->
     case lists:keysearch(Group, 1, S#state.other_grps) of
 	false ->
 	    {reply, {badarg, {Name, Msg}}, S};
-	{value, {Group, []}} ->
+	{value, {^Group, []}} ->
 	    {reply, {badarg, {Name, Msg}}, S};
-	{value, {Group, Nodes}} ->
+	{value, {^Group, Nodes}} ->
 	    Pid = global_search:start(send, {group, Nodes, Name, Msg, From}),
 	    Wait = get(send),
 	    put(send, [{Pid, From, Name, Msg} | Wait]),
@@ -482,9 +482,9 @@ handle_call({whereis_name, {group, Group}, Name}, From, S) ->
     case lists:keysearch(Group, 1, S#state.other_grps) of
 	false ->
 	    {reply, undefined, S};
-	{value, {Group, []}} ->
+	{value, {^Group, []}} ->
 	    {reply, undefined, S};
-	{value, {Group, Nodes}} ->
+	{value, {^Group, Nodes}} ->
 	    Pid = global_search:start(whereis, {group, Nodes, Name, From}),
 	    Wait = get(whereis_name),
 	    put(whereis_name, [{Pid, From} | Wait]),
@@ -607,7 +607,7 @@ handle_call({ng_add_check, Node, PubType, OthersNG}, _From, S) ->
     case S#state.group_publish_type =:= PubType of
 	true ->
 	    case OwnNG of
-		OthersNG ->
+		^OthersNG ->
 		    NN = [Node | S#state.nodes],
 		    NSE = lists:delete(Node, S#state.sync_error),
 		    NNC = lists:delete(Node, S#state.no_contact),
@@ -712,7 +712,7 @@ handle_cast({registered_names_res, Result, Pid, From}, S) ->
 handle_cast({send_res, Result, Name, Msg, Pid, From}, S) ->
 %    io:format("~p>>>>> send_res Result ~p~n",[node(), Result]),
     case Result of
-	{badarg,{Name, Msg}} ->
+	{badarg,{^Name, ^Msg}} ->
 	    continue;
 	ToPid ->
 	    ToPid ! Msg
@@ -819,7 +819,7 @@ handle_cast({conf_check, Vsn, Node, From, sync, CCName, PubType, CCNodes}, S) ->
 			{global_group_check, Node} ! {config_error, Vsn, From, node()},
 			S#state{nodes = lists:delete(Node, CurNodes)};
 
-		    {CCName, PubType, CCNodes, _OtherDef} ->
+		    {^CCName, ^PubType, ^CCNodes, _OtherDef} ->
 			%% OK, add the node to the #state.nodes if it isn't there
 			update_publish_nodes(S#state.publish_type, {PubType, CCNodes}),
 			global_name_server ! {nodeup, Node},
@@ -872,7 +872,7 @@ handle_info({nodeup, Node}, S) ->
 		   synced ->
 		       X = (catch rpc:call(Node, global_group, get_own_nodes, [])),
 		       case X of
-			   X when is_list(X) ->
+			   ^X when is_list(X) ->
 			       lists:sort(X);
 			   _ ->
 			       []
@@ -885,7 +885,7 @@ handle_info({nodeup, Node}, S) ->
     NSE = lists:delete(Node, S#state.sync_error),
     OwnNG = get_own_nodes(),
     case OwnNG of
-	OthersNG ->
+	^OthersNG ->
 	    send_monitor(S#state.monitor, {nodeup, Node}, S#state.sync_state),
 	    global_name_server ! {nodeup, Node},
 	    case lists:member(Node, S#state.nodes) of
@@ -1208,7 +1208,7 @@ check_exit_reg(undefined, _ExitPid, _Reason) ->
     ok;
 check_exit_reg(Reg, ExitPid, Reason) ->
     case lists:keysearch(ExitPid, 1, lists:delete(undefined, Reg)) of
-	{value, {ExitPid, From}} ->
+	{value, {^ExitPid, From}} ->
 	    NewReg = lists:delete({ExitPid, From}, Reg),
 	    put(registered_names, NewReg),
 	    gen_server:reply(From, {error, Reason});
@@ -1221,7 +1221,7 @@ check_exit_send(undefined, _ExitPid, _Reason) ->
     ok;
 check_exit_send(Send, ExitPid, _Reason) ->
     case lists:keysearch(ExitPid, 1, lists:delete(undefined, Send)) of
-	{value, {ExitPid, From, Name, Msg}} ->
+	{value, {^ExitPid, From, Name, Msg}} ->
 	    NewSend = lists:delete({ExitPid, From, Name, Msg}, Send),
 	    put(send, NewSend),
 	    gen_server:reply(From, {badarg, {Name, Msg}});
@@ -1234,7 +1234,7 @@ check_exit_where(undefined, _ExitPid, _Reason) ->
     ok;
 check_exit_where(Where, ExitPid, Reason) ->
     case lists:keysearch(ExitPid, 1, lists:delete(undefined, Where)) of
-	{value, {ExitPid, From}} ->
+	{value, {^ExitPid, From}} ->
 	    NewWhere = lists:delete({ExitPid, From}, Where),
 	    put(whereis_name, NewWhere),
 	    gen_server:reply(From, {error, Reason});

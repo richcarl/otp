@@ -72,7 +72,7 @@ handle_cast(_Request, State) ->
                          {noreply, NewState :: term()}.
 handle_info({'DOWN',Ref,process,_,shutdown}, #state{handlers=Hs}=State) ->
     case lists:keytake(Ref,2,Hs) of
-        {value,{Id,Ref},Hs1} ->
+        {value,{Id,^Ref},Hs1} ->
             %% Probably terminated by supervisor. Remove the handler to avoid
             %% error printouts due to failing handler.
             _ = case logger:get_handler_config(Id) of

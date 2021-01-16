@@ -143,7 +143,7 @@ chapter_ify(Es, first) ->
     %% plain paragraphs -- or if no first section is found, everything
     %% should be made into one
     case find_next(h3, Es) of
-	{Es, []} ->
+	{^Es, []} ->
 	    SubSections = subchapter_ify(Es, first),
 	    [{section, [?NL,{title,["Overview"]},
 			?NL | SubSections]}];
@@ -1063,8 +1063,8 @@ t_utype_elem(E=#xmlElement{content = Es}) ->
 	Name ->
 	    T = t_type(Es),
 	    case T of
-		[Name] -> T;    % avoid generating "Foo::Foo"
-		T -> [Name] ++ ["::"] ++ T
+		[^Name] -> T;    % avoid generating "Foo::Foo"
+		^T -> [Name] ++ ["::"] ++ T
 	    end
     end.
 

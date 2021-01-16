@@ -370,7 +370,7 @@ do_sort(KeyPos0, Input0, Output0, Opts, Do) ->
            inout_value = no_value},
     try
         doit(Do, Input, W)
-    catch {Ref,Error} ->
+    catch {^Ref,Error} ->
         Error
     end.
     
@@ -547,7 +547,7 @@ files(_I, L, _LSz, #w{seq = 1, out = Out}=W, []) ->
             W1 = outfun(binterm_objects(SL, []), W),
             NW = close_input(W1),
             outfun(close, NW);
-        Out ->
+        ^Out ->
             _ = write_run(L, W, Out),
             ok
     end;
@@ -712,7 +712,7 @@ merge_files([F1, F2 | Fs], L0, LSz, Last0, W) when LSz < ?MERGESIZE ->
     [Ts0 | InEtc] = F1,
     Kind = merge_kind(W),
     {Last, L, Ts} = case {Last0, Kind} of
-                        {{last, Lst}, Kind} -> 
+                        {{last, Lst}, ^Kind} -> 
                             {Lst, L0, Ts0};
                         {nolast, {ukmerge, _Kp}} -> 
                             [?OBJ(?SK(T, _I), BT) | Ts1] = Ts0,
@@ -762,7 +762,7 @@ merge_files([], [], 0, nolast, W) ->
     %% one) is called at least once before closing.
     merge_write(W, []);
 merge_files([], L, _LSz, Last, W) ->
-    Last = nolast,
+    ^Last = nolast,
     merge_write(W, L);
 merge_files(Fs, L, _LSz, Last, W) ->
     NW = merge_write(W, L),
@@ -1502,7 +1502,7 @@ close_out(_) ->
     ok.
 
 close_file(Fd, W) ->
-    {Fd, FileName} = lists:keyfind(Fd, 1, W#w.temp),
+    {^Fd, FileName} = lists:keyfind(Fd, 1, W#w.temp),
     ?DEBUG("closing ~tp~n", [FileName]),
     case file:close(Fd) of
         ok ->

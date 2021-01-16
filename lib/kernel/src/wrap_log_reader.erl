@@ -240,7 +240,7 @@ chunk_at_eof(WR, N, Bad) ->
 		     NoOfFiles, NewFileNo]),
 	    case {FirstFileNo, NewFileNo} of
 		{_, 0} -> {WR, eof};
-		{_, FirstFileNo} -> {WR, eof};
+		{_, ^FirstFileNo} -> {WR, eof};
 		_ -> read_next_file(WR, N, NewFileNo, Bad)
 	    end;
 	Error ->

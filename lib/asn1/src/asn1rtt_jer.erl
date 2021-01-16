@@ -43,7 +43,7 @@ encode_jer(Module,InfoFunc,Val) ->
 
 encode_jer({sequence_tab,Simple,Sname,Arity,CompInfos},Value) 
   when tuple_size(Value) == Arity+1 ->
-    [Sname|Clist] = tuple_to_list(Value),
+    [^Sname|Clist] = tuple_to_list(Value),
     encode_jer_component_tab(CompInfos,Clist,Simple,#{});
 %% {sequence,
 %%    Name::atom() % The record name used for the sequence 
@@ -52,7 +52,7 @@ encode_jer({sequence_tab,Simple,Sname,Arity,CompInfos},Value)
 %%    Value::record matching name and arity
 encode_jer({sequence,Sname,Arity,CompInfos},Value) 
   when tuple_size(Value) == Arity+1 ->
-    [Sname|Clist] = tuple_to_list(Value),
+    [^Sname|Clist] = tuple_to_list(Value),
     encode_jer_component(CompInfos,Clist,#{});
 encode_jer(string,Str) when is_list(Str) ->
     list_to_binary(Str);
@@ -245,7 +245,7 @@ decode_jer({choice,ChoiceTypes},ChoiceVal) ->
     [{Alt,Val}] = maps:to_list(ChoiceVal),
     case ChoiceTypes of
         #{Alt := Type} ->
-            Type = maps:get(Alt,ChoiceTypes),
+            ^Type = maps:get(Alt,ChoiceTypes),
             {binary_to_atom(Alt,utf8),decode_jer(Type,Val)};
         _ ->
             exit({error,{asn1,{invalid_choice,Alt,maps:keys(ChoiceTypes)}}})

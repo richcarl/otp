@@ -177,9 +177,9 @@ start_task(Type, Fun, St0) ->
 	    %% (the DOWN message is guaranteed to arrive after any
 	    %% messages sent by the process itself)
 	    receive
-		{ok, Reference, Pid} ->
+		{ok, ^Reference, ^Pid} ->
 		    Pid;
-		{'DOWN', Monitor, process, Pid, Reason} ->
+		{'DOWN', ^Monitor, process, ^Pid, Reason} ->
 		    %% send messages as if the insulator process was
 		    %% started, but terminated on its own accord
 		    Msg = {startup, Reason},
@@ -243,24 +243,24 @@ insulator_process(Type, Fun, St0) ->
 
 insulator_wait(Child, Parent, Buf, St) ->
     receive
-	{child, Child, Id, {'begin', Type, Data}} ->
+	{child, ^Child, Id, {'begin', Type, Data}} ->
 	    message_super(Id, {progress, 'begin', {Type, Data}}, St),
 	    insulator_wait(Child, Parent, [[] | Buf], St);
-	{child, Child, Id, {'end', Status, Time}} ->
+	{child, ^Child, Id, {'end', Status, Time}} ->
 	    Data = [{time, Time}, {output, lists:reverse(hd(Buf))}],
 	    message_super(Id, {progress, 'end', {Status, Data}}, St),
 	    insulator_wait(Child, Parent, tl(Buf), St);
-	{child, Child, Id, {skipped, Reason}} ->
+	{child, ^Child, Id, {skipped, Reason}} ->
 	    %% this happens when a subgroup fails to enter the context
 	    message_super(Id, {cancel, {abort, Reason}}, St),
 	    insulator_wait(Child, Parent, Buf, St);
-	{child, Child, Id, {abort, Cause}} ->
+	{child, ^Child, Id, {abort, Cause}} ->
 	    %% this happens when the child code threw an internal
 	    %% eunit_abort; the child process has already exited
 	    exit_messages(Id, {abort, Cause}, St),
 	    %% no need to wait for the {'EXIT',Child,_} message
 	    terminate_insulator(St);
-	{io_request, Child, ReplyAs, Req} ->
+	{io_request, ^Child, ReplyAs, Req} ->
 	    %% we only collect output from the child process itself, not
 	    %% from secondary processes, otherwise we get race problems;
 	    %% however, each test runs its personal group leader that
@@ -272,15 +272,15 @@ insulator_wait(Child, Parent, Buf, St) ->
 	    %% just ensure the sender gets a reply; ignore the data
 	    io_request(From, ReplyAs, Req, []),
 	    insulator_wait(Child, Parent, Buf, St);
-	{timeout, Child, Id} ->
+	{timeout, ^Child, Id} ->
 	    exit_messages(Id, timeout, St),
 	    kill_task(Child, St);
-	{'EXIT', Child, normal} ->
+	{'EXIT', ^Child, normal} ->
 	    terminate_insulator(St);
-	{'EXIT', Child, Reason} ->
+	{'EXIT', ^Child, Reason} ->
 	    exit_messages(St#procstate.id, {exit, Reason}, St),
 	    terminate_insulator(St);
-	{'EXIT', Parent, _} ->
+	{'EXIT', ^Parent, _} ->
 	    %% make sure child processes are cleaned up recursively
 	    kill_task(Child, St)
     end.
@@ -307,7 +307,7 @@ exit_messages(Id, Cause, St) ->
     %% the message for the most specific Id is always sent first
     message_super(Id, {cancel, Cause}, St),
     case St#procstate.id of
-	Id -> ok;
+	^Id -> ok;
 	Id1 -> message_super(Id1, {cancel, {blame, Id}}, St)
     end.
 
@@ -412,7 +412,7 @@ wait_for_tasks(PidSet, St) ->
 	    %% already informed the supervisor about any anomalies)
 	    Reference = St#procstate.ref,
 	    receive
-		{done, Reference, Pid} ->
+		{done, ^Reference, Pid} ->
 		    %% (if Pid is not in the set, del_element has no
 		    %% effect, so this is always safe)
 		    Rest = sets:del_element(Pid, PidSet),
@@ -622,7 +622,7 @@ group_leader_loop(Runner, Wait, Buf) ->
 group_leader_sync(G) ->
     G ! stop,
     receive
-	{G, Buf} -> Buf
+	{^G, Buf} -> Buf
     end.
 
 %% Implementation of buffering I/O for group leader processes. (Note that

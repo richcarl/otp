@@ -23,6 +23,7 @@
 %% API
 %% Avoid warning for local function error/2 clashing with autoimported BIF.
 -compile({no_auto_import,[error/2]}).
+-compile({no_auto_import,[error/3]}).
 -export([test_father/4, make_ASN1type/1, import/1, makeInternalNode2/2,
 	 is_consistent/1, resolve_defval/1, make_variable_info/1,
 	 check_trap_name/3, make_table_info/5, get_final_mib/2, set_dir/2,
@@ -1134,7 +1135,7 @@ check_def(Type, Name, Line, Status, [GroupObject|GroupObjects], Objects, Ets) ->
 	    ?vtrace("~p is a member of ~p", [GroupObject, Name]),
 	    %% Lucky so far, now lets check that the status is valid
 	    case ets:lookup(Ets, GroupObject) of
-		[{GroupObject, ObjectStatus}] ->
+		[{^GroupObject, ObjectStatus}] ->
 		    ?vtrace("check that the object status (~p) is valid", 
 			    [ObjectStatus]),
 		    check_group_member_status(Name, Status,
@@ -1151,7 +1152,7 @@ check_def(Type, Name, Line, Status, [GroupObject|GroupObjects], Objects, Ets) ->
 		    "[object status could be obsolete]", 
 		    [GroupObject, Name]),
 	    case ets:lookup(Ets, GroupObject) of
-		[{GroupObject, ObjectStatus}] ->
+		[{^GroupObject, ObjectStatus}] ->
 		    ?vtrace("check that the object status (~p) is valid", 
 			    [ObjectStatus]),
 		    check_group_member_status(Name, Status,
@@ -1322,7 +1323,7 @@ insert_mfa([X | Fs], [ME | MEs], DBName, Mod)
   when ME#me.entrytype =:= variable ->
     {Oid, {M,F,A}} = X,
     case ME#me.oid of
-	Oid ->
+	^Oid ->
 	    [ME#me{mfa = {M,F,A}} | insert_mfa(Fs, MEs, DBName, Mod)];
 	_Q -> 
 	    [insert_default_mfa(ME, DBName, Mod) |
@@ -1562,7 +1563,7 @@ key1search(Key, List) ->
 
 key1search(Key, List, Default) ->
     case lists:keysearch(Key, 1, List) of
-        {value, {Key, Val}} -> Val;
+        {value, {^Key, Val}} -> Val;
         _ -> Default
     end.
 
@@ -1687,11 +1688,11 @@ resolve_oids(OidEts) ->
 resolve_oids([Name | T], FatherOid, OidEts) ->
     {MyOid, MyChildren, MyLine} =
 	case ets:lookup(OidEts, Name) of
-	    [{Name, Oid, Line}] ->
+	    [{^Name, Oid, Line}] ->
 		print_error("Circular OBJECT IDENTIFIER definitions "
 			    "involving ~w\n", [Name], Line),
 		{Oid, [], Line};
-	    [{Name, _Father, Line, SubIndex, Children}] ->
+	    [{^Name, _Father, Line, SubIndex, Children}] ->
 		{FatherOid ++ SubIndex, Children, Line}
 	end,
     ets:insert(OidEts, {Name, MyOid, MyLine}),
@@ -1739,7 +1740,7 @@ tr_oid(Name, OidEts) ->
     ?vtrace("tr_oid -> entry with"
 	    "~n   Name: ~p", [Name]),
     case ets:lookup(OidEts, Name) of
-	[{Name, MyOid, _MyLine}] ->
+	[{^Name, MyOid, _MyLine}] ->
 	    MyOid;
 	[{_Natrap, Parent, Line, SubIndex, _Children}] ->
 	    print_error("OBJECT IDENTIFIER [~w] defined in terms "

@@ -40,7 +40,7 @@ check_int(Value, Value, _) when is_integer(Value) ->
     true;
 check_int(Value, DefValue, NNL) when is_atom(Value) ->
     case lists:keyfind(Value, 1, NNL) of
-	{_,DefValue} ->
+	{_,^DefValue} ->
 	    true;
 	_ ->
 	    throw(false)
@@ -117,7 +117,7 @@ check_named_bitstring(Bs, Bs, _) ->
 check_named_bitstring(Val, Bs, BsSize) ->
     Rest = bit_size(Val) - BsSize,
     case Val of
-	<<Bs:BsSize/bits,0:Rest>> ->
+	<<^Bs:BsSize/bits,0:Rest>> ->
 	    true;
 	_ ->
 	    throw(false)
@@ -125,7 +125,7 @@ check_named_bitstring(Val, Bs, BsSize) ->
 
 check_named_bitstring([_|_]=Val, Names, _, _) ->
     case lists:sort(Val) of
-	Names -> true;
+	^Names -> true;
 	_ -> throw(false)
     end;
 check_named_bitstring(Bs, _, Bs, _) ->
@@ -133,7 +133,7 @@ check_named_bitstring(Bs, _, Bs, _) ->
 check_named_bitstring(Val, _, Bs, BsSize) ->
     Rest = bit_size(Val) - BsSize,
     case Val of
-	<<Bs:BsSize/bits,0:Rest>> ->
+	<<^Bs:BsSize/bits,0:Rest>> ->
 	    true;
 	_ ->
 	    throw(false)
@@ -143,7 +143,7 @@ check_octetstring(V, V) ->
     true;
 check_octetstring(V, Def) when is_list(V) ->
     case list_to_binary(V) of
-	Def -> true;
+	^Def -> true;
 	_ -> throw(false)
     end;
 check_octetstring(_, _) ->
@@ -203,7 +203,7 @@ check_restrictedstring(_, _) ->
 
 check_literal_sof(Value, Default) ->
     case lists:sort(Value) of
-	Default ->
+	^Default ->
 	    true;
 	_ ->
 	    throw(false)

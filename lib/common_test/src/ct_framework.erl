@@ -92,10 +92,10 @@ init_tc(Mod,Func0,Args) ->
 	    {auto_skip,"Repeated test stopped by force_stop option"};
 	_ ->
 	    case ct_util:get_testdata(curr_tc) of
-		{Suite,{suite0_failed,{require,Reason}}} ->
+		{^Suite,{suite0_failed,{require,Reason}}} ->
                     initialize(false,Mod,Func,Args),
 		    {auto_skip,{require_failed_in_suite0,Reason}};
-		{Suite,{suite0_failed,_}=Failure} ->
+		{^Suite,{suite0_failed,_}=Failure} ->
                     initialize(false,Mod,Func,Args),
 		    {fail,Failure};
 		_ ->
@@ -110,7 +110,7 @@ init_tc(Mod,Func0,Args) ->
 			    init_tc1(Mod,Suite,Func,HookFunc,Args);
 			Seq when is_atom(Seq) ->
 			    case ct_util:read_suite_data({seq,Suite,Seq}) of
-				[Func|TCs] -> % this is the 1st case in Seq
+				[^Func|TCs] -> % this is the 1st case in Seq
 				    %% make sure no cases in this seq are
 				    %% marked as failed from an earlier execution
 				    %% in the same suite
@@ -144,7 +144,7 @@ init_tc1(?MODULE,_,error_in_suite,_,[Config0]) when is_list(Config0) ->
 init_tc1(Mod,Suite,Func,HookFunc,[Config0]) when is_list(Config0) ->
     Config1 = 
 	case ct_util:read_suite_data(last_saved_config) of
-	    {{Suite,LastFunc},SavedConfig} ->	% last testcase
+	    {{^Suite,LastFunc},SavedConfig} ->	% last testcase
 		[{saved_config,{LastFunc,SavedConfig}} | 
 		 lists:keydelete(saved_config,1,Config0)];
 	    {{LastSuite,InitOrEnd},
@@ -626,7 +626,7 @@ required_default(Name,Key,Info,_,_FuncSpec) ->
 try_set_default(Name,Key,Info,Where) ->
     CfgElems = 
 	case lists:keysearch(Name,1,Info) of
-	    {value,{Name,Val}} ->
+	    {value,{^Name,Val}} ->
 		[Val];
 	    false ->
 		case catch [{Key,element(3,Elem)} || Elem <- Info,
@@ -1119,7 +1119,7 @@ get_suite(Mod, Group={conf,Props,_Init,TCs,_End}) ->
                             %% as an explicit test) should not be returned, or
                             %% init/end functions for top groups will be executed
                             try ?val(name, element(2, hd(ConfTests))) of
-                                Name ->		% top group
+                                ^Name ->		% top group
                                     ct_groups:delete_subs(ConfTests, ConfTests);
                                 _ -> []
                             catch
@@ -1286,7 +1286,7 @@ get_seq(Mod, Func) ->
 		    [];
 		Seqs ->
 		    case lists:keysearch(Func,1,Seqs) of
-			{value,{Func,SeqTCs}} ->			    
+			{value,{^Func,SeqTCs}} ->			    
 			    case catch save_seq(Mod,Func,SeqTCs) of
 				{error,What} ->
 				    [{?MODULE,error_in_suite,[[{error,What}]]}];
@@ -1320,7 +1320,7 @@ save_seqs(Mod,AllTCs) ->
     
 save_seqs(Mod,[{sequence,Seq}|TCs],Seqs,All) ->
     case lists:keysearch(Seq,1,Seqs) of
-	{value,{Seq,SeqTCs}} ->
+	{value,{^Seq,SeqTCs}} ->
 	    save_seq(Mod,Seq,SeqTCs,All),
 	    [Seq|save_seqs(Mod,TCs,Seqs,All)];
 	false ->
@@ -1584,7 +1584,7 @@ add_data_dir(File,Config) when is_atom(File) ->
 
 add_data_dir(File,Config) when is_list(File) ->
     case filename:split(File) of
-	[File] ->
+	[^File] ->
 	    %% no user path, add data dir
 	    case lists:keysearch(data_dir,1,Config) of
 		{value,{data_dir,DataDir}} ->

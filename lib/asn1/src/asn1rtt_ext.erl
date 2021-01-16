@@ -79,9 +79,9 @@ transform_to_EXTERNAL1990_maps(#{encoding:=_}=V) ->
 transform_to_EXTERNAL1994({'EXTERNAL',DRef,IndRef,Data_v_desc,Encoding}=V) ->
     Identification =
 	case {DRef,IndRef} of
-	    {DRef,asn1_NOVALUE} ->
+	    {^DRef,asn1_NOVALUE} ->
 		{syntax,DRef};
-	    {asn1_NOVALUE,IndRef} ->
+	    {asn1_NOVALUE,^IndRef} ->
 		{'presentation-context-id',IndRef};
 	     _ ->
 		{'context-negotiation',

@@ -284,7 +284,7 @@ handle_cast(Event, _State) ->
 handle_info({active, Node}, State = #state{parent=Parent, current=Curr, appmon=Appmon}) ->
     create_menus(Parent, []),
     Pid = try
-	      Node = node(Appmon),
+	      ^Node = node(Appmon),
 	      Appmon
 	  catch _:_ ->
 		  {ok, P} = appmon_info:start_link(Node, self(), []),

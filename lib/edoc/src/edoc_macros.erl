@@ -32,6 +32,7 @@
 
 -export([expand_tags/3, std_macros/1, check_defs/1]).
 
+-compile({no_auto_import,[error/3]}).
 -import(edoc_report, [report/2, error/3, warning/4]).
 
 -include("edoc.hrl").

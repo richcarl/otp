@@ -150,7 +150,7 @@ disconnect(SSH) ->
 	{ok,Pid} ->
 	    try_log(heading(disconnect,SSH), "Handle: ~p", [Pid], 5000),
 	    case ct_gen_conn:stop(Pid) of
-		{error,{process_down,Pid,noproc}} ->
+		{error,{process_down,^Pid,noproc}} ->
 		    {error,already_closed};
 		Result ->
 		    Result
@@ -729,16 +729,16 @@ terminate(SSHRef, State) ->
 
 do_recv_response(SSH, Chn, Data, End, Timeout) ->
     receive
-	{ssh_cm, SSH, {open,Chn,RemoteChn,{session}}} ->
+	{ssh_cm, ^SSH, {open,^Chn,RemoteChn,{session}}} ->
 	    debug("RECVD open"),
 	    {ok,{open,Chn,RemoteChn,{session}}};
 
-	{ssh_cm, SSH, {closed,Chn}} ->
+	{ssh_cm, ^SSH, {closed,^Chn}} ->
 	    ssh_connection:close(SSH, Chn),
 	    debug("CLSD~n~p ~p", [SSH,Chn]),
 	    {ok,Data};
 
-	{ssh_cm, SSH, {data,Chn,_,NewData}} ->
+	{ssh_cm, ^SSH, {data,^Chn,_,NewData}} ->
 	    ssh_connection:adjust_window(SSH, Chn, size(NewData)),
 	    debug("RECVD~n~tp", [binary_to_list(NewData)]),
 	    DataAcc = Data ++ binary_to_list(NewData),
@@ -753,16 +753,16 @@ do_recv_response(SSH, Chn, Data, End, Timeout) ->
 		    do_recv_response(SSH, Chn, DataAcc, End, Timeout)
 	    end;
 
-	{ssh_cm, SSH, {eof,Chn}} ->
+	{ssh_cm, ^SSH, {eof,^Chn}} ->
 	    debug("RECVD EOF~n~p ~p", [SSH,Chn]),
 	    {ok,Data};
 
-	{ssh_cm, SSH, {exit_signal,Chn,Signal,Err,_Lang}} ->
+	{ssh_cm, ^SSH, {exit_signal,^Chn,Signal,Err,_Lang}} ->
 	    debug("RECVD exit_signal~n~p ~p~n~p ~p", [SSH,Chn,Signal,Err]),
 	    do_recv_response(SSH, Chn, Data, End, Timeout);
 	%%	    {ok,{exit_signal,Chn,Signal,Err,_Lang}};
 
-	{ssh_cm, SSH, {exit_status,Chn,Status}} ->
+	{ssh_cm, ^SSH, {exit_status,^Chn,Status}} ->
 	    debug("RECVD exit_status~n~p ~p~n~p", [SSH,Chn,Status]),
 	    do_recv_response(SSH, Chn, Data, End, Timeout);
 	%%	    {ok,{exit_status,Chn,_Status}};

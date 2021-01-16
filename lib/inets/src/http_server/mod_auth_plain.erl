@@ -51,7 +51,7 @@ add_user(DirData, #httpd_user{username = User} = UStruct) ->
 	      UStruct#httpd_user.password, 
 	      UStruct#httpd_user.user_data}, 
     case ets:lookup(PWDB, User) of
-	[{User, _SomePassword, _SomeData}] ->
+	[{^User, _SomePassword, _SomeData}] ->
 	    {error, user_already_in_db};
 	_ ->
 	    ets:insert(PWDB, Record),
@@ -61,7 +61,7 @@ add_user(DirData, #httpd_user{username = User} = UStruct) ->
 get_user(DirData, User) ->
     PWDB = proplists:get_value(auth_user_file, DirData),
     case ets:lookup(PWDB, User) of
-	[{User, PassWd, Data}] ->
+	[{^User, PassWd, Data}] ->
 	    {ok, #httpd_user{username  = User, 
 			     password  = PassWd, 
 			     user_data = Data}};
@@ -78,7 +78,7 @@ list_users(DirData) ->
 delete_user(DirData, UserName) ->
     PWDB = proplists:get_value(auth_user_file, DirData),
     case ets:lookup(PWDB, UserName) of
-	[{UserName, _SomePassword, _SomeData}] ->
+	[{^UserName, _SomePassword, _SomeData}] ->
 	    ets:delete(PWDB, UserName),
 	    {ok, Groups}  = list_groups(DirData),
 	    lists:foreach(fun(Group) -> 
@@ -94,7 +94,7 @@ delete_user(DirData, UserName) ->
 add_group_member(DirData, Group, UserName) ->
     GDB = proplists:get_value(auth_group_file, DirData),
     case ets:lookup(GDB, Group) of
-	[{Group, Users}] ->
+	[{^Group, Users}] ->
 	    case lists:member(UserName, Users) of
 		true ->
 		    true;
@@ -112,7 +112,7 @@ add_group_member(DirData, Group, UserName) ->
 list_group_members(DirData, Group) ->
     GDB = proplists:get_value(auth_group_file, DirData),
     case ets:lookup(GDB, Group) of
-	[{Group, Users}] ->
+	[{^Group, Users}] ->
 	    {ok, Users};
 	_ ->
 	    {error, no_such_group}
@@ -127,7 +127,7 @@ list_groups(DirData) ->
 delete_group_member(DirData, Group, User) ->
     GDB = proplists:get_value(auth_group_file, DirData),
     case ets:lookup(GDB, Group) of
-	[{Group, Users}] when is_list(Users) ->
+	[{^Group, Users}] when is_list(Users) ->
 	    case lists:member(User, Users) of
 		true ->
 		    ets:delete(GDB, Group),
@@ -143,7 +143,7 @@ delete_group_member(DirData, Group, User) ->
 delete_group(DirData, Group) ->
     GDB = proplists:get_value(auth_group_file, DirData),
     case ets:lookup(GDB, Group) of
-	[{Group, _Users}] ->
+	[{^Group, _Users}] ->
 	    ets:delete(GDB, Group),
 	    true;
 	_ ->

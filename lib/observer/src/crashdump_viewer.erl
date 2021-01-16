@@ -197,7 +197,7 @@ stop() ->
 	Pid ->
 	    Ref = erlang:monitor(process,Pid),
 	    cast(stop),
-	    receive {'DOWN', Ref, process, Pid, _} -> ok end
+	    receive {'DOWN', ^Ref, process, ^Pid, _} -> ok end
     end.
 
 %%%-----------------------------------------------------------------
@@ -228,9 +228,9 @@ do_script_start(StartFun) ->
 		Pid when is_pid(Pid) ->
 		    link(Pid),
 		    receive
-			{'EXIT', Pid, normal} ->
+			{'EXIT', ^Pid, normal} ->
 			    ok;
-			{'EXIT', Pid, Reason} ->
+			{'EXIT', ^Pid, Reason} ->
 			    io:format("\ncdv crash: ~tp\n",[Reason])
 		    end;
 		_ ->
@@ -589,9 +589,9 @@ truncated_here(Tag) ->
     case get(truncated) of
 	true ->
 	    case get(last_tag) of
-		{Tag,_Pos} -> % Tag == {TagType,Id}
+		{^Tag,_Pos} -> % Tag == {TagType,Id}
 		    true;
-		{{Tag,_Id},_Pos} ->
+		{{^Tag,_Id},_Pos} ->
 		    true;
 		_LastTag ->
 		    truncated_earlier(Tag)
@@ -1406,7 +1406,7 @@ parse_monitor(MonBin) ->
 
 get_pid_from_name(Name,Node) ->
     case ets:lookup(cdv_reg_proc_table,cdv_dump_node_name) of
-	[{_,Node}] ->
+	[{_,^Node}] ->
 	    case ets:lookup(cdv_reg_proc_table,Name) of
 		[{_,Pid}] when is_pid(Pid) ->
 		    pid_to_list(Pid);
@@ -1531,7 +1531,7 @@ read_stack_dump1(Fd,DecodeOpts,Dict,Acc) ->
 
 parse_top(Line0, DecodeOpts, D) ->
     {Label,Line1} = get_label(Line0),
-    {Term,Line,D} = parse_term(Line1, DecodeOpts, D),
+    {Term,Line,^D} = parse_term(Line1, DecodeOpts, D),
     [] = skip_blanks(Line),
     {Label,Term}.
 
@@ -2485,7 +2485,7 @@ sort_allocator_types([{Name,Data}|Allocators],Acc,DoTotal) ->
     Type =
 	case string:lexemes(Name,"[]") of
 	    [T,_Id] -> T;
-	    [Name] -> Name;
+	    [^Name] -> Name;
             Other -> Other
 	end,
     TypeData = proplists:get_value(Type,Acc,[]),
@@ -2574,7 +2574,7 @@ update_value(Key,Value,Acc) ->
     case lists:keytake(Key,1,Acc) of
 	false ->
 	    [{Key,Value}|Acc];
-	{value,{Key,Old},Acc1} ->
+	{value,{^Key,Old},Acc1} ->
 	    [{Key,Old+Value}|Acc1]
     end.
 
@@ -2901,7 +2901,7 @@ parse_heap_term("Mh"++Line0, Addr, DecodeOpts, D0) -> %Head node in a hashmap.
     {N,":"++Line2} = get_hex(Line1),
     {Nodes,Line,D1} = parse_tuple(N, Line2, Addr, DecodeOpts, D0, []),
     Map = maps:from_list(flatten_hashmap_nodes(Nodes)),
-    MapSize = maps:size(Map),                   %Assertion.
+    ^MapSize = maps:size(Map),                   %Assertion.
     D = gb_trees:update(Addr, Map, D1),
     {Map,Line,D};
 parse_heap_term("Mn"++Line0, Addr, DecodeOpts, D) -> %Interior node in a hashmap.

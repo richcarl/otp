@@ -329,7 +329,7 @@ get_wx_object_state(_, _) ->
 attach_fun(Fun, S = #state{cb=CB,cb_cnt=Next}) ->
     case gb_trees:lookup(Fun,CB) of
 	{value, ID} ->
-	    {Fun, N} = get(ID),
+	    {^Fun, N} = get(ID),
 	    put(ID, {Fun,N+1}),
 	    {ID,S};
 	none ->

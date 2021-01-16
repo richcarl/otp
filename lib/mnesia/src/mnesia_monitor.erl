@@ -231,7 +231,7 @@ call(Msg) ->
 
             %% We get an exit signal if server dies
 	    receive
-		{'EXIT', Pid, _Reason} ->
+		{'EXIT', ^Pid, _Reason} ->
 		    {error, {node_not_running, node()}}
 	    after 0 ->
 		    Res
@@ -347,7 +347,7 @@ handle_call({unsafe_mktab, Tab, Args}, _From, State) ->
 
 handle_call({open_dets, Tab, Args}, _From, State) ->
     case mnesia_lib:dets_sync_open(Tab, Args) of
-	{ok, Tab} ->
+	{ok, ^Tab} ->
 	    {reply, {ok, Tab}, State};
 
 	{error, Reason} ->
@@ -359,7 +359,7 @@ handle_call({open_dets, Tab, Args}, _From, State) ->
 
 handle_call({unsafe_open_dets, Tab, Args}, _From, State) ->
     case mnesia_lib:dets_sync_open(Tab, Args) of
-	{ok, Tab} ->
+	{ok, ^Tab} ->
 	    {reply, {ok, Tab}, State};
 	{error, Reason} ->
 	    {reply, {error,Reason}, State}
@@ -506,7 +506,7 @@ handle_cast({mnesia_down, mnesia_tm, Node}, State) ->
     Pending = State#state.pending_negotiators,
     State3 = check_raise_conditon_nodeup(Node, State2),
     case lists:keysearch(Node, 1, Pending) of
-	{value, {Node, Mon, ReplyTo, Reply}} ->
+	{value, {^Node, Mon, ReplyTo, Reply}} ->
 	    %% Late reply to remote monitor
 	    link(Mon),  %% link to remote Monitor
 	    gen_server:reply(ReplyTo, Reply),
@@ -577,7 +577,7 @@ handle_info(Msg = {'EXIT',Pid,_}, State) ->
     end;
 
 handle_info({protocol_negotiated, From,Res}, State) ->
-    From = element(1,State#state.connecting),
+    ^From = element(1,State#state.connecting),
     gen_server:reply(From, Res),
     process_q(State#state{connecting = undefined});
 
@@ -863,7 +863,7 @@ update_node_status({Node, down}, State = #state{remote_node_status = RNodeS}) ->
     State#state{remote_node_status = RNodeS2};
 update_node_status({Node, up}, State = #state{remote_node_status = RNodeS}) ->
     case lists:keyfind(Node, 1, RNodeS) of
-	{Node, down} ->
+	{^Node, down} ->
 	    RNodeS2 = lists:ukeymerge(1, [{Node, up}], RNodeS),
 	    State#state{remote_node_status = RNodeS2};
 	_ ->
@@ -872,7 +872,7 @@ update_node_status({Node, up}, State = #state{remote_node_status = RNodeS}) ->
 
 check_raise_conditon_nodeup(Node, State = #state{remote_node_status = RNodeS}) ->
     case lists:keyfind(Node, 1, RNodeS) of
-	{Node, up} ->
+	{^Node, up} ->
 	    self() ! {check_nodeup, Node};
 	_ ->
 	    ignore

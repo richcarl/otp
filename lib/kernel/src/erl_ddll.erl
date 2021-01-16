@@ -161,13 +161,13 @@ do_load_driver(Path, Driver, DriverFlags) ->
 	    ok;
 	{ok, pending_driver, Ref} ->
 	    receive
-		{'DOWN', Ref, driver, _, load_cancelled} ->
+		{'DOWN', ^Ref, driver, _, load_cancelled} ->
 		    {error, load_cancelled};
-		{'UP', Ref, driver, _, permanent} ->
+		{'UP', ^Ref, driver, _, permanent} ->
 		    {error, permanent}; 
-		{'DOWN', Ref, driver, _, {load_failure, Failure}} ->
+		{'DOWN', ^Ref, driver, _, {load_failure, Failure}} ->
 		    {error, Failure};
-		{'UP', Ref, driver, _, loaded} ->
+		{'UP', ^Ref, driver, _, loaded} ->
 		    ok
 	    end
     end.
@@ -184,11 +184,11 @@ do_unload_driver(Driver,Flags) ->
 	    ok;
 	{ok, pending_driver, Ref} ->
 	    receive
-		{'UP', Ref, driver, _, permanent} ->
+		{'UP', ^Ref, driver, _, permanent} ->
 		    {error, permanent}; 
-		{'UP', Ref, driver, _, unload_cancelled} ->
+		{'UP', ^Ref, driver, _, unload_cancelled} ->
 		    ok;
-		{'DOWN', Ref, driver, _, unloaded} ->
+		{'DOWN', ^Ref, driver, _, unloaded} ->
 		    ok
 	    end
     end.

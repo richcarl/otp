@@ -343,7 +343,7 @@ cleanup(Config) ->
 %% ct_release_tests.
 get_app_vsns(#ct_data{from=FromApps,to=ToApps},App) ->
     case {lists:keyfind(App,1,FromApps),lists:keyfind(App,1,ToApps)} of
-	{{App,FromVsn,_},{App,ToVsn,_}} ->
+	{{^App,FromVsn,_},{^App,ToVsn,_}} ->
 	    {ok,{FromVsn,ToVsn}};
 	_ ->
 	    {error,{app_not_found,App}}
@@ -375,10 +375,10 @@ get_app_vsns(#ct_data{from=FromApps,to=ToApps},App) ->
 %% instructions.
 get_appup(#ct_data{from=FromApps,to=ToApps},App) ->
     case lists:keyfind(App,1,ToApps) of
-	{App,ToVsn,ToDir} ->
+	{^App,ToVsn,ToDir} ->
 	    Appup = filename:join([ToDir, "ebin", atom_to_list(App)++".appup"]),
-	    {ok, [{ToVsn, Ups, Downs}]} = file:consult(Appup),
-	    {App,FromVsn,_} = lists:keyfind(App,1,FromApps),
+	    {ok, [{^ToVsn, Ups, Downs}]} = file:consult(Appup),
+	    {^App,FromVsn,_} = lists:keyfind(App,1,FromApps),
 	    case {systools_relup:appup_search_for_version(FromVsn,Ups),
 		  systools_relup:appup_search_for_version(FromVsn,Downs)} of
 		{{ok,Up},{ok,Down}} ->
@@ -639,21 +639,21 @@ do_upgrade({Cb,InitState},FromVsn,FromAppsVsns,ToRel,ToAppsVsns,InstallDir) ->
     CtData = #ct_data{from = FromAppsVsns,to=ToAppsVsns},
     State1 = do_callback(Node,Cb,upgrade_init,[CtData,InitState]),
 
-    [{"OTP upgrade test",FromVsn,_,permanent}] =
+    [{"OTP upgrade test",^FromVsn,_,permanent}] =
 	rpc:call(Node,release_handler,which_releases,[]),
     ToRelName = filename:basename(ToRel),
     copy_file(ToRel++".tar.gz",
 	      filename:join([InstallDir,releases,ToRelName++".tar.gz"])),
     ct:log("Unpacking new release"),
     {ok,ToVsn} = rpc:call(Node,release_handler,unpack_release,[ToRelName]),
-    [{"OTP upgrade test",ToVsn,_,unpacked},
-     {"OTP upgrade test",FromVsn,_,permanent}] =
+    [{"OTP upgrade test",^ToVsn,_,unpacked},
+     {"OTP upgrade test",^FromVsn,_,permanent}] =
 	rpc:call(Node,release_handler,which_releases,[]),
     ct:log("Installing new release"),
     case rpc:call(Node,release_handler,install_release,[ToVsn]) of
-	{ok,FromVsn,_} ->
+	{ok,^FromVsn,_} ->
 	    ok;
-	{continue_after_restart,FromVsn,_} ->
+	{continue_after_restart,^FromVsn,_} ->
 	    ct:log("Waiting for node restart")
     end,
     %% even if install_release returned {ok,...} there might be an
@@ -661,22 +661,22 @@ do_upgrade({Cb,InitState},FromVsn,FromAppsVsns,ToRel,ToAppsVsns,InstallDir) ->
     %% always make sure the node is running.
     {ok, _} = wait_node_up(current,ToVsn,ToAppsVsns),
 
-    [{"OTP upgrade test",ToVsn,_,current},
-     {"OTP upgrade test",FromVsn,_,permanent}] =
+    [{"OTP upgrade test",^ToVsn,_,current},
+     {"OTP upgrade test",^FromVsn,_,permanent}] =
 	rpc:call(Node,release_handler,which_releases,[]),
     ct:log("Permanenting new release"),
     ok = rpc:call(Node,release_handler,make_permanent,[ToVsn]),
-    [{"OTP upgrade test",ToVsn,_,permanent},
-     {"OTP upgrade test",FromVsn,_,old}] =
+    [{"OTP upgrade test",^ToVsn,_,permanent},
+     {"OTP upgrade test",^FromVsn,_,old}] =
 	rpc:call(Node,release_handler,which_releases,[]),
 
     State2 = do_callback(Node,Cb,upgrade_upgraded,[CtData,State1]),
 
     ct:log("Re-installing old release"),
     case rpc:call(Node,release_handler,install_release,[FromVsn]) of
-	{ok,FromVsn,_} ->
+	{ok,^FromVsn,_} ->
 	    ok;
-	{continue_after_restart,FromVsn,_} ->
+	{continue_after_restart,^FromVsn,_} ->
 	    ct:log("Waiting for node restart")
     end,
     %% even if install_release returned {ok,...} there might be an
@@ -684,13 +684,13 @@ do_upgrade({Cb,InitState},FromVsn,FromAppsVsns,ToRel,ToAppsVsns,InstallDir) ->
     %% always make sure the node is running.
     {ok, _} = wait_node_up(current,FromVsn,FromAppsVsns),
 
-    [{"OTP upgrade test",ToVsn,_,permanent},
-     {"OTP upgrade test",FromVsn,_,current}] =
+    [{"OTP upgrade test",^ToVsn,_,permanent},
+     {"OTP upgrade test",^FromVsn,_,current}] =
 	rpc:call(Node,release_handler,which_releases,[]),
     ct:log("Permanenting old release"),
     ok = rpc:call(Node,release_handler,make_permanent,[FromVsn]),
-    [{"OTP upgrade test",ToVsn,_,old},
-     {"OTP upgrade test",FromVsn,_,permanent}] =
+    [{"OTP upgrade test",^ToVsn,_,old},
+     {"OTP upgrade test",^FromVsn,_,permanent}] =
 	rpc:call(Node,release_handler,which_releases,[]),
 
     _State3 = do_callback(Node,Cb,upgrade_downgraded,[CtData,State2]),
@@ -698,7 +698,7 @@ do_upgrade({Cb,InitState},FromVsn,FromAppsVsns,ToRel,ToAppsVsns,InstallDir) ->
     ct:log("Terminating node ~p",[Node]),
     erlang:monitor_node(Node,true),
     _ = rpc:call(Node,init,stop,[]),
-    receive {nodedown,Node} -> ok end,
+    receive {nodedown,^Node} -> ok end,
     ct:log("Node terminated"),
 
     ok.
@@ -792,7 +792,7 @@ get_runtime_deps([App|Apps],StartApps,Acc,Visited) ->
 	    %% application:get_key/2, but still isn't so we need to
 	    %% read the .app file...
 	    AppFile = code:where_is_file(atom_to_list(App) ++ ".app"),
-	    {ok,[{application,App,Attrs}]} = file:consult(AppFile),
+	    {ok,[{application,^App,Attrs}]} = file:consult(AppFile),
 	    RuntimeDeps =
 		lists:flatmap(
 		  fun(Str) ->
@@ -891,10 +891,10 @@ wait_node_up(Node,ExpStatus,ExpVsn,ExpAppsVsns,0) ->
 wait_node_up(Node,ExpStatus,ExpVsn,ExpAppsVsns,N) ->
     case {rpc:call(Node,release_handler,which_releases,[ExpStatus]),
 	  rpc:call(Node, application, which_applications, [])} of
-	{[{_,ExpVsn,_,_}],Apps} when is_list(Apps) ->
+	{[{_,^ExpVsn,_,_}],Apps} when is_list(Apps) ->
 	    case [{A,V} || {A,_,V} <- lists:keysort(1,Apps),
                            lists:keymember(A,1,ExpAppsVsns)] of
-		ExpAppsVsns ->
+		^ExpAppsVsns ->
 		    {ok,Node};
 		_ ->
 		    timer:sleep(2000),

@@ -532,7 +532,7 @@ create_box(Parent, Data) ->
 			     _ ->
 				 Value = to_str(Value0),
                                  case string:nth_lexeme(lists:sublist(Value, 80),1, [$\n]) of
-                                     Value ->
+                                     ^Value ->
                                          %% Short string, no newlines - show all
 					 wxStaticText:new(Panel, ?wxID_ANY, Value);
                                      Shown ->
@@ -766,7 +766,7 @@ destroy_progress_dialog() ->
 sync_destroy_progress_dialog() ->
     Ref = erlang:monitor(process,?progress_handler),
     destroy_progress_dialog(),
-    receive {'DOWN',Ref,process,_,_} -> ok end.
+    receive {'DOWN',^Ref,process,_,_} -> ok end.
 
 report_progress(Progress) ->
     case whereis(?progress_handler) of

@@ -60,7 +60,7 @@ lookup(Table,Key) ->
 
 lookup(Table,Key,Undefined) ->
     case catch ets:lookup(Table,Key) of
-	[{Key,Value}|_] ->
+	[{^Key,Value}|_] ->
 	    Value;
 	_->
 	    Undefined
@@ -86,7 +86,7 @@ lookup_mime(ConfigDB,Suffix,Undefined) ->
     case ets:lookup(MimeTypesDB,Suffix) of
 	[] ->
 	    Undefined;
-	[{Suffix,MimeType}|_] ->
+	[{^Suffix,MimeType}|_] ->
 	    MimeType
     end.
 
@@ -105,7 +105,7 @@ lookup_mime_default(ConfigDB,Suffix,Undefined) ->
 		[{default_type,DefaultType}|_] ->
 		    DefaultType
 	    end;
-	[{Suffix,MimeType}|_] ->
+	[{^Suffix,MimeType}|_] ->
 	    MimeType
     end.
 
@@ -555,7 +555,7 @@ make_name2(Addr) ->
 search_and_replace(S,A,B) ->
     Fun = fun(What) -> 
                   case What of
-                      A -> B;
+                      ^A -> B;
                       O -> O
                   end
           end,

@@ -303,7 +303,7 @@ is_tmask_match([H1 | T1], [H2 | T2], [M1 | M2]) ->
 %%--------------------------------------------------
 assq(Key, List) ->
     case lists:keysearch(Key, 1, List) of
-	{value, {Key, Val}} -> {value, Val};
+	{value, {^Key, Val}} -> {value, Val};
 	_ -> false
     end.
     

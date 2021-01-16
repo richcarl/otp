@@ -360,7 +360,7 @@ get_target_addr_ext_mms(TDomain, TAddress, Key) ->
 		   snmpTargetAddrTable, NextKey, [?snmpTargetAddrTDomain,
 						  ?snmpTargetAddrTAddress,
 						  12]) of
-		[{value, TDomain}, {value, TAddress}, {value, MMS}] ->
+		[{value, ^TDomain}, {value, ^TAddress}, {value, MMS}] ->
 		    {ok, MMS};
 		_ ->
 		    get_target_addr_ext_mms(TDomain, TAddress, NextKey)
@@ -455,7 +455,7 @@ snmpCommunityTable(Op, Arg1, Arg2) ->
 verify_snmpCommunityTable_is_set_ok(Cols) ->
     LocalEngineID = snmp_framework_mib:get_engine_id(),
     case lists:keysearch(?snmpCommunityContextEngineID, 1, Cols) of
-	{value, {_, LocalEngineID}} -> 
+	{value, {_, ^LocalEngineID}} -> 
 	    {ok, Cols};
 	{value, _} -> 
 	    {inconsistentValue, ?snmpCommunityContextEngineID};

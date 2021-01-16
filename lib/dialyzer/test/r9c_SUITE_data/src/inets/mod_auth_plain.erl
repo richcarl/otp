@@ -94,7 +94,7 @@ delete_user(DirData, UserName) ->
 	    case list_groups(DirData) of
 		{ok,Groups}->
 		    lists:foreach(fun(Group) ->
-					  delete_group_member(DirData, Group, UserName)
+					  delete_group_member(DirData, ^Group, UserName)
 				  end,Groups),
 		    true;
 		_->
@@ -112,7 +112,7 @@ delete_user(DirData, UserName) ->
 add_group_member(DirData, Group, UserName) ->
     ?DEBUG("add_group_members -> ~n"
 	   "    Group:    ~p~n"
-	   "    UserName: ~p",[Group,UserName]),
+	   "    UserName: ~p",[^Group,UserName]),
     GDB = httpd_util:key1search(DirData, auth_group_file),
     case ets:lookup(GDB, Group) of
 	[{Group, Users}] ->
@@ -127,7 +127,7 @@ add_group_member(DirData, Group, UserName) ->
 	    end;
 	[] ->
 	    ?DEBUG("add_group_members -> create grouo",[]),
-	    ets:insert(GDB, {Group, [UserName]}),
+	    ets:insert(GDB, {^Group, [UserName]}),
 	    true;
 	Other ->
 	    ?ERROR("add_group_members -> Other: ~p",[Other]),

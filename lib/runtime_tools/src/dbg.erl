@@ -408,7 +408,7 @@ trace_port_control(Node, Command, Arg) ->
 deliver_and_flush(Port) ->
     Ref = erlang:trace_delivered(all),
     receive
-	{trace_delivered,all,Ref} -> ok
+	{trace_delivered,all,^Ref} -> ok
     end,
     erlang:port_control(Port, $f, "").
 					   
@@ -541,7 +541,7 @@ stop_trace_client(Pid) when is_pid(Pid) ->
     link(Pid),
     exit(to_pidspec(Pid),abnormal),
     Res = receive 
-	      {'EXIT', Pid, _} ->
+	      {'EXIT', ^Pid, _} ->
 		  ok
 	  after 5000 ->
 		  {error, timeout}
@@ -572,10 +572,10 @@ c(M, F, A, Flags) ->
 	    Pid = spawn(fun() -> c(S, M, F, A, [get_tracer_flag() | Flags1]) end),
 	    Mref = erlang:monitor(process, Pid),
 	    receive
-		{'DOWN', Mref, _, _, Reason} ->
+		{'DOWN', ^Mref, _, _, Reason} ->
 		    stop_clear(),
 		    {error, Reason};
-		{Pid, Res} ->
+		{^Pid, Res} ->
 		    erlang:demonitor(Mref, [flush]),
 		    %% 'sleep' prevents the tracer (recv_all_traces) from
 		    %% receiving garbage {'EXIT',...} when dbg i stopped.
@@ -598,7 +598,7 @@ stop() ->
     Mref = erlang:monitor(process, dbg),
     catch dbg ! {self(),stop},
     receive
-	{'DOWN',Mref,_,_,_} ->
+	{'DOWN',^Mref,_,_,_} ->
 	    ok
     end.
 
@@ -615,7 +615,7 @@ req(R) ->
     Mref = erlang:monitor(process, P),
     catch P ! {self(), R}, % May crash if P = atom() and server died
     receive
-	{'DOWN', Mref, _, _, _} -> % If server died
+	{'DOWN', ^Mref, _, _, _} -> % If server died
 	    exit(dbg_server_crash);
 	{dbg, Reply} ->
 	    erlang:demonitor(Mref, [flush]),
@@ -647,7 +647,7 @@ start(TracerFun) ->
     case whereis(dbg) of
 	undefined ->
 	    Dbg = spawn(fun() -> init(S) end),
-	    receive {Dbg,started} -> ok end,
+	    receive {^Dbg,started} -> ok end,
 	    case TracerFun of
 		no_tracer ->
 		    {ok, Dbg};
@@ -778,9 +778,9 @@ loop({C,T}=SurviveLinks, Table) ->
 	    loop(SurviveLinks, Table);
 	{'EXIT', Pid, Reason} ->
 	    case lists:delete(Pid, C) of
-		C ->
+		^C ->
 		    case lists:delete(Pid,T) of
-			T ->
+			^T ->
                             Modifier = modifier(user),
 			    io:format(user,
                                       "** dbg got EXIT - terminating: ~"++
@@ -1551,7 +1551,7 @@ get_tracer_flag() ->
 get_tracer_flag({Module,State}) ->
     {tracer, Module, State};
 get_tracer_flag(Port = Pid) when is_port(Port); is_pid(Pid)->
-    {tracer, Pid = Port}.
+    {tracer, ^Pid = Port}.
 
 save_pattern([]) ->
     0;
@@ -1565,7 +1565,7 @@ save_pattern(Pattern, PT) ->
 	[] ->
 	    ets:insert(PT, {Last + 1, BPattern}),
 	    Last + 1;
-	[{N, BPattern}] ->
+	[{N, ^BPattern}] ->
 	    N
     end.
 

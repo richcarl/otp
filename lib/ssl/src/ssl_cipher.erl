@@ -1068,7 +1068,7 @@ generic_block_cipher_from_bin({3, N}, T, IV, HashSize)
 		end,
     CompressedLength = byte_size(T) - PadLength - 1 - HashSize,
     <<Content:CompressedLength/binary, Mac:HashSize/binary,
-     Padding:PadLength/binary, ?BYTE(PadLength0)>> = T,
+     Padding:PadLength/binary, ?BYTE(^PadLength0)>> = T,
     #generic_block_cipher{content=Content, mac=Mac,
 			  padding=Padding, padding_length=PadLength0,
 			  next_iv = IV};
@@ -1080,7 +1080,7 @@ generic_block_cipher_from_bin({3, N}, T, IV, HashSize)
     IVLength = byte_size(IV),
     CompressedLength = byte_size(T) - IVLength - PadLength - 1 - HashSize,
     <<NextIV:IVLength/binary, Content:CompressedLength/binary, Mac:HashSize/binary,
-      Padding:PadLength/binary, ?BYTE(PadLength)>> = T,
+      Padding:PadLength/binary, ?BYTE(^PadLength)>> = T,
     #generic_block_cipher{content=Content, mac=Mac,
 			  padding=Padding, padding_length=PadLength,
 			  next_iv = NextIV}.

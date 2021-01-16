@@ -150,7 +150,7 @@ arg([Bad | _], _) ->
 
 path_exists(File, Type) ->
     case file:read_file_info(File) of
-	{ok, #file_info{type = Type}} ->
+	{ok, #file_info{type = ^Type}} ->
 	    true;
 	{ok, #file_info{type = WrongType}} ->
 	    throw({"Invalid type for file: ~p, ~p", [WrongType, File]});

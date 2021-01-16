@@ -99,10 +99,10 @@ init(Mode, Verbosity) ->
     Pid = spawn_link(fun() -> logger(Self, Mode, Verbosity) end),
     MRef = erlang:monitor(process,Pid),
     receive 
-	{started,Pid,Result} -> 
+	{started,^Pid,Result} -> 
 	    erlang:demonitor(MRef, [flush]),
 	    Result;
-	{'DOWN',MRef,process,_,Reason} ->
+	{'DOWN',^MRef,process,_,Reason} ->
 	    exit({could_not_start_process,?MODULE,Reason})
     end.
     
@@ -161,7 +161,7 @@ close(Info, StartDir) ->
 	    MRef = erlang:monitor(process,Pid),
 	    ?MODULE ! stop,
 	    receive
-		{'DOWN',MRef,process,_,_} ->
+		{'DOWN',^MRef,process,_,_} ->
 		    ok
 	    end;
 	undefined ->
@@ -242,10 +242,10 @@ call(Msg) ->
 	    Ref = make_ref(),
 	    Pid ! {Msg,{self(),Ref}},
 	    receive
-		{Ref, Result} -> 
+		{^Ref, Result} -> 
 		    erlang:demonitor(MRef, [flush]),
 		    Result;
-		{'DOWN',MRef,process,_,Reason}  -> 
+		{'DOWN',^MRef,process,_,Reason}  -> 
 		    {error,{process_down,?MODULE,Reason}}
 	    end
     end.
@@ -629,7 +629,7 @@ div_footer() ->
 maybe_log_timestamp() ->
     {MS,S,US} = ?now,
     case get(log_timestamp) of
-	{MS,S,_} ->
+	{^MS,^S,_} ->
 	    ok;
 	_ ->
 	    cast({log,sync,self(),group_leader(),ct_internal,?MAX_IMPORTANCE,
@@ -1092,7 +1092,7 @@ get_groupleader(Pid,GL,State) ->
 			    {ct_log,State#logger_state.ct_log_fd,TCGLs}
 		    end
 	    end;
-	{_,GL} ->
+	{_,^GL} ->
 	    {tc_log,GL,TCGLs};
 	_ ->
 	    %% special case where a test case io process has changed
@@ -1532,10 +1532,10 @@ not_built(BaseName,_LogDir,_All,Missing) ->
 
 locate_info(Path={Top,Obj},AllOrSuite,[{{Dir,Suite},Failed}|Errors]) ->
     case lists:reverse(filename:split(Dir)) of
-	["test",Obj,Top|_] ->
+	["test",^Obj,^Top|_] ->
 	    get_missing_suites(AllOrSuite,{Suite,Failed}) ++
 		locate_info(Path,AllOrSuite,Errors);
-	[Obj,Top|_] ->
+	[^Obj,^Top|_] ->
 	    get_missing_suites(AllOrSuite,{Suite,Failed}) ++
 		locate_info(Path,AllOrSuite,Errors);
 	_ ->
@@ -2513,7 +2513,7 @@ sort_and_filter_logdirs(NewDirs,_CachedTests) ->
 %% sort latest dirs found and combine them with cached entries
 sort_and_filter_logdirs([{TestName,IxDirs}|Tests],CachedTests,Combined) ->
     case lists:keysearch(TestName,1,CachedTests) of
-	{value,{TestName,_,_,{IxDir0,_,_},IxDirs0}} ->
+	{value,{^TestName,_,_,{IxDir0,_,_},IxDirs0}} ->
 	    Groups = sort_and_filter_logdirs2(TestName,
 					      IxDirs++[IxDir0|IxDirs0],
 					      []),
@@ -2913,7 +2913,7 @@ cache_vsn() ->
 
 is_correct_cache_vsn(#log_cache{version = CVSN}) ->
     case cache_vsn() of
-	CVSN -> true;
+	^CVSN -> true;
 	_    -> false
     end.
 
@@ -3002,7 +3002,7 @@ simulate() ->
 			S ! {self(),started},
 			simulate_logger_loop() 
 		end),
-    receive {Pid,started} -> Pid end.
+    receive {^Pid,started} -> Pid end.
 
 
 simulate_logger_loop() ->

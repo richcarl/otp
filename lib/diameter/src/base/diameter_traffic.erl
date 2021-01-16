@@ -1361,9 +1361,9 @@ recv_A(MRef, _, true, true) ->
 
 recv_A(MRef, Ref, Detach, Sent) ->
     receive
-        Ref ->  %% send has been attempted
+        ^Ref ->  %% send has been attempted
             recv_A(MRef, Ref, Detach, true);
-        {'DOWN', MRef, process, _, Reason} ->
+        {'DOWN', ^MRef, process, _, Reason} ->
             answer_rc(Reason, Ref, Sent)
     end.
 
@@ -1632,13 +1632,13 @@ recv_answer(SvcName, App, CallOpts, {TRef, MRef, #request{ref = Ref}
     %% includes the pid of the transport on which it was received,
     %% which may not be the last peer to which we've transmitted.
     receive
-        {answer = A, Ref, TPid, Dict0, Pkt} ->  %% Answer from peer
+        {answer = A, ^Ref, TPid, Dict0, Pkt} ->  %% Answer from peer
             {A, #request{} = erase(TPid), Dict0, Pkt};
-        {timeout = Reason, TRef, _} ->        %% No timely reply
+        {timeout = Reason, ^TRef, _} ->        %% No timely reply
             {error, Req, Reason};
-        {'DOWN', MRef, process, _, _} when false /= MRef -> %% local peer_down
+        {'DOWN', ^MRef, process, _, _} when false /= MRef -> %% local peer_down
             failover(SvcName, App, Req, CallOpts);
-        {failover, TRef} ->                   %% local or remote peer_down
+        {failover, ^TRef} ->                   %% local or remote peer_down
             failover(SvcName, App, Req, CallOpts)
     end.
 
@@ -1887,12 +1887,12 @@ recv(TPid, TRef, {LocalTRef, MRef}) ->
     receive
         {answer, _, _, _, _} = A ->
             A;
-        {'DOWN', MRef, process, _, _} ->
+        {'DOWN', ^MRef, process, _, _} ->
             {failover, TRef};
-        {failover = T, LocalTRef} ->
+        {failover = T, ^LocalTRef} ->
             {T, TRef};
         T ->
-            exit({timeout, LocalTRef, TPid} = T)
+            exit({timeout, ^LocalTRef, ^TPid} = T)
     end.
 
 %% send/3

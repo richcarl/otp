@@ -820,12 +820,12 @@ subst_1({template, Type, Attrs, Groups}, Env) ->
     {template, Type, Attrs, Gs1};
 subst_1({Var}=V, Env) ->
     case lists:keyfind(Var, 1, Env) of
-        {Var, TreeOrTrees} -> TreeOrTrees;
+        {^Var, TreeOrTrees} -> TreeOrTrees;
         false -> V
     end;
 subst_1({'*',Var}=V, Env) ->
     case lists:keyfind(Var, 1, Env) of
-        {Var, TreeOrTrees} -> TreeOrTrees;
+        {^Var, TreeOrTrees} -> TreeOrTrees;
         false -> V
     end;
 subst_1(Leaf, _Env) ->
@@ -848,12 +848,12 @@ alpha_1({template, Type, Attrs, Groups}, Env) ->
     {template, Type, Attrs, Gs1};
 alpha_1({Var}=V, Env) ->
     case lists:keyfind(Var, 1, Env) of
-        {Var, NewVar} -> {NewVar};
+        {^Var, NewVar} -> {NewVar};
         false -> V
     end;
 alpha_1({'*',Var}=V, Env) ->
     case lists:keyfind(Var, 1, Env) of
-        {Var, NewVar} -> {'*',NewVar};
+        {^Var, NewVar} -> {'*',NewVar};
         false -> V
     end;
 alpha_1(Leaf, _Env) ->
@@ -894,7 +894,7 @@ match_1(_, _, _Dict) ->
 %% match a template against a syntax tree
 match_template({template, Type, _, Gs}, Tree, Dict) ->
     case type(Tree) of
-        Type -> match_template_1(Gs, subtrees(Tree), Dict);
+        ^Type -> match_template_1(Gs, subtrees(Tree), Dict);
         _ -> throw(error)  % type mismatch
     end;
 match_template({Var}, _Tree, Dict)
@@ -947,7 +947,7 @@ match_glob(_, _, _, _Dict) ->
 compare_trees(T1, T2) ->
     Type1 = type(T1),
     case type(T2) of
-        Type1 ->
+        ^Type1 ->
             case subtrees(T1) of
                 [] ->
                     case subtrees(T2) of
@@ -1233,7 +1233,7 @@ merge_comments(StartLine, [C|Cs], [T|Ts], Acc) ->
         Pos when Pos < CommentLine ->
             %% TODO: traverse sub-tree rather than only the top level nodes
             merge_comments(StartLine, [C|Cs], Ts, [T|Acc]);
-        CommentLine ->
+        ^CommentLine ->
             Tc = erl_syntax:add_postcomments(
                    [erl_syntax:comment(Indent, Text)], T),
             merge_comments(StartLine, Cs, [Tc|Ts], Acc);

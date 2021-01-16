@@ -95,7 +95,7 @@ check_all_callbacks(_Module, _Behaviour, [], _State, Acc) ->
 check_all_callbacks(Module, Behaviour, [Cb|Rest],
 		    #state{plt = Plt, codeserver = Codeserver,
 			   records = Records} = State, Acc) ->
-  {{Behaviour, Function, Arity},
+  {{^Behaviour, Function, Arity},
    {{_BehFile, _BehLine}, Callback, Xtra}} = Cb,
   CbMFA = {Module, Function, Arity},
   CbReturnType = dialyzer_contracts:get_contract_return(Callback),
@@ -190,7 +190,7 @@ find_mismatching_args(Kind, [Type|Rest], [CbType|CbRest], Behaviour,
 add_tag_warning_info(Module, {Tag, [B|_R]} = Warn, State)
   when Tag =:= callback_missing;
        Tag =:= callback_info_missing ->
-  {B, Line} = lists:keyfind(B, 1, State#state.behlines),
+  {^B, Line} = lists:keyfind(B, 1, State#state.behlines),
   Category =
     case Tag of
       callback_missing -> ?WARN_BEHAVIOUR;

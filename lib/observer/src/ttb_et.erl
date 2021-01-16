@@ -125,7 +125,7 @@ init_et(Parent) ->
     Collector = et_viewer:get_collector_pid(Viewer),
     Parent ! {et_started,Collector},
     receive
-	{'EXIT',Viewer,shutdown} ->
+	{'EXIT',^Viewer,shutdown} ->
 	    ok
     end.
 	    

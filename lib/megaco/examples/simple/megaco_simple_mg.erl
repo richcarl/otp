@@ -76,7 +76,7 @@ start_batch(Args0) when is_list(Args0) ->
     Debug   = get_arg(debug, Args),
     Pid     = spawn(?MODULE, init_batch, [self(), MgcHost, Trace, Debug]),
     receive
-	{init_batch, Pid, Res} ->
+	{init_batch, ^Pid, Res} ->
 	    io:format("~p(~p): ~p~n", [?MODULE, ?LINE, Res]),
 	    Res
     end.
@@ -98,14 +98,14 @@ parse_args([Arg|Args], Acc) when is_atom(Arg) ->
 parse_args(Key, Val, Args) ->
     Entry = {Key, Val},
     case lists:keyreplace(Key, 1, Args, {Key, Val}) of
-	Args ->
+	^Args ->
 	    [Entry|Args];
 	Args2 ->
 	    Args2
     end.
 
 get_arg(Key, Args) ->
-    {value, {Key, Val}} = lists:keysearch(Key, 1, Args),
+    {value, {^Key, Val}} = lists:keysearch(Key, 1, Args),
     Val.
 
 init_batch(ReplyTo, MgcHost, Trace, Debug) ->

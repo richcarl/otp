@@ -877,7 +877,7 @@ vacmViewSpinLock(get) ->
 
 vacmViewSpinLock(is_set_ok, NewVal) ->
     case snmp_generic:variable_func(get, volatile_db(vacmViewSpinLock)) of
-	{value, NewVal} -> noError;
+	{value, ^NewVal} -> noError;
 	_ -> inconsistentValue
     end;
 vacmViewSpinLock(set, NewVal) ->

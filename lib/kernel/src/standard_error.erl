@@ -73,9 +73,9 @@ server_loop(Port) ->
 	{io_request,From,ReplyAs,Request} when is_pid(From) ->
 	    _ = do_io_request(Request, From, ReplyAs, Port),
 	    server_loop(Port);
-	{'EXIT',Port,badsig} ->			% Ignore badsig errors
+	{'EXIT',^Port,badsig} ->			% Ignore badsig errors
 	    server_loop(Port);
-	{'EXIT',Port,What} ->			% Port has exited
+	{'EXIT',^Port,What} ->			% Port has exited
 	    exit(What);
 	_Other ->				% Ignore other messages
 	    server_loop(Port)

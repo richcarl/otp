@@ -121,7 +121,7 @@ checkASN1Type(#me{asn1_type = ASN1Type},
      when ASN1Type#asn1_type.bertype =:= Type ->
     case make_value_a_correct_value({value, Value}, ASN1Type,
 				    undef) of
-	{value, Type, Value} -> true;
+	{value, ^Type, ^Value} -> true;
 	{error, Error} when is_atom(Error) -> throw(Error)
     end;
 
@@ -218,7 +218,7 @@ is_set_ok_all_rows(Module, Func, Args, [Row | Rows], Done) ->
 		{ErrorStatus, ColNumber} ->
 		    case undo_all_rows(Module, Func, Args, Done) of
 			{noError, 0} -> 
-			    {RowIndex, OrgCols} = Row,
+			    {^RowIndex, OrgCols} = Row,
 			    validate_err(row_is_set_ok,
 					 {ErrorStatus, 
 					  col_to_orgindex(ColNumber,OrgCols)},
@@ -275,7 +275,7 @@ undo_all_rows(Module, Func, Args, [Row | Rows]) ->
 	    case validate_err(table_undo, Result, {Module, Func, Args}) of
 		{noError, 0} -> undo_all_rows(Module, Func, Args, Rows);
 		{ErrorStatus, ColNumber} ->
-		    {RowIndex, OrgCols} = Row,
+		    {^RowIndex, OrgCols} = Row,
 		    undo_all_rows(Module, Func, Args, Rows),
 		    OrgIdx = col_to_orgindex(ColNumber, OrgCols),
 		    validate_err(row_undo, {ErrorStatus, OrgIdx},
@@ -326,7 +326,7 @@ set_value_all_rows(Module, Func, Args, [Row | Rows]) ->
     case validate_err(table_set, Res, {Module, Func, Args}) of
 	{noError, 0} -> set_value_all_rows(Module, Func, Args, Rows);
 	{ErrCode, ColNumber} ->
-	    {RowIndex, OrgCols} = Row,
+	    {^RowIndex, OrgCols} = Row,
 	    OrgIndex = col_to_orgindex(ColNumber, OrgCols),
 	    validate_err(row_set, {ErrCode, OrgIndex}, {Module, Func, Args})
     end.
@@ -372,28 +372,28 @@ dbg_apply(M,F,A) ->
         %% <Future proofing>
         %% As of R15 we get extra info containing, 
         %% among other things, line numbers.
-        {'EXIT', {undef, [{M, F, A, _} | _]}} ->
+        {'EXIT', {undef, [{^M, ^F, ^A, _} | _]}} ->
             {'EXIT', {hook_undef, {M, F, A}}};
-        {'EXIT', {function_clause, [{M, F, A, _} | _]}} ->
+        {'EXIT', {function_clause, [{^M, ^F, ^A, _} | _]}} ->
             {'EXIT', {hook_function_clause, {M, F, A}}};
 
         %% This is really overkill, but just to be on the safe side...
-        {'EXIT', {undef, {M, F, A, _}}} ->
+        {'EXIT', {undef, {^M, ^F, ^A, _}}} ->
             {'EXIT', {hook_undef, {M, F, A}}};
-        {'EXIT', {function_clause, {M, F, A, _}}} ->
+        {'EXIT', {function_clause, {^M, ^F, ^A, _}}} ->
             {'EXIT', {hook_function_clause, {M, F, A}}};
         %% </Future proofing>
 
         %% Old format format for compatibility
-        {'EXIT', {undef, [{M, F, A} | _]}} ->
+        {'EXIT', {undef, [{^M, ^F, ^A} | _]}} ->
             {'EXIT', {hook_undef, {M, F, A}}};
-        {'EXIT', {function_clause, [{M, F, A} | _]}} ->
+        {'EXIT', {function_clause, [{^M, ^F, ^A} | _]}} ->
             {'EXIT', {hook_function_clause, {M, F, A}}};
 
         %% XYZ: Older format for compatibility
-        {'EXIT', {undef, {M, F, A}}} ->
+        {'EXIT', {undef, {^M, ^F, ^A}}} ->
             {'EXIT', {hook_undef, {M, F, A}}};
-        {'EXIT', {function_clause, {M, F, A}}} ->
+        {'EXIT', {function_clause, {^M, ^F, ^A}}} ->
             {'EXIT', {hook_function_clause, {M, F, A}}};
 
         Result ->

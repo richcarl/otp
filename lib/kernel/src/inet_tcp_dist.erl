@@ -176,21 +176,21 @@ accept_loop(Driver, Kernel, Listen) ->
 
 controller(Driver, Kernel, Socket) ->
     receive
-	{Kernel, controller, Pid} ->
+	{^Kernel, controller, Pid} ->
 	    flush_controller(Pid, Socket),
 	    Driver:controlling_process(Socket, Pid),
 	    flush_controller(Pid, Socket),
 	    Pid ! {self(), controller};
-	{Kernel, unsupported_protocol} ->
+	{^Kernel, unsupported_protocol} ->
 	    exit(unsupported_protocol)
     end.
 
 flush_controller(Pid, Socket) ->
     receive
-	{tcp, Socket, Data} ->
+	{tcp, ^Socket, Data} ->
 	    Pid ! {tcp, Socket, Data},
 	    flush_controller(Pid, Socket);
-	{tcp_closed, Socket} ->
+	{tcp_closed, ^Socket} ->
 	    Pid ! {tcp_closed, Socket},
 	    flush_controller(Pid, Socket)
     after 0 ->
@@ -212,7 +212,7 @@ gen_accept_connection(Driver, AcceptPid, Socket, MyNode, Allowed, SetupTime) ->
 
 do_accept(Driver, Kernel, AcceptPid, Socket, MyNode, Allowed, SetupTime) ->
     receive
-	{AcceptPid, controller} ->
+	{^AcceptPid, controller} ->
 	    Timer = dist_util:start_timer(SetupTime),
 	    case check_ip(Driver, Socket) of
 		true ->

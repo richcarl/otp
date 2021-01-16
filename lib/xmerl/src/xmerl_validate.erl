@@ -173,7 +173,7 @@ valid_attribute(Name,DataType,IF,DefaultDecl,List_of_Attributes,Env,S)->
 	    exit({error,{Name,is_required}});
 	{'#IMPLIED',_,no_attribute}->
 	    []; %% and no default value
-	{'#FIXED',DefVal,#xmlAttribute{value=DefVal}=Attr} ->
+	{'#FIXED',DefVal,#xmlAttribute{value=DefVal}=A} when A =:= Attr ->
 	    Attr;
 	{'#FIXED',A,no_attribute} ->
 	    #xmlAttribute{name=Name,value=A}; % FIXED declare value becomes default.
@@ -181,7 +181,7 @@ valid_attribute(Name,DataType,IF,DefaultDecl,List_of_Attributes,Env,S)->
 	    exit({error,{fixed_default_value_missmatch,A,B}});
 	{_,Value,no_attribute} when is_list(Value)->
 	    #xmlAttribute{name=Name,value=Value};
-	{_,_,#xmlAttribute{}=Attr}->
+	{_,_,#xmlAttribute{}=A} when A =:= Attr->
 	    %% do test data value, and default_value
 	    test_attribute_value(DataType,Attr,IF,S);
 	{DefDecl,Else,XML} ->
@@ -506,7 +506,7 @@ choice([CH|CHS],[_XML|_T]=XMLS,Rules,WSaction,S)->
 	    choice(CHS,XMLS,Rules,WSaction,S);
 	{error,_R,_N} ->
 	    choice(CHS,XMLS,Rules,WSaction,S); %% XXX add a case {[],XML}
-	{[],XMLS1} -> %% Maybe a sequence with * or ? elements that
+	{[],^XMLS1} -> %% Maybe a sequence with * or ? elements that
                       %% didn't match
  	    case CHS of
  		[] -> % choice has succeded but without matching XMLS1

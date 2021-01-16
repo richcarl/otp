@@ -133,7 +133,7 @@ push_var(Vars,Variable) ->
     case lists:keysearch(Variable,1,Vars) of
 	false ->
 	    [{Variable,[0]}|Vars];
-	{value,{Variable,[Digit|Drest]}} ->
+	{value,{^Variable,[Digit|Drest]}} ->
 	    NewVars = lists:keydelete(Variable,1,Vars),
 	    [{Variable,[Digit,Digit|Drest]}|NewVars]
     end.
@@ -142,9 +142,9 @@ pop_var(Vars,Variable) ->
     case lists:keysearch(Variable,1,Vars) of
 	false ->
 	    ok;
-	{value,{Variable,[_Dig]}} ->
+	{value,{^Variable,[_Dig]}} ->
 	    lists:keydelete(Variable,1,Vars);
-	{value,{Variable,[_Dig|Digits]}} ->
+	{value,{^Variable,[_Dig|Digits]}} ->
 	    NewVars = lists:keydelete(Variable,1,Vars),
 	    [{Variable,Digits}|NewVars]
     end.
@@ -152,7 +152,7 @@ pop_var(Vars,Variable) ->
 get_curr([],Variable) ->
     Variable;
 get_curr([{Variable,[0|_Drest]}|_Tail],Variable) ->
-    Variable;
+    ^Variable;
 get_curr([{Variable,[Digit|_Drest]}|_Tail],Variable) ->
     list_to_atom(lists:concat([Variable,integer_to_list(Digit)]));
 

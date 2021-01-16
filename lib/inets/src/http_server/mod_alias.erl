@@ -107,7 +107,7 @@ real_name(ConfigDB, RequestURI, []) ->
 real_name(ConfigDB, RequestURI, [{MP,Replacement}| _] = Aliases)
   when element(1, MP) =:= re_pattern ->
     case longest_match(Aliases, RequestURI) of
-	{match, {MP, Replacement}} ->
+	{match, {^MP, ^Replacement}} ->
 	    NewURI = re:replace(RequestURI, MP, Replacement, [{return,list}]),
 	    {ShortPath,_} = httpd_util:split_path(NewURI),
 	    {Path,AfterPath} =

@@ -996,7 +996,7 @@ scroll_changed(S, Expected) ->
 	    OldPos = event_pos(S),
 	    NewPos = lists:max([OldPos + Expected, 0]),
 	    case S#state.first_event of
-		    #e{key = Key, pos = OldPos} ->
+		    #e{key = Key, pos = ^OldPos} ->
 		    jump_up(S, Key, OldPos, NewPos);
 		first ->
 		    scroll_first(S);
@@ -1008,7 +1008,7 @@ scroll_changed(S, Expected) ->
 	    OldPos = event_pos(S),
 	    NewPos = lists:min([OldPos + Expected, S#state.n_events]),
 	    case S#state.first_event of
-		    #e{key = Key, pos = OldPos} ->
+		    #e{key = Key, pos = ^OldPos} ->
 		    jump_down(S, Key, OldPos, NewPos);
 		first = Key ->
 		    jump_down(S, Key, 0, NewPos);
@@ -1849,7 +1849,7 @@ do_open_event(S, N) ->
 	    Pid = S#state.collector_pid,
 	    Fun = fun create_contents_window/2,
 	    Prev = et_collector:iterate(Pid, Key, -1),
-	    {S2, Res} = 
+	    {^S2, Res} = 
 		if
 		    Prev =:= Key ->
 			et_collector:iterate(Pid, first, 1, Fun, {S2, []});
@@ -1986,7 +1986,7 @@ do_split_list(List, N, Page, Acc) ->
 
 get_latest_resize(#wx{obj = ObjRef, event = #wxSize{}} = Wx) ->
     receive
-	#wx{obj = ObjRef, event = #wxSize{}} = Wx2 ->
+	#wx{obj = ^ObjRef, event = #wxSize{}} = Wx2 ->
 	    get_latest_resize(Wx2)
     after 100 ->
 	    Wx
@@ -1994,7 +1994,7 @@ get_latest_resize(#wx{obj = ObjRef, event = #wxSize{}} = Wx) ->
 
 get_latest_scroll(#wx{obj = ObjRef, event = #wxScroll{type = scroll_changed}} = Wx) ->
     receive
-	#wx{obj = ObjRef, event = #wxScroll{type = scroll_changed}} = Wx2 ->
+	#wx{obj = ^ObjRef, event = #wxScroll{type = scroll_changed}} = Wx2 ->
 	    get_latest_scroll(Wx2)
     after 100 ->
 	    Wx

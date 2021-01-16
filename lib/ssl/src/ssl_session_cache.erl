@@ -47,7 +47,7 @@ terminate(Cache) ->
 %%--------------------------------------------------------------------
 lookup(Cache, Key) ->
     try ets:lookup(Cache, Key) of
-	[{Key, Session}] ->
+	[{^Key, Session}] ->
 	    Session;
 	[] ->
 	    undefined

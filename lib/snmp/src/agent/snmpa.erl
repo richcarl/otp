@@ -312,7 +312,7 @@ load_mib(Mib) ->
 
 load_mib(Agent, Mib) ->
     case load_mibs(Agent, [Mib]) of
-	{error, {'load aborted at', Mib, Reason}} ->
+	{error, {'load aborted at', ^Mib, Reason}} ->
 	    {error, Reason};
 	Else ->
 	    Else
@@ -344,7 +344,7 @@ unload_mib(Mib) ->
 
 unload_mib(Agent, Mib) ->
     case unload_mibs(Agent, [Mib]) of
-	{error, {'unload aborted at', Mib, Reason}} ->
+	{error, {'unload aborted at', ^Mib, Reason}} ->
 	    {error, Reason};
 	Else ->
 	    Else

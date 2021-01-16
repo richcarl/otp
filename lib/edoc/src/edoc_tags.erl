@@ -37,6 +37,7 @@
 	 filter_tags/2, filter_tags/3, check_tags/4, parse_tags/4,
          check_types/3]).
 
+-compile({no_auto_import,[error/3]}).
 -import(edoc_report, [report/4, warning/4, error/3]).
 
 -include("edoc.hrl").
@@ -309,7 +310,7 @@ parse_spec(Data, Line, _Env, {_, {F, A}} = _Where) ->
 	    case N of
 		undefined ->
 		    Spec#t_spec{name = #t_name{module = [], name = F}};
-		#t_name{module = [], name = F} ->
+		#t_name{module = [], name = ^F} ->
 		    Spec;
 		_ ->
 		    throw_error(Line, "@spec name does not match.")

@@ -679,8 +679,8 @@ schema_transaction(Fun) ->
 	    Args = [self(), Fun, whereis(mnesia_controller)],
 	    Pid = spawn_link(?MODULE, schema_coordinator, Args),
 	    receive
-		{transaction_done, Res, Pid} -> Res;
-		{'EXIT', Pid, R} -> {aborted, {transaction_crashed, R}}
+		{transaction_done, Res, ^Pid} -> Res;
+		{'EXIT', ^Pid, R} -> {aborted, {transaction_crashed, R}}
 	    end;
 	_ ->
             {aborted, nested_transaction}
@@ -888,7 +888,7 @@ pick(Tab, Key, List, Default) ->
             mnesia:abort({badarg, Tab, "Missing key", Key, List});
         false ->
             Default;
-        {value, {Key, Value}} ->
+        {value, {^Key, Value}} ->
             Value;
 	{value, BadArg} ->
 	    mnesia:abort({bad_type, Tab, BadArg})
@@ -942,10 +942,10 @@ get_ext_types_disc_() ->
         {ok, _, Prop} ->
             K1 = user_properties,
             case lists:keyfind(K1, 1, Prop) of
-                {K1, UserProp} ->
+                {^K1, UserProp} ->
                     K2 = mnesia_backend_types,
                     case lists:keyfind(K2, 1, UserProp) of
-                        {K2, Types} ->
+                        {^K2, Types} ->
                             Types;
                         _ ->
                             []
@@ -2106,7 +2106,7 @@ make_change_table_majority(Tab, Majority) ->
     OldMajority = Cs#cstruct.majority,
     Cs2 = Cs#cstruct{majority = Majority},
     FragOps = case lists:keyfind(base_table, 1, Cs#cstruct.frag_properties) of
-		  {_, Tab} ->
+		  {_, ^Tab} ->
 		      FragNames = mnesia_frag:frag_names(Tab) -- [Tab],
 		      lists:map(
 			fun(T) ->
@@ -2190,7 +2190,7 @@ update_existing_op([{op, Op, L = [{name,Tab}|_], _OldProp}|Ops],
     {true, lists:reverse(Acc) ++ [NewOp|Ops]};
 update_existing_op([Op = {op, create_table, L}|Ops], Tab, Prop, How, Acc) ->
     case lists:keysearch(name, 1, L) of
-	{value, {_, Tab}} ->
+	{value, {_, ^Tab}} ->
 	    %% Tab is being created here -- insert Prop into L
 	    L1 = insert_prop(Prop, L, How),
 	    {true, lists:reverse(Acc) ++ [{op, create_table, L1}|Ops]};
@@ -2392,7 +2392,7 @@ prepare_op(_Tid, {op, announce_im_running, Node, SchemaDef, Running, RemoteRunni
 prepare_op(_Tid, {op, sync_trans}, {part, CoordPid}) ->
     CoordPid ! {sync_trans, self()},
     receive
-	{sync_trans, CoordPid} ->
+	{sync_trans, ^CoordPid} ->
 	    {false, optional};
 	{mnesia_down, _Node} = Else ->
 	    mnesia_lib:verbose("sync_op terminated due to ~tp~n", [Else]),
@@ -2705,7 +2705,7 @@ create_ram_table(Tab, #cstruct{type=Type, storage_properties=Props}) ->
     EtsOpts = proplists:get_value(ets, Props, []),
     Args = [{keypos, 2}, public, named_table, Type | EtsOpts],
     case mnesia_monitor:unsafe_mktab(Tab, Args) of
-	Tab ->
+	^Tab ->
 	    ok;
 	{error,Reason} ->
 	    Err = "Failed to create ets table",
@@ -2764,7 +2764,7 @@ receive_sync(Nodes, Pids) ->
 
 set_where_to_read(Tab, Node, Cs) ->
     case mnesia_lib:val({Tab, where_to_read}) of
-	Node ->
+	^Node ->
 	    case Cs#cstruct.local_content of
 		true ->
 		    ok;
@@ -3230,7 +3230,7 @@ arrange_restore(R, Fun, Recs) ->
 restore_items([Rec | Recs], Header, Schema, Ext, R) ->
     Tab = element(1, Rec),
     case lists:keysearch(Tab, 1, R#r.tables) of
-	{value, {Tab, Where0, Snmp, RecName}} ->
+	{value, {^Tab, Where0, Snmp, RecName}} ->
 	    Where = case Where0 of
 			undefined ->
 			    val({Tab, where_to_commit});
@@ -3251,7 +3251,7 @@ restore_items([], _Header, _Schema, _Ext, R) ->
 
 restore_func(Tab, R) ->
     case lists:keysearch(Tab, 1, R#r.table_options) of
-	{value, {Tab, OP}} ->
+	{value, {^Tab, OP}} ->
 	    OP;
 	false ->
 	    R#r.default_op

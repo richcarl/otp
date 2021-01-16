@@ -31,6 +31,8 @@
 -compile({no_auto_import,[error/1]}).
 %% Avoid warning for local function error/2 clashing with autoimported BIF.
 -compile({no_auto_import,[error/2]}).
+%% Avoid warning for local function error/3 clashing with autoimported BIF.
+-compile({no_auto_import,[error/3]}).
 -export([init/0, 
 	 reset/0, 
 	 process_incoming_msg/4, generate_outgoing_msg/5]).
@@ -173,7 +175,7 @@ is_auth(AuthProtocol, AuthKey, AuthParams, Packet, SecName,
 	    SnmpEngineID = get_engine_id(),
 	    ?vtrace("SnmpEngineID: ~p",[SnmpEngineID]),
 	    case MsgAuthEngineID of
-		SnmpEngineID -> %% 3.2.7a
+		^SnmpEngineID -> %% 3.2.7a
 		    ?vtrace("we are authoritative: 3.2.7a",[]),
 		    SnmpEngineBoots = get_engine_boots(),
 		    ?vtrace("SnmpEngineBoots: ~p",[SnmpEngineBoots]),

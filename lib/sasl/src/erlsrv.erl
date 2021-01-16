@@ -82,14 +82,14 @@ read_all_data(Port) ->
 
 read_all_data(Port,Line,Lines) ->
     receive
-	{Port, {data, {noeol,Data}}} ->
+	{^Port, {data, {noeol,Data}}} ->
 	    read_all_data(Port,Line++Data,Lines);
-	{Port, {data, {eol,Data}}} ->
+	{^Port, {data, {eol,Data}}} ->
 	    read_all_data(Port,[],[Line++Data|Lines]);
-	{Port,_Other} ->
+	{^Port,_Other} ->
 	    Port ! {self(), close},
 	    receive
-		{Port, closed} ->
+		{^Port, closed} ->
 		    case Line of
 			[] -> Lines;
 			_ -> [Line|Lines]
@@ -174,9 +174,9 @@ get_service(EVer, ServiceName) ->
 	    F = fun(X) ->
 			{Name,Value} = splitline(X),
 			case lists:keysearch(Name,1,Table) of
-			    {value,{Name,_Atom,Value}} ->
+			    {value,{^Name,_Atom,^Value}} ->
 				[];
-			    {value,{Name,Atom,_}} ->
+			    {value,{^Name,Atom,_}} ->
 				{Atom,Value};
 			    _ ->
 				[]
@@ -193,7 +193,7 @@ get_service(EVer, ServiceName) ->
 			 fun(S) ->
 				 X = string:trim(S, leading, "$\t"),
 				 case hd(string:lexemes(X,"=")) of
-				     X ->
+				     ^X ->
 					 %% Can this happen?
 					 {X,""};
 				     Y ->

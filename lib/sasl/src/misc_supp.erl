@@ -74,14 +74,14 @@ format_tuples([{Key, Value} | T], Exclude, Res) ->
 
 assq(Key, List) ->
     case lists:keysearch(Key, 1, List) of
-	{value, {Key, Val}} -> {value, Val};
+	{value, {^Key, Val}} -> {value, Val};
 	_ -> false
     end.
 
 %% Primitive assq. Use to get items from a process dictionary list.
 passq(Key, List) ->
     case lists:keysearch(Key, 1, List) of
-	{value, {Key, Val}} -> Val;
+	{value, {^Key, Val}} -> Val;
 	_ -> undefined
     end.
 

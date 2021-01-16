@@ -199,7 +199,7 @@ v(Vid, _, {ok, {Vid, _}}, Acc) -> %% same id as inheriting dictionary's
     Acc;
 v(Vid, Avps, _, Acc) ->
     case lists:keyfind(Vid, 1, Acc) of
-        {Vid, As} ->
+        {^Vid, As} ->
             lists:keyreplace(Vid, 1, Acc, {Vid, As ++ Avps});
         false ->
             [{Vid, Avps} | Acc]

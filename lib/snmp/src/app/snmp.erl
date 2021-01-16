@@ -620,7 +620,7 @@ print_mod_info(Prefix, {Module, Info}) ->
 
 key1search(Key, Vals) ->
     case lists:keysearch(Key, 1, Vals) of
-        {value, {Key, Val}} ->
+        {value, {^Key, Val}} ->
             {value, Val};
         false ->
             not_found
@@ -717,7 +717,7 @@ ms1() ->
     LibDir = code:lib_dir(App),
     File   = filename:join([LibDir, "ebin", atom_to_list(App) ++ ".app"]),
     case file:consult(File) of
-        {ok, [{application, App, AppFile}]} ->
+        {ok, [{application, ^App, AppFile}]} ->
             case lists:keysearch(modules, 1, AppFile) of
                 {value, {modules, Mods}} ->
                     {ok, Mods};

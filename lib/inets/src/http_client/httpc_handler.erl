@@ -515,7 +515,7 @@ do_handle_info({Proto, _Socket, Data},
 	    handle_http_msg(Result, State); 
 	{_, whole_body, _} when Method =:= head ->
 	    handle_response(State#state{body = <<>>}); 
-	{Module, whole_body, [Body, Length]} ->
+	{^Module, whole_body, [Body, Length]} ->
 	    {_, Code, _} = StatusLine,
 	    {Streamed, NewBody, NewRequest} = stream(Body, Request, Code),
 	    %% When we stream we will not keep the already
@@ -532,7 +532,7 @@ do_handle_info({Proto, _Socket, Data},
 	    NewMFA   = {Module, whole_body, [NewBody, NewLength]}, 
 	    {noreply, NewState#state{mfa     = NewMFA,
 				     request = NewRequest}};
-        {Module, decode_size,
+        {^Module, decode_size,
              [TotalChunk, HexList, AccHeaderSize,
               {MaxBodySize, BodySoFar, AccLength, MaxHeaderSize}]}
 	  when BodySoFar =/= <<>> ->
@@ -546,7 +546,7 @@ do_handle_info({Proto, _Socket, Data},
                              {MaxBodySize, NewBody, AccLength, MaxHeaderSize}]},
 	    {noreply, NewState#state{mfa     = NewMFA,
 				     request = NewRequest}};
-	{Module, decode_data,
+	{^Module, decode_data,
 	 [ChunkSize, TotalChunk,
 	  {MaxBodySize, BodySoFar, AccLength, MaxHeaderSize}]}
 	  when TotalChunk =/= <<>> orelse BodySoFar =/= <<>> ->
@@ -821,7 +821,7 @@ connect_and_send_first_request(Address, Request, #state{options = Options0} = St
 		httpc_request:is_client_closing(
 		  Request#request.headers),
             SessionType = httpc_manager:session_type(Options),
-            SocketType  = socket_type(Request),
+            ^SocketType  = socket_type(Request),
             Session = #session{id = {Request#request.address, self()},
                                scheme = Request#request.scheme,
                                socket = Socket,
@@ -1023,7 +1023,7 @@ handle_http_body(Body, #state{headers       = Headers,
             case ((Length =< MaxBodySize) orelse (MaxBodySize =:= nolimit)) of
                 true ->
                     case httpc_response:whole_body(Body, Length) of
-                        {ok, Body} ->
+                        {ok, ^Body} ->
 			    {_, NewBody, NewRequest} =
 				stream(Body, Request, Code),
 			    handle_response(State#state{body    = NewBody,
@@ -1372,7 +1372,7 @@ cancel_timer(undefined, _) ->
 cancel_timer(Timer, TimeoutMsg) ->
     erlang:cancel_timer(Timer),
     receive 
-	TimeoutMsg ->
+	^TimeoutMsg ->
 	    ok
     after 0 ->
 	    ok
@@ -1418,7 +1418,7 @@ handle_proxy(HostPort = {Host, _Port}, {Proxy, NoProxy}) ->
     case Proxy of
 	undefined ->
 	    HostPort;
-	Proxy ->
+	^Proxy ->
 	    case is_no_proxy_dest(Host, NoProxy) of
 		true ->
 		    HostPort;

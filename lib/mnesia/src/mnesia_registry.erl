@@ -92,7 +92,7 @@ start(Type, Tab, LinkTo) ->
     receive
 	{ok, Res} ->
 	    Res;
-	{'EXIT', Pid, Reason} when LinkTo == Starter ->
+	{'EXIT', ^Pid, Reason} when LinkTo == Starter ->
 	    exit(Reason)
     end.
 
@@ -155,7 +155,7 @@ create_table(Tab, TabDef) ->
     case mnesia:create_table(Tab, [{attributes, Attrs} | TabDef]) of
 	{atomic, ok} ->
 	    ok;
-	{aborted, {already_exists, Tab}} ->
+	{aborted, {already_exists, ^Tab}} ->
 	    ok;
 	{aborted, Reason} ->
 	    exit(Reason)

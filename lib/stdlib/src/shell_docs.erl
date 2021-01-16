@@ -75,7 +75,7 @@ validate(#docs_v1{ module_doc = MDocs, docs = AllDocs }) ->
 
     %% Check some macro in-variants
     AE = lists:sort(?ALL_ELEMENTS),
-    AE = lists:sort(?INLINE ++ ?BLOCK),
+    ^AE = lists:sort(?INLINE ++ ?BLOCK),
     true = lists:all(fun(Elem) -> ?IS_INLINE(Elem) end, ?INLINE),
     true = lists:all(fun(Elem) -> ?IS_BLOCK(Elem) end, ?BLOCK),
 
@@ -259,11 +259,11 @@ trim_first_and_last(Content, What) when What < 256 ->
 
 trim_first([Bin|T],What) when is_binary(Bin) ->
     case Bin of
-        <<What>> ->
+        <<^What>> ->
             {T,true};
-        <<What,NewBin/binary>> ->
+        <<^What,NewBin/binary>> ->
             {[NewBin|T],true};
-        Bin ->
+        ^Bin ->
             {[Bin|T],true}
     end;
 trim_first([{Elem,Attr,Content} = Tag|T],What) ->
@@ -272,7 +272,7 @@ trim_first([{Elem,Attr,Content} = Tag|T],What) ->
             {T,true};
         {NewContent,true} ->
             {[{Elem,Attr,NewContent}|T],true};
-        {Content,false} ->
+        {^Content,false} ->
             {NewT,NewState} = trim_first(T,What),
             {[Tag | NewT],NewState}
     end;
@@ -283,13 +283,13 @@ trim_last([Bin | T],What) when is_binary(Bin) ->
     case trim_last(T,What) of
         {NewT,true} ->
             {[Bin | NewT],true};
-        {T,false} ->
+        {^T,false} ->
             PreSz = byte_size(Bin)-1,
             case Bin of
-                <<What>> -> {T,true};
-                <<NewBin:PreSz/binary,What>> ->
+                <<^What>> -> {T,true};
+                <<NewBin:PreSz/binary,^What>> ->
                     {[NewBin|T],true};
-                Bin ->
+                ^Bin ->
                     {[Bin|T],true}
             end
     end;
@@ -297,7 +297,7 @@ trim_last([{Elem,Attr,Content} = Tag|T],What) ->
     case trim_last(T,What) of
         {NewT,true} ->
             {[Tag | NewT],true};
-        {T,false} ->
+        {^T,false} ->
             case trim_last(Content,What) of
                 {[],true} ->
                     %% If the content became empty and we processed some text

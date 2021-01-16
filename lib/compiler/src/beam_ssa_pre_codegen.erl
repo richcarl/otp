@@ -361,16 +361,16 @@ bs_restores([], _, _, Rs) -> Rs.
 bs_update_successors(#b_br{succ=Succ,fail=Fail}, SPos, FPos, D) ->
     join_positions([{Succ,SPos},{Fail,FPos}], D);
 bs_update_successors(#b_switch{fail=Fail,list=List}, SPos, FPos, D) ->
-    SPos = FPos,                                %Assertion.
+    ^SPos = FPos,                                %Assertion.
     Update = [{L,SPos} || {_,L} <- List] ++ [{Fail,SPos}],
     join_positions(Update, D);
 bs_update_successors(#b_ret{}, SPos, FPos, D) ->
-    SPos = FPos,                                %Assertion.
+    ^SPos = FPos,                                %Assertion.
     D.
 
 join_positions([{L,MapPos0}|T], D) ->
     case D of
-        #{L:=MapPos0} ->
+        #{L:=^MapPos0} ->
             %% Same map.
             join_positions(T, D);
         #{L:=MapPos1} ->
@@ -428,7 +428,7 @@ bs_restores_is([#b_set{op=bs_match,dst=NewPos,args=Args}=I|Is],
     Start = bs_subst_ctx(NewPos, CtxChain),
     [_,FromPos|_] = Args,
     case SPos0 of
-        #{Start:=FromPos} ->
+        #{Start:=^FromPos} ->
             %% Same position, no restore needed.
             SPos = case bs_match_type(I) of
                        plain ->
@@ -472,7 +472,7 @@ bs_restores_is([#b_set{op=bs_extract,args=[FromPos|_]}|Is],
                CtxChain, SPos, _FPos, Rs) ->
     Start = bs_subst_ctx(FromPos, CtxChain),
 
-    #{Start:=FromPos} = SPos,                   %Assertion.
+    #{Start:=^FromPos} = SPos,                   %Assertion.
     FPos = SPos,
 
     bs_restores_is(Is, CtxChain, SPos, FPos, Rs);
@@ -539,7 +539,7 @@ bs_invalidate_pos([], Pos, _CtxChain) ->
 bs_restore_args([#b_var{}=Arg|Args], Pos0, CtxChain, Dst, Rs0) ->
     Start = bs_subst_ctx(Arg, CtxChain),
     case Pos0 of
-        #{Start:=Arg} ->
+        #{Start:=^Arg} ->
             %% Same position, no restore needed.
             bs_restore_args(Args, Pos0, CtxChain, Dst, Rs0);
         #{Start:=_} ->
@@ -599,7 +599,7 @@ bs_insert_is([#b_set{dst=Dst}=I0|Is], Saves, Restores, XFrm, Acc0) ->
            end,
     Acc = [I | Pre] ++ Acc0,
     case Is of
-        [#b_set{op={succeeded,_},args=[Dst]}] ->
+        [#b_set{op={succeeded,_},args=[^Dst]}] ->
             %% Defer the save sequence to the success block.
             {reverse(Acc, Is), Post};
         _ ->
@@ -710,7 +710,7 @@ legacy_bs_is([#b_set{op=Op,dst=Dst}=I0,
             I = I0#b_set{dst=TempDst},
             SuccI = SuccI0#b_set{args=[TempDst]},
             Copy = #b_set{op=copy,dst=Dst,args=[TempDst]},
-            #b_br{bool=SuccDst,succ=SuccL} = Last,
+            #b_br{bool=^SuccDst,succ=SuccL} = Last,
             Copies = Copies0#{SuccL=>Copy},
             legacy_bs_is([], Last, IsYreg, Count, Copies, [SuccI,I|Acc]);
         false ->
@@ -771,7 +771,7 @@ sanitize_is([#b_set{op=get_map_element,args=Args0}=I0|Is],
             I = I0#b_set{args=[MapVar,Key]},
             Copy = #b_set{op=copy,dst=MapVar,args=[Map]},
             sanitize_is(Is, Last, Count, Values, true, [I,Copy|Acc]);
-        [_,_]=Args0 ->
+        [_,_]=Args when Args =:= Args0 ->
             sanitize_is(Is, Last, Count0, Values, Changed, [I0|Acc]);
         [_,_]=Args ->
             I = I0#b_set{args=Args},
@@ -788,7 +788,7 @@ sanitize_is([#b_set{op={succeeded,guard},dst=Dst,args=[Arg0]}=I0],
                         args=[#b_remote{mod=#b_literal{val=erlang},
                                         name=#b_literal{val=error},
                                         arity=1},_],
-                        dst=Arg0}|Acc] ->
+                        dst=^Arg0}|Acc] ->
                     %% This erlang:error/1 is the result from a
                     %% sanitized bs_add or bs_init instruction. Calls
                     %% to erlang:error/1 in receive is not allowed, so
@@ -1067,7 +1067,7 @@ match_fail_instrs_blk([#b_set{op=call,anno=Anno,
     case match_fail_stk(Stk, Acc, [], []) of
         {[_|_]=Vars,Is} when length(Vars) =:= Arity ->
             case maps:get(location, Anno, none) of
-                Location ->
+                ^Location ->
                     I = Call#b_set{op=match_fail,
                                    args=[#b_literal{val=function_clause}|Vars]},
                     Is ++ [I];
@@ -1175,7 +1175,7 @@ use_set_tuple_element(#st{ssa=Blocks0}=St) ->
 use_ste_1([L|Ls], Uses, Blocks) ->
     #b_blk{is=Is0} = Blk0 = map_get(L, Blocks),
     case use_ste_is(Is0, Uses) of
-        Is0 ->
+        ^Is0 ->
             use_ste_1(Ls, Uses, Blocks);
         Is ->
             Blk = Blk0#b_blk{is=Is},
@@ -1197,7 +1197,7 @@ use_ste_is([], _Uses) -> [].
 
 use_ste_call({Dst0,Pos0,_Var0,_Val0}, Call1, Is0, Uses) ->
     case get_ste_call(Is0, []) of
-        {Prefix,{Dst1,Pos1,Dst0,Val1},Call2,Is}
+        {Prefix,{Dst1,Pos1,^Dst0,Val1},Call2,Is}
           when Pos1 > 0, Pos0 > Pos1 ->
             case is_single_use(Dst0, Uses) of
                 true ->
@@ -1430,7 +1430,7 @@ need_frame_1([#b_set{op=old_make_fun,dst=Fun}|Is], {return,Ret}=Context) ->
             Used = ordsets:subtract(beam_ssa:used(Blk), Defs),
             case Used of
                 [] -> false;
-                [Fun] -> false;
+                [^Fun] -> false;
                 [_|_] -> true
             end
         end;
@@ -2331,10 +2331,10 @@ update_used([], _First, _N, Ranges) -> Ranges.
 
 add_ranges([{V,{A,N}=Range}|T], Map) ->
     case Map of
-        #{V := [{N,Z}|Ranges]} ->
+        #{V := [{^N,Z}|Ranges]} ->
             %% Coalesce two adjacent ranges.
             add_ranges(T, Map#{V := [{A,Z}|Ranges]});
-        #{V := [{A,N}|_]} ->
+        #{V := [{^A,^N}|_]} ->
             %% Ignore repeated range (probably from arguments).
             add_ranges(T, Map);
         #{V := Ranges} ->
@@ -2505,7 +2505,7 @@ frame_size_1(L, Regs, Blocks0) ->
         FrameSize =/= 0 ->
             [{y,0}|_] = Yregs,                  %Assertion.
             {y,Last} = last(Yregs),
-            Last = FrameSize - 1,               %Assertion.
+            ^Last = FrameSize - 1,               %Assertion.
             ok;
         true ->
             ok
@@ -2553,7 +2553,7 @@ turn_yregs(#st{frames=Frames,regs=Regs0,ssa=Blocks}=St) ->
 turn_yregs_1(Def, FrameSize, Regs) ->
     Yregs0 = [{map_get(V, Regs),V} || V <- Def, is_yreg(map_get(V, Regs))],
     Yregs1 = rel2fam(Yregs0),
-    FrameSize = length(Yregs1),
+    ^FrameSize = length(Yregs1),
     Yregs2 = [{{y,FrameSize-Y-1},Vs} || {{y,Y},Vs} <- Yregs1],
     R0 = sofs:family(Yregs2),
     R1 = sofs:family_to_relation(R0),
@@ -2602,7 +2602,7 @@ reserve_zreg([#b_set{op={bif,tuple_size},dst=Dst},
               #b_set{op={bif,'=:='},args=[Dst,Val],dst=Bool}],
              Last, ShortLived, A) ->
     case {Val,Last} of
-        {#b_literal{val=Arity},#b_br{bool=Bool}} when Arity bsr 32 =:= 0 ->
+        {#b_literal{val=Arity},#b_br{bool=^Bool}} when Arity bsr 32 =:= 0 ->
             %% These two instructions can be combined to a test_arity
             %% instruction provided that the arity variable is short-lived.
             reserve_test_zreg(Dst, ShortLived, A);
@@ -2760,7 +2760,7 @@ res_place_gc_instrs([], Acc) ->
 
 res_place_test_heap(I, Acc) ->
     case Acc of
-        [test_heap|Acc] ->
+        [test_heap|^Acc] ->
             [test_heap,I|Acc];
         _ ->
             [test_heap,I|Acc]

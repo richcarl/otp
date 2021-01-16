@@ -947,6 +947,6 @@ sub(_, _) -> 0.
 get_option(Key, TupleList, Default) ->
     case lists:keyfind(Key, 1, TupleList) of
 	false -> Default;
-	{Key, Value} -> Value;
+	{^Key, Value} -> Value;
 	_ -> Default
     end.

@@ -364,12 +364,12 @@ guess_encoding(Data0, #state{encoding = PeerEnc0,
             {latin1,_} -> latin1;
             {_,latin1} -> latin1;
             _ -> case unicode:characters_to_binary(Data0, utf8, utf8) of
-                     Data0 -> utf8;
+                     ^Data0 -> utf8;
                      _ -> latin1
                  end
         end,
     case TestEnc0 of
-        Enc ->
+        ^Enc ->
             {Enc, State};
         latin1 ->
             {Enc, State};

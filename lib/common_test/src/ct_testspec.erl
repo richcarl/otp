@@ -50,7 +50,7 @@
 prepare_tests(TestSpec,Node) when is_record(TestSpec,testspec),
 				  is_atom(Node) ->
     case lists:keysearch(Node,1,prepare_tests(TestSpec)) of
-	{value,{Node,Run,Skip}} ->
+	{value,{^Node,Run,Skip}} ->
 	    {Run,Skip};
 	false ->
 	    {[],[]}
@@ -97,7 +97,7 @@ prepare_tests(TestSpec) when is_record(TestSpec,testspec) ->
 %% of {Node,RunPerNode,[]} tuples where the tests have been sorted
 %% on a per node basis.
 run_per_node([{{Node,Dir},Test}|Ts],Result,MergeTests) ->
-    {value,{Node,{Run,Skip}}} = lists:keysearch(Node,1,Result),
+    {value,{^Node,{Run,Skip}}} = lists:keysearch(Node,1,Result),
     Run1 = case MergeTests of
 	       false ->
 		   append({Dir, Test}, Run);
@@ -139,7 +139,7 @@ merge_suites(Dir,Test,[]) ->
 %% of {Node,RunPerNode,SkipPerNode} tuples where the skips have been 
 %% sorted on a per node basis.
 skip_per_node([{{Node,Dir},Test}|Ts],Result) ->
-    {value,{Node,{Run,Skip}}} = lists:keysearch(Node,1,Result),
+    {value,{^Node,{Run,Skip}}} = lists:keysearch(Node,1,Result),
     Skip1 = [{Dir,Test}|Skip],
     skip_per_node(Ts,insert_in_order({Node,{Run,Skip1}},Result,replace));
 skip_per_node([],Result) -> 
@@ -193,7 +193,7 @@ prepare_suites(_Node,_Dir,[],Run,Skip) ->
 
 prepare_cases(Node,Dir,Suite,Cases,Run,Skip) ->
     case get_skipped_cases(Node,Dir,Suite,Cases) of
-	[SkipAll={{Node,Dir},{Suite,_Cmt}}] ->	      % all cases to be skipped
+	[SkipAll={{^Node,^Dir},{^Suite,_Cmt}}] ->	      % all cases to be skipped
 	    case lists:any(fun({{N,D},{S,all}}) when N == Node,
 						     D == Dir,
 						     S == Suite ->
@@ -516,7 +516,7 @@ replace_names_in_elems([Elem|Es],Modified,Defs) when is_atom(Elem) ->
 replace_names_in_elems([Elem=[Ch|_]|Es],Modified,Defs) when is_integer(Ch) ->
     %% Term *could* be a string, attempt to search through it
     case replace_names_in_string(Elem,Defs) of
-	Elem ->
+	^Elem ->
 	    List = replace_names_in_elems(Elem,[],Defs),
 	    replace_names_in_elems(Es,[List|Modified],Defs);
 	Elem1 ->
@@ -534,7 +534,7 @@ replace_names_in_string(Term,Defs=[{Name,Replacement=[Ch|_]}|Ds])
   when is_integer(Ch) ->
     try re:replace(Term,[$'|atom_to_list(Name)]++"'",
 		   Replacement,[{return,list},unicode]) of
-	Term ->					% no match, proceed
+	^Term ->					% no match, proceed
 	    replace_names_in_string(Term,Ds);
 	Term1 ->
 	    replace_names_in_string(Term1,Defs)
@@ -566,7 +566,7 @@ replace_names_in_node1(NodeStr,Defs=[{Name,Replacement}|Ds]) ->
        true ->
 	    case re:replace(NodeStr,atom_to_list(Name),
 			    ReplStr,[{return,list},unicode]) of
-		NodeStr ->			% no match, proceed
+		^NodeStr ->			% no match, proceed
 		    replace_names_in_node1(NodeStr,Ds);
 		NodeStr1 ->
 		    replace_names_in_node1(NodeStr1,Defs)
@@ -622,15 +622,15 @@ get_absfile(Callback,FullName,#testspec{spec_dir=SpecDir}) ->
     R =  Callback:check_parameter(FullName),
     ok = file:set_cwd(OldWd),
     case R of
-	{ok, {file, FullName}}->
+	{ok, {file, ^FullName}}->
 	    File = filename:basename(FullName),
 	    Dir = get_absname(filename:dirname(FullName),SpecDir),
 	    filename:join(Dir,File);
-	{ok, {config, FullName}}->
+	{ok, {config, ^FullName}}->
 	    FullName;
-	{error, {nofile, FullName}}->
+	{error, {nofile, ^FullName}}->
 	    FullName;
-	{error, {wrong_config, FullName}}->
+	{error, {wrong_config, ^FullName}}->
 	    FullName
     end.
 
@@ -756,18 +756,18 @@ filter_init_terms([],NewTerms,Spec) ->
 
 add_option({Key,Value},Node,List,WarnIfExists) when is_list(Value) ->
     OldOptions = case lists:keyfind(Node,1,List) of
-	{Node,Options}->
+	{^Node,Options}->
 	    Options;
 	false->
 	    []
     end,
     NewOption = case lists:keyfind(Key,1,OldOptions) of
-	{Key,OldOption} when WarnIfExists,OldOption/=[]->
+	{^Key,OldOption} when WarnIfExists,OldOption/=[]->
 	    io:format("There is an option ~w=~w already "
 		      "defined for node ~w, skipping new ~w~n",
 		[Key,OldOption,Node,Value]),
 	    OldOption;
-	{Key,OldOption}->
+	{^Key,OldOption}->
 	    OldOption ++ Value;
 	false->
 	    Value
@@ -1303,9 +1303,9 @@ insert_groups1(_Suite,_Groups,all) ->
     all;
 insert_groups1(Suite,Groups,Suites0) ->
     case lists:keysearch(Suite,1,Suites0) of
-	{value,{Suite,all}} ->
+	{value,{^Suite,all}} ->
 	    Suites0;
-	{value,{Suite,GrAndCases0}} ->
+	{value,{^Suite,GrAndCases0}} ->
 	    GrAndCases = insert_groups2(Groups,GrAndCases0),
 	    insert_in_order({Suite,GrAndCases},Suites0,replace);
 	false ->
@@ -1316,9 +1316,9 @@ insert_groups2(_Groups,all) ->
     all;
 insert_groups2([Group={Gr,Cases}|Groups],GrAndCases) ->
     case lists:keysearch(Gr,1,GrAndCases) of
-	{value,{Gr,all}} ->
+	{value,{^Gr,all}} ->
 	    GrAndCases;
-	{value,{Gr,Cases0}} ->
+	{value,{^Gr,Cases0}} ->
 	    Cases1 = insert_in_order(Cases,Cases0),
 	    insert_groups2(Groups,insert_in_order({Gr,Cases1},GrAndCases));
 	false ->
@@ -1358,9 +1358,9 @@ insert_cases1(_Suite,_Cases,all) ->
     all;
 insert_cases1(Suite,Cases,Suites0) ->
     case lists:keysearch(Suite,1,Suites0) of
-	{value,{Suite,all}} ->
+	{value,{^Suite,all}} ->
 	    Suites0;
-	{value,{Suite,Cases0}} ->
+	{value,{^Suite,Cases0}} ->
 	    Cases1 = insert_in_order(Cases,Cases0),
 	    insert_in_order({Suite,Cases1},Suites0,replace);
 	false ->
@@ -1417,7 +1417,7 @@ skip_groups1(Suite,Groups,Cmt,Suites0) ->
 				   {Group,{skip,Cmt}}
 			   end,Groups),
     case lists:keysearch(Suite,1,Suites0) of
-	{value,{Suite,GrAndCases0}} ->
+	{value,{^Suite,GrAndCases0}} ->
 	    GrAndCases1 = GrAndCases0 ++ SkipGroups,
 	    insert_in_order({Suite,GrAndCases1},Suites0,replace);
 	false ->
@@ -1454,7 +1454,7 @@ skip_cases1(Suite,Cases,Cmt,Suites0) ->
 				  {C,{skip,Cmt}}
 			  end,Cases),
     case lists:keysearch(Suite,1,Suites0) of
-	{value,{Suite,Cases0}} ->
+	{value,{^Suite,Cases0}} ->
 	    Cases1 = Cases0 ++ SkipCases,
 	    insert_in_order({Suite,Cases1},Suites0,replace);
 	false ->
@@ -1515,7 +1515,7 @@ ref2node(RefOrNode,Refs) ->
     case lists:member($@,atom_to_list(RefOrNode)) of
 	false ->				% a ref	    
 	    case lists:keysearch(RefOrNode,1,Refs) of
-		{value,{RefOrNode,Node}} ->
+		{value,{^RefOrNode,Node}} ->
 		    Node;
 		false ->
 		    throw({error,{noderef_missing,RefOrNode}})
@@ -1529,7 +1529,7 @@ ref2dir(Ref,Spec) ->
 
 ref2dir(Ref,Refs,Spec) when is_atom(Ref) ->
     case lists:keysearch(Ref,1,Refs) of
-	{value,{Ref,Dir}} ->
+	{value,{^Ref,Dir}} ->
 	    get_absdir(Dir,Spec);
 	false ->
 	    throw({error,{alias_missing,Ref}})

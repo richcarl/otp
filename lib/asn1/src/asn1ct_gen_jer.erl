@@ -419,7 +419,7 @@ gen_encode_user(Erules, #typedef{}=D, _Wrapper) ->
                 gen_encode_constructed(Erules,Typename,InnerType,Type);
             {primitive,bif} ->
                 gen_encode_prim(jer,Type,"Val");
-            #'Externaltypereference'{module=CurrentMod,type=Etype} ->
+            #'Externaltypereference'{module=^CurrentMod,type=Etype} ->
                 {typeinfo,{CurrentMod,typeinfo_func(Etype)}};
             #'Externaltypereference'{module=Emod,type=Etype} ->
                 {typeinfo,{Emod,typeinfo_func(Etype)}};
@@ -438,7 +438,7 @@ gen_typeinfo(Erules, Typename, Type) ->
 	    gen_encode_constructed(Erules,Typename,InnerType,Type);
 	{primitive,bif} ->
 	    gen_encode_prim(jer,Type,"Val");
-	#'Externaltypereference'{module=CurrentMod,type=Etype} ->
+	#'Externaltypereference'{module=^CurrentMod,type=Etype} ->
 	    {typeinfo,{CurrentMod,typeinfo_func(Etype)}};
 	#'Externaltypereference'{module=Emod,type=Etype} ->
 	    {typeinfo,{Emod,typeinfo_func(Etype)}};

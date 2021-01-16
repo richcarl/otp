@@ -415,8 +415,8 @@ get_row(Table, Item, Column) ->
     Ref = erlang:monitor(process, Table),
     Table ! {get_row, self(), Item, Column},
     receive
-	{'DOWN', Ref, _, _, _} -> "";
-	{Table, Res} ->
+	{'DOWN', ^Ref, _, _, _} -> "";
+	{^Table, Res} ->
 	    erlang:demonitor(Ref),
 	    Res
     end.
@@ -425,8 +425,8 @@ get_attr(Table, Item) ->
     Ref = erlang:monitor(process, Table),
     Table ! {get_attr, self(), Item},
     receive
-	{'DOWN', Ref, _, _, _} -> wx:null();
-	{Table, Res} ->
+	{'DOWN', ^Ref, _, _, _} -> wx:null();
+	{^Table, Res} ->
 	    erlang:demonitor(Ref),
 	    Res
     end.

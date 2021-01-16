@@ -334,7 +334,7 @@ down(Pid)
 
 down(MRef)
   when is_reference(MRef) ->
-    receive {'DOWN', MRef, process, _, _} = T -> T end.
+    receive {'DOWN', ^MRef, process, _, _} = T -> T end.
 
 %% ---------------------------------------------------------------------------
 %% # fold_n/3

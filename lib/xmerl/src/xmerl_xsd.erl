@@ -189,7 +189,7 @@ xmerl_xsd_vsn() ->
     end.
 xmerl_xsd_vsn_check(S=#xsd_state{vsn=MD5_VSN}) ->
     case [V||{vsn,V}<-xmerl_xsd:module_info(attributes)] of
-	[MD5_VSN] ->
+	[^MD5_VSN] ->
 	    {ok,S};
 	_ ->
 	    {error,{[],?MODULE,{different_version_of_xmerl_xsd_module_used,
@@ -1175,7 +1175,7 @@ rename_redef_group(Name={LN,Scope,NS},S) ->
     %% Scope must be []
     NewName = {LN,['#redefine'|Scope],NS},
     case resolve({group,NewName},S) of
-	{SG=#schema_group{name=Name},_} ->
+	{SG=#schema_group{name=^Name},_} ->
 	    _ = save_object({group,SG#schema_group{name=NewName}},S),
 	    NewName;
 	_ ->
@@ -1246,7 +1246,7 @@ push_circularity_mark(_,S) ->
     S.
 pop_circularity_mark(Mark,S=#xsd_state{redefine=false}) ->
     case S#xsd_state.circularity_stack of
-	[Mark|Rest] ->
+	[^Mark|Rest] ->
 	    S#xsd_state{circularity_stack=Rest};
 	_ ->
 	    S
@@ -1497,7 +1497,7 @@ check_chain(Kind,[S4SC|S4SCs],ChainCM=[_H|_T],
 	    _ -> Kind
 	end,
     case check_cm2(NewKind,S4SC,ChainCM,S) of
-	{ChainCMRest,#xsd_state{errors=Errs}} ->
+	{ChainCMRest,#xsd_state{errors=^Errs}} ->
 	    check_chain(Kind,S4SCs,ChainCMRest,S);
 	{_ChainCMRest,_S2} ->
 	    case optional(S4SC) of
@@ -1529,7 +1529,7 @@ check_alternative(Kind,[S4SC|S4SCs],AltCM = [_H|_T],
 	    _ -> Kind
 	end,
     case check_cm2(NewKind,S4SC,AltCM,S) of
-	{AltCMRest,#xsd_state{errors=Err}} ->
+	{AltCMRest,#xsd_state{errors=^Err}} ->
 	    {ok,[[S4SC],AltCMRest,Kind,S]};
 	{AltCMRest,_S2} ->
 	    check_alternative(Kind,S4SCs,AltCMRest,S)
@@ -1552,7 +1552,7 @@ occurance_loop(Occ={Min,Max},CheckFun,Args,N) ->
 	    {ok,Args};
 	Err = {error,_} ->
 	    Err;
-	{ok,Args} ->
+	{ok,^Args} ->
 	    {error,{[],?MODULE,{no_match,occurance_kind(Args)}}};
 	{ok,NewArgs} when Nplus1 < Max ->
 	    occurance_loop(Occ,CheckFun,NewArgs,Nplus1);
@@ -1979,7 +1979,7 @@ is_already_processed(NameSpace,#xsd_state{schema_name=SchemaName,
 %%     case {keymember(SchemaName,2,CNS),keymember(NameSpace,3,CNS)} of
 %% 	{true,true} ->
     case keysearch(SchemaName,2,CNS) of
-	{_,{_,_,NameSpace}} ->
+	{_,{_,_,^NameSpace}} ->
 	    true;
 	_ ->
 	    false
@@ -2918,14 +2918,14 @@ check_target_namespace(XMLEl,S) ->
 	{URI,{Prefix,_}} ->
 	    NS = XMLEl#xmlElement.namespace,
 	    case namespace(Prefix,NS,NS#xmlNamespace.default) of
-		URI ->
+		^URI ->
 		    ok;
 		_ ->
 		    failed
 	    end;
 	{URI,_} ->
 	    case (XMLEl#xmlElement.namespace)#xmlNamespace.default of
-		URI ->
+		^URI ->
 		    ok;
 		_ ->
 		    failed
@@ -3063,11 +3063,11 @@ check_attributes([],[SA|SchemaAtts],XMLEl,XsiFactors,S,CheckedAtts) ->
 		    NewAtt = create_attribute(Name,Default),
 		    check_attributes([],SchemaAtts,XMLEl,XsiFactors,S2,
 				     [NewAtt|CheckedAtts]);
-		{optional,undefined,Fix} ->
+		{optional,undefined,^Fix} ->
 		    NewAtt = create_attribute(Name,Def),
 		    check_attributes([],SchemaAtts,XMLEl,XsiFactors,S2,
 				     [NewAtt|CheckedAtts]);
-		{optional,Default,Fix} ->
+		{optional,Default,^Fix} ->
 		    Err = {error_path(XMLEl,XMLEl#xmlElement.name),?MODULE,
 			   {default_and_fixed_attributes_mutual_exclusive,
 			    Name,Default,Fix}},
@@ -3256,7 +3256,7 @@ check_union_types([],UT,Value,S) ->
     acc_errs(S,{[],?MODULE,{value_not_valid,Value,UT}});
 check_union_types([T|Ts],UT,Value,S = #xsd_state{errors=Errs}) ->
     case check_type(T,Value,unapplied,S) of
-	{Val,S2=#xsd_state{errors=Errs}} ->
+	{Val,S2=#xsd_state{errors=^Errs}} ->
 	    {Val,S2};
 	{_,_} ->
 	    check_union_types(Ts,UT,Value,S)
@@ -3278,7 +3278,7 @@ reserved_attribute(#xmlAttribute{name=Name},#xmlNamespace{nodes=NSNodes}) ->
 			      InstAtt=="schemaLocation";
 			      InstAtt=="noNamespaceSchemaLocation" ->
 	    case keyNsearch(?XSD_INSTANCE_NAMESPACE,2,NSNodes,[]) of
-		{Prefix,_} ->
+		{^Prefix,_} ->
 		    true;
 		_ ->
 		    false
@@ -3351,7 +3351,7 @@ check_abstract(ElName,El,#schema_element{},S) ->
 check_form({LocalName,_,Namespace},LocalName,
 	   El=#xmlElement{name=Name,namespace=NS},qualified,S) ->
     case NS#xmlNamespace.default of
-	Namespace ->
+	^Namespace ->
 	    S;
 	_ ->
 	    acc_errs(S,{error_path(El,Name),?MODULE,
@@ -3634,7 +3634,7 @@ check_reference(Ref={complexType,_},S) ->
 check_reference({simple_or_complex_Type,Ref},S=#xsd_state{errors=Errs}) ->
     %% complex or simple type
     case check_reference({complexType,Ref},S) of
-	S2=#xsd_state{errors=Errs} -> S2;
+	S2=#xsd_state{errors=^Errs} -> S2;
 	_ -> check_reference({simpleType,Ref},S)
     end;
 check_reference(Ref,S) ->
@@ -3794,7 +3794,7 @@ cmp_any_namespace({_,_,EIINS},Namespace,_S) ->
 	    true;
 	_ -> 
 	    case keysearch(EIINS,2,Namespace) of
-		{value,{'not',EIINS}} ->
+		{value,{'not',^EIINS}} ->
 		    false;
 		_ ->
 		    true
@@ -4124,12 +4124,12 @@ merge_derived_types2(_XSDType={simpleType,BuiltInType},
 		     InstType=#schema_complex_type{content=Content},
 		     Blocks,_Mode,S) ->
     case Content of
-	[{extension,{BuiltInType,CM}}] ->
+	[{extension,{^BuiltInType,CM}}] ->
 	    {NewContent,S2} = extend_type([],CM,S),
 	    {InstType#schema_complex_type{base_type=BuiltInType,
 					  content=NewContent},
 	     allowed_derivation(extension,Blocks,S2)};
-	[{restriction,{BuiltInType,CM}}] ->
+	[{restriction,{^BuiltInType,CM}}] ->
 	    {NewContent,S2} = restrict_simple_type([],CM,BuiltInType,S),
 	    {InstType#schema_complex_type{base_type=BuiltInType,
 					  content=NewContent},
@@ -4149,7 +4149,7 @@ merge_derived_types2({simpleType,BuiltInType},
 		     InstType=#schema_simple_type{content=Content},
 		     Blocks,_Mode,S) ->
     case Content of
-	[{restriction,{BuiltInType,CM}}] ->
+	[{restriction,{^BuiltInType,CM}}] ->
 	    {InstType#schema_simple_type{base_type=BuiltInType,
 					 content=CM},
 	     allowed_derivation(restriction,Blocks,S)};
@@ -4158,11 +4158,11 @@ merge_derived_types2({simpleType,BuiltInType},
     end;    
 merge_derived_types2(XSDType,InstType,Blocks,Mode,S) ->
     case {variety_type(XSDType,S),variety_type(InstType,S)} of
-	{XSDType,InstType} ->
+	{^XSDType,^InstType} ->
 	    {error,acc_errs(S,{[],?MODULE,{unexpected_type,XSDType,InstType}})};
 	{_XSDType2,InstType2} ->
 	    case allowed_derivation(substitution,Blocks,S) of
-		S ->
+		^S ->
 		    merge_derived_types2(XSDType,InstType2,Blocks,Mode,S);
 		S2 ->
 		    {error,S2}
@@ -4228,7 +4228,7 @@ extend_type([],[],Acc,S) ->
 extend_type([BaseCM|BaseRest],Ext=[{SeqCho,{Extension,Occ}}|ExtRest],Acc,S)
   when SeqCho == sequence; SeqCho == choice ->
     case BaseCM of
-	{SeqCho,{BC,_Occ}} ->
+	{^SeqCho,{BC,_Occ}} ->
 	    extend_type(BaseRest,ExtRest,[{SeqCho,{BC++Extension,Occ}}|Acc],S);
 	G = {group,{_Ref,_Occ}} ->
 	    {ResG,S2} = resolve(G,S),
@@ -4279,7 +4279,7 @@ restrict_type([BaseCM|BaseRest],[{SeqCho,{CM,Occ}}|RestrRest],TypeName,Acc,S)
   when SeqCho == sequence; SeqCho == choice ->
     %% context 3
     case BaseCM of
-	{SeqCho,{BCM,_}} ->
+	{^SeqCho,{BCM,_}} ->
 	    case check_element_presence(CM,BCM) of
 		{error,Reason} ->
 		    {reverse(Acc),acc_errs(S,Reason)};
@@ -4412,7 +4412,7 @@ wildcard_subset(_,[],S) ->
     S;
 wildcard_subset(BaseNS,NS,S) when is_list(BaseNS),is_list(NS) ->
     case [X||X<-NS,member(X,BaseNS)] of
-	NS ->
+	^NS ->
 	    S;
 	_ ->
 	    acc_errs(S,{[],?MODULE,{wildcard_namespace,NS,
@@ -4831,7 +4831,7 @@ atom_if_shortasciilist(N) ->
 namespace("xml",_,_) -> 'http://www.w3.org/XML/1998/namespace';
 namespace(Prefix,NS,Default) ->
     case key1search(Prefix,NS#xmlNamespace.nodes,Default) of
-	{Prefix,Namespace} ->
+	{^Prefix,Namespace} ->
 	    Namespace;
 	Namespace -> Namespace
     end.
@@ -5087,7 +5087,7 @@ load_object({group,{QN,_Occ={Min,_}}},S) when is_integer(Min) ->
     load_object({group,QN},S);
 load_object(Key,S=#xsd_state{table=Tab}) ->
     case ets:lookup(Tab,Key) of
-	[{Key,Value}] ->
+	[{^Key,Value}] ->
 	    {Value,S};
 	[] -> 
 	    case ets:lookup(Tab,global_def(Key)) of
@@ -5130,7 +5130,7 @@ save_ID(ID,S) ->
     end.
 check_and_save_ID(ID,S) ->
     case xmerl_xsd_type:check_simpleType('ID',ID,S) of
-	{ok,ID} ->
+	{ok,^ID} ->
 	    save_ID(ID,S);
 	_ ->
 	    acc_errs(S,{illegal_ID_value,ID})
@@ -5327,7 +5327,7 @@ keyNsearch(Key,N,L,Default) ->
 
 key_replace_or_insert(Key,N,List,Tuple) ->
     case keyreplace(Key,N,List,Tuple) of
-	List ->
+	^List ->
 	    [Tuple|List];
 	NewList ->
 	    NewList

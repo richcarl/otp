@@ -87,7 +87,7 @@ loop(_,repeat,N,N,_,_Args,_,AccResult) ->
 loop(If,Type,N,Data0,Data1,Args,TPid,AccResult) ->
     Pid = spawn_tester(If,self(),Args),
     receive 
-	{'EXIT',Pid,Reason} ->
+	{'EXIT',^Pid,Reason} ->
 	    case Reason of
 		{user_error,What} ->
 		    io:format("\nTest run failed!\nReason: ~tp\n\n\n", [What]),
@@ -100,11 +100,11 @@ loop(If,Type,N,Data0,Data1,Args,TPid,AccResult) ->
 		    cancel(TPid),
 		    {error,Reason}
 	    end;
-	{Pid,{error,Reason}} ->
+	{^Pid,{error,Reason}} ->
 	    io:format("\nTest run failed!\nReason: ~tp\n\n\n",[Reason]),
 	    cancel(TPid),
 	    {error,Reason};
-	{Pid,Result} ->
+	{^Pid,Result} ->
 	    if Type == repeat ->
 		    io:format("\nTest run ~w(~w) complete.\n\n\n",[N+1,Data0]),
 		    lists:keydelete(loop_info,1,Args),

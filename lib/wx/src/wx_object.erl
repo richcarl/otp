@@ -235,7 +235,7 @@ start_link(Name, Mod, Args, Options) ->
     gen_response(gen:start(?MODULE, link, Name, Mod, Args, [get(?WXE_IDENTIFIER)|Options])).
 
 gen_response({ok, Pid}) ->
-    receive {ack, Pid, Ref = #wx_ref{}} -> Ref end;
+    receive {ack, ^Pid, Ref = #wx_ref{}} -> Ref end;
 gen_response(Reply) ->
     Reply.
 
@@ -453,7 +453,7 @@ loop(Parent, Name, State, Mod, Time, Debug) ->
 	{system, From, Req} ->
 	    sys:handle_system_msg(Req, From, Parent, ?MODULE, Debug,
 				  [Name, State, Mod, Time]);
-	{'EXIT', Parent, Reason} ->
+	{'EXIT', ^Parent, Reason} ->
 	    terminate(Reason, Name, Msg, Mod, State, Debug);
 	{'_wxe_destroy_', _Me} ->
 	    terminate(wx_deleted, Name, Msg, Mod, State, Debug);
@@ -498,7 +498,7 @@ handle_msg({'$gen_call', From, Msg}, Parent, Name, State, Mod) ->
     end;
 handle_msg(Msg, Parent, Name, State, Mod) ->
     case catch dispatch(Msg, Mod, State) of
-        {'EXIT', {undef, [{Mod, handle_info, [_,_], _}|_]}} ->
+        {'EXIT', {undef, [{^Mod, handle_info, [_,_], _}|_]}} ->
             handle_no_reply({noreply, State}, Parent, Name, Msg, Mod, State, []);
         Reply ->
             handle_no_reply(Reply, Parent, Name, Msg, Mod, State, [])

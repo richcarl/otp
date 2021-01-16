@@ -94,8 +94,8 @@ command_1(Pid, Cmd) when is_pid(Pid) ->
 
 command_wait(Pid, Timeout, Monitor) ->
     receive
-	{Pid, Result} -> Result;
-	{'DOWN', Monitor, process, Pid, _R} -> {error, server_down}
+	{^Pid, Result} -> Result;
+	{'DOWN', ^Monitor, process, ^Pid, _R} -> {error, server_down}
     after Timeout ->
 	    %% avoid creating a monitor unless some time has passed
 	    command_wait(Pid, infinity, erlang:monitor(process, Pid))
@@ -112,9 +112,9 @@ ensure_started(Name, N) when N > 0 ->
 	    Parent = self(),
 	    Pid = spawn(fun () -> server_start(Name, Parent) end),
 	    receive
-		{Pid, ok} ->
+		{^Pid, ok} ->
 		    Pid;
-		{Pid, error} ->
+		{^Pid, error} ->
 		    receive after 200 -> ensure_started(Name, N - 1) end
 	    end;
 	Pid ->
@@ -326,7 +326,7 @@ auto_super(Server, M) ->
     group_leader(whereis(user), self()),
     Pid = spawn_link(fun () -> auto_proc(Server, M) end),
     receive
-	{'EXIT', Pid, _} ->
+	{'EXIT', ^Pid, _} ->
 	    ok
     after ?AUTO_TIMEOUT	->
 	    exit(Pid, kill),

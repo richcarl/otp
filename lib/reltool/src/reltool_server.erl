@@ -1176,7 +1176,7 @@ read_app_info(_AppFileOrBin, _AppFile, _AppName, undefined, missing, DefaultVsn,
 read_app_info(AppFileOrBin, AppFile, AppName, _ActiveDir, _AppStatus, DefaultVsn, Status) ->
     EnoentText = file:format_error(enoent),
     case reltool_utils:prim_consult(AppFileOrBin) of
-        {ok,  [{application, AppName, Info}]} ->
+        {ok,  [{application, ^AppName, Info}]} ->
             AI = #app_info{vsn = DefaultVsn},
             parse_app_info(AppFile, Info, AI, Status);
         {ok, _BadApp} ->
@@ -1319,7 +1319,7 @@ xref_mod(File) when is_list(File) ->
 
 wait_for_processto_die(Ref, Pid, File) ->
     receive
-	{'DOWN', Ref, _Type, _Object, _Info} ->
+	{'DOWN', ^Ref, _Type, _Object, _Info} ->
 	    ok
     after timer:seconds(30) ->
 	    error_logger:error_msg("~w(~w): Waiting for process ~w to die ~tp\n",
@@ -1987,7 +1987,7 @@ escript_files_to_apps(EscriptAppName,
 					       [ModOrInfo],
 					       App#app.mods),
 			{[App#app{mods = Mods} | Acc2], Status};
-		    Acc ->
+		    ^Acc ->
 			{NewApp, Status2} = init_escript_app(AppName,
 							     EscriptAppName,
 							     Dir,

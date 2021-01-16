@@ -795,7 +795,7 @@ opt_al_1(A, Opts0) ->
 		    Opts1 = proplists:delete(align, Opts0),
 		    [{align,8-Bits }|Opts1]
 	    end;
-	A ->					%Assertion.
+	^A ->					%Assertion.
 	    Opts0
     end.
 
@@ -1816,7 +1816,7 @@ enc_opt({call,erlang,bit_size,[Bin],Dst}=Imm0, St0) ->
 	{Lb,Ub}=Range ->
 	    St = set_type(Dst, t_integer(Range), St0),
 	    Imm = case Lb of
-		      Ub -> none;
+		      ^Ub -> none;
 		      _ -> Imm0
 		  end,
 	    {Imm,St}
@@ -1836,7 +1836,7 @@ enc_opt({call,erlang,byte_size,[Bin],Dst}=Imm0, St0) ->
 	    Ub = (Ub0+7) div 8,
 	    St = set_type(Dst, t_integer({Lb,Ub}), St0),
 	    Imm = case Lb of
-		      Ub -> none;
+		      ^Ub -> none;
 		      _ -> Imm0
 		  end,
 	    {Imm,St}
@@ -2443,7 +2443,7 @@ enc_cond_term({ult,Var0,Int}) ->
     Var = mk_val(Var0),
     N = uper_num_bits(Int),
     case 1 bsl N of
-	Int ->
+	^Int ->
 	    emit([Var," bsr ",N," =:= 0"]);
 	_ ->
 	    emit(["0 =< ",Var,", ",Var," < ",Int])
@@ -2543,7 +2543,7 @@ enc_hoist_align(Imm0) ->
 
 enc_hoist_align_reverse([H|T], Acc) ->
     case enc_opt_al_1([H], 0) of
-	{[H],_} ->
+	{[^H],_} ->
 	    enc_hoist_align_reverse(T, [H|Acc]);
 	{_,_} ->
 	    lists:reverse(T, [H,stop|Acc])

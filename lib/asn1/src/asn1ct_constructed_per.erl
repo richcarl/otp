@@ -640,7 +640,7 @@ dec_objset_2(Erule, Obj, RestFields0, Typename) ->
 	    emit("{Term,_} = "),
 	    Func = enc_func("dec_", Type),
 	    case get(currmod) of
-		Mod ->
+		^Mod ->
 		    emit([{asis,Func},"(Bytes)"]);
 		_ ->
 		    emit([{asis,Mod},":",{asis,Func},"(Bytes)"])
@@ -652,7 +652,7 @@ dec_objset_2(Erule, Obj, RestFields0, Typename) ->
 		#typedef{typespec=#'Object'{def=Def}} ->
 		    {object,_,Fields} = Def,
 		    [NextField|RestFields] = RestFields0,
-		    {NextField,Typedef} = lists:keyfind(NextField, 1, Fields),
+		    {^NextField,Typedef} = lists:keyfind(NextField, 1, Fields),
 		    dec_objset_2(Erule, Typedef, RestFields, Typename)
 	    end
     end.
@@ -713,7 +713,7 @@ gen_encode_sof_imm(Erule, Typename, SeqOrSetOf, #type{}=D) ->
 			    end,
 		   [{apply,{local,Enc,CompType},
 		     [{var,"Comp"}|ObjArg]}];
-	       #'Externaltypereference'{module=Currmod,type=Ename} ->
+	       #'Externaltypereference'{module=^Currmod,type=Ename} ->
 		   [{apply,{local,enc_func(Ename),CompType},[{var,"Comp"}]}];
 	       #'Externaltypereference'{module=EMod,type=Ename} ->
 		   [{apply,{EMod,enc_func(Ename),CompType},[{var,"Comp"}]}];
@@ -1055,7 +1055,7 @@ def_values(#type{def={'BIT STRING',[_|_]=Ns}}, List) when is_list(List) ->
 def_values(#type{def={'INTEGER',Ns}}, Def) ->
     [asn1_DEFAULT,Def|case lists:keyfind(Def, 2, Ns) of
 			  false -> [];
-			  {Val,Def} -> [Val]
+			  {Val,^Def} -> [Val]
 		      end];
 def_values(_, Def) ->
     [asn1_DEFAULT,Def].
@@ -1092,7 +1092,7 @@ gen_enc_line_imm_1(Erule, TopType, Cname, Type, Element, DynamicEnc) ->
 	_ ->
 	    CurrMod = get(currmod),
 	    case asn1ct_gen:type(Atype) of
-		#'Externaltypereference'{module=CurrMod,type=EType} ->
+		#'Externaltypereference'{module=^CurrMod,type=EType} ->
 		    [{apply,{local,enc_func(EType),Atype},[Element]}];
 		#'Externaltypereference'{module=Mod,type=EType} ->
 		    [{apply,{Mod,enc_func(EType),Atype},[Element]}];
@@ -1174,11 +1174,11 @@ index_object_set_2(Name, [_|T], ClassFields) ->
     index_object_set_2(Name, T, ClassFields);
 index_object_set_2(Name, [], ClassFields) ->
     case lists:keyfind(Name, 2, ClassFields) of
-	{typefield,Name,'OPTIONAL'} ->
+	{typefield,^Name,'OPTIONAL'} ->
 	    none;
-	{objectfield,Name,_,_,'OPTIONAL'} ->
+	{objectfield,^Name,_,_,'OPTIONAL'} ->
 	    none;
-	{typefield,Name,{'DEFAULT',#type{}=Type}} ->
+	{typefield,^Name,{'DEFAULT',#type{}=Type}} ->
 	    InnerType = asn1ct_gen:get_inner(Type#type.def),
 	    case asn1ct_gen:type(InnerType) of
 		{primitive,bif} ->
@@ -1235,14 +1235,14 @@ enc_obj(Erule, Obj, TypeName, RestFieldNames0, Aligned) ->
 		#typedef{typespec=#'Object'{def=Def}} ->
 		    {object,_,Fields} = Def,
 		    [NextField|RestFieldNames] = RestFieldNames0,
-		    {NextField,Typedef} = lists:keyfind(NextField, 1, Fields),
+		    {^NextField,Typedef} = lists:keyfind(NextField, 1, Fields),
 		    enc_obj(Erule, Typedef, TypeName,
 			    RestFieldNames, Aligned)
 	    end;
 	#'Externaltypereference'{module=Mod,type=Type} ->
 	    Func = enc_func(Type),
 	    case get(currmod) of
-		Mod ->
+		^Mod ->
 		    [{apply,{local,Func,Obj},[{var,"Val"}]}];
 		_ ->
 		    [{apply,{Mod,Func,Obj},[{var,"Val"}]}]
@@ -1531,9 +1531,9 @@ gen_dec_line_imm(Erule, TopType, Comp, DecInfObj, Pre) ->
     Post =
 	fun({SaveBytes,Finish}) ->
 		{AccTerm,AccBytes} = Finish(),
-		#'ComponentType'{name=Cname} = Comp,
+		#'ComponentType'{name=^Cname} = Comp,
 		case DecInfObj of
-		    {Cname,ObjSet} ->
+		    {^Cname,ObjSet} ->
 			ObjSetRef =
 			    case ObjSet of
 				{deep,OSName,_,_} ->
@@ -1662,7 +1662,7 @@ gen_dec_line_special(Gen, Atype, TopType, Comp, DecInfObj) ->
 gen_dec_line_dec_inf(Gen, Comp, DecInfObj) ->
     #'ComponentType'{name=Cname} = Comp,
     case DecInfObj of
-	{Cname,{_,_OSet,_UniqueFName,ValIndex}} ->
+	{^Cname,{_,_OSet,_UniqueFName,ValIndex}} ->
 	    Term = asn1ct_gen:mk_var(asn1ct_name:curr(term)),
 	    ValueMatch = value_match(Gen, ValIndex,Term),
 	    emit([",",nl,

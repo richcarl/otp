@@ -276,7 +276,7 @@ func(Line, Last, Nos) ->
     {Name, Line1} = word(Line),
     case Name of
 	[] -> false;
-	Last -> false;
+	^Last -> false;
 	_ ->
 	    {Space, Line2} = white(Line1),
 	    case Line2 of

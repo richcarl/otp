@@ -135,7 +135,7 @@ script_start(Args) ->
 	    Self = self(),
 	    Pid = spawn_link(fun() -> script_start1(Self, Args) end),
 	    receive
-		{'EXIT',Pid,Reason} ->
+		{'EXIT',^Pid,Reason} ->
 		    case Reason of
 			{user_error,What} ->
 			    io:format("\nTest run failed!\nReason: ~tp\n\n\n",
@@ -148,10 +148,10 @@ script_start(Args) ->
 				      "~tp\n\n\n", [Reason]),
 			    finish(Tracing, ?EXIT_STATUS_TEST_RUN_FAILED, Args)
 		    end;
-		{Pid,{error,Reason}} ->
+		{^Pid,{error,Reason}} ->
 		    io:format("\nTest run failed! Reason:\n~tp\n\n\n",[Reason]),
 		    finish(Tracing, ?EXIT_STATUS_TEST_RUN_FAILED, Args);
-		{Pid,Result} ->
+		{^Pid,Result} ->
 		    io:nl(),
 		    finish(Tracing, analyze_test_result(Result, Args), Args)
 	    end;
@@ -866,9 +866,9 @@ run_test(StartOpts) when is_list(StartOpts) ->
     CTPid = spawn(run_test1_fun(StartOpts)),
     Ref = monitor(process, CTPid),
     receive
-	{'DOWN',Ref,process,CTPid,{user_error,Error}} ->
+	{'DOWN',^Ref,process,^CTPid,{user_error,Error}} ->
 		    {error,Error};
-	{'DOWN',Ref,process,CTPid,Other} ->
+	{'DOWN',^Ref,process,^CTPid,Other} ->
 		    Other
     end.
 
@@ -1201,13 +1201,13 @@ check_config_file(Callback, File)->
 	    ok
     end,
     case Callback:check_parameter(File) of
-	{ok,{file,File}}->
+	{ok,{file,^File}}->
 	    ?abs(File);
 	{ok,{config,_}}->
 	    File;
 	{error,{wrong_config,Message}}->
 	    exit({error,{wrong_config,{Callback,Message}}});
-	{error,{nofile,File}}->
+	{error,{nofile,^File}}->
 	    exit({error,{no_such_file,?abs(File)}})
     end.
 
@@ -1226,7 +1226,7 @@ run_dir(Opts = #opts{logdir = LogDir,
 				  ok;
 			      false ->
 				  case code:load_file(Callback) of
-				      {module,Callback}->
+				      {module,^Callback}->
 					  ok;
 				      {error,_}->
 					  exit({error,{no_such_module,
@@ -1351,9 +1351,9 @@ run_testspec(TestSpec) ->
     CTPid = spawn(run_testspec1_fun(TestSpec)),
     Ref = monitor(process, CTPid),
     receive
-	{'DOWN',Ref,process,CTPid,{user_error,Error}} ->
+	{'DOWN',^Ref,process,^CTPid,{user_error,Error}} ->
 		    Error;
-	{'DOWN',Ref,process,CTPid,Other} ->
+	{'DOWN',^Ref,process,^CTPid,Other} ->
 		    Other
     end.
 
@@ -1832,10 +1832,10 @@ possibly_spawn(true, Tests, Skip, Opts) ->
 		    end,
 		TestRunPid = spawn_link(TestRun),
 		receive
-		    {'EXIT',TestRunPid,{ok,TestResult}} ->
+		    {'EXIT',^TestRunPid,{ok,TestResult}} ->
 			io:format(user, "~nCommon Test returned ~tp~n~n",
 				  [TestResult]);
-		    {'EXIT',TestRunPid,Error} ->
+		    {'EXIT',^TestRunPid,Error} ->
 			exit(Error)				
 		end
 	end,
@@ -2406,7 +2406,7 @@ count_test_cases1(Jobs, N, Suites, Ref) ->
 	    throw(Error);
 	{no_of_cases,{Ss,N1}} ->
 	    count_test_cases1(Jobs-1, add_known(N,N1), [Ss|Suites], Ref);
-	{'DOWN', Ref, _, _, Info} ->
+	{'DOWN', ^Ref, _, _, Info} ->
 	    throw({error,{test_server_died,Info}})
     end.
 
@@ -2571,7 +2571,7 @@ wait_for_idle() ->
     ct_util:update_last_run_index(),
     Notify = fun(Me,IdleState) -> Me ! {idle,IdleState},
 				  receive
-				      {Me,proceed} -> ok
+				      {^Me,proceed} -> ok
 				  after
 				      30000 -> ok
 				  end
@@ -2585,7 +2585,7 @@ wait_for_idle() ->
 	    Result = receive
 			 {idle,abort}           -> aborted;
 			 {idle,_}               -> ok;
-			 {'DOWN', Ref, _, _, _} -> error
+			 {'DOWN', ^Ref, _, _, _} -> error
 		     end,
 	    erlang:demonitor(Ref, [flush]),
 	    ct_util:update_last_run_index(),
@@ -2834,11 +2834,11 @@ get_start_opt(Key, IfExists, IfNotExists, Args) ->
 
 try_get_start_opt(Key, IfExists, IfNotExists, Args) ->
     case lists:keysearch(Key, 1, Args) of
-	{value,{Key,Val}} when is_function(IfExists) ->
+	{value,{^Key,Val}} when is_function(IfExists) ->
 	    IfExists(Val);
-	{value,{Key,Val}} when IfExists == value ->
+	{value,{^Key,Val}} when IfExists == value ->
 	    Val;
-	{value,{Key,_Val}} ->
+	{value,{^Key,_Val}} ->
 	    IfExists;
 	_ ->
 	    IfNotExists

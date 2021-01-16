@@ -160,7 +160,7 @@ transform_expression(LC, Bs0, WithLintErrors) ->
                 [] ->
                     {NewForms,_State1} = transform(FormsNoShadows, State),
                     NewForms1 = restore_anno(NewForms, NodeInfo),
-                    {function,L,bar,Ar,[{clause,L,As,[],[NF]}]} =
+                    {function,^L,bar,^Ar,[{clause,^L,^As,[],[NF]}]} =
                         lists:last(NewForms1),
                     {ok,NF};
                 Errors when WithLintErrors ->
@@ -326,7 +326,7 @@ badarg(Forms, State) ->
 lc_nodes(E, NodeInfo) ->
     map_anno(fun(Anno) ->
                      N = erl_anno:line(Anno),
-                     [{N, Data}] = ets:lookup(NodeInfo, N),
+                     [{^N, Data}] = ets:lookup(NodeInfo, N),
                      NData = Data#{inside_lc => true},
                      true = ets:insert(NodeInfo, {N, NData}),
                      Anno
@@ -344,15 +344,15 @@ lc_messages(MsL, NodeInfo) ->
 
 lc_loc(N, NodeInfo) ->
     case ets:lookup(NodeInfo, N) of
-        [{N, #{inside_lc := true}}] ->
+        [{^N, #{inside_lc := true}}] ->
             true;
-        [{N, _}] ->
+        [{^N, _}] ->
             false
     end.
 
 genvar_pos(Location, S) ->
     case ets:lookup(S#state.node_info, Location) of
-        [{Location, #{genvar_pos := Pos}}] ->
+        [{^Location, #{genvar_pos := Pos}}] ->
             Pos;
         [] ->
             Location
@@ -489,7 +489,7 @@ used_genvar_check(FormsNoShadows, State) ->
                             {var, Anno, _} = NewVar = save_anno(Var, NodeInfo),
                             Location0 = erl_anno:location(Anno0),
                             Location = erl_anno:location(Anno),
-                            [{Location, Data}] =
+                            [{^Location, Data}] =
                                 ets:lookup(NodeInfo, Location),
                             Pos = {Location0,get(?QLC_FILE),OrigVar},
                             NData = Data#{genvar_pos => Pos},
@@ -959,7 +959,7 @@ join_handle(AP, L, [F, H, O, C], Constants) ->
 join_handle_constants(QId, ExtraConstants) ->
     IdNo = QId#qid.no,
     case lists:keyfind(IdNo, 1, ExtraConstants) of
-        {IdNo, ConstOps} ->
+        {^IdNo, ConstOps} ->
             ConstOps;
         false ->
             []
@@ -1348,7 +1348,7 @@ lu_skip(ColConstants, FilterData, PatternFrame, PatternVars,
                      LookedUpConstants = 
                          case lists:keyfind(Column, 1, ColConstants) of
                              false -> [];
-                             {Column, LUCs} -> LUCs
+                             {^Column, LUCs} -> LUCs
                          end,
                      %% Don't try to handle filters that compare several
                      %% values equal. See also frames_to_columns().
@@ -1395,7 +1395,7 @@ join_gens(Cs0, Qs, Skip) ->
 
 join_gens2(Cs0, FilterData, Skip) ->
     [{J, skip_tag(case lists:keyfind(J, 1, Skip) of
-                      {J, FilL} ->
+                      {^J, FilL} ->
                           FilL;
                       false ->
                           []
@@ -1412,7 +1412,7 @@ skip_tag(FilList, FilterData) ->
 
 skip_tag(Col, ColFils, FilterData) ->
     case lists:keyfind(Col, 1, ColFils) of
-        {Col, FilL} ->
+        {^Col, FilL} ->
             Tag = if
                       length(FilterData) =:= length(FilL) ->
                           all;
@@ -1529,7 +1529,7 @@ sel_gf([], _N, _Deps, _RDs, _Gens, _Gens1) ->
 sel_gf([{#qid{no = N}=Id,{fil,F}}=Fil | FData], N, Deps, State, Gens, Gens1) ->
     case is_guard_test(F, State) of
         true ->
-            {Id,GIds} = lists:keyfind(Id, 1, Deps),
+            {^Id,GIds} = lists:keyfind(Id, 1, Deps),
             case length(GIds) =< 1 of
                 true ->
                     case generators_in_scope(GIds, Gens1) of
@@ -1911,7 +1911,7 @@ is_unique_var({var, _L, V}) ->
 expand_pattern_records(P, State) ->
     A = anno0(),
     E = {'case',A,{atom,A,true},[{clause,A,[P],[],[{atom,A,true}]}]},
-    {'case',_,_,[{clause,A,[NP],_,_}]} = expand_expr_records(E, State),
+    {'case',_,_,[{clause,^A,[NP],_,_}]} = expand_expr_records(E, State),
     NP.
 
 expand_expr_records(E, State) ->
@@ -2285,7 +2285,7 @@ try_ms(E, P, Fltr, State) ->
     X = ms_transform:parse_transform(State#state.records ++ [Form], []),
     case catch 
         begin
-            {function,L,foo,0,[{clause,L,[],[],[MS0]}]} = lists:last(X),
+            {function,^L,foo,0,[{clause,^L,[],[],[MS0]}]} = lists:last(X),
             MS = erl_parse:normalise(var2const(MS0)),
             XMS = ets:match_spec_compile(MS),
             true = ets:is_compiled_ms(XMS),
@@ -2627,10 +2627,10 @@ restore_anno(Abstr, NodeInfo) ->
     F = fun(Anno) ->
                 Location = erl_anno:location(Anno),
                 case ets:lookup(NodeInfo, Location) of
-                    [{Location, Data}] ->
+                    [{^Location, Data}] ->
                         OrigLocation = maps:get(location, Data),
                         erl_anno:set_location(OrigLocation, Anno);
-                    [{Location}] -> % generated code
+                    [{^Location}] -> % generated code
                         Anno;
                     [] ->
                         Anno
@@ -2640,9 +2640,9 @@ restore_anno(Abstr, NodeInfo) ->
 
 restore_loc(Location, #state{node_info = NodeInfo}) ->
   case ets:lookup(NodeInfo, Location) of
-      [{Location, #{location := OrigLocation}}] ->
+      [{^Location, #{location := OrigLocation}}] ->
           OrigLocation;
-      [{Location}] ->
+      [{^Location}] ->
           Location;
       [] ->
           Location
@@ -2701,7 +2701,7 @@ nos({named_fun,Loc,Name,Cs}, S) ->
     {{var,NLoc,NName}, S1} = case Name of
                                  '_' ->
                                      S;
-                                 Name ->
+                                 ^Name ->
                                      nos_pattern({var,Loc,Name}, S)
                                end,
     NCs = [begin
@@ -2749,7 +2749,7 @@ nos_pattern([P0 | Ps0], S0, PVs0) ->
 nos_pattern({var,L,V}, {LI,Vs0,UV,A,Sg,State}, PVs0) when V =/= '_' ->
     {Name, Vs, PVs} = 
         case lists:keyfind(V, 1, PVs0) of
-            {V, VN} ->
+            {^V, VN} ->
                 _ = used_var(V, Vs0, UV), 
                 {VN, Vs0, PVs0};
             false -> 
@@ -2772,9 +2772,9 @@ nos_var(Anno, Name, State) ->
     NodeInfo = State#state.node_info,
     Location = erl_anno:location(Anno),
     case ets:lookup(NodeInfo, Location) of
-        [{Location, #{name := _}}] ->
+        [{^Location, #{name := _}}] ->
             true;
-        [{Location, Data}] ->
+        [{^Location, Data}] ->
             true = ets:insert(NodeInfo, {Location, Data#{name => Name}});
         [] -> % cannot happen
             true
@@ -2791,7 +2791,7 @@ used_var(V, Vs, UV) ->
 
 next_var(V, Vs, AllVars, LI, UV) ->
     NValue = case ets:lookup(LI, V) of
-                 [{V, Value}] -> Value + 1;
+                 [{^V, Value}] -> Value + 1;
                  [] -> 1
              end,
     true = ets:insert(LI, {V, NValue}),
@@ -2810,7 +2810,7 @@ undo_no_shadows1({var, Anno, _}=Var, State) ->
     Location = erl_anno:location(Anno),
     NodeInfo = State#state.node_info,
     case ets:lookup(NodeInfo, Location) of
-        [{Location, #{name := Name}}] ->
+        [{^Location, #{name := Name}}] ->
             {var, Anno, Name};
         _ ->
             Var

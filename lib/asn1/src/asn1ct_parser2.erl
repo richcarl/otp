@@ -776,7 +776,7 @@ parse_Unions(Tokens) ->
     {InterSec,Rest} = parse_Intersections(Tokens),
     {Unions,Rest2} = parse_UnionsRec(Rest),
     case {InterSec,Unions} of
-	{InterSec,[]} ->
+	{^InterSec,[]} ->
 	    {InterSec,Rest2};
 	{V1,V2} ->
 	    {{union,V1,V2},Rest2}
@@ -833,7 +833,7 @@ parse_IntersectionElements(Tokens) ->
 	[{'EXCEPT',_}|Rest2] ->
 	    {Exclusion,Rest3} = parse_Elements(Rest2),
 	    {{'EXCEPT',InterSec,Exclusion},Rest3};
-	Rest ->
+	^Rest ->
 	    {InterSec,Rest}
     end.
 
@@ -2260,7 +2260,7 @@ merge_constraints(Clist) ->
 merge_constraints([#constraint{c=C,e=E}|T], Cacc0, Eacc0) ->
     Eacc = case E of
 	       undefined -> Eacc0;
-	       E -> [E|Eacc0]
+	       ^E -> [E|Eacc0]
 	   end,
     Cacc = [C|Cacc0],
     merge_constraints(T, Cacc, Eacc);

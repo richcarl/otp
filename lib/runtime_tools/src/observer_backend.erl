@@ -350,7 +350,7 @@ flag_holder_proc(Collector) ->
     erlang:system_flag(scheduler_wall_time,true),
     Ref = erlang:monitor(process,Collector),
     receive
-	{'DOWN',Ref,_,_,_} ->
+	{'DOWN',^Ref,_,_,_} ->
 	    erlang:system_flag(scheduler_wall_time,false),
 	    ok
     end.
@@ -411,7 +411,7 @@ ttb_init_node(MetaFile_0,PI,Traci) ->
     end,
     Self = self(),
     MetaPid = spawn(fun() -> ttb_meta_tracer(MetaFile,PI,Self,Traci) end),
-    receive {MetaPid,started} -> ok end,
+    receive {^MetaPid,started} -> ok end,
     MetaPid ! {metadata,Traci},
     case PI of
 	true ->
@@ -569,7 +569,7 @@ pinfo(P,Globals) ->
     case process_info(P,registered_name) of
 	[] ->
 	    case lists:keysearch(P,1,Globals) of
-		{value,{P,G}} -> {pid,{P,{global,G}}};
+		{value,{^P,G}} -> {pid,{P,{global,G}}};
 		false -> 
 		    case process_info(P,initial_call) of
 			{_,I} -> {pid,{P,I}};
@@ -597,7 +597,7 @@ ttb_resume_trace() ->
             Pid = proplists:get_value(ttb_control, Data),
             {_, Timeout} = proplists:get_value(resume, Data),
             case rpc:call(node(Pid), erlang, whereis, [ttb]) of
-                Pid ->
+                ^Pid ->
                     Pid ! {noderesumed, node(), self()},
                     wait_for_fetch_ready(Timeout);
                 _ ->
@@ -655,7 +655,7 @@ ttb_make_binary(Term) ->
 ttb_stop(MetaPid) ->
     Delivered = erlang:trace_delivered(all),
     receive
-	{trace_delivered,all,Delivered} -> ok
+	{trace_delivered,all,^Delivered} -> ok
     end,
     Ref = erlang:monitor(process,MetaPid),
     MetaPid ! stop,
@@ -664,7 +664,7 @@ ttb_stop(MetaPid) ->
     %% because dbg will be stopped when this function
     %% returns, and then the Port (in {local,MetaFile,Port})
     %% cannot be accessed any more.
-    receive {'DOWN', Ref, process, MetaPid, _Info} -> ok end,
+    receive {'DOWN', ^Ref, process, ^MetaPid, _Info} -> ok end,
     stop_seq_trace().
 
 stop_seq_trace() ->

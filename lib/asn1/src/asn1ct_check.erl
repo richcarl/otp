@@ -474,7 +474,7 @@ check_class(S = #state{mname=M,tname=T},ClassSpec)
   when is_record(ClassSpec,type) ->
     Def = ClassSpec#type.def,
     case Def of
-	#'Externaltypereference'{module=M,type=T} ->
+	#'Externaltypereference'{module=^M,type=^T} ->
 	    #objectclass{fields=Def}; % in case of recursive definitions
 	Tref = #'Externaltypereference'{type=TName} ->
 	    {MName,RefType} = get_referenced_type(S,Tref),
@@ -623,11 +623,11 @@ if_current_checked_type(S,#type{def=Def}) ->
     CurrentCheckedName = S#state.tname,
     MergedModules = S#state.inputmodules,
     case Def of
-	#'Externaltypereference'{module=CurrentModule,
-				 type=CurrentCheckedName} ->
+	#'Externaltypereference'{module=^CurrentModule,
+				 type=^CurrentCheckedName} ->
 	    true;
 	#'Externaltypereference'{module=ModuleName,
-				 type=CurrentCheckedName} ->
+				 type=^CurrentCheckedName} ->
 	    case MergedModules of
 		undefined ->
 		    false;
@@ -862,7 +862,7 @@ check_object_set_mk(M, N, Def, #osi{uniq={unique,undefined}}) ->
 check_object_set_mk(M, N, Def, #osi{uniq={UniqField,_}}) ->
     {_,_,Fields} = Def,
     case lists:keyfind(UniqField, 1, Fields) of
-	{UniqField,#valuedef{value=Val}} ->
+	{^UniqField,#valuedef{value=Val}} ->
 	    [{{M,N},Val,Fields}];
 	false ->
 	    case Fields of
@@ -1095,7 +1095,7 @@ get_fieldname_set_1(_, [], _Fields, Acc) ->
 
 check_fieldname_element(S, Name, {_,_,Fields}) ->
     case lists:keyfind(Name, 1, Fields) of
-	{Name,Def} ->
+	{^Name,Def} ->
 	    check_fieldname_element_1(S, Def);
 	false ->
 	    asn1_error(S, {undefined_field,Name})
@@ -1349,9 +1349,9 @@ preprocess_get_fields([], Acc) ->
 
 match_syntax(S, [{token,Token}|T], [A|As]=Args, Acc) ->
     case A of
-	{word_or_setting,_,#'Externaltypereference'{type=Token}} ->
+	{word_or_setting,_,#'Externaltypereference'{type=^Token}} ->
 	    match_syntax(S, T, As, Acc);
-	{Token,Line} when is_integer(Line) ->
+	{^Token,Line} when is_integer(Line) ->
 	    match_syntax(S, T, As, Acc);
 	_ ->
 	    {nomatch,Args}
@@ -1372,7 +1372,7 @@ match_syntax(S, [{optional,L}|T], As0, Acc)         ->
     case match_syntax(S, L, As0, []) of
 	{match,Match,As} ->
 	    match_syntax(S, T, As, lists:reverse(Match)++Acc);
-	{nomatch,As0} ->
+	{nomatch,^As0} ->
 	    match_syntax(S, T, As0, Acc);
 	{nomatch,_}=NoMatch ->
 	    NoMatch
@@ -1641,7 +1641,7 @@ merged_name(#state{inputmodules=[]},ERef) ->
     ERef;
 merged_name(S,ERef=#'Externaltypereference'{module=M}) ->
     case {S#state.mname,lists:member(M,S#state.inputmodules)} of
-	{M,_} ->
+	{^M,_} ->
 	    ERef;
 	{MergeM,true} -> 
 	    %% maybe the reference is renamed
@@ -2055,7 +2055,7 @@ normalize_integer(_S, Int, _) when is_integer(Int) ->
     Int;
 normalize_integer(S, #'Externalvaluereference'{value=Name}=Ref, NNL) ->
     case lists:keyfind(Name, 1, NNL) of
-	{Name,Val} ->
+	{^Name,Val} ->
 	    Val;
 	false ->
 	    try get_referenced_value(S, Ref) of
@@ -2267,7 +2267,7 @@ normalized_record(SorS,S,Value,Components,NameList) ->
 	false ->
 	    NoComps = length(Components),
 	    ListOfVals = normalize_seq_or_set(SorS,S,Value,Components,NameList,[]),
-	    NoComps = length(ListOfVals),       %Assertion.
+	    ^NoComps = length(ListOfVals),       %Assertion.
             case use_maps(S) of
                 false ->
                     list_to_tuple([NewName|ListOfVals]);
@@ -3742,7 +3742,7 @@ check_externaltypereference(S,Etref=#'Externaltypereference'{module=Emod})->
     Currmod = S#state.mname,
     MergedMods = S#state.inputmodules,
     case Emod of
-	Currmod ->
+	^Currmod ->
 	    %% reference to current module or to imported reference
 		check_reference(S,Etref);
 	 _ ->
@@ -3803,7 +3803,7 @@ get_referenced_type(S, T, Recurse) ->
 
 do_get_referenced_type(S, T0) ->
     case match_parameter(S, T0) of
-	T0 ->
+	^T0 ->
 	    do_get_ref_type_1(S, T0);
 	T ->
 	    do_get_referenced_type(S, T)
@@ -5051,7 +5051,7 @@ remove_doubles([],Acc) ->
 
 remove_doubles1(El,L) ->
     case lists:delete(El,L) of
-	L -> L;
+	^L -> L;
 	NewL -> remove_doubles1(El,NewL)
     end.
 
@@ -5427,7 +5427,7 @@ leading_attr_index1(_,[],_,_,_) ->
 leading_attr_index1(S,[C|Cs],Arg={ObjectSet,_,CDef,P},
 		    AttrInfo={Attr,SubAttr},N) ->
     case C#'ComponentType'.name of
-	Attr ->
+	^Attr ->
 	    ValueMatch = value_match(S,C,Attr,SubAttr),
 	    {ObjectSet,Attr,N,CDef,P,ValueMatch};
 	_ ->

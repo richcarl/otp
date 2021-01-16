@@ -101,7 +101,7 @@ own_alert_format(#alert{reason = Reason} = Alert) ->
     case Reason of
         undefined ->            
             {" ~s\n", [Txt]};
-        Reason ->
+        ^Reason ->
             {" ~s\n - ~p", [Txt, Reason]}
     end.
 own_alert_format_depth(#alert{reason = Reason} = Alert) ->   
@@ -109,7 +109,7 @@ own_alert_format_depth(#alert{reason = Reason} = Alert) ->
     case Reason of
         undefined ->            
             {" ~s\n", [Txt]};
-        Reason ->
+        ^Reason ->
             {" ~s\n ~P", [Txt, Reason, ?DEPTH]}
     end.
 

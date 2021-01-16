@@ -135,7 +135,7 @@ handle_event(#wx{event=#wxList{type=command_list_col_click, col=Col}},
 	     State = #state{node=Node, grid=Grid,
 			    opt=Opt0=#opt{sort_key=Key, sort_incr=Bool}}) ->
     Opt = case Col+2 of
-	      Key -> Opt0#opt{sort_incr=not Bool};
+	      ^Key -> Opt0#opt{sort_incr=not Bool};
 	      NewKey -> Opt0#opt{sort_key=NewKey}
 	  end,
     Ports0 = get_ports(Node),
@@ -284,7 +284,7 @@ handle_info({portinfo_open, PortIdStr},
     NodeName = node(list_to_port(PortIdStr)),
     Available =
         case NodeName of
-            ActiveNodeName ->
+            ^ActiveNodeName ->
                 ActiveAvailable;
             _ ->
                 portinfo_available(NodeName)
@@ -302,7 +302,7 @@ handle_info({portinfo_open, PortIdStr},
                 end,
             Ports =
                 case NodeName of
-                    ActiveNodeName ->
+                    ^ActiveNodeName ->
                         update_grid(Grid, sel(State), Opt, Ports0);
                     _ ->
                         State#state.ports
@@ -316,7 +316,7 @@ handle_info({portinfo_open, PortIdStr},
 handle_info(refresh_interval, State = #state{node=Node, grid=Grid, opt=Opt,
                                              ports=OldPorts}) ->
     case get_ports(Node) of
-        OldPorts ->
+        ^OldPorts ->
             %% no change
             {noreply, State};
         Ports0 ->

@@ -126,7 +126,7 @@ my_ip_read(Sock,N) ->
     case gen_tcp:recv(Sock, N) of
         {ok, Data} ->
 	    case length(Data) of
-		N ->
+		^N ->
 		    Data;
 		X ->
 		    Data ++ my_ip_read(Sock, N - X)

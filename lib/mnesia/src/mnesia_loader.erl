@@ -313,7 +313,7 @@ start_remote_sender(Node,Tab,Storage) ->
 	{SenderPid, {first, TabSize, DetsData}} ->
 	    {SenderPid, TabSize, DetsData};
 	%% Protocol conversion hack
-	{copier_done, Node} ->
+	{copier_done, ^Node} ->
 	    verbose("Sender of table ~tp crashed on node ~p ~n", [Tab, Node]),
 	    down(Tab, Storage)
     end.
@@ -353,9 +353,9 @@ spawned_receiver(ReplyTo,Tab,Storage,Cs, SenderPid,TabSize,DetsData, Init) ->
 
 wait_on_load_complete(Pid) ->
     receive
-	{Pid, Res} ->
+	{^Pid, Res} ->
 	    Res;
-	{'EXIT', Pid, Reason} ->
+	{'EXIT', ^Pid, Reason} ->
 	    error(Reason);
 	Else ->
 	    Pid ! Else,
@@ -365,7 +365,7 @@ wait_on_load_complete(Pid) ->
 do_init_table(Tab,Storage,Cs,SenderPid,
 	      TabSize,DetsInfo,OrigTabRec,Init) ->
     case create_table(Tab, TabSize, Storage, Cs) of
-	{Storage,Tab} ->
+	{^Storage,^Tab} ->
 	    %% Debug info
 	    Node = node(SenderPid),
 	    put(mnesia_table_receiver, {Tab, Node, SenderPid}),
@@ -411,7 +411,7 @@ create_table(Tab, TabSize, Storage, Cs) ->
 	    EtsOpts = proplists:get_value(ets, StorageProps, []),
 	    Args = [{keypos, 2}, public, named_table, Cs#cstruct.type | EtsOpts],
 	    case mnesia_monitor:unsafe_mktab(Tab, Args) of
-		Tab ->
+		^Tab ->
 		    {Storage, Tab};
 		Else ->
 		    Else
@@ -432,7 +432,7 @@ tab_receiver(Node, Tab, Storage, Cs, OrigTabRec) ->
 	    finish_copy(Storage,Tab,Cs,SenderPid,DatBin,OrigTabRec);
 
 	%% Protocol conversion hack
-	{copier_done, Node} ->
+	{copier_done, ^Node} ->
 	    verbose("Sender of table ~tp crashed on node ~p ~n", [Tab, Node]),
 	    down(Tab, Storage);
 
@@ -453,23 +453,23 @@ make_table_fun(Pid, TabRec, Storage) ->
 
 get_data(Pid, TabRec, Storage) ->
     receive
-	{Pid, {more_z, CompressedRecs}} when is_binary(CompressedRecs) ->
+	{^Pid, {more_z, CompressedRecs}} when is_binary(CompressedRecs) ->
 	    maybe_reply(Pid, {TabRec, more}, Storage),
 	    {zlib_uncompress(CompressedRecs),
 	     make_table_fun(Pid, TabRec, Storage)};
-	{Pid, {more, Recs}} ->
+	{^Pid, {more, Recs}} ->
 	    maybe_reply(Pid, {TabRec, more}, Storage),
 	    {Recs, make_table_fun(Pid, TabRec, Storage)};
-	{Pid, no_more} ->
+	{^Pid, no_more} ->
 	    end_of_input;
 	{copier_done, Node} ->
 	    case node(Pid) of
-		Node ->
+		^Node ->
 		    {copier_done, Node};
 		_ ->
 		    get_data(Pid, TabRec, Storage)
 	    end;
-	{'EXIT', Pid, Reason} ->
+	{'EXIT', ^Pid, Reason} ->
 	    handle_exit(Pid, Reason),
 	    get_data(Pid, TabRec, Storage)
     end.
@@ -512,7 +512,7 @@ init_table(Tab, {ext,Alias,Mod}, Fun, State, Sender) ->
 init_table(Tab, disc_only_copies, Fun, DetsInfo,Sender) ->
     ErtsVer = erlang:system_info(version),
     case DetsInfo of
-	{ErtsVer, DetsData}  ->
+	{^ErtsVer, DetsData}  ->
 	    try dets:is_compatible_bchunk_format(Tab, DetsData) of
 		false ->
 		    Sender ! {self(), {old_protocol, Tab}},
@@ -741,7 +741,7 @@ do_send_table(Pid, Tab, Storage, RemoteS) ->
 		    {_, _} = Res ->
 			Res
 		end;
-	    Storage ->
+	    ^Storage ->
 		%% Send first
 		TabSize = mnesia:table_info(Tab, size),
 		KeysPerTransfer = calc_nokeys(Storage, Tab),
@@ -804,7 +804,7 @@ need_lock(Tab) ->
 	    %% do not deadlock with it
 	    mnesia_lib:unset({?MODULE, active_trans}),
 	    case mnesia_locker:get_held_locks(Tab) of
-		[{write, Tid}|_] -> false;
+		[{write, ^Tid}|_] -> false;
 		_Locks -> true
 	    end;
 	_ ->
@@ -853,8 +853,8 @@ send_more(Pid, N, Chunk, DataState, Tab, Storage) ->
 		    send_more(NewPid, N, NewChunk, NewData, Tab,
 			      Storage)
 	    end;
-	{_NewPid, {old_protocol, Tab}} ->
-	    Storage =  val({Tab, storage_type}),
+	{_NewPid, {old_protocol, ^Tab}} ->
+	    ^Storage =  val({Tab, storage_type}),
 	    {Init, NewChunk} =
 		reader_funcs(false, Tab, Storage, calc_nokeys(Storage, Tab)),
 	    send_more(Pid, 1, NewChunk, Init(), Tab, Storage);
@@ -925,7 +925,7 @@ finish_copy(Pid, Tab, Storage, RemoteS, NeedLock) ->
 	fun() ->
 		NeedLock andalso mnesia:read_lock_table(Tab),
                 %% Check that receiver is still alive
-                receive {copier_done, Node} ->
+                receive {copier_done, ^Node} ->
                         throw(receiver_died)
                 after 0 -> ok
                 end,
@@ -935,9 +935,9 @@ finish_copy(Pid, Tab, Storage, RemoteS, NeedLock) ->
 		mnesia_checkpoint:tm_add_copy(Tab, RecNode),
 		Pid ! {self(), {no_more, DatBin}},
 		receive
-		    {Pid, no_more} -> % Dont bother about the spurious 'more' message
+		    {^Pid, no_more} -> % Dont bother about the spurious 'more' message
 			no_more;
-		    {copier_done, Node} ->
+		    {copier_done, ^Node} ->
 			verbose("Tab receiver ~tp crashed (more): ~p~n", [Tab, Node]),
 			receiver_died
 		end

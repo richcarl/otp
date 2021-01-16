@@ -359,7 +359,7 @@ subtract(number, #t_integer{elements=any}) -> #t_float{};
 subtract(#t_list{type=TypeA,terminator=TermA}=T,
          #t_cons{type=TypeB,terminator=TermB}) ->
     case {meet(TypeA, TypeB), meet(TermA, TermB)} of
-        {TypeA, TermA} -> nil;
+        {^TypeA, ^TermA} -> nil;
         _ -> T
     end;
 subtract(#t_list{type=Type,terminator=Term}, nil) ->
@@ -381,7 +381,7 @@ subtract(#t_union{tuple_set=[_|_]=Records0}=A, #t_tuple{}=B) ->
 subtract(#t_union{tuple_set=#t_tuple{}=Tuple}=A, #t_tuple{}=B) ->
     %% Exclude Tuple if it's more specific than B.
     case meet(Tuple, B) of
-        Tuple -> shrink_union(A#t_union{tuple_set=none});
+        ^Tuple -> shrink_union(A#t_union{tuple_set=none});
         _ -> A
     end;
 subtract(#t_union{other=Other}=A, B) ->
@@ -390,7 +390,7 @@ subtract(#t_union{other=Other}=A, B) ->
 subtract(A, B) ->
     %% There's nothing left if A is more specific than B.
     case meet(A, B) of
-        A -> none;
+        ^A -> none;
         _Other -> A
     end.
 

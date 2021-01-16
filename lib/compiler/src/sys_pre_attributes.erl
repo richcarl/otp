@@ -119,7 +119,7 @@ pre_transform([H | T], Acc, S) ->
 		false ->
 		    pre_transform(T, [H | Acc], S);
 
-		{replace, Name, NewVal} ->
+		{replace, ^Name, NewVal} ->
 		    report_warning("Replace attribute ~p: ~p -> ~p~n",
 				   [Name, Val, NewVal],
 				   S),
@@ -136,7 +136,7 @@ pre_transform([H | T], Acc, S) ->
 			    pre_transform(T, [New | Acc], S2)
 		    end;
 
-		{delete, Name} ->
+		{delete, ^Name} ->
 		    report_warning("Delete attribute ~p: ~p~n",
 				   [Name, Val],
 				   S),

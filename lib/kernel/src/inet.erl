@@ -199,7 +199,7 @@ get_rc() ->
 close(Socket) ->
     prim_inet:close(Socket),
     receive
-	{Closed, Socket} when Closed =:= tcp_closed; Closed =:= udp_closed ->
+	{Closed, ^Socket} when Closed =:= tcp_closed; Closed =:= udp_closed ->
 	    ok
     after 0 ->
 	    ok
@@ -1196,7 +1196,7 @@ mod([], Tag, Address, Map, undefined, Acc) ->
 	     #{inet := IPv4Mod} = Map,
 	     %% Get the mod, but IPv6 address overrides default IPv4
 	     case inet_db:Tag() of
-		 IPv4Mod ->
+		 ^IPv4Mod ->
 		     #{inet6 := IPv6Mod} = Map,
 		     IPv6Mod;
 		 Mod ->
@@ -1312,7 +1312,7 @@ gethostbyname_self(Name, Type)
     %% the returned hostent record and the hostname that was asked for.
     %%
     case inet_db:tolower(Self) of
-	N ->
+	^N ->
 	    {ok,
 	     make_hostent(
 	       Self, [translate_ip(loopback, Type)], [], Type)};
@@ -1323,7 +1323,7 @@ gethostbyname_self(Name, Type)
 		Domain ->
 		    FQDN = lists:append([Self,".",Domain]),
 		    case inet_db:tolower(FQDN) of
-			N ->
+			^N ->
 			    {ok,
 			     make_hostent(
 			       FQDN,
@@ -1726,7 +1726,7 @@ port_list(Name) ->
     filter(
       fun(Port) ->
 	      case erlang:port_info(Port, name) of
-		  {name, Name} -> true;
+		  {name, ^Name} -> true;
 		  _ -> false
 	      end
       end, erlang:ports()).
@@ -1749,21 +1749,21 @@ format_error(Tag) ->
 tcp_close(S) when is_port(S) ->
     %% if exit_on_close is set we must force a close even if remotely closed!!!
     prim_inet:close(S),
-    receive {tcp_closed, S} -> ok after 0 -> ok end.
+    receive {tcp_closed, ^S} -> ok after 0 -> ok end.
 
 %% Close a UDP socket.
 udp_close(S) when is_port(S) ->
     receive 
-	{udp_closed, S} -> ok
+	{udp_closed, ^S} -> ok
     after 0 ->
 	    prim_inet:close(S),
-	    receive {udp_closed, S} -> ok after 0 -> ok end
+	    receive {udp_closed, ^S} -> ok after 0 -> ok end
     end.
 
 %% Set controlling process for TCP socket.
 tcp_controlling_process(S, NewOwner) when is_port(S), is_pid(NewOwner) ->
     case erlang:port_info(S, connected) of
-	{connected, NewOwner} ->
+	{connected, ^NewOwner} ->
 	    ok;
 	{connected, Pid} when Pid =/= self() ->
 	    {error, not_owner};
@@ -1802,19 +1802,19 @@ tcp_controlling_process(S, NewOwner) when is_port(S), is_pid(NewOwner) ->
 
 tcp_sync_input(S, Owner, Flag) ->
     receive
-	{tcp, S, Data} ->
+	{tcp, ^S, Data} ->
 	    Owner ! {tcp, S, Data},
 	    tcp_sync_input(S, Owner, Flag);
-	{tcp_closed, S} ->
+	{tcp_closed, ^S} ->
 	    Owner ! {tcp_closed, S},
 	    tcp_sync_input(S, Owner, true);
-	{S, {data, Data}} ->
+	{^S, {data, Data}} ->
 	    Owner ! {S, {data, Data}},
 	    tcp_sync_input(S, Owner, Flag);	    
-	{inet_async, S, Ref, Status} ->
+	{inet_async, ^S, Ref, Status} ->
 	    Owner ! {inet_async, S, Ref, Status},
 	    tcp_sync_input(S, Owner, Flag);
-	{inet_reply, S, Status} ->
+	{inet_reply, ^S, Status} ->
 	    Owner ! {inet_reply, S, Status},
 	    tcp_sync_input(S, Owner, Flag)
     after 0 -> 
@@ -1824,7 +1824,7 @@ tcp_sync_input(S, Owner, Flag) ->
 %% Set controlling process for UDP or SCTP socket.
 udp_controlling_process(S, NewOwner) when is_port(S), is_pid(NewOwner) ->
     case erlang:port_info(S, connected) of
-	{connected, NewOwner} ->
+	{connected, ^NewOwner} ->
 	    ok;
 	{connected, Pid} when Pid =/= self() ->
 	    {error, not_owner};
@@ -1844,12 +1844,12 @@ udp_controlling_process(S, NewOwner) when is_port(S), is_pid(NewOwner) ->
 
 udp_sync_input(S, Owner) ->
     receive
-	{sctp, S, _, _, _}=Msg    -> udp_sync_input(S, Owner, Msg);
-	{udp, S, _, _, _}=Msg     -> udp_sync_input(S, Owner, Msg);
-	{udp_closed, S}=Msg       -> udp_sync_input(S, Owner, Msg);
-	{S, {data,_}}=Msg         -> udp_sync_input(S, Owner, Msg);
-	{inet_async, S, _, _}=Msg -> udp_sync_input(S, Owner, Msg);
-	{inet_reply, S, _}=Msg    -> udp_sync_input(S, Owner, Msg)
+	{sctp, ^S, _, _, _}=Msg    -> udp_sync_input(S, Owner, Msg);
+	{udp, ^S, _, _, _}=Msg     -> udp_sync_input(S, Owner, Msg);
+	{udp_closed, ^S}=Msg       -> udp_sync_input(S, Owner, Msg);
+	{^S, {data,_}}=Msg         -> udp_sync_input(S, Owner, Msg);
+	{inet_async, ^S, _, _}=Msg -> udp_sync_input(S, Owner, Msg);
+	{inet_reply, ^S, _}=Msg    -> udp_sync_input(S, Owner, Msg)
     after 0 ->
 	    ok
     end.
@@ -1881,7 +1881,7 @@ stop_timer(Timer) ->
     case erlang:cancel_timer(Timer) of
 	false ->
 	    receive
-		{timeout,Timer,_} -> false
+		{timeout,^Timer,_} -> false
 	    after 0 ->
 		    false
 	    end;

@@ -1310,7 +1310,7 @@ print_attribute_comment(InnerType,Pos,Cname,Prop) ->
 	{'Externaltypereference',_,XModule,Name} ->
 	    emit([nl,"%% attribute ",Cname,"(",Pos,")   External ",XModule,":",Name]);
 	_ ->
-	    emit([nl,"%% attribute ",Cname,"(",Pos,") with type ",InnerType])
+	    emit([nl,"%% attribute ",^Cname,"(",Pos,") with type ",InnerType])
     end,
     case Prop of
 	mandatory ->

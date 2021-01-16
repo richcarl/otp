@@ -232,7 +232,7 @@ setup(#state{frame=Frame, notebook=Notebook}=State) ->
 handle_event(#wx{event=#wxNotebook{type=command_notebook_page_changing}},
 	     #state{active_tab=Previous} = State) ->
     case get_active_pid(State) of
-	Previous -> {noreply, State};
+	^Previous -> {noreply, State};
 	Pid ->
 	    Pid ! active,
 	    {noreply, State#state{active_tab=Pid}}
@@ -376,18 +376,18 @@ pid2panel(Pid, #state{gen_panel=Gen, pro_panel=Pro, port_panel=Ports,
 		      atom_panel=Atoms, dist_panel=Dist, mod_panel=Mods,
 		      mem_panel=Mem, persistent_panel=Persistent, int_panel=Int}) ->
     case Pid of
-	Gen -> ?GEN_STR;
-	Pro -> ?PRO_STR;
-	Ports -> ?PORT_STR;
-	Ets -> ?ETS_STR;
-	Timers -> ?TIMER_STR;
-	Funs -> ?FUN_STR;
-	Atoms -> ?ATOM_STR;
-	Dist -> ?DIST_STR;
-	Mods -> ?MOD_STR;
-	Mem -> ?MEM_STR;
+	^Gen -> ?GEN_STR;
+	^Pro -> ?PRO_STR;
+	^Ports -> ?PORT_STR;
+	^Ets -> ?ETS_STR;
+	^Timers -> ?TIMER_STR;
+	^Funs -> ?FUN_STR;
+	^Atoms -> ?ATOM_STR;
+	^Dist -> ?DIST_STR;
+	^Mods -> ?MOD_STR;
+	^Mem -> ?MEM_STR;
         ?PERSISTENT_STR -> Persistent;
-	Int -> ?INT_STR;
+	^Int -> ?INT_STR;
 	_ -> "unknown"
     end.
 
@@ -460,7 +460,7 @@ maybe_warn_filename(FileName) ->
         false ->
             DumpName = filename:absname(os:getenv("ERL_CRASH_DUMP", "erl_crash.dump")),
             case filename:absname(FileName) of
-                DumpName ->
+                ^DumpName ->
                     Warning =
                         "WARNING: the current crashdump might be overwritten "
                         "if the crashdump_viewer node crashes.\n\n"

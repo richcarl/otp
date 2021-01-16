@@ -242,7 +242,7 @@ handle_info({Proto, Socket, Data},
 	    {stop, normal, State#state{response_sent = true,
 				                   mod = NewModData}};
 
-    {http_chunk = Module, Function, Args} when ChunkState =/= undefined ->
+    {http_chunk = M, ^Function, ^Args} when ChunkState =/= undefined, M =:= Module ->
         NewState = handle_chunk(Module, Function, Args, State),
         {noreply, NewState};
 	NewMFA ->
@@ -497,7 +497,7 @@ handle_body(#state{headers = Headers, body = Body,
 	    {stop, normal, State#state{response_sent = true}};
 	_ -> 
 	    Length = list_to_integer(Headers#http_request_h.'content-length'),
-	    MaxChunk = max_client_body_chunk(ConfigDB),
+	    ^MaxChunk = max_client_body_chunk(ConfigDB),
 	    case ((Length =< MaxBodySize) or (MaxBodySize == nolimit)) of
 		true ->
 		    case httpd_request:body_chunk_first(Body, Length, MaxChunk) of 

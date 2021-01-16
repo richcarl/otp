@@ -370,12 +370,12 @@ connect(RH, RemoteMid, SendHandle, ControlPid, Extra)
     Flag      = process_flag(trap_exit, true),
     Connector = erlang:spawn_link(ConnectorFun),
     receive
-	{'EXIT', Connector, {result, ConnectResult}} ->
+	{'EXIT', ^Connector, {result, ConnectResult}} ->
 	    ?rt2("connect result: received expected connector exit signal", 
 		 [Connector, ConnectResult]),
 	    process_flag(trap_exit, Flag),
 	    ConnectResult;
-	{'EXIT', Connector, OtherReason} ->
+	{'EXIT', ^Connector, OtherReason} ->
 	    ?rt2("connect exit: received unexpected connector exit signal", 
 		 [Connector, OtherReason]),
 	    process_flag(trap_exit, Flag),
@@ -835,10 +835,10 @@ do_prepare_message(RH, CH, SendHandle, MegaMsg, ControlPid, Bin) ->
     case megaco_config:lookup_local_conn(CH) of
 	[ConnData] ->
 	    case check_message_auth(CH, ConnData, MegaMsg, Bin) of
-		{ok, ConnData2, MegaMsg} ->
+		{ok, ConnData2, ^MegaMsg} ->
 		    %% Let the connection be permanent
 		    {ok, ConnData2, MegaMsg};
-		{ReplyTag, ConnData, Reason} ->
+		{ReplyTag, ^ConnData, Reason} ->
 		    %% Remove the temporary connection
 		    disconnect(CH, {bad_auth, Reason}),
 		    {ReplyTag, ConnData, Reason}
@@ -2180,7 +2180,7 @@ handle_recv_pending(#conn_data{long_request_resend = LRR,
     
     megaco_monitor:cancel_apply_after(Ref),
     {WaitFor, CurrTimer} = megaco_timer:init(InitTimer),
-    ConnHandle = ConnData#conn_data.conn_handle,
+    ^ConnHandle = ConnData#conn_data.conn_handle,
     M = ?MODULE,
     F = request_timeout,
     A = [ConnHandle, TransId],
@@ -2236,7 +2236,7 @@ handle_recv_pending(#conn_data{conn_handle = ConnHandle} = ConnData, TransId,
     
     megaco_monitor:cancel_apply_after(Ref),
     {WaitFor, Timer2} = megaco_timer:restart(CurrTimer),
-    ConnHandle = ConnData#conn_data.conn_handle,
+    ^ConnHandle = ConnData#conn_data.conn_handle,
     M = ?MODULE,
     F = request_timeout,
     A = [ConnHandle, TransId],
@@ -2868,7 +2868,7 @@ handle_segment_reply(CD,
 	    ?rt2("no unsent segments", [Sent]),
 	    handle_segment_reply_callback(CD, TransId, SN, SC, Extra),
 	    case lists:keysearch(SN, 1, Sent) of
-		{value, {SN, _Bin, SegTmr}} ->
+		{value, {^SN, _Bin, SegTmr}} ->
 		    megaco_monitor:cancel_apply_after(SegTmr), %% BMK BMK
 		    case lists:keydelete(SN, 1, Sent) of
 			[] ->  %% We are done
@@ -2895,7 +2895,7 @@ handle_segment_reply(CD,
 	    ?rt2("unsent segments", [Sent, NotSent]),
 	    handle_segment_reply_callback(CD, TransId, SN, SC, Extra),
 	    case lists:keysearch(SN, 1, Sent) of
-		{value, {SN, _Bin, SegTmr}} ->
+		{value, {^SN, _Bin, SegTmr}} ->
 		    megaco_monitor:cancel_apply_after(SegTmr), %% BMK BMK
 		    NewSent = lists:keydelete(SN, 1, Sent),
 		    [{SN2, Bin2}|NewNotSent] = NotSent,
@@ -3364,10 +3364,10 @@ wait_for_reply(CD, TransIds, ProxyMon) ->
     ProxyPid = CD#conn_data.reply_data,
     ProxyPid ! {go, self(), CD, TransIds},
     receive
-	{reply, ProxyPid, Reply} ->
+	{reply, ^ProxyPid, Reply} ->
 	    erlang:demonitor(ProxyMon, [flush]),
 	    Reply;
-	{'DOWN', ProxyMon, process, ProxyPid, Info} ->
+	{'DOWN', ^ProxyMon, process, ^ProxyPid, Info} ->
 	    UserReply = {error, {call_proxy_crash, Info}}, 
 	    {CD#conn_data.protocol_version, UserReply}
     end.
@@ -3407,9 +3407,9 @@ maybe_stop_proxy(_) ->
 
 call_proxy(Parent) ->
     receive
-	{go, Parent, CD, TransIds} ->
+	{go, ^Parent, CD, TransIds} ->
 	    call_proxy(Parent, CD, TransIds);
-	{stop, Parent} ->
+	{stop, ^Parent} ->
 	    exit(normal)
     end.
 
@@ -3491,14 +3491,14 @@ wfr_update(TransIds, TransId, Version, Results, {ok, {SegNo, Last, ARs}}, Extra)
     case lists:keysearch(TransId, 2, Results) of
 	
 	%% All segments ok (actionReplies)
-	{value, {V, TransId, {ok, SegReps}}} ->
+	{value, {V, ^TransId, {ok, SegReps}}} ->
 	    SegReps2 = lists:keysort(1, [{SegNo, ARs}|SegReps]),
 	    Rep      = wfr_mk_reply(V, TransId, {ok, SegReps2}, Extra),
 	    Results2 = lists:keyreplace(TransId, 2, Results, Rep),
 	    {TransIds2, Results2};
 	
 	%% Atleast one segment error (transactionError)
-	{value, {V, TransId, {error, {segment, OkSegs, ErrSegs}}}} ->
+	{value, {V, ^TransId, {error, {segment, OkSegs, ErrSegs}}}} ->
 	    OkSegs2  = lists:keysort(1, [{SegNo, ARs}|OkSegs]),
 	    ErrSegs2 = lists:keysort(1, ErrSegs),
 	    Error    = {error, {segment, OkSegs2, ErrSegs2}}, 
@@ -3521,7 +3521,7 @@ wfr_update(TransIds, TransId, Version, Results, {error, {SegNo, Last, ED}}, Extr
     case lists:keysearch(TransId, 2, Results) of
 	
 	%% First segment with error (transactionError)
-	{value, {V, TransId, {ok, SegReps}}} ->
+	{value, {V, ^TransId, {ok, SegReps}}} ->
 	    OkSegs   = lists:keysort(1, [{SegNo, ED}|SegReps]),
 	    ErrSegs  = [{SegNo, ED}], 
 	    Error    = {error, {segment, OkSegs, ErrSegs}}, 
@@ -3530,7 +3530,7 @@ wfr_update(TransIds, TransId, Version, Results, {error, {SegNo, Last, ED}}, Extr
 	    {TransIds2, Results2};
 
 	%% Another segment with error (transactionError)
-	{value, {V, TransId, {error, {segment, OkSegs, ErrSegs}}}} ->
+	{value, {V, ^TransId, {error, {segment, OkSegs, ErrSegs}}}} ->
 	    OkSegs2  = lists:keysort(1, OkSegs),
 	    ErrSegs2 = lists:keysort(1, [{SegNo, ED}|ErrSegs]),
 	    Error    = {error, {segment, OkSegs2, ErrSegs2}}, 
@@ -3555,14 +3555,14 @@ wfr_update(TransIds, TransId, Version, Results, {ok, {SegNo, _Last, ARs}}, Extra
     case lists:keysearch(TransId, 2, Results) of
 	
 	%% All segments ok (actionReplies)
-	{value, {V, TransId, {ok, SegReps}}} ->
+	{value, {V, ^TransId, {ok, SegReps}}} ->
 	    SegReps2 = [{SegNo, ARs}|SegReps],
 	    Rep      = wfr_mk_reply(V, TransId, {ok, SegReps2}, Extra),
 	    Results2 = lists:keyreplace(TransId, 2, Results, Rep),
 	    {TransIds, Results2};
 	
 	%% Atleast one segment error (transactionError)
-	{value, {V, TransId, {error, {segment, OkSegs, ErrSegs}}}} ->
+	{value, {V, ^TransId, {error, {segment, OkSegs, ErrSegs}}}} ->
 	    OkSegs2  = [{SegNo, ARs}|OkSegs],
 	    Error    = {error, {segment, OkSegs2, ErrSegs}}, 
 	    Rep      = wfr_mk_reply(V, TransId, Error, Extra),
@@ -3583,7 +3583,7 @@ wfr_update(TransIds, TransId, Version, Results, {error, {SegNo, _Last, ED}}, Ext
     case lists:keysearch(TransId, 2, Results) of
 	
 	%% First segment with error (transactionError)
-	{value, {V, TransId, {ok, OkSegs}}} ->
+	{value, {V, ^TransId, {ok, OkSegs}}} ->
 	    ErrSegs  = [{SegNo, ED}], 
 	    Error    = {error, {segment, OkSegs, ErrSegs}}, 
 	    Rep      = wfr_mk_reply(V, TransId, Error, Extra),
@@ -3591,7 +3591,7 @@ wfr_update(TransIds, TransId, Version, Results, {error, {SegNo, _Last, ED}}, Ext
 	    {TransIds, Results2};
 
 	%% Another segment with error (transactionError)
-	{value, {V, TransId, {error, {OkSegs, ErrSegs}}}} ->
+	{value, {V, ^TransId, {error, {OkSegs, ErrSegs}}}} ->
 	    ErrSegs2 = [{SegNo, ED}|ErrSegs],
 	    Error    = {error, {segment, OkSegs, ErrSegs2}}, 
 	    Rep      = wfr_mk_reply(V, TransId, Error, Extra),
@@ -3615,14 +3615,14 @@ wfr_update(TransIds, TransId, Version, Results,
     case lists:keysearch(TransId, 2, Results) of
 	
 	%% First segment with error (transactionError)
-	{value, {V, TransId, {ok, OkSegs}}} ->
+	{value, {V, ^TransId, {ok, OkSegs}}} ->
 	    Error    = {error, {segment_timeout, Missing, OkSegs, []}}, 
 	    Rep      = wfr_mk_reply(V, TransId, Error, Extra),
 	    Results2 = lists:keyreplace(TransId, 2, Results, Rep),
 	    {TransIds2, Results2};
        
 	%% Another segment with error (transactionError)
-	{value, {V, TransId, {error, {segment, OkSegs, ErrSegs}}}} ->
+	{value, {V, ^TransId, {error, {segment, OkSegs, ErrSegs}}}} ->
 	    Error    = {error, {segment_timeout, Missing, OkSegs, ErrSegs}}, 
 	    Rep      = wfr_mk_reply(V, TransId, Error, Extra),
 	    Results2 = lists:keyreplace(TransId, 2, Results, Rep),
@@ -4304,7 +4304,7 @@ do_cancel(ConnHandle, Reason, ConnData) ->
 		end,
     Requests  = megaco_monitor:match_requests(ReqPat),
     lists:foreach(CancelReq, Requests),
-    RemoteMid = ConnHandle#megaco_conn_handle.remote_mid,
+    ^RemoteMid = ConnHandle#megaco_conn_handle.remote_mid,
     RepTransIdPat = #trans_id{mid = RemoteMid, _ = '_'}, % BUGBUG List here?
     RepPat = #reply{trans_id  = RepTransIdPat,
 		    local_mid = LocalMid,
@@ -5259,7 +5259,7 @@ lookup_reply(CD, TransId) ->
 	    {false, Rep};
 
 	%% Old (pre-3.13.1) version of the record => Convert to new version
-	[{reply, TransId, 
+	[{reply, ^TransId, 
 	  LocalMid, State, PendingTmrRef, Handler, TimerRef, 
 	  Version, Bytes, AckAction, SendHandle, Segments}] 
 	when is_record(CD, conn_data) ->
@@ -5281,7 +5281,7 @@ lookup_reply(CD, TransId) ->
 	    {true, Rep};
 
 	%% Old (pre-3.13.1) version of the record => Convert to new version
-	[{reply, TransId, 
+	[{reply, ^TransId, 
 	  LocalMid, State, PendingTmrRef, Handler, TimerRef, 
 	  Version, Bytes, AckAction, SendHandle, Segments}] ->
 	    %% ConnData is not known here, so ignore for now

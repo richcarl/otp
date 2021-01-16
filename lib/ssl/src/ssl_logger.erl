@@ -81,19 +81,19 @@ debug(Level, Direction, Protocol, Message)
 format(#{alert := Alert, alerter := own} = Report) ->
     #{protocol := ProtocolName,
       role := Role,
-      alert := Alert,
+      alert := ^Alert,
       statename := StateName } = Report,
     ssl_alert:own_alert_format(ProtocolName, Role, StateName, Alert);
 format(#{alert := Alert, alerter := peer} = Report) ->
     #{protocol := ProtocolName,
       role := Role,
-      alert := Alert,
+      alert := ^Alert,
       statename := StateName } = Report,
     ssl_alert:alert_format(ProtocolName, Role, StateName, Alert);
 format(#{alert := Alert, alerter := ignored} = Report) -> 
     #{protocol := ProtocolName,
       role := Role,
-      alert := Alert,
+      alert := ^Alert,
       statename := StateName} = Report,
     %% Happens in DTLS
     {Fmt, Args} = ssl_alert:own_alert_format(ProtocolName, Role, StateName, Alert),

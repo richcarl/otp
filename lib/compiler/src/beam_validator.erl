@@ -242,7 +242,7 @@ build_function_table([{function,_,Arity,Entry,Code0}|Fs], Acc) ->
                              true
                      end, Code0),
     case Code of
-        [{label,Entry} | Is] ->
+        [{label,^Entry} | Is] ->
             Info = #{ arity => Arity,
                       parameter_info => find_parameter_info(Is, #{}) },
             build_function_table(Fs, Acc#{ Entry => Info });
@@ -275,11 +275,11 @@ validate_1(Is, MFA0, Entry, Level, Ft) ->
 
 extract_header([{func_info, {atom,Mod}, {atom,Name}, Arity}=I | Is],
              MFA0, Entry, Offset, Acc) ->
-    {_, Name, Arity} = MFA0,                    %Assertion.
+    {_, ^Name, ^Arity} = MFA0,                    %Assertion.
     MFA = {Mod, Name, Arity},
 
     case Is of
-        [{label, Entry} | _] ->
+        [{label, ^Entry} | _] ->
             Header = reverse(Acc, [I]),
             {Offset + 1, MFA, Header, Is};
         _ ->
@@ -405,7 +405,7 @@ vi({init,Reg}, Vst) ->
 vi({init_yregs,{list,Yregs}}, Vst0) ->
     case ordsets:from_list(Yregs) of
         [] -> error(empty_list);
-        Yregs -> ok;
+        ^Yregs -> ok;
         _ -> error(not_ordset)
     end,
     foldl(fun(Y, Vst) ->
@@ -768,7 +768,7 @@ vi({'try',Dst,{f,Fail}}, Vst) when Fail =/= none ->
     init_try_catch_branch(trytag, Dst, Fail, Vst);
 vi({catch_end,Reg}, #vst{current=#st{ct=[Tag|_]}}=Vst0) ->
     case get_tag_type(Reg, Vst0) of
-        {catchtag,_Fail}=Tag ->
+        {catchtag,_Fail}=T when T =:= Tag ->
             %% Kill the catch tag and receive marker.
             %%
             %% The marker is only cleared when an exception is thrown, but it's
@@ -783,7 +783,7 @@ vi({catch_end,Reg}, #vst{current=#st{ct=[Tag|_]}}=Vst0) ->
     end;
 vi({try_end,Reg}, #vst{current=#st{ct=[Tag|_]}}=Vst) ->
     case get_tag_type(Reg, Vst) of
-        {trytag,_Fail}=Tag ->
+        {trytag,_Fail}=T when T =:= Tag ->
             %% Kill the catch tag. Note that x registers and the receive marker
             %% are unaffected.
             kill_catch_tag(Reg, Vst);
@@ -792,7 +792,7 @@ vi({try_end,Reg}, #vst{current=#st{ct=[Tag|_]}}=Vst) ->
     end;
 vi({try_case,Reg}, #vst{current=#st{ct=[Tag|_]}}=Vst0) ->
     case get_tag_type(Reg, Vst0) of
-        {trytag,_Fail}=Tag ->
+        {trytag,_Fail}=T when T =:= Tag ->
             %% Kill the catch tag, all x registers, and the receive marker.
             Vst1 = kill_catch_tag(Reg, Vst0),
             Vst2 = prune_x_regs(0, Vst1),
@@ -1638,7 +1638,7 @@ verify_call_args(_, 0, #vst{}) ->
 verify_call_args({f,Lbl}, Live, #vst{ft=Ft}=Vst) ->
     case Ft of
         #{ Lbl := FuncInfo } ->
-            #{ arity := Live,
+            #{ arity := ^Live,
                parameter_info := ParamInfo } = FuncInfo,
             verify_local_args(Live - 1, ParamInfo, #{}, Vst);
         #{} ->
@@ -1722,7 +1722,7 @@ verify_arg_type_1(Reg, GivenType, Info, Vst) ->
             %% pass after all optimizations have been applied in which we
             %% tolerate arguments that aren't in direct conflict.
             ok;
-        GivenType ->
+        ^GivenType ->
             true = GivenType =/= none,          %Assertion.
             ok;
         _ ->
@@ -1859,7 +1859,7 @@ validate_float_arith_bif(Ss, Dst, Vst0) ->
 
 assert_fls(Fls, Vst) ->
     case get_fls(Vst) of
-	Fls -> ok;
+	^Fls -> ok;
 	OtherFls -> error({bad_floating_point_state,OtherFls})
     end.
 
@@ -2315,7 +2315,7 @@ new_value(Type, Op, Ss, #vst{current=#st{vs=Vs0}=St,ref_ctr=Counter}=Vst) ->
 
 kill_catch_tag(Reg, #vst{current=#st{ct=[Tag|Tags]}=St}=Vst0) ->
     Vst = Vst0#vst{current=St#st{ct=Tags,fls=undefined}},
-    Tag = get_tag_type(Reg, Vst),               %Assertion.
+    ^Tag = get_tag_type(Reg, Vst),               %Assertion.
     kill_tag(Reg, Vst).
 
 check_try_catch_tags(Type, {y,N}=Reg, Vst) ->
@@ -2415,7 +2415,7 @@ subtract(A, B) ->
 assert_type(RequiredType, Term, Vst) ->
     GivenType = get_movable_term_type(Term, Vst),
     case meet(RequiredType, GivenType) of
-        GivenType ->
+        ^GivenType ->
             ok;
         _RequiredType ->
             error({bad_type,{needed,RequiredType},{actual,GivenType}})
@@ -2717,11 +2717,11 @@ mv_1(Same, Same, VsA, VsB, Acc0) ->
     %% We're merging different versions of the same value, so it's safe to
     %% reuse old entries if the type's unchanged.
     #value{type=TypeA,args=Args}=EntryA = map_get(Same, VsA),
-    #value{type=TypeB,args=Args}=EntryB = map_get(Same, VsB),
+    #value{type=TypeB,args=^Args}=EntryB = map_get(Same, VsB),
 
     Entry = case join(TypeA, TypeB) of
-                TypeA -> EntryA;
-                TypeB -> EntryB;
+                ^TypeA -> EntryA;
+                ^TypeB -> EntryB;
                 JoinedType -> EntryA#value{type=JoinedType}
             end,
 

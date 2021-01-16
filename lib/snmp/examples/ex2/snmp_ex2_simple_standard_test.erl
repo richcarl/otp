@@ -253,9 +253,9 @@ verify_vb(#varbind{oid = Oid, variabletype = Type, value = Val} = Vb,
 	    case snmp_ex2_manager:oid_to_name(lists:reverse(RevOid)) of
 		{ok, Name} ->
 		    case lists:keysearch(Name, 1, NameAndTypes) of
-			{value, {Name, Type}} ->
+			{value, {^Name, ^Type}} ->
 			    Val;
-			{value, {Name, WrongType}} ->
+			{value, {^Name, WrongType}} ->
 			    error({wrong_type, {WrongType, Vb}});
 			false ->
 			    error({unexpected_name, {Name, Vb}})
@@ -265,9 +265,9 @@ verify_vb(#varbind{oid = Oid, variabletype = Type, value = Val} = Vb,
 	    end;
 	_ ->
 	    case lists:keysearch(Oid, 1, NameAndTypes) of
-		{value, {Oid, Type}} ->
+		{value, {^Oid, ^Type}} ->
 		    Val;
-		{value, {Oid, WrongType}} ->
+		{value, {^Oid, WrongType}} ->
 		    error({wrong_type, {WrongType, Vb}});
 		false ->
 		    error({unexpected_oid, Vb})

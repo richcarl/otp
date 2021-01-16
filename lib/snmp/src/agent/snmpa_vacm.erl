@@ -399,7 +399,7 @@ score(Key, GroupKey, ContextName, Match, SecModel, SecLevel) ->
 	chop_off_context(ContextName, Rest1, 0, CtxLen, Match),
     %% Make sure the vacmSecModel is valid (any or matching)
     NSecModel = case VSecModel of
-		    SecModel -> 198;
+		    ^SecModel -> 198;
 		    ?SEC_ANY -> 0;
 		    _        -> throw({ok, 0})
 		end,

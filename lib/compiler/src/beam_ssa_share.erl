@@ -97,7 +97,7 @@ function(#b_function{anno=Anno,bs=Blocks0}=F) ->
 blocks([L|Ls], Blocks, Changed) ->
     #b_blk{last=Last0} = Blk0 = map_get(L, Blocks),
     case block(Blk0, Blocks) of
-        #b_blk{last=Last0} ->
+        #b_blk{last=^Last0} ->
             blocks(Ls, Blocks, Changed);
         #b_blk{}=Blk ->
             blocks(Ls, Blocks#{L:=Blk}, true)
@@ -350,7 +350,7 @@ canonical_terminator(_L, #b_br{bool=#b_var{},succ=Succ}=Br, _Blocks) ->
 canonical_terminator(_, _, _) -> none.
 
 canonical_terminator_phis([#b_set{op=phi,args=PhiArgs}=Phi|Is], L) ->
-    {Value,L} = keyfind(L, 2, PhiArgs),
+    {Value,^L} = keyfind(L, 2, PhiArgs),
     [Phi#b_set{op=copy,args=[Value]}|canonical_terminator_phis(Is, L)];
 canonical_terminator_phis([#b_set{}=I|_], L) ->
     case beam_ssa:is_loop_header(I) of

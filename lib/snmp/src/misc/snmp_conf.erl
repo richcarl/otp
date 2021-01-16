@@ -366,7 +366,7 @@ check_string(X, _Len)                   -> error({invalid_string, X}).
 
 check_atom(X, Atoms) ->
     case lists:keysearch(X, 1, Atoms) of
-        {value, {X, Val}} -> 
+        {value, {^X, Val}} -> 
 	    {ok, Val};
         _ -> 
 	    error({invalid_atom, X, Atoms})

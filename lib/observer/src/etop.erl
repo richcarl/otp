@@ -165,7 +165,7 @@ data_handler(Reader, Opts) ->
 	    end,
 	    stop(Opts),
 	    out_proc_stopped;
-	{'EXIT', Reader, eof} ->
+	{'EXIT', ^Reader, eof} ->
 	    io:format("Lost connection to node ~p exiting~n", [Opts#opts.node]),
 	    stop(Opts),
 	    connection_lost;
@@ -182,7 +182,7 @@ stop(Opts) ->
     
 update(#opts{store=Store,node=Node,tracing=Tracing,intv=Interval}=Opts) ->
     Pid = spawn_link(Node,observer_backend,etop_collect,[self()]),
-    Info = receive {Pid,I} -> I 
+    Info = receive {^Pid,I} -> I 
 	   after Interval ->
                    %% Took more than the update interval to fetch
                    %% data. Either the connection is lost or the
@@ -196,7 +196,7 @@ update(#opts{store=Store,node=Node,tracing=Tracing,intv=Interval}=Opts) ->
 	if Tracing == on ->
 		PI=lists:map(fun(PI=#etop_proc_info{pid=P}) -> 
 				     case ets:lookup(Store,P) of
-					 [{P,T}] -> PI#etop_proc_info{runtime=T};
+					 [{^P,T}] -> PI#etop_proc_info{runtime=T};
 					 [] -> PI
 				     end
 			     end,
@@ -377,7 +377,7 @@ meminfo(_MemI, []) -> [].
 
 get_mem(Tag, MemI) ->
     case lists:keysearch(Tag, 1, MemI) of
-	{value, {Tag, I}} -> I;			       %these are in bytes
+	{value, {^Tag, I}} -> I;			       %these are in bytes
 	_ -> 0
     end.
 

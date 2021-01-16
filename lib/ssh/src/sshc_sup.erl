@@ -79,7 +79,7 @@ id(Address, Port, Profile) ->
 
 system_name(SysSup) ->
     case lists:keyfind(SysSup, 2, supervisor:which_children(?SSHC_SUP)) of
-        {Name, SysSup, _, _} -> Name;
+        {Name, ^SysSup, _, _} -> Name;
         false -> undefind
     end.
 

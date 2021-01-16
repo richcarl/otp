@@ -409,9 +409,9 @@ v3_proc(NoteStore, Packet, LocalEngineID, V3Hdr, Data, Log) ->
                     %% Response to the discovery stage 1 request
                     ?vdebug("v3_proc -> discovery stage 1 response", []),
                     {ok, 'version-3', PDU, PduMMS, {discovery, SecEngineID}};
-                #note{sec_engine_id = SecEngineID,
+                #note{sec_engine_id = ^SecEngineID,
                       sec_model     = _MsgSecModel,
-                      sec_name      = SecName,
+                      sec_name      = ^SecName,
                       sec_level     = _SecLevel,   % OTP-16207
                       ctx_engine_id = _CtxEngineID,
                       ctx_name      = _CtxName,
@@ -446,10 +446,10 @@ v3_proc(NoteStore, Packet, LocalEngineID, V3Hdr, Data, Log) ->
                     %% Response to the discovery stage 1 request
                     ?vdebug("v3_proc -> discovery stage 1 response", []),
                     {ok, 'version-3', PDU, PduMMS, {discovery, SecEngineID}};
-                #note{sec_engine_id = SecEngineID,
+                #note{sec_engine_id = ^SecEngineID,
                       sec_model     = _MsgSecModel,
-                      sec_name      = SecName,
-                      sec_level     = SecLevel,
+                      sec_name      = ^SecName,
+                      sec_level     = ^SecLevel,
                       ctx_engine_id = _CtxEngineID,
                       ctx_name      = _CtxName,
                       disco         = true,
@@ -458,12 +458,12 @@ v3_proc(NoteStore, Packet, LocalEngineID, V3Hdr, Data, Log) ->
                     %% Response to the discovery stage 2 request
                     ?vdebug("v3_proc -> discovery stage 2 response", []),
                     {ok, 'version-3', PDU, PduMMS, discovery};
-		#note{sec_engine_id = SecEngineID, 
-		      sec_model     = MsgSecurityModel, 
-		      sec_name      = SecName, 
-		      sec_level     = SecLevel,
-		      ctx_engine_id = ContextEngineID, 
-		      ctx_name      = ContextName,
+		#note{sec_engine_id = ^SecEngineID, 
+		      sec_model     = ^MsgSecurityModel, 
+		      sec_name      = ^SecName, 
+		      sec_level     = ^SecLevel,
+		      ctx_engine_id = ^ContextEngineID, 
+		      ctx_name      = ^ContextName,
 		      disco         = false,
 		      req_id        = _ReqId} ->
 		    {ok, 'version-3', PDU, PduMMS, undefined};
@@ -479,7 +479,7 @@ v3_proc(NoteStore, Packet, LocalEngineID, V3Hdr, Data, Log) ->
 	    SnmpEngineID = LocalEngineID, 
 	    ?vtrace("v3_proc -> 7.2.13", []),
 	    case SecEngineID of
-		SnmpEngineID when (DiscoOrPlain =:= discovery) ->
+		^SnmpEngineID when (DiscoOrPlain =:= discovery) ->
 		    %% This is a discovery step 2 message!
 		    ?vtrace("v3_proc -> discovery stage 2", []),
 		    generate_discovery2_report_msg(MsgID, 
@@ -493,11 +493,11 @@ v3_proc(NoteStore, Packet, LocalEngineID, V3Hdr, Data, Log) ->
 						   LocalEngineID, 
 						   Log);
 
-		SnmpEngineID when (DiscoOrPlain =:= plain) ->
+		^SnmpEngineID when (DiscoOrPlain =:= plain) ->
 		    %% 4.2.2.1.1 - we don't handle proxys yet => we only 
 		    %% handle ContextEngineID to ourselves
 		    case ContextEngineID of
-			SnmpEngineID ->
+			^SnmpEngineID ->
 			    %% Uses ACMData that snmpa_acm knows of.
 			    {ok, 'version-3', PDU, PduMMS, 
 			     {v3, MsgID, MsgSecurityModel, SecName, SecLevel,

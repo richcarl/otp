@@ -627,9 +627,9 @@ bulk_input(Head, InitFun, Ref, Seq) ->
 	    _ = (catch InitFun(close));
        (read) ->
 	    case catch {Ref, InitFun(read)} of
-		{Ref, end_of_input} ->
+		{^Ref, end_of_input} ->
 		    end_of_input;
-		{Ref, {L0, NewInitFun}} when is_list(L0), 
+		{^Ref, {L0, NewInitFun}} when is_list(L0), 
                                              is_function(NewInitFun) ->
 		    Kp = Head#head.keypos,
 		    case catch bulk_objects(L0, Head, Kp, Seq, []) of
@@ -639,7 +639,7 @@ bulk_input(Head, InitFun, Ref, Seq) ->
 			{L, NSeq} ->
 			    {L, bulk_input(Head, NewInitFun, Ref, NSeq)}
 		    end;
-		{Ref, Value} ->
+		{^Ref, Value} ->
 		    {error, {init_fun, Value}};
 		Error ->
 		    throw({thrown, Error})
@@ -953,11 +953,11 @@ bchunk_init(Head, InitFun) ->
     Ref = make_ref(), 
     %% The non-empty list of data begins with the table parameters.
     case catch {Ref, InitFun(read)} of
-	{Ref, end_of_input} ->
+	{^Ref, end_of_input} ->
 	    {error, {init_fun, end_of_input}};
-	{Ref, {[], NInitFun}} when is_function(NInitFun) ->
+	{^Ref, {[], NInitFun}} when is_function(NInitFun) ->
 	    bchunk_init(Head, NInitFun);
-	{Ref, {[ParmsBin | L], NInitFun}} 
+	{^Ref, {[ParmsBin | L], NInitFun}} 
 	                when is_list(L), is_function(NInitFun) ->
 	    #head{fptr = Fd, type = Type, keypos = Kp, 
 		  auto_save = Auto, cache = Cache, 
@@ -996,7 +996,7 @@ bchunk_init(Head, InitFun) ->
 		not_ok ->
 		    {error, {init_fun, ParmsBin}}
 	    end;
-	{Ref, Value} ->
+	{^Ref, Value} ->
 	    {error, {init_fun, Value}};
 	Error ->
 	    {thrown, Error}
@@ -1022,13 +1022,13 @@ bchunk_input(InitFun, SizeT, Head, Ref, Cache, ASz) ->
             _ = (catch InitFun(close));
        (read) ->
 	    case catch {Ref, InitFun(read)} of
-		{Ref, end_of_input} ->
+		{^Ref, end_of_input} ->
 		    _ = fast_write_all_sizes(Cache, SizeT, Head),
 		    end_of_input;
-		{Ref, {L, NInitFun}} when is_list(L), is_function(NInitFun) ->
+		{^Ref, {L, NInitFun}} when is_list(L), is_function(NInitFun) ->
 		    do_make_slots(L, Cache, SizeT, Head, Ref, ASz, 
 				  NInitFun);
-		{Ref, Value} ->
+		{^Ref, Value} ->
 		    {error, {init_fun, Value}};
 		Error ->
 		    throw({thrown, Error})
@@ -1072,7 +1072,7 @@ fast_output(Head, SizeT, Bases, SegAddr, SegEnd) ->
 	    fast_output_end(Head, SizeT);
        (L) ->
 	    case file:position(Head#head.fptr, SegAddr) of
-		{ok, SegAddr} ->
+		{ok, ^SegAddr} ->
 		    NewSegAddr = write_segment_file(L, Bases, Head, [], 
 						    SegAddr, SegAddr),
 		    fast_output2(Head, SizeT, Bases, NewSegAddr, 
@@ -1146,7 +1146,7 @@ fast_write_sizes([[Addr | C] | CL], Sz, SizeT, Head, NCL, PwriteList) ->
     case ets:lookup(SizeT, Sz) of
 	[] ->
 	    throw({error, invalid_objects_list});
-	[{Sz,Position,_ObjCounter,_NoCollections}] ->
+	[{^Sz,Position,_ObjCounter,_NoCollections}] ->
 	    %% Update ObjCounter:
 	    NoColls = length(C),
 	    _ = ets:update_counter(SizeT, Sz, {3, NoColls}),
@@ -1674,7 +1674,7 @@ free_list_to_file(Ftab, H, Pos, Sz, Ws, WsSz) ->
     free_list_to_file(Ftab, H, Pos+1, Sz, NWs, NWsSz).
 
 free_lists_from_file(H, Pos) ->
-    {ok, Pos} = dets_utils:position(H#head.fptr, H#head.filename, Pos),
+    {ok, ^Pos} = dets_utils:position(H#head.fptr, H#head.filename, Pos),
     FL = dets_utils:empty_free_lists(),
     case catch bin_to_tree([], H, start, FL, -1, []) of
 	{'EXIT', _} ->
@@ -1840,18 +1840,18 @@ re_hash_slots([FB | Bins], [E | L], Head, Z, BinFS, BinTS, WsB) ->
 	      end,
     case re_hash_split(KeyObjs, Head, [], 0, [], 0) of
 	{_KL, _KSz, [], 0} ->
-            Sz1 = _KSz + ?OHDSZ,
+            ^Sz1 = _KSz + ?OHDSZ,
 	    re_hash_slots(Bins, L, Head, Z, [B1 | BinFS], [Z | BinTS], WsB);
 	{[], 0, _ML, _MSz} -> %% Optimization.
-            Sz1 = _MSz + ?OHDSZ,
+            ^Sz1 = _MSz + ?OHDSZ,
 	    re_hash_slots(Bins, L, Head, Z, [Z | BinFS], [B1 | BinTS], WsB);
 	{KL, KSz, ML, MSz} when KL =/= [], KSz > 0, ML =/= [], MSz > 0 ->
 	    {Head1, FS1, Ws1} = 
 		updated(Head, P1, Sz1, KSz, Pos1, KL, true, foo, bar),
-	    {NewHead, [{Pos2,Bin2}], Ws2} = 
+	    {NewHead, [{^Pos2,Bin2}], Ws2} = 
 		updated(Head1, 0, 0, MSz, Pos2, ML, true, foo, bar),
 	    NewBinFS = case FS1 of
-			   [{Pos1,Bin1}] -> [Bin1 | BinFS];
+			   [{^Pos1,Bin1}] -> [Bin1 | BinFS];
 			   [] -> [B1 | BinFS] % cannot happen
 		       end,
 	    NewBinTS = [Bin2 | BinTS],
@@ -2013,7 +2013,7 @@ eval_work_list(Head, [{Key,[{_Seq,{lookup,Pid}}]}]) ->
                            case dets_utils:mkeysearch(Key, 1, KeyObjs) of
                                false ->
                                    [];
-                               {value, {Key,_KS,_KB,O,Os}} ->
+                               {value, {^Key,_KS,_KB,O,Os}} ->
                                    case catch binobjs2terms(Os) of
                                        {'EXIT', _Error} ->
                                            Bad = dets_utils:bad_object

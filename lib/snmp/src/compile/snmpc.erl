@@ -150,7 +150,7 @@ compile_1(FileName, Options) ->
 	    Pid = spawn_link(?MODULE,init,[self(),FileName,Opts]),
 	    receive
 		{compile_result,R} -> R;
-		{'EXIT',Pid, Reason} when Reason =/= normal ->
+		{'EXIT',^Pid, Reason} when Reason =/= normal ->
 		    exit(Reason)
 	    end;
 	{error, Reason} -> 
@@ -225,7 +225,7 @@ get_options([_|Opts], Formats, Args) ->
 
 get_info(Key, Info) ->
     case lists:keysearch(Key, 1, Info) of
-	{value, {Key, Val}} ->
+	{value, {^Key, Val}} ->
 	    Val;
 	false ->
 	    throw("undefined")
@@ -248,7 +248,7 @@ update_options([{Key,DefVal}|DefOpts], Options) ->
 	    Options1 = 
 		lists:keyreplace(Key, 1, Options, {Key, Val++DefVal}),
 	    update_options(DefOpts, Options1);
-	{value, DefVal} -> %% Same value, no need to update
+	{value, ^DefVal} -> %% Same value, no need to update
 	    update_options(DefOpts, Options);
 	{value, Val} ->    %% New value, so update
 	    Options1 = 
@@ -1167,12 +1167,12 @@ definitions_loop([{#mc_object_type{name   = NameOfTable,
 	  [NameOfTable, SeqName, Tline, Entry, Seq]),
     update_status(NameOfTable, Tstatus),
     case Entry of
-	{#mc_object_type{syntax      = {{type, SeqName},_line},
+	{#mc_object_type{syntax      = {{type, ^SeqName},_line},
 			 max_access  = 'not-accessible',
 			 kind        = {table_entry, _IndexingInfo},
 			 name_assign = {_NameOfTable,[1]}}, _Eline} ->
 	    case Seq of
-		{#mc_sequence{name = SeqName}, Sline} ->
+		{#mc_sequence{name = ^SeqName}, Sline} ->
 		    snmpc_lib:error("Internal error. Correct incorrect "
 					   "table (~p,~w).",[SeqName,Sline],
 				    Tline);
@@ -1398,9 +1398,9 @@ define_cols([{#mc_object_type{name        = NameOfCol,
 		     "Invalid parent ~p for table column ~p (should be ~p).",
 		     [Parent,NameOfCol,NameOfEntry],Oline),
 		   error;
-	       {NameOfEntry,[SubIndex2]} ->
+	       {^NameOfEntry,[^SubIndex2]} ->
 		   ok;
-	       {NameOfEntry,[SI]} ->
+	       {^NameOfEntry,[SI]} ->
 		   snmpc_lib:print_error(
 		     "Invalid column number ~p for column ~p.",
 		     [SI, NameOfCol], Oline),
@@ -1504,7 +1504,7 @@ save(Filename, MibName, Options) ->
     File1 = filename:basename(R),
     File3 = snmpc_misc:to_upper(File1),
     case snmpc_misc:to_upper(atom_to_list(MibName)) of
-	File3 ->
+	^File3 ->
 	    {value, OutDirr} = snmpc_misc:assq(outdir, Options),
 	    OutDir = snmpc_misc:ensure_trailing_dir_delimiter(OutDirr),
 	    File2 = (OutDir ++ File1) ++ ".bin",

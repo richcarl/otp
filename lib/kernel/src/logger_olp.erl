@@ -600,7 +600,7 @@ try_callback_call(Module, Function, Args, DefRet) ->
         throw:R -> R;
         error:undef:S when DefRet=/='$no_default_return' ->
             case S of
-                [{Module,Function,Args,_}|_] ->
+                [{^Module,^Function,^Args,_}|_] ->
                     DefRet;
                 _ ->
                     erlang:raise(error,undef,S)

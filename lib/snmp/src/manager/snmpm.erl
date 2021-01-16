@@ -275,14 +275,14 @@ snmpm_start_verify(Parent, _Ref, To) when (To =< 0) ->
 snmpm_start_verify(Parent, Ref, To) ->
     T0 = t(),
     receive
-	{cancel, Parent} ->
+	{cancel, ^Parent} ->
 	    ?d("cancel", []),
 	    demonitor(Ref),
 	    unlink(Parent),
 	    exit(normal);
-	{'EXIT', Parent, _} ->
+	{'EXIT', ^Parent, _} ->
 	    exit(normal);
-	{'DOWN', Ref, process, _Object, _Info} ->
+	{'DOWN', ^Ref, process, _Object, _Info} ->
 	    ?d("down", []),
 	    sleep(?NOTIFY_START_TICK_TIME),
 	    ?MODULE:snmpm_start_verify(Parent, monitor(), t(T0, To))

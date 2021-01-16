@@ -584,8 +584,8 @@ maybe_contract_segs(T) -> T.
 rehash([?kv(Key,_Bag)=KeyBag|T], Slot1, Slot2, MaxN) ->
     [L1|L2] = rehash(T, Slot1, Slot2, MaxN),
     case erlang:phash(Key, MaxN) of
-	Slot1 -> [[KeyBag|L1]|L2];
-	Slot2 -> [L1|[KeyBag|L2]]
+	^Slot1 -> [[KeyBag|L1]|L2];
+	^Slot2 -> [L1|[KeyBag|L2]]
     end;
 rehash([], _Slot1, _Slot2, _MaxN) -> [[]|[]].
 

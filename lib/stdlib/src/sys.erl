@@ -459,7 +459,7 @@ suspend_loop(SysState, Parent, Mod, Debug, Misc, Hib) ->
 	    receive
 		{system, From, Msg} ->
 		    handle_system_msg(SysState, Msg, From, Parent, Mod, Debug, Misc, Hib);
-		{'EXIT', Parent, Reason} ->
+		{'EXIT', ^Parent, Reason} ->
 		    Mod:system_terminate(Reason, Parent, Debug, Misc)
 	    end
     end.
@@ -468,7 +468,7 @@ suspend_loop_hib(SysState, Parent, Mod, Debug, Misc, Hib) ->
     receive
 	{system, From, Msg} ->
 	    handle_system_msg(SysState, Msg, From, Parent, Mod, Debug, Misc, Hib);
-	{'EXIT', Parent, Reason} ->
+	{'EXIT', ^Parent, Reason} ->
             Mod:system_terminate(Reason, Parent, Debug, Misc)
     after 0 -> % Not a system message, go back into hibernation
 	 proc_lib:hibernate(?MODULE, suspend_loop_hib, [SysState, Parent, Mod, 
@@ -648,7 +648,7 @@ get_debug(Item, Debug, Default) ->
 %% Workaround: accepts more Item types than get_debug/3.
 get_debug2(Item, Debug, Default) ->
     case lists:keysearch(Item, 1, Debug) of
-	{value, {Item, Data}} -> Data;
+	{value, {^Item, Data}} -> Data;
 	_ -> Default
     end.
 

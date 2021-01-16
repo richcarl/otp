@@ -85,28 +85,28 @@ run_analysis(Analysis, LegalWarnings) ->
 loop(#server_state{parent = Parent} = State,
      #analysis{analysis_pid = AnalPid} = Analysis, ExtCalls) ->
   receive
-    {AnalPid, log, LogMsg} ->
+    {^AnalPid, log, LogMsg} ->
       send_log(Parent, LogMsg),
       loop(State, Analysis, ExtCalls);
-    {AnalPid, warnings, Warnings} ->
+    {^AnalPid, warnings, Warnings} ->
       send_warnings(Parent, Warnings),
       loop(State, Analysis, ExtCalls);
-    {AnalPid, cserver, CServer, Plt} ->
+    {^AnalPid, cserver, CServer, Plt} ->
       skip_ets_transfer(AnalPid),
       send_codeserver_plt(Parent, CServer, Plt),
       loop(State, Analysis, ExtCalls);
-    {AnalPid, done, Plt, DocPlt} ->
+    {^AnalPid, done, Plt, DocPlt} ->
       send_ext_calls(Parent, ExtCalls),
       send_analysis_done(Parent, Plt, DocPlt);
-    {AnalPid, ext_calls, NewExtCalls} ->
+    {^AnalPid, ext_calls, NewExtCalls} ->
       loop(State, Analysis, NewExtCalls);
-    {AnalPid, ext_types, ExtTypes} ->
+    {^AnalPid, ext_types, ExtTypes} ->
       send_ext_types(Parent, ExtTypes),
       loop(State, Analysis, ExtCalls);
-    {AnalPid, mod_deps, ModDeps} ->
+    {^AnalPid, mod_deps, ModDeps} ->
       send_mod_deps(Parent, ModDeps),
       loop(State, Analysis, ExtCalls);
-    {Parent, stop} ->
+    {^Parent, stop} ->
       exit(AnalPid, kill),
       ok
   end.
@@ -174,7 +174,7 @@ remote_type_postprocessing(TmpCServer, Args) ->
   {Pid, Ref} = erlang:spawn_monitor(Fun),
   dialyzer_codeserver:give_away(TmpCServer, Pid),
   Pid ! {self(), go},
-  receive {'DOWN', Ref, process, Pid, Return} ->
+  receive {'DOWN', ^Ref, process, ^Pid, Return} ->
       skip_ets_transfer(Pid),
       case Return of
         {error, _ErrorMsg} = Error -> exit(Error);
@@ -217,7 +217,7 @@ remote_type_postproc(TmpCServer0, Args) ->
 
 skip_ets_transfer(Pid) ->
   receive
-    {'ETS-TRANSFER', _Tid, Pid, _HeriData} ->
+    {'ETS-TRANSFER', _Tid, ^Pid, _HeriData} ->
       skip_ets_transfer(Pid)
   after 0 ->
       ok
@@ -315,7 +315,7 @@ compile_and_store(Files, #analysis_state{codeserver = CServer,
   {T2, _} = statistics(wall_clock),
   Msg1 = io_lib:format("done in ~.2f secs\nRemoving edges... ", [(T2-T1)/1000]),
   send_log(Parent, Msg1),
-  Callgraph =
+  ^Callgraph =
     ?timing(Timing, "clean", _C2,
 	    cleanup_callgraph(State, CServer2, Callgraph, Modules)),
   {T3, _} = statistics(wall_clock),
@@ -451,8 +451,8 @@ compile_common(Core, Callgraph, CServer, UseContracts, LegalWarnings) ->
 store_core(Mod, Core, Callgraph, CServer) ->
   Exp = get_exports_from_core(Core),
   ExpTypes = get_exported_types_from_core(Core),
-  CServer = dialyzer_codeserver:insert_exports(Exp, CServer),
-  CServer = dialyzer_codeserver:insert_temp_exported_types(ExpTypes, CServer),
+  ^CServer = dialyzer_codeserver:insert_exports(Exp, CServer),
+  ^CServer = dialyzer_codeserver:insert_temp_exported_types(ExpTypes, CServer),
   CoreTree = cerl:from_records(Core),
   CoreSize = cerl_trees:size(CoreTree),
   {ok, CoreSize, {Mod, CoreTree, Callgraph, CServer}}.
@@ -484,7 +484,7 @@ get_exports_from_core(Core) ->
 store_code_and_build_callgraph(Mod, Core, Callgraph, CServer) ->
   CoreTree = cerl:from_records(Core),
   {Vertices, Edges} = dialyzer_callgraph:scan_core_tree(CoreTree, Callgraph),
-  CServer = dialyzer_codeserver:insert(Mod, CoreTree, CServer),
+  ^CServer = dialyzer_codeserver:insert(Mod, CoreTree, CServer),
   {ok, Vertices, Edges, Mod}.
 
 %%--------------------------------------------------------------------
@@ -558,9 +558,9 @@ rcv_and_send_ext_types(SendTo, Parent) ->
 
 rcv_ext_types(Self, ExtTypes) ->
   receive
-    {Self, ext_types, ExtType} ->
+    {^Self, ext_types, ExtType} ->
       rcv_ext_types(Self, [ExtType|ExtTypes]);
-    {Self, done} -> lists:usort(ExtTypes)
+    {^Self, done} -> lists:usort(ExtTypes)
   end.
 
 send_log(Parent, Msg) ->
@@ -638,7 +638,7 @@ find_call_file_and_line({Module, _, _}, Tree, MFA, CodeServer) ->
 	    case cerl:is_c_atom(M) andalso cerl:is_c_atom(F) of
 	      true ->
 		case {cerl:concrete(M), cerl:concrete(F), A} of
-		  MFA ->
+		  ^MFA ->
 		    Ann = cerl:get_ann(SubTree),
 		    [{get_file(CodeServer, Module, Ann), get_line(Ann)}|Acc];
 		  {erlang, make_fun, 3} ->
@@ -654,7 +654,7 @@ find_call_file_and_line({Module, _, _}, Tree, MFA, CodeServer) ->
 			   cerl:concrete(CA2),
 			   cerl:concrete(CA3)}
 			of
-			  MFA ->
+			  ^MFA ->
 			    Ann = cerl:get_ann(SubTree),
 			    [{get_file(CodeServer, Module, Ann),
                               get_line(Ann)}|Acc];

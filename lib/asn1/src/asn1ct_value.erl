@@ -192,7 +192,7 @@ from_type_prim(M, D) ->
 		    V = i_random(C),
 		    case lists:keyfind(V, 2, NNL) of
 			false -> V;
-			{N,V} -> N
+			{N,^V} -> N
 		    end
 	    end;
 	Enum when is_tuple(Enum),element(1,Enum)=='ENUMERATED' ->
@@ -410,7 +410,7 @@ get_constraint(C, Key) ->
         false                    -> no;
         {'ValueRange', {Lb, Ub}} -> {check_external(Lb), check_external(Ub)};
         {'SizeConstraint', N}    -> N;
-        {Key, Value}             -> Value
+        {^Key, Value}             -> Value
     end.
 
 check_external(ExtRef) when is_record(ExtRef, 'Externalvaluereference') ->

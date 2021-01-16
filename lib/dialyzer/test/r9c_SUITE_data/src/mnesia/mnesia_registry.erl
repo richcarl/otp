@@ -92,7 +92,7 @@ start(Type, Tab, LinkTo) ->
     end.
 
 %% Starts a receiver process and optionally creates a Mnesia table
-%% with suitable default values. Returns the Pid of the receiver process
+%% with suitable default values. Returns the ^Pid of the receiver process
 %%
 %% The receiver process accumulates Mnesia operations and performs
 %% all operations or none at commit. The understood messages are:

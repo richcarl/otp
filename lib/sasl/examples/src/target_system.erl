@@ -224,7 +224,7 @@ subst([], _Vars, Result) ->
 subst_var([$%| Rest], Vars, Result, VarAcc) ->
     Key = lists:reverse(VarAcc),
     case lists:keysearch(Key, 1, Vars) of
-        {value, {Key, Value}} ->
+        {value, {^Key, Value}} ->
             subst(Rest, Vars, lists:reverse(Value, Result));
         false ->
             subst(Rest, Vars, [$%| VarAcc ++ [$%| Result]])

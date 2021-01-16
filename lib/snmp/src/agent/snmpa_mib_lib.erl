@@ -67,7 +67,7 @@ get_table(NameDb, FOI, Key, Acc) ->
         endOfTable ->
             ?vdebug("end of table",[]),
             {ok, lists:reverse(Acc)};
-        Key ->
+        ^Key ->
             %% Crap, circular ref
             ?vinfo("cyclic reference: ~w -> ~w", [Key, Key]),
             throw({error, {cyclic_db_reference, Key, Acc}});

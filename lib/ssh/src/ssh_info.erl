@@ -191,7 +191,7 @@ walk_sups([H={_,Pid,_,_}|T], Indent) ->
      io_lib:format('~200p  ~p is ~s~n',[H,Pid,dead_or_alive(Pid)]),
      case H of
 	 {_,_,supervisor,[ssh_connection_handler]} -> "";
-	 {_,Pid,supervisor,_} -> walk_sups(children(Pid), ?inc(Indent));
+	 {_,^Pid,supervisor,_} -> walk_sups(children(Pid), ?inc(Indent));
 	 _ -> ""
      end,
      walk_sups(T, Indent)
@@ -221,7 +221,7 @@ children(Pid) ->
 			   Parent ! {self(),supervisor:which_children(Pid)}
 		   end),
     receive
-	{Helper,L} when is_list(L) ->
+	{^Helper,L} when is_list(L) ->
 	    L
     after
 	2000 ->

@@ -232,7 +232,7 @@ handle_info({udp, U, IP, Port, Data}, S0) ->
     %% check that the connecting node is valid and has the same
     %% erlang version as the boot server node
     case {Valid,Data,Token} of
-	{true,Token,Token} ->
+	{true,^Token,^Token} ->
 	    case gen_udp:send(U,IP,Port,[?EBOOT_REPLY,S0#state.priority,
                                          int16(S0#state.listen_port),
                                          S0#state.version])
@@ -286,7 +286,7 @@ code_change(_Vsn, State, _Extra) ->
 
 boot_init(Tag) ->
     receive
-	{Tag, Listen} ->
+	{^Tag, Listen} ->
 	    process_flag(trap_exit, true),
 	    boot_main(Listen)
     end.
@@ -298,14 +298,14 @@ boot_main(Listen) ->
 
 boot_main(Listen, Tag, Pid) ->
     receive
-	{Tag, _} ->
+	{^Tag, _} ->
 	    boot_main(Listen);
-	{'EXIT', Pid, _} -> 
+	{'EXIT', ^Pid, _} -> 
 	    boot_main(Listen);
 	{'EXIT', _, Reason} ->
 	    exit(Pid, kill),
 	    exit(Reason);
-	{tcp_closed, Listen} ->
+	{tcp_closed, ^Listen} ->
 	    exit(closed)
     end.
 
@@ -323,10 +323,10 @@ boot_accept(Server, Listen, Tag) ->
 
 boot_loop(Socket, PS) ->
     receive
-	{tcp, Socket, Data} ->
+	{tcp, ^Socket, Data} ->
 	    PS2 = handle_command(Socket, PS, Data),
 	    boot_loop(Socket, PS2);
-	{tcp_closed, Socket} ->
+	{tcp_closed, ^Socket} ->
 	    true
     end.
 

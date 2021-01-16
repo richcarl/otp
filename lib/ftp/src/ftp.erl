@@ -2587,7 +2587,7 @@ validate_options([], ValidOptions, Acc) ->
     end;
 validate_options([{Key, Value}|Options], ValidOptions, Acc) ->
     case lists:keysearch(Key, 1, ValidOptions) of
-        {value, {Key, Validate, _, Default}} ->
+        {value, {^Key, Validate, _, Default}} ->
             case (catch Validate(Value)) of
                 true ->
                     NewValidOptions = lists:keydelete(Key, 1, ValidOptions),

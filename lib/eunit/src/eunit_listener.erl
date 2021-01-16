@@ -119,16 +119,16 @@ group_loop(N, Id, Data, St) ->
 wait_for(Id, Type, ParentId) ->
     ?debugFmt("waiting for ~w ~w", [Id, Type]),
     receive
-	{status, Id, {progress, Type, Data}} ->
+	{status, ^Id, {progress, ^Type, Data}} ->
 	    ?debugFmt("got status ~w ~w", [Id, Data]),
 	    {ok, Data};
-	{status, ParentId, {progress, 'end', Data}} when Type =:= 'begin' ->
+	{status, ^ParentId, {progress, 'end', Data}} when Type =:= 'begin' ->
 	    ?debugFmt("got parent end ~w ~w", [ParentId, Data]),
 	    {done, Data};
-	{status, Id, {cancel, Reason}} when Type =:= 'end' ->
+	{status, ^Id, {cancel, Reason}} when Type =:= 'end' ->
 	    ?debugFmt("got cancel ~w ~w", [Id, Reason]),
 	    {cancel, Reason};
-	{status, ParentId, {cancel, _Reason}} ->
+	{status, ^ParentId, {cancel, _Reason}} ->
 	    ?debugFmt("got parent cancel ~w ~w", [ParentId, _Reason]),
 	    {done, {cancel, _Reason}}
     end.

@@ -284,7 +284,7 @@ send_event_after(Time, Event) ->
 cancel_timer(Ref) ->
     case erlang:cancel_timer(Ref) of
 	false ->
-	    receive {timeout, Ref, _} -> 0
+	    receive {timeout, ^Ref, _} -> 0
 	    after 0 -> false 
 	    end;
 	RemainingTime ->
@@ -392,7 +392,7 @@ decode_msg(Msg,Parent, Name, StateName, StateData, Mod, Time, HibernateAfterTime
         {system, From, Req} ->
 	    sys:handle_system_msg(Req, From, Parent, ?MODULE, Debug,
 				  [Name, StateName, StateData, Mod, Time, HibernateAfterTimeout], Hib);
-	{'EXIT', Parent, Reason} ->
+	{'EXIT', ^Parent, Reason} ->
 	    terminate(
               Reason, Name, undefined, Msg, Mod, StateName, StateData, Debug);
 	_Msg when Debug =:= [] ->
@@ -494,7 +494,7 @@ handle_msg(Msg, Parent, Name, StateName, StateData, Mod, _Time, HibernateAfterTi
 					   StateName, NStateData, [])),
 	    reply(From, Reply),
 	    exit(R);
-        {'EXIT', {undef, [{Mod, handle_info, [_,_,_], _}|_]}} ->
+        {'EXIT', {undef, [{^Mod, handle_info, [_,_,_], _}|_]}} ->
             ?LOG_WARNING(#{label=>{gen_fsm,no_handle_info},
                            module=>Mod,
                            message=>Msg},

@@ -309,7 +309,7 @@ connection_info(ConnectionHandler, []) ->
     connection_info(ConnectionHandler, conn_info_keys());
 connection_info(ConnectionHandler, Key) when is_atom(Key) ->
     case connection_info(ConnectionHandler, [Key]) of
-        [{Key,Val}] -> {Key,Val};
+        [{^Key,Val}] -> {Key,Val};
         Other -> Other
     end;
 connection_info(ConnectionHandler, Options) ->
@@ -356,7 +356,7 @@ retrieve(#connection{options=Opts}, Key) ->
         Value -> 
             {ok,Value}
     catch
-        error:{badkey,Key} ->
+        error:{badkey,^Key} ->
             undefined
     end;
 retrieve(ConnectionHandler, Key) ->
@@ -919,7 +919,7 @@ handle_event(_,
             D = send_msg(Reply, D0#data{ssh_params = Ssh}),
 	    {keep_state, D};
 	
-	{"ssh-connection", "ssh-connection", Method} ->
+	{"ssh-connection", "ssh-connection", ^Method} ->
 	    %% Userauth request with a method like "password" or so
 	    case lists:member(Method, Ssh0#ssh.userauth_methods) of
 		true ->
@@ -955,7 +955,7 @@ handle_event(_,
 	%% {"ssh-connection", Expected, Method} when Expected =/= ServiceName -> Do what?
 	%% {ServiceName,      Expected, Method} when Expected =/= ServiceName -> Do what?
 
-	{ServiceName, _, _} when ServiceName =/= "ssh-connection" ->
+	{^ServiceName, _, _} when ServiceName =/= "ssh-connection" ->
             {Shutdown, D} =  
                 ?send_disconnect(?SSH_DISCONNECT_SERVICE_NOT_AVAILABLE,
                                  io_lib:format("Unknown service: ~p",[ServiceName]),
@@ -1885,7 +1885,7 @@ stop_subsystem(#data{ssh_params =
     spawn(fun() ->
                   Mref = erlang:monitor(process, C),
                   receive
-                      {'DOWN', Mref, process, C, _Info} -> ok
+                      {'DOWN', ^Mref, process, ^C, _Info} -> ok
                   after
                       10000 -> ok
                   end,
@@ -2482,19 +2482,19 @@ handshake(Pid, Ref, Timeout) ->
 	ssh_connected ->
 	    erlang:demonitor(Ref),
 	    {ok, Pid};
-	{Pid, not_connected, Reason} ->
+	{^Pid, not_connected, Reason} ->
 	    {error, Reason};
-	{Pid, user_password} ->
+	{^Pid, user_password} ->
 	    Pass = io:get_password(),
 	    Pid ! Pass,
 	    handshake(Pid, Ref, Timeout);
-	{Pid, question} ->
+	{^Pid, question} ->
 	    Answer = io:get_line(""),
 	    Pid ! Answer,
 	    handshake(Pid, Ref, Timeout);
-	{'DOWN', _, process, Pid, {shutdown, Reason}} ->
+	{'DOWN', _, process, ^Pid, {shutdown, Reason}} ->
 	    {error, Reason};
-	{'DOWN', _, process, Pid, Reason} ->
+	{'DOWN', _, process, ^Pid, Reason} ->
 	    {error, Reason}
     after Timeout ->
 	    stop(Pid),

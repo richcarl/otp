@@ -529,7 +529,7 @@ compile_alt(Pattern, Result) ->
 	    NewResult = [AltPattern|Result],
 	    RestPattern = compile_part(Rest),
 	    {ok, {alt, [Alt++RestPattern || Alt <- NewResult]}};
-	Pattern ->
+	^Pattern ->
 	    error
     end.
 

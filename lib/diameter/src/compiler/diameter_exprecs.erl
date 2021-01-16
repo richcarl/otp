@@ -160,7 +160,7 @@ accessors(Rname, Fields) ->
      '#info-X/1'(Rname, Fields)].
 
 fields(Rname, Recs) ->
-    {Rname, Fields} = lists:keyfind(Rname, 1, Recs),
+    {^Rname, Fields} = lists:keyfind(Rname, 1, Recs),
     lists:map(fun({record_field, _, {atom, _, N}})    -> N;
                  ({record_field, _, {atom, _, N}, _}) -> N
               end,

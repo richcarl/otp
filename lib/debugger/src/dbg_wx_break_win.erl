@@ -227,7 +227,7 @@ check_input(Entries) ->
 check_input([{Entry, Type} | Entries], Data) ->
     Str = wxTextCtrl:getValue(Entry),
     case erl_scan:string(Str) of
-	{ok, [{Type, _Line, Val}], _EndLine} ->
+	{ok, [{^Type, _Line, Val}], _EndLine} ->
 	    check_input(Entries, [Val|Data]);
 	_Error -> error
     end;

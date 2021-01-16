@@ -586,7 +586,7 @@ collect_attribute(Core, Tag) ->
 
 collect_attribute([{Key, Value}|T], Tag, File) ->
   case cerl:concrete(Key) of
-    Tag ->
+    ^Tag ->
       [{cerl:concrete(Value), get_core_line(cerl:get_ann(Key)), File} |
        collect_attribute(T, Tag, File)];
     file ->

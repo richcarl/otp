@@ -278,7 +278,7 @@ handle_info({do_it, Key}, State) ->
 
 handle_info({'EXIT', Pid, Reason}, State) ->
     case State#state.starter of
-	Pid ->
+	^Pid ->
 	    {stop, Reason, State};
 	_Other ->
 	    Work = State#state.work,
@@ -396,7 +396,7 @@ del_task(Key, WorkStore) ->
 		Ref /= nil ->
                     {ok,_} = timer:cancel(Ref),
 		    receive
-			{do_it, Key} ->
+			{do_it, ^Key} ->
 			    Opts
 		    after 10 ->
 			    Opts
@@ -790,7 +790,7 @@ calc_load(Old, Opts) ->
     case get_opt(load_average, Opts) of
 	true ->
 	    case Old of
-		{_, L} -> {ok, {L, L}};
+		{_, ^L} -> {ok, {L, L}};
 		{_, O2} when abs(L-O2) < 3 -> {ok, {O2, L}};
 		{_, O2}	-> {ok, {O2, trunc((2*L+O2)/3)}};
 		_ -> {ok, {0, L}}

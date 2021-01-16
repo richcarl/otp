@@ -945,7 +945,7 @@ opt_remove_2({op,L,'orelse',A1,A2}, Rs) ->
 opt_remove_2({call,Line,{remote,_,{atom,_,erlang},{atom,_,is_record}},
 	      [{var,_,V},{atom,_,Tag},{integer,_,Sz}]}=A, Rs) ->
     case orddict:find(V, Rs) of
-	{ok,{remove,Tag,Sz}} ->
+	{ok,{remove,^Tag,^Sz}} ->
 	    {atom,Line,true};
 	_ ->
 	    A
@@ -953,7 +953,7 @@ opt_remove_2({call,Line,{remote,_,{atom,_,erlang},{atom,_,is_record}},
 opt_remove_2({call,Line,{atom,_,is_record},
 	      [{var,_,V},{atom,_,Tag},{integer,_,Sz}]}=A, Rs) ->
     case orddict:find(V, Rs) of
-	{ok,{remove,Tag,Sz}} ->
+	{ok,{remove,^Tag,^Sz}} ->
 	    {atom,Line,true};
 	_ ->
 	    A

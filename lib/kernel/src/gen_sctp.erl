@@ -279,7 +279,7 @@ do_connect(S, Addr, Port, Opts, Timeout, ConnWait) when is_port(S), is_list(Opts
     case inet_db:lookup_socket(S) of
 	{ok,Mod} ->
 	    case Mod:getserv(Port) of
-		{ok,Port} ->
+		{ok,^Port} ->
 		    try inet:start_timer(Timeout) of
 			Timer ->
 			    try Mod:getaddr(Addr, Timer) of

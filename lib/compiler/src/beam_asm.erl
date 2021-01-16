@@ -105,7 +105,7 @@ on_load(Fs0, Attr0) ->
     end.
 
 insert_on_load_instruction(Is0, Entry) ->
-    {Bef,[{label,Entry}=El|Is]} =
+    {Bef,[{label,^Entry}=El|Is]} =
 	splitwith(fun({label,L}) when L =:= Entry -> false;
 		     (_) -> true
 		  end, Is0),

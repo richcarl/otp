@@ -93,7 +93,7 @@ start_tracer_node(TraceFile,TI) ->
 	{ok,Sock} -> 
 	    gen_tcp:close(LSock),
 	    receive 
-		{tcp,Sock,Result} when is_binary(Result) ->
+		{tcp,^Sock,Result} when is_binary(Result) ->
 		    case unpack(Result) of
 			error ->
 			    gen_tcp:close(Sock),
@@ -103,7 +103,7 @@ start_tracer_node(TraceFile,TI) ->
 			    {ok,Sock};
 			{ok,Error} -> Error
 		    end;
-		{tcp_closed,Sock} ->
+		{tcp_closed,^Sock} ->
 		    gen_tcp:close(Sock),
 		    {error,could_not_start_tracernode}
 	    after ?ACCEPT_TIMEOUT ->
@@ -127,7 +127,7 @@ trace_nodes(Sock,Nodes) ->
 
 receive_ack(Sock) ->
     receive
-	{tcp,Sock,Bin} when is_binary(Bin) ->
+	{tcp,^Sock,Bin} when is_binary(Bin) ->
 	    case unpack(Bin) of
 		error -> receive_ack(Sock);
 		{ok,_} -> ok
@@ -143,7 +143,7 @@ receive_ack(Sock) ->
 stop_tracer_node(Sock) ->
     Bin = term_to_binary(id(stop)),
     ok = gen_tcp:send(Sock, tag_trace_message(Bin)),
-    receive {tcp_closed,Sock} -> gen_tcp:close(Sock) end,
+    receive {tcp_closed,^Sock} -> gen_tcp:close(Sock) end,
     ok.
     
 
@@ -179,21 +179,21 @@ trc([TraceFile, PortAtom, Type]) ->
     erlang:halt().
 trc_loop(Sock,Patterns,Type) ->
     receive
-	{tcp,Sock,Bin} ->
+	{tcp,^Sock,Bin} ->
 	    case unpack(Bin) of
 		error ->
 		    ttb:stop(),
 		    gen_tcp:close(Sock);
 		{ok,{add_nodes,Nodes}} -> 
 		    add_nodes(Nodes,Patterns,Type),
-		    Bin = term_to_binary(id(ok)),
+		    ^Bin = term_to_binary(id(ok)),
 		    ok = gen_tcp:send(Sock, tag_trace_message(Bin)),
 		    trc_loop(Sock,Patterns,Type);
 		{ok,stop} -> 
 		    ttb:stop(),
 		    gen_tcp:close(Sock)
 	    end;
-	{tcp_closed,Sock} ->
+	{tcp_closed,^Sock} ->
 	    ttb:stop(),
 	    gen_tcp:close(Sock)
     end.
@@ -415,7 +415,7 @@ wait_for_node_started(LSock,Timeout,Client,Cleanup,TI,CtrlPid) ->
 	{ok,Sock} -> 
 	    gen_tcp:close(LSock),
 	    receive 
-		{tcp,Sock,Started0} when is_binary(Started0) ->
+		{tcp,^Sock,Started0} when is_binary(Started0) ->
 		    case unpack(Started0) of
 			error ->
 			    gen_tcp:close(Sock),
@@ -438,7 +438,7 @@ wait_for_node_started(LSock,Timeout,Client,Cleanup,TI,CtrlPid) ->
 			    test_server_ctrl:node_started(Nodename),
 			    {{ok,Nodename},W}
 		    end;
-		{tcp_closed,Sock} ->
+		{tcp_closed,^Sock} ->
 		    gen_tcp:close(Sock),
 		    {error, connection_closed}
 	    after Timeout ->
@@ -533,7 +533,7 @@ start_node_get_option_value(Key, List) ->
 
 start_node_get_option_value(Key, List, Default) ->
     case lists:keysearch(Key, 1, List) of
-	{value, {Key, Value}} ->
+	{value, {^Key, Value}} ->
 	    Value;
 	false ->
 	    Default
@@ -857,17 +857,17 @@ id(I) -> I.
 print_data(Port) ->
     ct_util:mark_process(),
     receive
-	{Port, {data, Bytes}} ->
+	{^Port, {data, Bytes}} ->
 	    io:put_chars(Bytes),
 	    print_data(Port);
-	{Port, eof} ->
+	{^Port, eof} ->
 	    Port ! {self(), close}, 
 	    receive
-		{Port, closed} ->
+		{^Port, closed} ->
 		    true
 	    end, 
 	    receive
-		{'EXIT',  Port,  _} -> 
+		{'EXIT',  ^Port,  _} -> 
 		    ok
 	    after 1 ->				% force context switch
 		    ok

@@ -211,7 +211,7 @@ truncate_zeros(M, Sum) ->
 
 decode_real(Buffer) ->
     Sz = byte_size(Buffer),
-    {RealVal,<<>>,Sz} = decode_real2(Buffer, [], Sz, 0),
+    {RealVal,<<>>,^Sz} = decode_real2(Buffer, [], Sz, 0),
     RealVal.
 
 decode_real2(Buffer, _C, 0, _RemBytes) ->

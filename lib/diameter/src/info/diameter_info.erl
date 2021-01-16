@@ -683,7 +683,7 @@ recsplit(SFun, Rec) ->
     fun(Fs,Vs) -> SFun(element(1, Rec), Fs, Vs) end.
 
 keyfetch(Key, List) ->
-    {Key,V} = lists:keyfind(Key, 1, List),
+    {^Key,V} = lists:keyfind(Key, 1, List),
     V.
 
 %% ft/4

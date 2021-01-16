@@ -603,7 +603,7 @@ loop(Cpid, Data) ->
 	    send(From, Result),
 	    ?MODULE:loop(Cpid, Data);
 
-	{Cpid, 'EXIT', Reason} ->
+	{^Cpid, 'EXIT', Reason} ->
 	    ?PRINT("Got EXIT from Cpid, reason=~p~n",[Reason]),
 	    exit(Reason);
 
@@ -1031,7 +1031,7 @@ recv_response(S, Data) ->
 check_reply(Data, {ok,Msg}, Op) when
   Msg#'LDAPMessage'.messageID == Data#eldap.id ->
     case Msg#'LDAPMessage'.protocolOp of
-	{Op, Result} ->
+	{^Op, Result} ->
 	    case Result#'LDAPResult'.resultCode of
 		success -> {ok,Data};
 		referral -> {{ok, {referral,Result#'LDAPResult'.referral}}, Data};
@@ -1121,8 +1121,8 @@ send(To,Msg) ->
 
 recv(From)   ->
     receive
-	{From, Msg} -> Msg;
-	{'EXIT', From, Reason} ->
+	{^From, Msg} -> Msg;
+	{'EXIT', ^From, Reason} ->
 	    {error, {internal_error, Reason}}
     end.
 

@@ -476,7 +476,7 @@ clear_breaks(WinInfo, Mod) ->
     Fun =
 	fun(BreakInfo) ->
 		case BreakInfo#breakInfo.point of
-		    {Mod, _Line} ->
+		    {^Mod, _Line} ->
 			dbg_wx_win:delete_break(BreakInfo#breakInfo.break),
 			false;
 		    _ -> true

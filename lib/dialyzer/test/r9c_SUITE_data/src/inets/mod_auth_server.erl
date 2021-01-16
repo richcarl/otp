@@ -256,7 +256,7 @@ handle_call({delete_user, Addr, Port, Dir, User, AuthPwd}, _From, State)->
     {reply, Reply, State};
 
 %% Delete a group
-handle_call({delete_group, Addr, Port, Dir, Group, AuthPwd}, _From, State)->
+handle_call({delete_group, Addr, Port, ^Dir, Group, AuthPwd}, _From, State)->
     Reply = api_call(Addr, Port, Dir, delete_group, [Group], AuthPwd, State),
     {reply, Reply, State};
 

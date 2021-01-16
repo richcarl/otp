@@ -726,10 +726,10 @@ strip_prefix(Path, Dir) ->
 strip_name_ebin(Dir, Name, Vsn) ->
     FullName = Name ++ "-" ++ Vsn,
     case lists:reverse(Dir) of
-        ["ebin", Name     | D] -> {ok, lists:reverse(D)};
-        ["ebin", FullName | D] -> {ok, lists:reverse(D)};
-        [Name     | D] -> {ok, lists:reverse(D)};
-        [FullName | D] -> {ok, lists:reverse(D)};
+        ["ebin", ^Name     | D] -> {ok, lists:reverse(D)};
+        ["ebin", ^FullName | D] -> {ok, lists:reverse(D)};
+        [^Name     | D] -> {ok, lists:reverse(D)};
+        [^FullName | D] -> {ok, lists:reverse(D)};
         _                      -> false
     end.
 
@@ -1139,7 +1139,7 @@ spec_archive(#app{label               = Label,
 					 Label,
 					 ExternalFiles)]
                 end,
-            ArchiveOpts =
+            ^ArchiveOpts =
 		reltool_utils:default_val(AppArchiveOpts, SysArchiveOpts),
             ArchiveDir =
 		spec_create_dir(RootDir, SourceDir, Label, ArchiveFiles),
@@ -1546,7 +1546,7 @@ subst([], _Vars, Result) ->
 subst_var([$%| Rest], Vars, Result, VarAcc) ->
     Key = lists:reverse(VarAcc),
     case lists:keyfind(Key, 1, Vars) of
-        {Key, Value} ->
+        {^Key, Value} ->
             subst(Rest, Vars, lists:reverse(Value, Result));
         false ->
             subst(Rest, Vars, [$% | VarAcc ++ [$% | Result]])

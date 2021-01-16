@@ -76,7 +76,7 @@ kill_the_process(Pid, Timeout0, TruncTO, ReportTVal) ->
 	    Trap = {timetrap_timeout,TimeToReport,MFLs},
 	    exit(Pid, Trap),
 	    receive
-		{'DOWN', Mon, process, Pid, _} ->
+		{'DOWN', ^Mon, process, ^Pid, _} ->
 		    ok
 	    after 10000 ->
 		    %% Pid is probably trapping exits, hit it harder...
@@ -103,7 +103,7 @@ timetrap_cancel(Handle) ->
     unlink(Handle),
     MonRef = erlang:monitor(process, Handle),
     exit(Handle, kill),
-    receive {'DOWN',MonRef,_,_,_} -> ok
+    receive {'DOWN',^MonRef,_,_,_} -> ok
     after
 	2000 ->
 	    erlang:demonitor(MonRef, [flush]),
@@ -136,19 +136,19 @@ call_crash(Time,Crash,M,F,A) ->
     Pid = spawn_link(M,F,A),
     Answer =
 	receive
-	    {'EXIT',Crash} ->
+	    {'EXIT',^Crash} ->
 		ok;
-	    {'EXIT',Pid,Crash} ->
+	    {'EXIT',^Pid,^Crash} ->
 		ok;
 	    {'EXIT',_Reason} when Crash==any ->
 		ok;
-	    {'EXIT',Pid,_Reason} when Crash==any ->
+	    {'EXIT',^Pid,_Reason} when Crash==any ->
 		ok;
 	    {'EXIT',Reason} ->
 		test_server:format(12, "Wrong crash reason. Wanted ~tp, got ~tp.",
 		      [Crash, Reason]),
 		exit({wrong_crash_reason,Reason});
-	    {'EXIT',Pid,Reason} ->
+	    {'EXIT',^Pid,Reason} ->
 		test_server:format(12, "Wrong crash reason. Wanted ~tp, got ~tp.",
 		      [Crash, Reason]),
 		exit({wrong_crash_reason,Reason});
@@ -187,7 +187,7 @@ app_test(Application, Mode) ->
 is_app(Application) ->
     case file:consult(filename:join([code:lib_dir(Application),"ebin",
 		   atom_to_list(Application)++".app"])) of
-	{ok, [{application, Application, AppFile}] } ->
+	{ok, [{application, ^Application, AppFile}] } ->
 	    {ok, AppFile};
 	_ ->
 	    test_server:format(minor,
@@ -296,7 +296,7 @@ is_appup(Application, Version) ->
     AppupFile = atom_to_list(Application) ++ ".appup",
     AppupPath = filename:join([code:lib_dir(Application), "ebin", AppupFile]),
     case file:consult(AppupPath) of
-        {ok, [{Version, Up, Down}]} when is_list(Up), is_list(Down) ->
+        {ok, [{^Version, Up, Down}]} when is_list(Up), is_list(Down) ->
             {ok, Up, Down};
         _ ->
             test_server:format(
@@ -309,9 +309,9 @@ is_appup(Application, Version) ->
 do_appup_tests(undefined, Application, Up, Down, _Modules) ->
     %% library application
     case Up of
-        [{<<".*">>, [{restart_application, Application}]}] ->
+        [{<<".*">>, [{restart_application, ^Application}]}] ->
             case Down of
-                [{<<".*">>, [{restart_application, Application}]}] ->
+                [{<<".*">>, [{restart_application, ^Application}]}] ->
                     ok;
                 _ ->
                     test_server:format(
@@ -394,7 +394,7 @@ check_instruction(up, {add_module, Module}, _, Modules) ->
 check_instruction(down, {add_module, Module}, _, Modules) ->
     %% An old module is re-added
     case (catch check_module(Module, Modules)) of
-        {error, {unknown_module, Module, Modules}} -> ok;
+        {error, {unknown_module, ^Module, ^Modules}} -> ok;
         ok -> throw({error, {existing_readded_module, Module}})
     end;
 check_instruction(_, {load_module, Module}, _, Modules) ->
@@ -409,7 +409,7 @@ check_instruction(_, {load_module, Module, Pre, Post, DepMods}, _, Modules) ->
     check_purge(Post);
 check_instruction(up, {delete_module, Module}, _, Modules) ->
     case (catch check_module(Module, Modules)) of
-        {error, {unknown_module, Module, Modules}} ->
+        {error, {unknown_module, ^Module, ^Modules}} ->
             ok;
         ok ->
             throw({error,{existing_module_deleted, Module}})

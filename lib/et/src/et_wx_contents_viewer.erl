@@ -171,9 +171,9 @@ stop(ContentsPid) when is_pid(ContentsPid) ->
     MonitorRef = erlang:monitor(Type, ContentsPid),
     ContentsPid ! {stop, self()},
     receive
-	{'DOWN', MonitorRef, Type, ContentsPid, shutdown} ->
+	{'DOWN', ^MonitorRef, ^Type, ^ContentsPid, shutdown} ->
 	    ok;
-	{'DOWN', MonitorRef, Type, ContentsPid, Reason} ->
+	{'DOWN', ^MonitorRef, ^Type, ^ContentsPid, Reason} ->
 	    {error, Reason}
     end.
 

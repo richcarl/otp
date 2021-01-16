@@ -49,10 +49,10 @@ start(LogDir,Nodes) ->
     Pid = spawn_link(fun() -> init(Self,LogDir,Nodes) end),
     MRef = erlang:monitor(process,Pid),
     receive 
-	{started,Pid,Result} -> 
+	{started,^Pid,Result} -> 
 	    erlang:demonitor(MRef, [flush]),
 	    {Pid,Result};
-	{'DOWN',MRef,process,_,Reason} ->
+	{'DOWN',^MRef,process,_,Reason} ->
 	    exit({could_not_start_process,?MODULE,Reason})
     end.
 
@@ -74,7 +74,7 @@ stop() ->
 	    MRef = erlang:monitor(process,Pid),
 	    ?MODULE ! stop,
 	    receive
-		{'DOWN',MRef,process,_,_} ->
+		{'DOWN',^MRef,process,_,_} ->
 		    ok
 	    end;
 	undefined ->
@@ -516,10 +516,10 @@ call(Msg) ->
 	    Ref = make_ref(),
 	    ?MODULE ! {Msg,{self(),Ref}},
 	    receive
-		{Ref, Result} -> 
+		{^Ref, Result} -> 
 		    erlang:demonitor(MRef, [flush]),
 		    Result;
-		{'DOWN',MRef,process,_,Reason}  -> 
+		{'DOWN',^MRef,process,_,Reason}  -> 
 		    {error,{process_down,?MODULE,Reason}}
 	    end
     end.

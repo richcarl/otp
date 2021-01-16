@@ -78,7 +78,7 @@ add_user(DirData, UStruct) ->
 	[Record] ->
 	    {error, user_already_in_db};
 	_ ->
-	    dets:insert(PWDB, Record),
+	    dets:insert(PWDB, ^Record),
 	    true
     end.
 
@@ -114,7 +114,7 @@ delete_user(DirData, UserName) ->
     {Addr, Port, Dir} = lookup_common(DirData),
     PWDB = httpd_util:key1search(DirData, auth_user_file),
     User = {UserName, Addr, Port, Dir},
-    case dets:lookup(PWDB, User) of
+    case dets:lookup(PWDB, ^User) of
 	[{User, SomePassword, UserData}] ->
 	    dets:delete(PWDB, User),
 	    lists:foreach(fun(Group) -> delete_group_member(DirData, Group, UserName) end,
@@ -133,7 +133,7 @@ add_group_member(DirData, GroupName, UserName) ->
     GDB = httpd_util:key1search(DirData, auth_group_file),
     Group = {GroupName, Addr, Port, Dir},
     case dets:lookup(GDB, Group) of
-	[{Group, Users}] ->
+	[{^Group, Users}] ->
 	    case lists:member(UserName, Users) of
 		true ->
 		    true;
@@ -153,7 +153,7 @@ list_group_members(DirData, GroupName) ->
     GDB = httpd_util:key1search(DirData, auth_group_file),
     Group = {GroupName, Addr, Port, Dir},
     case dets:lookup(GDB, Group) of
-	[{Group, Users}] ->
+	[{^Group, Users}] ->
 	    {ok, Users};
 	Other ->
 	    {error, no_such_group}
@@ -198,7 +198,7 @@ delete_group(DirData, GroupName) ->
     Group = {GroupName, Addr, Port, Dir},
     case dets:lookup(GDB, Group) of
 	[{Group, Users}] ->
-	    dets:delete(GDB, Group),
+	    dets:delete(GDB, ^Group),
 	    true;
 	_ ->
 	    {error, no_such_group}

@@ -173,7 +173,7 @@ ccc_1([#b_local{}=Call | Args], Ctx, Aliases, ModInfo) ->
             case ParamInfo of
                 #{ Parameter := suitable_for_reuse } ->
                     suitable_for_reuse;
-                #{ Parameter := {unsuitable_call, {Call, _}}=Info } ->
+                #{ Parameter := {unsuitable_call, {^Call, _}}=Info } ->
                     Info;
                 #{ Parameter := Info } ->
                     {unsuitable_call, {Call, Info}};
@@ -816,7 +816,7 @@ acp_forward_params(FsUses, ModInfo0) ->
     %% Allowing context passthrough on one function may make it possible to
     %% enable it on another, so it needs to be repeated for maximum effect.
     case foldl(F, ModInfo0, FsUses) of
-        ModInfo0 -> ModInfo0;
+        ^ModInfo0 -> ModInfo0;
         Changed -> acp_forward_params(FsUses, Changed)
     end.
 

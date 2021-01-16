@@ -503,7 +503,7 @@ appup_search_for_version(BaseVsn,[{BaseVsn,RU}|_]) ->
     {ok,RU};
 appup_search_for_version(BaseVsn,[{Vsn,RU}|VsnRUs]) when is_binary(Vsn) ->
     case re:run(BaseVsn,Vsn,[unicode,{capture,first,list}]) of
-	{match,[BaseVsn]} ->
+	{match,[^BaseVsn]} ->
 	    {ok, RU};
 	_ ->
 	    appup_search_for_version(BaseVsn,VsnRUs)

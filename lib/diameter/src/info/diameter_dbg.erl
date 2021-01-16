@@ -454,9 +454,9 @@ state(Pid) ->
     MRef = erlang:monitor(process, Pid),
     Pid ! {state, self()},
     receive
-        {'DOWN', MRef, process, _, _} ->
+        {'DOWN', ^MRef, process, _, _} ->
             Pid;
-        {Pid, _} = T ->
+        {^Pid, _} = T ->
             erlang:demonitor(MRef, [flush]),
             T
     end.

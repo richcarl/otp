@@ -292,7 +292,7 @@ get_option(Key) ->
 
 get_option(Key, Profile) ->
     case get_options([Key], Profile) of
-	{ok, [{Key, Value}]} ->
+	{ok, [{^Key, Value}]} ->
 	    {ok, Value};
 	Error ->
 	    Error
@@ -630,11 +630,11 @@ handle_answer(RequestId, false, _) ->
     {ok, RequestId};
 handle_answer(RequestId, true, Options) ->
     receive
-	{http, {RequestId, saved_to_file}} ->
+	{http, {^RequestId, saved_to_file}} ->
 	    {ok, saved_to_file};
-	{http, {RequestId, {_,_,_} = Result}} ->
+	{http, {^RequestId, {_,_,_} = Result}} ->
 	    return_answer(Options, Result);
-	{http, {RequestId, {error, Reason}}} ->
+	{http, {^RequestId, {error, Reason}}} ->
 	    {error, Reason}
     end.
 
@@ -685,7 +685,7 @@ http_options([], HttpOptions, Acc) ->
     Acc;
 http_options([{Tag, Default, Idx, Post} | Defaults], HttpOptions, Acc) ->
     case lists:keysearch(Tag, 1, HttpOptions) of
-	{value, {Tag, Val0}} ->
+	{value, {^Tag, Val0}} ->
 	    case Post(Val0) of
 		{ok, Val} ->
 		    Acc2 = setelement(Idx, Acc, Val),
@@ -858,7 +858,7 @@ request_options([], Options, Acc) ->
     Acc;
 request_options([{Key, DefaultVal, Verify} | Defaults], Options, Acc) ->
     case lists:keysearch(Key, 1, Options) of
-	{value, {Key, Value}} ->
+	{value, {^Key, Value}} ->
 	    case Verify(Value) of
 		ok ->
 		    Options2 = lists:keydelete(Key, 1, Options),

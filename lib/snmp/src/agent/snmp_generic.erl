@@ -241,7 +241,7 @@ table_foreach(Tab, Fun, FOI, Oid) ->
 	endOfTable ->
 	    ?vdebug("end of table",[]),
 	    ok;
-	Oid ->
+	^Oid ->
 	    %% OOUPS, circular ref, major db fuckup
 	    ?vinfo("cyclic reference: ~w -> ~w",[Oid,Oid]),
 	    exit({cyclic_db_reference,Oid});
@@ -351,7 +351,7 @@ table_try_row(_NameDb, _TryChangeStatusFunc, _RowIndex, []) -> {noError, 0};
 table_try_row(NameDb, TryChangeStatusFunc, RowIndex, Cols) ->
     #table_info{status_col = StatusCol} = table_info(NameDb),
     case lists:keysearch(StatusCol, 1, Cols) of
-	{value, {StatusCol, Val}} ->
+	{value, {^StatusCol, Val}} ->
 	    case table_check_status(NameDb, StatusCol, 
 				    Val, RowIndex, Cols) of
 		{noError, 0} ->
@@ -494,7 +494,7 @@ table_set_row(_NameDb, _, _, _RowIndex, []) -> {noError, 0};
 table_set_row(NameDb, ChangedStatusFunc, ConsFunc, RowIndex, Cols) ->
     #table_info{status_col = StatusCol} = table_info(NameDb),
     case lists:keysearch(StatusCol, 1, Cols) of
-	{value, {StatusCol, Val}} ->
+	{value, {^StatusCol, Val}} ->
 	    table_set_status(NameDb, RowIndex, Val, StatusCol, 
 			     Cols, ChangedStatusFunc, ConsFunc);
 	_ -> table_set_cols(NameDb, RowIndex, Cols, ConsFunc)
@@ -694,7 +694,7 @@ table_find(NameDb, Col, Value, Indexes) ->
 	    false;
 	NewIndexes ->
 	    case table_get_element(NameDb, NewIndexes, Col) of
-		{value, Value} -> NewIndexes;
+		{value, ^Value} -> NewIndexes;
 		_Else -> table_find(NameDb, Col, Value, NewIndexes)
 	    end
     end.
@@ -840,7 +840,7 @@ table_get_row(NameDb, RowIndex, _FOI) ->
 get_status_col(Name, Cols) ->
     #table_info{status_col = StatusCol} = table_info(Name),
     case lists:keysearch(StatusCol, 1, Cols) of
-	{value, {StatusCol, Val}} -> {ok, Val};
+	{value, {^StatusCol, Val}} -> {ok, Val};
 	_ -> false
     end.
 

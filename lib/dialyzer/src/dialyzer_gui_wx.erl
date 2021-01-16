@@ -369,50 +369,50 @@ gui_loop(#gui_state{backend_pid = BackendPid, doc_plt = DocPlt,
       wxWindow:destroy(Frame),
       ?RET_NOTHING_SUSPICIOUS;
     %% ----- Menu -----
-    #wx{id = ?menuID_FILE_SAVE_LOG, obj = Frame, 
+    #wx{id = ?menuID_FILE_SAVE_LOG, obj = ^Frame, 
 	event = #wxCommand{type = command_menu_selected}} ->
       save_file(State, log),
       gui_loop(State);
-    #wx{id=?menuID_FILE_SAVE_WARNINGS, obj=Frame, 
+    #wx{id=?menuID_FILE_SAVE_WARNINGS, obj=^Frame, 
 	event=#wxCommand{type=command_menu_selected}} ->
       save_file(State, warnings),
       gui_loop(State);
-    #wx{id=?menuID_FILE_QUIT, obj=Frame, 
+    #wx{id=?menuID_FILE_QUIT, obj=^Frame, 
 	event=#wxCommand{type=command_menu_selected}} ->
       case maybe_quit(State) of
 	true -> ?RET_NOTHING_SUSPICIOUS;
 	false -> gui_loop(State)
       end;
-    #wx{id=?menuID_PLT_SHOW_CONTENTS, obj=Frame, 
+    #wx{id=?menuID_PLT_SHOW_CONTENTS, obj=^Frame, 
 	event=#wxCommand{type=command_menu_selected}} ->
       show_doc_plt(State),
       gui_loop(State);
-    #wx{id=?menuID_PLT_SEARCH_CONTENTS, obj=Frame, 
+    #wx{id=?menuID_PLT_SEARCH_CONTENTS, obj=^Frame, 
 	event=#wxCommand{type=command_menu_selected}} ->
       case dialyzer_plt:get_specs(DocPlt) of
 	"" -> error_sms(State, "No analysis has been made yet!\n");
 	_ -> search_doc_plt(State)
       end,
       gui_loop(State);
-    #wx{id=?menuID_OPTIONS_INCLUDE_DIR, obj=Frame, 
+    #wx{id=?menuID_OPTIONS_INCLUDE_DIR, obj=^Frame, 
 	event=#wxCommand{type=command_menu_selected}} ->
       NewOptions = include_dialog(State),
       NewState = State#gui_state{options = NewOptions},
       gui_loop(NewState);
-    #wx{id=?menuID_OPTIONS_MACRO, obj=Frame, 
+    #wx{id=?menuID_OPTIONS_MACRO, obj=^Frame, 
 	event=#wxCommand{type=command_menu_selected}} ->
       NewOptions = macro_dialog(State),
       NewState = State#gui_state{options = NewOptions},
       gui_loop(NewState);
-    #wx{id=?menuID_HELP_MANUAL, obj=Frame, 
+    #wx{id=?menuID_HELP_MANUAL, obj=^Frame, 
 	event=#wxCommand{type=command_menu_selected}} ->
       handle_help(State, "Dialyzer Manual", "manual.txt"),
       gui_loop(State);
-    #wx{id=?menuID_HELP_WARNING_OPTIONS, obj=Frame, 
+    #wx{id=?menuID_HELP_WARNING_OPTIONS, obj=^Frame, 
 	event=#wxCommand{type=command_menu_selected}} ->
       handle_help(State, "Dialyzer Warnings", "warnings.txt"),
       gui_loop(State);
-    #wx{id=?menuID_HELP_ABOUT, obj=Frame, 
+    #wx{id=?menuID_HELP_ABOUT, obj=^Frame, 
 	event=#wxCommand{type=command_menu_selected}} ->
       Message = "	       This is DIALYZER version "  ++ ?VSN ++  " \n"++
 	"DIALYZER is a DIscrepancy AnaLYZer for ERlang programs.\n\n"++
@@ -465,7 +465,7 @@ gui_loop(#gui_state{backend_pid = BackendPid, doc_plt = DocPlt,
       update_editor(Log, "\n***** Analysis stopped ****\n"),
       gui_loop(State);
     %% ----- Analysis -----
-    {BackendPid, ext_calls, ExtCalls} ->
+    {^BackendPid, ext_calls, ExtCalls} ->
       Msg = io_lib:format("The following functions are called "
 			  "but type information about them is not available.\n"
 			  "The analysis might get more precise by including "
@@ -473,7 +473,7 @@ gui_loop(#gui_state{backend_pid = BackendPid, doc_plt = DocPlt,
 			  [ExtCalls]),
       free_editor(State,"Analysis Done",  Msg),
       gui_loop(State);
-    {BackendPid, ext_types, ExtTypes} ->
+    {^BackendPid, ext_types, ExtTypes} ->
       Map = fun({M,F,A}) -> io_lib:format("~tp:~tp/~p",[M,F,A]) end,
       ExtTypeString = lists:join("\n", lists:map(Map, ExtTypes)),
       Msg = io_lib:format("The following remote types are being used "
@@ -483,14 +483,14 @@ gui_loop(#gui_state{backend_pid = BackendPid, doc_plt = DocPlt,
 			  "that they are exported:\n~ts\n", [ExtTypeString]),
       free_editor(State, "Analysis done", Msg),
       gui_loop(State);
-    {BackendPid, log, LogMsg} ->
+    {^BackendPid, log, LogMsg} ->
       update_editor(Log, LogMsg),
       gui_loop(State);
-    {BackendPid, warnings, Warns} ->
+    {^BackendPid, warnings, Warns} ->
       SortedWarns = lists:keysort(2, Warns),  %% Sort on file/line
       NewState = add_warnings(State, SortedWarns),
       gui_loop(NewState);
-    {BackendPid, cserver, CServer, Plt} ->
+    {^BackendPid, cserver, CServer, Plt} ->
       Self = self(),
       Fun = 
 	fun() -> 
@@ -498,16 +498,16 @@ gui_loop(#gui_state{backend_pid = BackendPid, doc_plt = DocPlt,
 	end,
       ExplanationPid = spawn_link(Fun),
       gui_loop(State#gui_state{expl_pid = ExplanationPid});
-    {BackendPid, done, NewPlt, NewDocPlt} ->
+    {^BackendPid, done, NewPlt, NewDocPlt} ->
       message(State, "Analysis done"),
       dialyzer_plt:delete(NewPlt),
       config_gui_stop(State),
       gui_loop(State#gui_state{doc_plt = NewDocPlt});
-    {'EXIT', BackendPid, {error, Reason}} ->
+    {'EXIT', ^BackendPid, {error, Reason}} ->
       free_editor(State, ?DIALYZER_ERROR_TITLE, Reason),
       config_gui_stop(State),
       gui_loop(State);
-    {'EXIT', BackendPid, Reason} when Reason =/= 'normal' ->
+    {'EXIT', ^BackendPid, Reason} when Reason =/= 'normal' ->
       free_editor(State, ?DIALYZER_ERROR_TITLE, io_lib:format("~tp", [Reason])),
       config_gui_stop(State),
       gui_loop(State)
@@ -1161,7 +1161,7 @@ handle_explanation(#gui_state{rawWarnings = RawWarns,
 
 explanation_loop(#gui_state{expl_pid = ExplPid} = State) ->
   receive
-    {ExplPid, explanation, Explanation} ->
+    {^ExplPid, explanation, Explanation} ->
       show_explanation(State, Explanation);
     _ -> io:format("Unknown message\n"),
 	 explanation_loop(State)
@@ -1201,11 +1201,11 @@ show_explanation(#gui_state{gui = Wx} = State, Explanation) ->
   
 show_explanation_loop(#gui_state{frame = Frame, expl_pid = ExplPid} = State, Win, Explanation) ->
   receive
-    {ExplPid, none, _} -> 
+    {^ExplPid, none, _} -> 
       output_sms(State, ?DIALYZER_MESSAGE_TITLE, 
 		       "There is not any other explanation for this error!\n", info),
       show_explanation_loop(State, Win,  Explanation);
-    {ExplPid, further, NewExplanation} ->
+    {^ExplPid, further, NewExplanation} ->
       update_explanation(State, NewExplanation),
       show_explanation_loop(State, Win,  NewExplanation);
     #wx{id = ?ExplButton, event = #wxCommand{type = command_button_clicked}} ->

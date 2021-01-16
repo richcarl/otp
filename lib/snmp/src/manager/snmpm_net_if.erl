@@ -181,7 +181,7 @@ worker(Worker, Failer, #state{log = Log} = State) ->
 		  put(verbosity, Verbosity),
 		  NewState =
 		      case do_reopen_log(Log) of
-			  Log ->
+			  ^Log ->
 			      State;
 			  NewLog ->
 			      State#state{log = NewLog}
@@ -334,7 +334,7 @@ socket_params(Domain, {IpAddr, IpPort} = Addr, BindTo, CommonSocketOpts) ->
 	case Family of
 	    inet6 ->
 		[Family, {ipv6_v6only, true} | CommonSocketOpts];
-	    Family ->
+	    ^Family ->
 		[Family | CommonSocketOpts]
 	end,
     case Family of
@@ -596,7 +596,7 @@ handle_info(
   #state{transports = Transports} = State) ->
     Size = byte_size(Bytes),
     case lists:keyfind(Socket, #transport.socket, Transports) of
-	#transport{socket = Socket, domain = Domain} ->
+	#transport{socket = ^Socket, domain = Domain} ->
 	    ?vlog("received ~w bytes from ~p:~p [~w]",
 		  [Size, IpAddr, IpPort, Socket]),
 	    maybe_handle_recv_msg(Domain, {IpAddr, IpPort}, Bytes, State),
@@ -612,7 +612,7 @@ handle_info(
   #state{transports = Transports} = State) ->
     ?vinfo("got udp-error on ~p: ~w", [Socket, Error]),
     case lists:keyfind(Socket, #transport.socket, Transports) of
-	#transport{socket = Socket} = Transport ->
+	#transport{socket = ^Socket} = Transport ->
 	    handle_udp_error(Transport, Error),
 	    {noreply, State};
 	false ->
@@ -925,7 +925,7 @@ handle_inform_response(Ref, Domain, Addr, State) ->
 handle_inform_response_mt(Ref, Domain, Addr, State) ->
     Key = {Ref, Domain, Addr},
     case ets:lookup(snmpm_inform_request_table, Key) of
-	[{Key, _, {Vsn, ACM, RePdu}}] ->
+	[{^Key, _, {Vsn, ACM, RePdu}}] ->
 	    Logger = logger(State#state.log, read, Domain, Addr),
 	    ets:delete(snmpm_inform_request_table, Key), 
 	    maybe_send_inform_response(
@@ -974,7 +974,7 @@ do_irgc('$end_of_table', _) ->
 do_irgc(Key, Now) ->
     Next = ets:next(snmpm_inform_request_table, Key),
     case ets:lookup(snmpm_inform_request_table, Key) of
-        [{Key, BestBefore, _}] when BestBefore < Now ->
+        [{^Key, BestBefore, _}] when BestBefore < Now ->
             ets:delete(snmpm_inform_request_table, Key);
         _ ->
             ok
@@ -1171,7 +1171,7 @@ handle_set_log_type(State, _NewType) ->
 select_transport_from_domain(Domain, Transports) when is_atom(Domain) ->
     Pos = #transport.domain,
     case lists:keyfind(Domain, Pos, Transports) of
-	#transport{domain = Domain} = Transport ->
+	#transport{domain = ^Domain} = Transport ->
 	    Transport;
 	false when Domain == snmpUDPDomain ->
 	    lists:keyfind(transportDomainUdpIpv4, Pos, Transports);
@@ -1188,7 +1188,7 @@ select_transport_from_domain(Domain, Transports) when is_atom(Domain) ->
 fix_filter_address(Transports, Address) ->
     DefaultDomain = snmpm_config:default_transport_domain(),
     case Transports of
-	[#transport{domain = DefaultDomain}, DefaultDomain] ->
+	[#transport{domain = ^DefaultDomain}, ^DefaultDomain] ->
 	    case Address of
 		{Domain, Addr} when is_atom(Domain) ->
 		    Addr;

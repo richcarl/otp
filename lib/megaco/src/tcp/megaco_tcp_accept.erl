@@ -113,11 +113,11 @@ do_accept(Tcp, Sup, Fd) ->
 
 tcp_clear(Socket) ->
     receive
-        {tcp, Socket, _Data} ->
+        {tcp, ^Socket, _Data} ->
             tcp_clear(Socket);
-        {tcp_closed, Socket} ->
+        {tcp_closed, ^Socket} ->
             tcp_clear(Socket);
-        {tcp_error, Socket} ->
+        {tcp_error, ^Socket} ->
             tcp_clear(Socket)
     after 0 -> 
             ok

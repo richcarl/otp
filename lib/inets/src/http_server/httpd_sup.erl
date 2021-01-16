@@ -234,7 +234,7 @@ listen(Address, Port, Config)  ->
 start_listen(Address, Port, Config) ->
     Pid = listen_owner(Address, Port, Config),
     receive
-	{Pid, Result} ->
+	{^Pid, Result} ->
 	    {Pid, Result}
     end.
 

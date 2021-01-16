@@ -192,8 +192,8 @@ call(Holder, What) when is_pid(Holder) ->
     Ref = erlang:monitor(process, Holder),
     Holder ! What,
     receive
-	{'DOWN', Ref, _, _, _} -> "";
-	{Holder, Res} ->
+	{'DOWN', ^Ref, _, _, _} -> "";
+	{^Holder, Res} ->
 	    erlang:demonitor(Ref),
 	    Res
     after 5000 ->
@@ -233,7 +233,7 @@ handle_call(new_dump, _From,
     wxListCtrl:deleteAllItems(Grid),
     Ref = erlang:monitor(process,Holder),
     Holder ! stop,
-    receive {'DOWN',Ref,_,_,_} -> ok end,
+    receive {'DOWN',^Ref,_,_,_} -> ok end,
     Attrs = observer_lib:create_attrs(Grid),
     {NewHolder,TW} = spawn_table_holder(Callback, all, Attrs),
     {reply, ok, State#state{detail_wins=[],holder=NewHolder,trunc_warn=TW}};
@@ -260,7 +260,7 @@ handle_event(#wx{id=MenuId,
 		 event=#wxCommand{type = command_menu_selected}},
 	     #state{menu_items=MenuItems} = State) ->
     case lists:keyfind(MenuId,1,MenuItems) of
-	{MenuId,Type,Id} ->
+	{^MenuId,Type,Id} ->
 	    start_detail_win(Id, Type);
 	false ->
 	    ok
@@ -399,7 +399,7 @@ search_id(From, Id, Callback, Info) ->
 
 search_id(Callback, RowInfo, Id) ->
     case observer_lib:to_str(get_cell_data(Callback, id, RowInfo)) of
-	Id   -> throw(RowInfo);
+	^Id   -> throw(RowInfo);
 	_Str -> not_found
     end.
 

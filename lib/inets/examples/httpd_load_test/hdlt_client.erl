@@ -163,23 +163,23 @@ proxy_loop(Ref, CtrlNode, Client) ->
 	    Pid ! {node_info, NodeInfo}, 
 	    proxy_loop(Ref, CtrlNode, Client);
 
-	{'EXIT', Client, normal} ->
+	{'EXIT', ^Client, normal} ->
 	    ?LOG("received normal exit message from client (~p)", 
 		 [Client]),
 	    exit(normal);
 	
-	{'EXIT', Client, Reason} ->
+	{'EXIT', ^Client, Reason} ->
 	    ?INFO("received exit message from client (~p)"
 		 "~n   Reason: ~p", [Client, Reason]),
 	    %% Unexpected client termination, inform the controller and die
 	    global:send(hdlt_ctrl, {client_exit, Client, node(), Reason}),
 	    exit({client_exit, Reason});
 
-	{nodedown, CtrlNode} ->
+	{nodedown, ^CtrlNode} ->
 	    ?LOG("received nodedown for controller node - terminate", []), 
 	    halt();
 
-	{'DOWN', Ref, process, _, _} ->
+	{'DOWN', ^Ref, process, _, _} ->
 	    ?INFO("received DOWN message for controller - terminate", []),
 	    %% The controller has terminated, dont care why, time to die
 	    halt()
@@ -278,7 +278,7 @@ client_loop(#state{mode     = stopping,
 		   time     = Time, 
 		   last_req = LastReqId} = State) ->
     receive 
-	{http, {LastReqId, {{_, 200, _}, _, _}}} ->
+	{http, {^LastReqId, {{_, 200, _}, _, _}}} ->
 	    ?DEBUG("[stopping] received reply for last request (~p)", [LastReqId]),
 	    time_to_complete(State),
 	    ok;

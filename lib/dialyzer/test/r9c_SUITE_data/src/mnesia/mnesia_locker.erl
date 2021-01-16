@@ -115,9 +115,9 @@ async_release_tid(Nodes, Tid) ->
 send_release_tid(Nodes, Tid) ->
     rpc:abcast(Nodes, ?MODULE, {self(), {sync_release_tid, Tid}}).
 
-receive_release_tid_acc([Node | Nodes], Tid) ->
+receive_release_tid_acc([^Node | Nodes], Tid) ->
     receive
-	{?MODULE, Node, {tid_released, Tid}} ->
+	{?MODULE, ^Node, {tid_released, Tid}} ->
 	    receive_release_tid_acc(Nodes, Tid);
 	{mnesia_down, Node} ->
 	    receive_release_tid_acc(Nodes, Tid)
@@ -788,7 +788,7 @@ add_debug(Node) ->  % Use process dictionary for debug info
 	undefined ->
 	    put(mnesia_wlock_nodes, [Node]);
 	NodeList  ->
-	    put(mnesia_wlock_nodes, [Node|NodeList])
+	    put(mnesia_wlock_nodes, [^Node|NodeList])
     end.
 
 del_debug(Node) ->
@@ -911,7 +911,7 @@ dirty_rpc(Node, _Tab, ?ALL, _Lock) ->
     [Node];
 dirty_rpc(Node, ?GLOBAL, _Key, _Lock) ->
     [Node];
-dirty_rpc(Node, Tab, Key, Lock) ->
+dirty_rpc(^Node, Tab, Key, Lock) ->
     Args = [Tab, Key],
     case rpc:call(Node, mnesia_lib, db_get, Args) of
 	{badrpc, Reason} ->
@@ -981,9 +981,9 @@ global_lock(Tid, Store, Item, read, Ns) ->
     rec_requests(Ns, Oid, Store),
     Ns.
 
-send_requests([Node | Nodes], X) ->
+send_requests([^Node | Nodes], X) ->
     {?MODULE, Node} ! {self(), X},
-    send_requests(Nodes, X);
+    send_requests(^Nodes, X);
 send_requests([], _X) ->
     ok.
 

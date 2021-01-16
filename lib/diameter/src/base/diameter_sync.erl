@@ -409,7 +409,7 @@ i(Ref, Req, Timeout) ->
     Timer = send_timeout(Ref, Timeout),
     MRef = erlang:monitor(process, ?SERVER),
     receive
-        {Ref, ok} -> %% Do the deed.
+        {^Ref, ok} -> %% Do the deed.
             %% Ensure we don't leave messages in the mailbox since the
             %% request itself might receive. Alternatively, could have
             %% done the eval in a new process but then we'd have to
@@ -422,9 +422,9 @@ i(Ref, Req, Timeout) ->
             %% banged by go/1 is received before the pid becomes
             %% accessible.
             {value, eval(Req)};
-        {Ref, timeout = T} ->
+        {^Ref, timeout = T} ->
             T;
-        {'DOWN', MRef, process, _Pid, _Info} = D ->  %% server death
+        {'DOWN', ^MRef, process, _Pid, _Info} = D ->  %% server death
             D
     end.
 
@@ -443,7 +443,7 @@ cancel_timer({TRef, Msg}) ->
 flush(Msg, false) ->  %% Message has already been sent ...
     %% 'error' should never happen but crash if it does so as not to
     %% hang the process.
-    ok = receive Msg -> ok after ?TIMEOUT -> error end;
+    ok = receive ^Msg -> ok after ?TIMEOUT -> error end;
 flush(_, _) ->        %% ... or not.
     ok.
 
@@ -521,7 +521,7 @@ fetch_keys(Dict) ->
 
 find(Key, Dict) ->
     case ets:lookup(Dict, Key) of
-        [{Key, V}] ->
+        [{^Key, V}] ->
             {ok, V};
         [] ->
             error

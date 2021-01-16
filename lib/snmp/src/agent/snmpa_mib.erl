@@ -479,7 +479,7 @@ handle_call({lookup, Oid}, _From,
 		Rep = Mod:lookup(Data, Oid),
 		ets:insert(Cache, {Key, Rep, timestamp()}),
 		{Rep, maybe_start_cache_gc_timer(State)};
-	    [{Key, Rep, _}] ->
+	    [{^Key, Rep, _}] ->
 		?vtrace("lookup -> found in cache - update timestamp", []),
 		ets:update_element(Cache, Key, {3, timestamp()}),
 		{Rep, State}
@@ -506,7 +506,7 @@ handle_call({next, Oid, MibView}, _From,
 		Rep = Mod:next(Data, Oid, MibView),
 		ets:insert(Cache, {Key, Rep, timestamp()}),
 		{Rep, maybe_start_cache_gc_timer(State)};
-	    [{Key, Rep, _}] ->
+	    [{^Key, Rep, _}] ->
 		?vdebug("lookup -> found in cache - update timestamp", []),
 		ets:update_element(Cache, Key, {3, timestamp()}),
 		{Rep, State}

@@ -172,13 +172,13 @@ next_event(StateName, no_record,
     case next_record(State0) of
 	{no_record, State} ->
             ssl_connection:hibernate_after(StateName, State, Actions);
-        {#ssl_tls{epoch = CurrentEpoch,
+        {#ssl_tls{epoch = ^CurrentEpoch,
                   type = ?HANDSHAKE,
                   version = Version} = Record, State1} ->
             State = dtls_version(StateName, Version, State1), 
 	    {next_state, StateName, State,
 	     [{next_event, internal, {protocol_record, Record}} | Actions]};
-        {#ssl_tls{epoch = CurrentEpoch} = Record, State} ->
+        {#ssl_tls{epoch = ^CurrentEpoch} = Record, State} ->
 	    {next_state, StateName, State, [{next_event, internal, {protocol_record, Record}} | Actions]};
 	{#ssl_tls{epoch = Epoch,
 		  type = ?HANDSHAKE,
@@ -202,13 +202,13 @@ next_event(StateName, no_record,
 next_event(connection = StateName, Record,
 	   #state{connection_states = #{current_read := #{epoch := CurrentEpoch}}} = State0, Actions) ->
     case Record of
-        #ssl_tls{epoch = CurrentEpoch,
+        #ssl_tls{epoch = ^CurrentEpoch,
                  type = ?HANDSHAKE,
-                 version = Version} = Record ->
+                 version = Version} ->
             State = dtls_version(StateName, Version, State0), 
 	    {next_state, StateName, State,
 	     [{next_event, internal, {protocol_record, Record}} | Actions]};
-	#ssl_tls{epoch = CurrentEpoch} ->
+	#ssl_tls{epoch = ^CurrentEpoch} ->
 	    {next_state, StateName, State0, [{next_event, internal, {protocol_record, Record}} | Actions]};
 	#ssl_tls{epoch = Epoch,
                  type = ?HANDSHAKE,
@@ -227,8 +227,8 @@ next_event(connection = StateName, Record,
 next_event(StateName, Record, 
 	   #state{connection_states = #{current_read := #{epoch := CurrentEpoch}}} = State0, Actions) ->
     case Record of
-        #ssl_tls{epoch = CurrentEpoch,
-                 version = Version} = Record ->
+        #ssl_tls{epoch = ^CurrentEpoch,
+                 version = Version} ->
             State = dtls_version(StateName, Version, State0),
             {next_state, StateName, State, 
              [{next_event, internal, {protocol_record, Record}} | Actions]};
@@ -575,11 +575,11 @@ hello(internal, #client_hello{cookie = Cookie} = Hello, #state{static_env = #sta
     State = ssl_connection:handle_sni_extension(State0, Hello),
     {ok, {IP, Port}} = dtls_socket:peername(Transport, Socket),
     case dtls_handshake:cookie(Secret, IP, Port, Hello) of
-	Cookie ->
+	^Cookie ->
 	    handle_client_hello(Hello, State);
 	_ ->
             case dtls_handshake:cookie(PSecret, IP, Port, Hello) of
-               	Cookie -> 
+               	^Cookie -> 
                     handle_client_hello(Hello, State);
                 _ ->
                     %% Handle bad cookie as new cookie request RFC 6347 4.1.2
@@ -1006,7 +1006,7 @@ handle_state_timeout(flight_retransmission_timeout, StateName,
                                 #{flight_state := {retransmit, _NextTimeout}}} = State0) ->
     {State1, Actions0} = send_handshake_flight(State0, 
                                                retransmit_epoch(StateName, State0)),
-    {next_state, StateName, State, Actions} = next_event(StateName, no_record, State1, Actions0),
+    {next_state, ^StateName, State, Actions} = next_event(StateName, no_record, State1, Actions0),
     %% This will reset the retransmission timer by repeating the enter state event
     {repeat_state, State, Actions}.
 

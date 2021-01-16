@@ -284,7 +284,7 @@ file(File, Options0) when is_list(Options0) ->
             Flag = process_flag(trap_exit, false),
             Pid = spawn_link(fun() -> infile(Self, File, OptionValues) end),
             receive
-                {Pid, Rep} -> 
+                {^Pid, Rep} -> 
                     receive after 1 -> ok end,
                     process_flag(trap_exit, Flag),
                     Rep
@@ -472,7 +472,7 @@ assure_extension(File, Ext) ->
 %% Assumes File is a filename.
 strip_extension(File, Ext) ->
     case filename:extension(File) of
-        Ext -> filename:rootname(File);
+        ^Ext -> filename:rootname(File);
         _Other -> File
     end.
 
@@ -1056,7 +1056,7 @@ kind_of_symbol(St, SymName) ->
             case member(SymName, St#yecc.terminals) of
                 false ->
                     case St#yecc.endsymbol of
-                        SymName ->
+                        ^SymName ->
                             endsymbol;
                         _ ->
                             unknown
@@ -1544,7 +1544,7 @@ compute_parse_actions(N, St, StateActions) ->
         true -> 
             StateActions;
         false ->
-            {N, StateN} = lookup_state(St#yecc.state_tab, N),
+            {^N, StateN} = lookup_state(St#yecc.state_tab, N),
             %% There can be duplicates in Actions.
             Actions = compute_parse_actions1(StateN, N, St),
             compute_parse_actions(N - 1, St, [{N, Actions} | StateActions])
@@ -2063,7 +2063,7 @@ output_goto(St, [], _StateInfo) ->
 
 output_goto1(St0, [{From, To} | Tail], F, StateInfo, IsFirst) ->
     St10 = delim(St0, IsFirst),
-    {To, ToInfo} = lookup_state(StateInfo, To),
+    {^To, ToInfo} = lookup_state(StateInfo, To),
     #state_info{reduce_only = RO, state_repr = Repr, comment = C} = ToInfo,
     if
         RO -> 
@@ -2146,7 +2146,7 @@ output_actions(St0, StateJumps, StateInfo) ->
     St05 =
         fwrite(St0, <<"-dialyzer({nowarn_function, yeccpars2/7}).\n">>, []),
     St10 = foldl(fun({State, Called}, St_0) ->
-                         {State, #state_info{state_repr = IState}} = 
+                         {^State, #state_info{state_repr = IState}} = 
                              lookup_state(StateInfo, State),
                          output_state_selection(St_0, State, IState, Called)
             end, St05, SelS),
@@ -2155,7 +2155,7 @@ output_actions(St0, StateJumps, StateInfo) ->
                 ?YECC_BUG(<<"{missing_state_in_action_table, Other}">>, []),
                 []),
     foldl(fun({State, JActions}, St_0) ->
-                  {State, #state_info{state_repr = IState}} = 
+                  {^State, #state_info{state_repr = IState}} = 
                       lookup_state(StateInfo, State),
                   output_state_actions(St_0, State, IState, 
                                        JActions, StateInfo)
@@ -2284,7 +2284,7 @@ output_reduce(St0, State, Terminal,
     if 
         NmbrOfDaughters =:= 0 ->
             NextState = goto(State, Head, St40),
-            {NextState, I} = lookup_state(StateInfo, NextState),
+            {^NextState, I} = lookup_state(StateInfo, NextState),
             #state_info{reduce_only = RO, state_repr = Repr, comment = C} = I,
             %% Reduce actions do not use the state, so we just pass
             %% the old (now bogus) on:

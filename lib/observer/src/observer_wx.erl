@@ -244,7 +244,7 @@ handle_event(#wx{event=#wxNotebook{type=command_notebook_page_changed, nSel=Next
 	     #state{active_tab=Previous, node=Node, panels=Panels, status_bar=SB} = State) ->
     {_, Obj, _} = lists:nth(Next+1, Panels),
     case wx_object:get_pid(Obj) of
-	Previous ->
+	^Previous ->
             {noreply, State};
 	Pid ->
             wxStatusBar:setStatusText(SB, ""),
@@ -681,7 +681,7 @@ default_menus(NodesMenuItems) ->
     LogMenu =  {"Log", [#create_menu{id = ?ID_LOGVIEW, text = "Toggle log view"}]},
     case os:type() =:= {unix, darwin} of
 	false ->
-	    FileMenu = {"File", [CDV, Quit]},
+	    ^FileMenu = {"File", [CDV, Quit]},
 	    HelpMenu = {"Help", [About,Help]},
 	    [FileMenu, NodeMenu, LogMenu, HelpMenu];
 	true ->

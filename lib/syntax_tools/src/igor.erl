@@ -1767,7 +1767,7 @@ transform_function(T, Env, St) ->
     {T1, St1} = default_transform(T, Env, St),
     F = erl_syntax_lib:analyze_function(T1),
     {V, Text} = case (Env#code.map)(F) of
-		    F ->
+		    ^F ->
 			%% Not renamed
 			{none, []};
 		    {Atom, _Arity} ->
@@ -1796,7 +1796,7 @@ transform_implicit_fun(T, Env, St) ->
 		    arity_qualifier ->
 			F = erl_syntax_lib:analyze_implicit_fun(T1),
 			case (Env#code.map)(F) of
-			    F ->
+			    ^F ->
 				%% Not renamed
 				{none, []};
 			    {Atom, Arity} ->
@@ -2263,7 +2263,7 @@ transform_record(T, Env, St) ->
 
 rename_record(R, F, Env) ->
     case map_record_name(R, Env#code.map) of
-	R ->
+	^R ->
 	    %% Not renamed
 	    {none, []};
 	R1 ->

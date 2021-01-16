@@ -394,7 +394,7 @@ check_constant_values(Db, Config) ->
     %% Check port number
     Port = httpd_util:lookup(Db,port),
     case proplists:get_value(port,Config) of  %% MUST be equal
-	Port ->
+	^Port ->
 	    ok;
 	OtherPort ->
 	    throw({error,{port_number_changed,Port,OtherPort}})
@@ -403,7 +403,7 @@ check_constant_values(Db, Config) ->
     %% Check bind address
     Addr = httpd_util:lookup(Db,bind_address),
     case proplists:get_value(bind_address, Config) of  %% MUST be equal
-	Addr ->
+	^Addr ->
 	    ok;
 	OtherAddr ->
 	    throw({error,{addr_changed,Addr,OtherAddr}})
@@ -412,7 +412,7 @@ check_constant_values(Db, Config) ->
     %% Check socket type
     SockType = httpd_util:lookup(Db, socket_type),
     case proplists:get_value(socket_type, Config) of  %% MUST be equal
-	SockType ->
+	^SockType ->
 	    ok;
 	OtherSockType ->
 	    throw({error,{sock_type_changed,SockType,OtherSockType}})
@@ -435,7 +435,7 @@ get_ustate(0,_State) ->
 get_ustate(ConnectionCnt,State) ->
     ConfigDB = State#state.config_db,
     case httpd_util:lookup(ConfigDB, max_clients, 150) of
-	ConnectionCnt ->
+	^ConnectionCnt ->
 	    busy;
 	_ ->
 	    active

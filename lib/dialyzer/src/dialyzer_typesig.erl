@@ -1041,7 +1041,7 @@ get_underapprox_from_guard(Tree, Map) ->
       {Type, Map};
     literal ->
       case cerl:unfold_literal(Tree) of
-	Tree ->
+	^Tree ->
 	  Type =
 	    case cerl:concrete(Tree) of
 	      Int when is_integer(Int) -> t_from_term(Int);
@@ -1153,7 +1153,7 @@ get_safe_underapprox_1([Pat0|Left], Acc, Map) ->
       end;
     literal ->
       case cerl:unfold_literal(Pat) of
-	Pat ->
+	^Pat ->
 	  Type =
 	    case cerl:concrete(Pat) of
 	      Int when is_integer(Int) -> t_from_term(Int);
@@ -1867,7 +1867,7 @@ solve_scc(SCC, Map, State, Users, ToSolve, TryingUnit) ->
 
 affected(Updated, Users) ->
   lists:umerge([case lists:keyfind(V, 1, Users) of
-                  {V, Vs} -> Vs;
+                  {^V, Vs} -> Vs;
                   false -> []
                 end || V <- Updated]).
 
@@ -3362,7 +3362,7 @@ lookup_record(State, Tag, Arity) ->
   #state{module = M, mod_records = ModRecs, cserver = CServer} = State,
   {State1, Rec} =
     case lists:keyfind(M, 1, ModRecs) of
-      {M, Rec0} ->
+      {^M, Rec0} ->
         {State, Rec0};
       false ->
         Rec0 = dialyzer_codeserver:lookup_mod_records(M, CServer),

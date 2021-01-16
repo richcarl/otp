@@ -231,9 +231,9 @@ write_file(Head, Bin) ->
 		R2 = file:sync(Fd),
 		R3 = file:close(Fd),
                 case {R1, R2, R3} of
-                    {ok, ok, R3} -> R3;
-                    {ok, R2, _} -> R2;
-                    {R1, _, _} -> R1
+                    {ok, ok, ^R3} -> R3;
+                    {ok, ^R2, _} -> R2;
+                    {^R1, _, _} -> R1
                 end;
 	    Else ->
 		Else
@@ -425,9 +425,9 @@ cache_size(C) ->
 cache_lookup(Type, [Key | Keys], CL, LU) ->
     %% mkeysearch returns the _first_ tuple with a matching key.
     case mkeysearch(Key, 1, CL) of
-	{value, {Key,{_Seq,{insert,Object}}}} when Type =:= set ->
+	{value, {^Key,{_Seq,{insert,Object}}}} when Type =:= set ->
 	    cache_lookup(Type, Keys, CL, [Object | LU]);
-	{value, {Key,{_Seq,delete_key}}} ->
+	{value, {^Key,{_Seq,delete_key}}} ->
 	    cache_lookup(Type, Keys, CL, LU);
 	_ ->
 	    false
@@ -578,7 +578,7 @@ undo_free(Ftab, Pos, Addr, Base) ->
 	    {BuddyAddr, MoveUpAddr} = my_buddy(Addr, ?POW(Pos-1), Base),
 	    NewFtab = setelement(Pos, Ftab, bplus_insert(PosTab, BuddyAddr)),
 	    undo_free(NewFtab, Pos+1, MoveUpAddr, Base);
-	{ok, Addr} ->
+	{ok, ^Addr} ->
 	    NewPosTab = bplus_delete(PosTab, Addr),
 	    setelement(Pos, Ftab, NewPosTab)
     end.
@@ -617,7 +617,7 @@ free_in_pos(Ftab, Addr, Pos, Base) ->
 	undefined -> % no buddy found
 	    ?DEBUG("  table ~p, no buddy~n", [Pos]),
 	    setelement(Pos, Ftab, bplus_insert(PosTab, Addr));
-	{ok, BuddyAddr} -> % buddy found
+	{ok, ^BuddyAddr} -> % buddy found
 	    PosTab1 = bplus_delete(PosTab, Addr),
 	    PosTab2 = bplus_delete(PosTab1, BuddyAddr),
 	    ?DEBUG("  table ~p, with buddy ~p~n", [Pos, BuddyAddr]),
@@ -699,7 +699,7 @@ all_free(Head) ->
     Tab = get_freelists(Head),
     Base = Head#head.base,
     case all_free(all(Tab), Base, Base, []) of
-	[{Base,Base} | L] -> L;
+	[{^Base,^Base} | L] -> L;
 	L -> L
     end.
     
@@ -884,12 +884,12 @@ disk_map_pread(P) ->
             case ets:lookup(T, P) of
                 [] -> 
                     throw({pread, P, 8});
-                [{P,{pointer,0,0}}] ->
+                [{^P,{pointer,0,0}}] ->
                     ok;
-                [{P,{pointer,Pointer,Sz}}] ->
+                [{^P,{pointer,Pointer,Sz}}] ->
                     case ets:lookup(T, Pointer) of
                         %% _P =/= P after re-hash...
-                        [{Pointer,{slot,_P,Sz}}] ->
+                        [{^Pointer,{slot,_P,^Sz}}] ->
                             ok;
                         Got ->
                             throw({pread, P, Pointer, Got})
@@ -917,15 +917,15 @@ dm([{P0,<<?FREE:32>>} | Bs], T) ->
     case ets:lookup(T, P) of
         [] -> 
             throw({free, P0});
-        [{P,_OldSz}] ->
+        [{^P,_OldSz}] ->
             true = ets:delete(T, P)
     end,
     dm(Bs, T);
 dm([{SlotP,<<Sz:32,?ACTIVE:32,_/binary>>} | Bs], T) ->
     Ptr = case ets:lookup(T, {pointer,SlotP}) of
-              [{{pointer,SlotP}, Pointer}] ->
+              [{{pointer,^SlotP}, Pointer}] ->
                   case ets:lookup(T, Pointer) of
-                      [{Pointer,{pointer,SlotP,Sz2}}] ->
+                      [{^Pointer,{pointer,^SlotP,Sz2}}] ->
                           case log2(Sz) =:= log2(Sz2) of
                               true -> 
                                   Pointer;
@@ -958,7 +958,7 @@ dm([{P,<<Sz:32,X:32>>} | Bs], T) ->
     true = ets:insert(T, {P,{pointer,X,Sz}}),
     if 
         Sz =:= 0 -> 
-            X = 0,
+            ^X = 0,
             true;
         true -> 
             true = ets:insert(T, {{pointer,X}, P})
@@ -967,8 +967,8 @@ dm([{P,<<Sz:32,X:32>>} | Bs], T) ->
 dm([{P,<<X:32>>} | Bs], T) ->
     case ets:lookup(T, X) of
         [] -> throw({segment, P, X});
-        [{X,{pointer,0,0}}] -> ok;
-        [{X,{pointer,P,X}}] -> ok
+        [{^X,{pointer,0,0}}] -> ok;
+        [{^X,{pointer,^P,^X}}] -> ok
     end,
     dm(Bs, T);
 dm([{P,<<_Sz:32,B0/binary>>=B} | Bs], T) ->
@@ -1005,9 +1005,9 @@ prev(P, T) ->
         '$end_of_table' -> ok;
         Prev -> 
             case ets:lookup(T, Prev) of
-                [{Prev,{pointer,_Ptr,_}}] when Prev + 8 > P -> 
+                [{^Prev,{pointer,_Ptr,_}}] when Prev + 8 > P -> 
                     {Prev, 8};
-                [{Prev,{slot,_,Sz}}] when Prev + Sz > P ->
+                [{^Prev,{slot,_,Sz}}] when Prev + Sz > P ->
                     {Prev, Sz};
                 _ ->
                     ok
@@ -1208,7 +1208,7 @@ bplus_lookup_leaf(Key, Leaf) ->
 bplus_lookup_leaf_2(_, _, 0) -> undefined;
 bplus_lookup_leaf_2(Key, Leaf, N) ->
     case ?GET_LEAF_KEY(Leaf, N) of
-	Key -> {ok, Key};
+	^Key -> {ok, Key};
 	_ ->
 	    bplus_lookup_leaf_2(Key, Leaf, N-1)
     end.

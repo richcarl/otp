@@ -216,7 +216,7 @@ statistic_collector(I) ->
 stat_loop(M, Old) ->
     timer:sleep(2000),
     case statistics(run_queue) of
-	Old ->
+	^Old ->
 	    stat_loop(M, Old);
 	NewLoad ->
 	    M ! {node(), load, NewLoad}, %% async 

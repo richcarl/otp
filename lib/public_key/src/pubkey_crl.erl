@@ -72,7 +72,7 @@ fresh_crl(DP, {_, #'CertificateList'{tbsCertList = TBSCRL}} = CRL, CallBack) ->
     case Now >= UpdateTime of
 	true ->
 	    case CallBack(DP, CRL) of
-		CRL ->
+		^CRL ->
 		    no_fresh_crl;
 	       NewCRL ->
 		    fresh_crl(DP, NewCRL, CallBack)

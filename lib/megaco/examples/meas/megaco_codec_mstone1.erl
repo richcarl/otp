@@ -236,7 +236,7 @@ mstone_init(MessagePackage, RunTime, Factor, Codecs, DrvInclude) ->
 		    Parent ! {done, self()}
 	    end),
     receive
-	{done, Pid} ->
+	{done, ^Pid} ->
 	    ok
     end.
 			 
@@ -391,7 +391,7 @@ mstone_runner_init(RunTime, _Codec, Parent, Mod, Conf, Msgs0) ->
     warmup(Mod, Conf, Msgs, []),
     Parent ! {ready, self()},
     receive
-        {go, Parent} ->
+        {go, ^Parent} ->
             ok
     end,
     erlang:send_after(RunTime, self(), stop),

@@ -134,6 +134,6 @@ wrap_call(Fd, Command) ->
 get_fd_data(#file_descriptor{ data = Data }) ->
     {Owner, _ServerPid} = Data,
     case self() of
-        Owner -> Data;
+        ^Owner -> Data;
         _ -> error(not_on_controlling_process)
     end.

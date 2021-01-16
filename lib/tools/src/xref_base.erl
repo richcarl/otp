@@ -574,7 +574,7 @@ do_replace_module(Module, File, OV, OW, State) ->
     OldApp = OldXMod#xref_mod.app_name,
     OB = OldXMod#xref_mod.builtins,
     case do_add_a_module(File, OldApp, OB, OV, OW, State1) of
-	{ok, [Module], NewState} ->
+	{ok, [^Module], NewState} ->
 	    {ok, Module, NewState};
 	{ok, [ReadModule], _State} ->
 	    throw_error({module_mismatch, Module, ReadModule});
@@ -919,7 +919,7 @@ depr_desc(_) -> undefined.
 %% Attrs is collected from the attribute 'xref' (experimental).
 do_add_module(S, XMod, Unres, Data) ->
     #xref{mode = Mode} = S,
-    Mode = S#xref.mode,
+    ^Mode = S#xref.mode,
     {ok, PrepMod, Bad} = prepare_module(Mode, XMod, Unres, Data),
     {ok, Ms, NS} = finish_module(PrepMod, S),
     {ok, Ms, Bad, NS}.

@@ -731,7 +731,7 @@ relate_file_name(File, #state{cwd = CWD, root = Root}, Canonicalize) ->
 	       false -> Root
 	   end,
     AbsFile = case make_relative_filename(File) of
-		  File ->
+		  ^File ->
 		       relate_filename_to_path(File, CWD1, Canonicalize);
 		  RelFile ->
 		       relate_filename_to_path(RelFile, Root, Canonicalize)

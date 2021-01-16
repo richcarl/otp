@@ -182,7 +182,7 @@ stop(SvcName) ->
 
 stop(ok, Pid) ->
     MRef = monitor(process, Pid),
-    receive {'DOWN', MRef, process, _, _} -> ok end;
+    receive {'DOWN', ^MRef, process, _, _} -> ok end;
 stop(No, _) ->
     No.
 
@@ -1011,13 +1011,13 @@ watchdog(TPid, [T], _, ?WD_REOPEN, Wd, State) ->
 
 %% Watchdog has recovered a suspect connection.
 watchdog(TPid, [], ?WD_SUSPECT, ?WD_OKAY, Wd, State) ->
-    #watchdog{peer = TPid} = Wd,  %% assert
+    #watchdog{peer = ^TPid} = Wd,  %% assert
     connection_up(Wd, State);
 
 %% Watchdog has an unresponsive connection. Note that the peer table
 %% entry isn't removed until DOWN.
 watchdog(TPid, [], ?WD_OKAY, ?WD_SUSPECT = To, Wd, State) ->
-    #watchdog{peer = TPid} = Wd,  %% assert
+    #watchdog{peer = ^TPid} = Wd,  %% assert
     watchdog_down(Wd, To, State);
 
 %% Watchdog has lost its connection.
@@ -1103,7 +1103,7 @@ peer_up({Id, Alias}, TC, SA) ->
     peer_up(Id, Alias, TC, SA).
 
 peer_up(Id, Alias, {TPid, _} = TC, {SvcName, Apps}) ->
-    #diameter_app{id = Id}  %% assert
+    #diameter_app{id = ^Id}  %% assert
         = App
         = find_app(Alias, Apps),
 
@@ -1214,7 +1214,7 @@ peer_down({Id, Alias}, TC, SA) ->
     peer_down(Id, Alias, TC, SA).
 
 peer_down(Id, Alias, TC, {SvcName, Apps}) ->
-    #diameter_app{id = Id}  %% assert
+    #diameter_app{id = ^Id}  %% assert
         = App
         = find_app(Alias, Apps),
 
@@ -1597,9 +1597,9 @@ pick_peer(Local,
             No;
         false = No ->
             No;
-        {{TPid, #diameter_caps{}} = T, S} when is_pid(TPid) ->
+        {{TPid, #diameter_caps{}} = T, ^S} when is_pid(TPid) ->
             T;                     %% Accept returned state in the immutable
-        {false = No, S} ->         %% case as long it isn't changed.
+        {false = No, ^S} ->         %% case as long it isn't changed.
             No;
         T when M ->
             ModX = App#diameter_app.module,

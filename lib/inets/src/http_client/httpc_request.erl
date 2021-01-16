@@ -86,7 +86,7 @@ send(SendAddr, Socket, SocketType,
     
     {NewHeaders, Uri} = 
 	case Address of
-	    SendAddr ->
+	    ^SendAddr ->
 		{TmpHdrs2, Path ++ Query};
 	    _Proxy when SocketType == ip_comm ->
 		TmpHdrs3 = handle_proxy(HttpOptions, TmpHdrs2), 

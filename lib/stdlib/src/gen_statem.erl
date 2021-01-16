@@ -732,19 +732,19 @@ call_clean(ServerRef, Request, Timeout, T) ->
             end),
     Mref = monitor(process, Pid),
     receive
-        {Ref,Result} ->
+        {^Ref,Result} ->
             demonitor(Mref, [flush]),
             case Result of
                 {ok,Reply} ->
                     Reply
             end;
-        {Ref,Class,Reason,Stacktrace} ->
+        {^Ref,Class,Reason,Stacktrace} ->
             demonitor(Mref, [flush]),
             erlang:raise(
               Class,
               {Reason,{?MODULE,call,[ServerRef,Request,Timeout]}},
               Stacktrace);
-        {'DOWN',Mref,_,_,Reason} ->
+        {'DOWN',^Mref,_,_,Reason} ->
             %% There is a theoretical possibility that the
             %% proxy process gets killed between try--of and !
             %% so this clause is in case of that
@@ -926,7 +926,7 @@ format_status(
 -compile({inline, update_parent/2}).
 update_parent(P, Parent) ->
     case P of
-        #params{parent = Parent} ->
+        #params{parent = ^Parent} ->
             P;
         #params{} ->
             P#params{parent = Parent}
@@ -974,7 +974,7 @@ print_event(Dev, SystemEvent, Name) ->
           when Tag =:= postpone; Tag =:= consume ->
             StateString =
                 case NextState of
-                    State ->
+                    ^State ->
                         io_lib:format("~tp", [State]);
                     _ ->
                         io_lib:format("~tp => ~tp", [State,NextState])
@@ -1053,7 +1053,7 @@ loop_receive(
                 %%
 		{timeout,TimerRef,TimeoutType} ->
                     case S#state.timers of
-                        #{TimeoutType := {TimerRef,TimeoutMsg}} = Timers
+                        #{TimeoutType := {^TimerRef,TimeoutMsg}} = Timers
                           when TimeoutType =/= t0q->
                             %% Our timer
                             Timers_1 = maps:remove(TimeoutType, Timers),
@@ -1073,7 +1073,7 @@ loop_receive(
 		      S#state.hibernate);
 		{'EXIT',Pid,Reason} ->
                     case P#params.parent of
-                        Pid ->
+                        ^Pid ->
                             terminate(
                               exit, Reason, ?STACKTRACE(), P, Debug, S, []);
                         _ ->
@@ -1293,7 +1293,7 @@ loop_state_callback_result(
   StateCall, Result) ->
     %%
     case Result of
-	{next_state,State,NewData} ->
+	{next_state,^State,NewData} ->
             loop_actions(
               P, Debug, S, Q, {State,NewData},
               NextEventsR, Hibernate, TimeoutsR, Postpone,
@@ -1313,7 +1313,7 @@ loop_state_callback_result(
                 state_data = State_Data,
                 hibernate = Hibernate},
               Q);
-	{next_state,State,NewData,Actions} ->
+	{next_state,^State,NewData,Actions} ->
             loop_actions(
               P, Debug, S, Q, {State,NewData},
               NextEventsR, Hibernate, TimeoutsR, Postpone,
@@ -2309,7 +2309,7 @@ parse_timeout_opts_abs(Opts, Abs) ->
     case Opts of
         [] ->
             Abs;
-        [{abs,Abs_1}|Opts] when is_boolean(Abs_1) ->
+        [{abs,Abs_1}|^Opts] when is_boolean(Abs_1) ->
             parse_timeout_opts_abs(Opts, Abs_1);
         _ ->
             badarg
@@ -2792,7 +2792,7 @@ listify(Item) ->
        false ->
            %% No timer found and we have not seen the timeout message
            receive
-               {timeout,(TimerRef),_} ->
+               {timeout,__T,_} when __T =:= (TimerRef) ->
                    ok
            end;
        _ ->

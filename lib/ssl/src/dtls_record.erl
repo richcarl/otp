@@ -443,7 +443,7 @@ get_dtls_records_aux({_, _, Version, _} = Vinfo, <<?BYTE(Type),?BYTE(MajVer),?BY
                                         (Type == ?CHANGE_CIPHER_SPEC) ->
     ssl_logger:debug(LogLevel, inbound, 'record', [RawDTLSRecord]),
     case {MajVer, MinVer} of
-        Version ->
+        ^Version ->
             get_dtls_records_aux(Vinfo, Rest, [#ssl_tls{type = Type,
                                                  version = {MajVer, MinVer},
                                                  epoch = Epoch, sequence_number = SequenceNumber,

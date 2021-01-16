@@ -137,9 +137,9 @@ call(N, M, F, A, T) when is_atom(N),
     ReqId = spawn_request(N, ?MODULE, execute_call, [Res, M, F, A],
                           [{reply, error_only}, monitor]),
     receive
-        {spawn_reply, ReqId, error, Reason} ->
+        {spawn_reply, ^ReqId, error, Reason} ->
             result(spawn_reply, ReqId, Res, Reason);
-        {'DOWN', ReqId, process, _Pid, Reason} ->
+        {'DOWN', ^ReqId, process, _Pid, Reason} ->
             result(down, ReqId, Res, Reason)
     after T ->
             result(timeout, ReqId, Res, undefined)
@@ -200,9 +200,9 @@ receive_response({Res, ReqId}, Tmo) when is_reference(Res),
                                          is_reference(ReqId),
                                          ?IS_VALID_TMO(Tmo) ->
     receive
-        {spawn_reply, ReqId, error, Reason} ->
+        {spawn_reply, ^ReqId, error, Reason} ->
             result(spawn_reply, ReqId, Res, Reason);
-        {'DOWN', ReqId, process, _Pid, Reason} ->
+        {'DOWN', ^ReqId, process, _Pid, Reason} ->
             result(down, ReqId, Res, Reason)
     after Tmo ->
             result(timeout, ReqId, Res, undefined)
@@ -230,9 +230,9 @@ wait_response({Res, ReqId}, WT) when is_reference(Res),
                                      is_reference(ReqId),
                                      ?IS_VALID_TMO(WT) ->
     receive
-        {spawn_reply, ReqId, error, Reason} ->
+        {spawn_reply, ^ReqId, error, Reason} ->
             result(spawn_reply, ReqId, Res, Reason);
-        {'DOWN', ReqId, process, _Pid, Reason} ->
+        {'DOWN', ^ReqId, process, _Pid, Reason} ->
             {response, result(down, ReqId, Res, Reason)}
     after WT ->
             no_response
@@ -544,9 +544,9 @@ result(timeout, ReqId, Res, _Reason) ->
             %% a result instead of a timeout since we
             %% just got the result...
             receive
-                {spawn_reply, ReqId, error, Reason} ->
+                {spawn_reply, ^ReqId, error, Reason} ->
                     result(spawn_reply, ReqId, Res, Reason);
-                {'DOWN', ReqId, process, _Pid, Reason} ->
+                {'DOWN', ^ReqId, process, _Pid, Reason} ->
                     result(down, ReqId, Res, Reason)
             after
                 0 ->

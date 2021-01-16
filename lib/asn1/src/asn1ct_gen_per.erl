@@ -104,7 +104,7 @@ gen_encode_user(Erules,D) when is_record(D,typedef) ->
 	    emit([".",nl]);
 	{constructed,bif} ->
 	    asn1ct_gen:gen_encode_constructed(Erules,Typename,InnerType,D);
-	#'Externaltypereference'{module=CurrMod,type=Etype} ->
+	#'Externaltypereference'{module=^CurrMod,type=Etype} ->
             emit([{asis,enc_func(Etype)},"(Val).",nl]);
 	#'Externaltypereference'{module=Emod,type=Etype} ->
             emit([{asis,Emod},":",{asis,enc_func(Etype)},"(Val).",nl])
@@ -269,7 +269,7 @@ gen_dec_external(Ext, BytesVar) ->
     CurrMod = get(currmod),
     #'Externaltypereference'{module=Mod,type=Type} = Ext,
     emit([case CurrMod of
-	      Mod -> [];
+	      ^Mod -> [];
 	      _ -> [{asis,Mod},":"]
 	  end,{asis,dec_func(Type)},"(",BytesVar,")"]).
 

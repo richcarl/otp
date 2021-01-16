@@ -156,7 +156,7 @@ rec(Pid) when is_pid(Pid) ->
 	{?MODULE, _, Reply} ->
 	    Reply;
 
-	{'EXIT', Pid, _} ->
+	{'EXIT', ^Pid, _} ->
 	    {error, {node_not_running, node()}}
     end;
 rec(undefined) ->
@@ -164,9 +164,9 @@ rec(undefined) ->
 
 rec(Pid, Ref) ->
     receive
-	{?MODULE, Ref, Reply} ->
+	{?MODULE, ^Ref, Reply} ->
 	    Reply;
-	{'EXIT', Pid, _} ->
+	{'EXIT', ^Pid, _} ->
 	    {error, {node_not_running, node()}}
     end.
 
@@ -494,13 +494,13 @@ do_async_dirty(Tid, Commit, _Tab) ->
 process_dirty_queue(Tab, [Item | Queue]) ->
     Queue2 = process_dirty_queue(Tab, Queue),
     case Item of
-	{async_dirty, Tid, Commit, Tab} ->
+	{async_dirty, Tid, Commit, ^Tab} ->
 	    do_async_dirty(Tid, Commit, Tab),
 	    Queue2;
-	{sync_dirty, From, Tid, Commit, Tab} ->
+	{sync_dirty, From, Tid, Commit, ^Tab} ->
 	    do_sync_dirty(From, Tid, Commit, Tab),
 	    Queue2;
-	{Tab, unblock_me, From} ->
+	{^Tab, unblock_me, From} ->
 	    reply(From, unblocked),
 	    Queue2;
 	_ ->
@@ -649,8 +649,8 @@ del_coord_store(Coords, Tid, Current, Obsolete) ->
     Stores = gb_trees:get(Tid, Coords),
     Rest =
     	case Stores of
-    	    [Obsolete, Current | Tail] -> Tail;
-    	    [Current, Obsolete | Tail] -> Tail
+    	    [^Obsolete, ^Current | Tail] -> Tail;
+    	    [^Current, ^Obsolete | Tail] -> Tail
     	end,
     ?ets_delete_table(Obsolete),
     gb_trees:update(Tid, [Current|Rest], Coords).
@@ -673,7 +673,7 @@ clear_fixtable(Node, State=#state{fixed_tabs = FT0}) ->
     case mnesia_lib:key_search_delete(Node, 1, FT0) of
 	{none, _Ft} ->
 	    State;
-	{{Node,Tabs},FT} ->
+	{{^Node,Tabs},FT} ->
 	    lists:foreach(
 	      fun(Tab) ->
 		      case ?catch_val({Tab, storage_type}) of
@@ -691,14 +691,14 @@ manage_fixtable(Tab,true,Requester,State=#state{fixed_tabs = FT0}) ->
     case mnesia_lib:key_search_delete(Node, 1, FT0) of
 	{none, FT}->
 	    State#state{fixed_tabs=[{Node, [Tab]}|FT]};
-	{{Node,Tabs},FT} ->
+	{{^Node,Tabs},FT} ->
 	    State#state{fixed_tabs=[{Node, [Tab|Tabs]}|FT]}
     end;
 manage_fixtable(Tab,false,Requester,State = #state{fixed_tabs = FT0}) ->
     Node = node(Requester),
     case mnesia_lib:key_search_delete(Node, 1, FT0) of
 	{none,_FT} -> State; % Hmm? Safeguard
-	{{Node, Tabs0},FT} ->
+	{{^Node, Tabs0},FT} ->
 	    case lists:delete(Tab, Tabs0) of
 		[] -> State#state{fixed_tabs=FT};
 		Tabs -> State#state{fixed_tabs=[{Node,Tabs}|FT]}
@@ -923,7 +923,7 @@ restart(Mod, Tid, Ts, Fun, Args, Factor0, Retries0, Type, Why) ->
 	    timer:sleep(SleepTime),
 	    mnesia_locker:receive_release_tid_acc(Nodes, Tid),
 	    case get_restarted(Tid) of
-		{restarted, Tid} ->
+		{restarted, ^Tid} ->
 		    execute_transaction(Fun, Args, Factor0 + 1,
 					Retries, Type);
 		{error, Reason} ->
@@ -933,7 +933,7 @@ restart(Mod, Tid, Ts, Fun, Args, Factor0, Retries0, Type, Why) ->
 
 get_restarted(Tid) ->
     case Res = rec() of
-	{restarted, Tid} ->
+	{restarted, ^Tid} ->
 	    Res;
 	{error,_} ->
 	    Res;
@@ -1052,8 +1052,8 @@ intercept_best_friend([_|R],true) ->
 
 wait_for_best_friend(Pid, Timeout) ->
     receive
-	{'EXIT', Pid, _} -> ok;
-	{activity_ended, _, Pid} -> ok
+	{'EXIT', ^Pid, _} -> ok;
+	{activity_ended, _, ^Pid} -> ok
     after Timeout ->
 	    case erlang:is_process_alive(Pid) of
 		true -> wait_for_best_friend(Pid, 1000);
@@ -1579,19 +1579,19 @@ multi_commit(Protocol, Majority, Tid, CR, Store)
 rec_acc_pre_commit([Pid | Tail], Tid, Store, Commit, Res, DumperMode,
 		   GoodPids, AckPids) ->
     receive
-	{?MODULE, _, {acc_pre_commit, Tid, Pid, true}} ->
+	{?MODULE, _, {acc_pre_commit, ^Tid, ^Pid, true}} ->
 	    rec_acc_pre_commit(Tail, Tid, Store, Commit, Res, DumperMode,
 			       [Pid | GoodPids], [Pid | AckPids]);
 
-	{?MODULE, _, {acc_pre_commit, Tid, Pid, false}} ->
+	{?MODULE, _, {acc_pre_commit, ^Tid, ^Pid, false}} ->
 	    rec_acc_pre_commit(Tail, Tid, Store, Commit, Res, DumperMode,
 			       [Pid | GoodPids], AckPids);
 
-	{?MODULE, _, {acc_pre_commit, Tid, Pid}} ->
+	{?MODULE, _, {acc_pre_commit, ^Tid, ^Pid}} ->
 	    %% Kept for backwards compatibility. Remove after Mnesia 4.x
 	    rec_acc_pre_commit(Tail, Tid, Store, Commit, Res, DumperMode,
 			       [Pid | GoodPids], [Pid | AckPids]);
-	{?MODULE, _, {do_abort, Tid, Pid, _Reason}} ->
+	{?MODULE, _, {do_abort, ^Tid, ^Pid, _Reason}} ->
 	    AbortRes = {do_abort, {bad_commit, node(Pid)}},
 	    rec_acc_pre_commit(Tail, Tid, Store, Commit, AbortRes, DumperMode,
 			       GoodPids, AckPids);
@@ -1648,7 +1648,7 @@ sync_schema_commit(_Tid, _Store, []) ->
     ok;
 sync_schema_commit(Tid, Store, [Pid | Tail]) ->
     receive
-	{?MODULE, _, {schema_commit, Tid, Pid}} ->
+	{?MODULE, _, {schema_commit, ^Tid, ^Pid}} ->
 	    ?ets_match_delete(Store, {waiting_for_commit_ack, node(Pid)}),
 	    sync_schema_commit(Tid, Store, Tail);
 
@@ -1693,7 +1693,7 @@ commit_participant(Protocol, Coord, Tid, Bin, C0, DiscNs, _RamNs) ->
 	    reply(Coord, {vote_yes, Tid, self()}),
 
 	    receive
-		{Tid, pre_commit} ->
+		{^Tid, pre_commit} ->
 		    D = C#commit.decision,
 		    mnesia_recover:log_decision(D#decision{outcome = unclear}),
 		    ?eval_debug_fun({?MODULE, commit_participant, pre_commit},
@@ -1705,7 +1705,7 @@ commit_participant(Protocol, Coord, Tid, Bin, C0, DiscNs, _RamNs) ->
 		    %% Now we are vulnerable for failures, since
 		    %% we cannot decide without asking others
 		    receive
-			{Tid, committed} ->
+			{^Tid, committed} ->
 			    mnesia_recover:log_decision(D#decision{outcome = committed}),
 			    ?eval_debug_fun({?MODULE, commit_participant, log_commit},
 					    [{tid, Tid}]),
@@ -1717,7 +1717,7 @@ commit_participant(Protocol, Coord, Tid, Bin, C0, DiscNs, _RamNs) ->
 			    ?eval_debug_fun({?MODULE, commit_participant, do_commit},
 					    [{tid, Tid}]);
 
-			{Tid, {do_abort, _Reason}} ->
+			{^Tid, {do_abort, _Reason}} ->
 			    mnesia_recover:log_decision(D#decision{outcome = aborted}),
 			    ?eval_debug_fun({?MODULE, commit_participant, log_abort},
 					    [{tid, Tid}]),
@@ -1734,7 +1734,7 @@ commit_participant(Protocol, Coord, Tid, Bin, C0, DiscNs, _RamNs) ->
 			    verbose("** ERROR ** commit_participant ~p, got unexpected msg: ~tp~n",
 				    [Tid, Msg])
 		    end;
-		{Tid, {do_abort, Reason}} ->
+		{^Tid, {do_abort, Reason}} ->
 		    reply(Coord, {do_abort, Tid, self(), Reason}),
 		    mnesia_schema:undo_prepare_commit(Tid, C0),
 		    ?eval_debug_fun({?MODULE, commit_participant, pre_commit_undo_prepare},
@@ -2031,9 +2031,9 @@ rec_dirty([], Res) ->
 
 get_dirty_reply(Node, Res) ->
     receive
-	{?MODULE, Node, {'EXIT', Reason}} ->
+	{?MODULE, ^Node, {'EXIT', Reason}} ->
 	    {'EXIT', {aborted, {badarg, Reason}}};
-	{?MODULE, Node, {dirty_res, ok}} ->
+	{?MODULE, ^Node, {dirty_res, ok}} ->
 	    case Res of
 		{'EXIT', {aborted, {node_not_running, _Node}}} ->
 		    ok;
@@ -2041,9 +2041,9 @@ get_dirty_reply(Node, Res) ->
 		    %% Prioritize bad results, but node_not_running
 		    Res
 	    end;
-	{?MODULE, Node, {dirty_res, Reply}} ->
+	{?MODULE, ^Node, {dirty_res, Reply}} ->
 	    Reply;
-	{mnesia_down, Node} ->
+	{mnesia_down, ^Node} ->
 	    case get(mnesia_activity_state) of
 		{_, Tid, _Ts} when element(1,Tid) == tid ->
 		    %% Hmm dirty called inside a transaction, to avoid
@@ -2096,18 +2096,18 @@ new_cr_format(#commit{ext=Snmp}=Cr) ->
 
 rec_all([Node | Tail], Tid, Res, Pids) ->
     receive
-	{?MODULE, Node, {vote_yes, Tid}} ->
+	{?MODULE, ^Node, {vote_yes, ^Tid}} ->
 	    rec_all(Tail, Tid, Res, Pids);
-	{?MODULE, Node, {vote_yes, Tid, Pid}} ->
+	{?MODULE, ^Node, {vote_yes, ^Tid, Pid}} ->
 	    rec_all(Tail, Tid, Res, [Pid | Pids]);
-	{?MODULE, Node, {vote_no, Tid, Reason}} ->
+	{?MODULE, ^Node, {vote_no, ^Tid, Reason}} ->
 	    rec_all(Tail, Tid, {do_abort, Reason}, Pids);
-	{?MODULE, Node, {committed, Tid}} ->
+	{?MODULE, ^Node, {committed, ^Tid}} ->
 	    rec_all(Tail, Tid, Res, Pids);
-	{?MODULE, Node, {aborted, Tid}} ->
+	{?MODULE, ^Node, {aborted, ^Tid}} ->
 	    rec_all(Tail, Tid, Res, Pids);
 
-	{mnesia_down, Node} ->
+	{mnesia_down, ^Node} ->
 	    %% Make sure that mnesia_tm knows it has died
 	    %% it may have been restarted
 	    Abort = {do_abort, {bad_commit, Node}},
@@ -2179,7 +2179,7 @@ info(Serial) ->
 search_pr_coordinator(_S, []) -> no;
 search_pr_coordinator(S, [{Tid, _Ts}|Tail]) ->
     case Tid#tid.counter of
-	S ->
+	^S ->
 	    io:format( "Tid is coordinator, owner == \n", []),
 	    display_pid_info(Tid#tid.pid),
 	    search_pr_coordinator(S, Tail);

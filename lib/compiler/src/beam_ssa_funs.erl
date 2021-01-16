@@ -49,7 +49,7 @@ module(#b_module{body=Fs0}=Module, _Opts) ->
 find_trampolines(#b_function{args=Args,bs=Blocks}=F, Trampolines) ->
     case map_get(0, Blocks) of
         #b_blk{is=[#b_set{op=call,
-                          args=[#b_local{}=Actual | Args],
+                          args=[#b_local{}=Actual | ^Args],
                           dst=Dst}],
                last=#b_ret{arg=Dst}} ->
             {_, Name, Arity} = beam_ssa:get_anno(func_info, F),
@@ -82,7 +82,7 @@ lfo_analyze_is([#b_set{op=call,
                LFuns) when is_map_key(Fun, LFuns) ->
     #b_set{args=[#b_local{arity=Arity} | FreeVars]} = map_get(Fun, LFuns),
     case length(CallArgs) + length(FreeVars) of
-        Arity ->
+        ^Arity ->
             lfo_analyze_is(Is, maps:without(CallArgs, LFuns));
         _ ->
             %% This will `badarity` at runtime, and it's easier to disable the

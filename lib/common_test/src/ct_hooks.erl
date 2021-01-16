@@ -261,13 +261,13 @@ call(Fun, Config, Meta) ->
 
 call(Fun, Config, Meta, NoChangeRet) when is_function(Fun) ->
     case call(Fun,Config,Meta) of
-	Config -> NoChangeRet;
+	^Config -> NoChangeRet;
 	NewReturn -> NewReturn
     end;
 
 call([{Hook, call_id, NextFun} | Rest], Config, Meta, Hooks) ->
     try
-	{Config, #ct_hook_config{ id = NewId } = NewHook} =
+	{^Config, #ct_hook_config{ id = NewId } = NewHook} =
 	    call_id(Hook, Config, Meta),
 	{NewHooks, NewRest} = 
 	    case lists:keyfind(NewId, #ct_hook_config.id, Hooks) of
@@ -362,7 +362,7 @@ terminate_if_scope_ends(HookId, [on_tc_skip,Suite,end_per_suite], Hooks) ->
 terminate_if_scope_ends(HookId, Function0, Hooks) ->
     Function = strip_config(Function0),
     case lists:keyfind(HookId, #ct_hook_config.id, Hooks) of
-        #ct_hook_config{ id = HookId, scope = Function} = Hook ->
+        #ct_hook_config{ id = ^HookId, scope = ^Function} = Hook ->
             case Function of
                 [AllOrGroup,_] when AllOrGroup=:=post_all;
                                     AllOrGroup=:=post_groups ->

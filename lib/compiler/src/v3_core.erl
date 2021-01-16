@@ -1156,7 +1156,7 @@ expr_bin_1(Es, St0) ->
     case Res of
         {bad_binary,Eps,St} ->
             throw({bad_binary,Eps,St});
-        {_,_,_}=Res ->
+        {_,_,_} ->
             Res
     end.
 
@@ -1249,7 +1249,7 @@ make_bit_type(_Line, {atom,Anno,all}=Size, Type0) ->
         true ->
             %% This `all` was created by the compiler from a binary
             %% segment without a size.
-            {ok,Size,Bt} = erl_bits:set_bit_type(Size, Type0),
+            {ok,^Size,Bt} = erl_bits:set_bit_type(Size, Type0),
             {Size,erl_bits:as_list(Bt)};
         false ->
             %% This `all` was present in the source code. It is not
@@ -1291,7 +1291,7 @@ constant_bin_1(Es) ->
 		 ({atom,_,undefined}, B) -> {value,undefined,B}
 	      end,
     try eval_bits:expr_grp(Es, EmptyBindings, EvalFun) of
-	{value,Bin,EmptyBindings} ->
+	{value,Bin,^EmptyBindings} ->
 	    Bin
     catch error:_ ->
 	    error
@@ -1987,7 +1987,7 @@ pat_alias(P1, P2) ->
     end,
     Type = cerl:data_type(P1),
     case cerl:data_type(P2) of
-	Type -> ok;
+	^Type -> ok;
 	_ -> throw(nomatch)
     end,
     Es1 = cerl:data_es(P1),
@@ -2439,7 +2439,7 @@ upat_element(#ibitstr{val=H0,size=Sz0}=Seg, Ks, Bs0, St0) ->
     Bs1 = case H0 of
 	      #c_var{name=Hname} ->
 		  case H1 of
-		      #c_var{name=Hname} ->
+		      #c_var{name=^Hname} ->
 			  Bs0;
 		      #c_var{name=Other} ->
 			  [{Hname,Other}|Bs0]

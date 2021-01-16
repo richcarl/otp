@@ -528,7 +528,7 @@ load({Mod, Src, Beam, BeamBin, Exp, Abst}, Dist) ->
 		   fun() ->
 		       code:purge(Mod),
 		       erts_debug:breakpoint({Mod,'_','_'}, false),
-		       {module,Mod} = code:load_binary(Mod, Beam, BeamBin)
+		       {module,^Mod} = code:load_binary(Mod, Beam, BeamBin)
 		   end),
     case erl_prim_loader:get_file(filename:absname(Src)) of
 	{ok, SrcBin, _} ->
@@ -536,7 +536,7 @@ load({Mod, Src, Beam, BeamBin, Exp, Abst}, Dist) ->
             SrcBin1 = unicode:characters_to_binary(SrcBin, enc(SrcBin)),
             true = is_binary(SrcBin1),
 	    Bin = term_to_binary({interpreter_module,Exp,Abst,SrcBin1,MD5}),
-	    {module, Mod} = dbg_iserver:safe_call({load, Mod, Src, Bin}),
+	    {module, ^Mod} = dbg_iserver:safe_call({load, Mod, Src, Bin}),
 	    _ = everywhere(Dist,
 			   fun() ->
 			       true = erts_debug:breakpoint({Mod,'_','_'}, true) > 0

@@ -222,11 +222,11 @@ call(Msg) ->
     case Pid of
 	undefined ->
 	    {error, {node_not_running, node()}};
-	Pid ->
+	^Pid ->
 	    Res = gen_server:call(Pid, Msg, infinity),
             %% We get an exit signal if server dies
             receive
-                {'EXIT', Pid, _Reason} ->
+                {'EXIT', ^Pid, _Reason} ->
                     {error, {node_not_running, node()}}
             after 0 ->
                     Res

@@ -224,8 +224,8 @@ call(Holder, What, TMO) ->
     Ref = erlang:monitor(process, Holder),
     Holder ! What,
     receive
-	{'DOWN', Ref, _, _, _} -> holder_dead;
-	{Holder, Res} ->
+	{'DOWN', ^Ref, _, _, _} -> holder_dead;
+	{^Holder, Res} ->
 	    erlang:demonitor(Ref),
 	    Res
     after TMO ->
@@ -344,7 +344,7 @@ handle_event(#wx{id=?ID_TRACE_PIDS}, #state{sel={_, Pids}, panel=Panel}=State)  
 	[] ->
 	    observer_wx:create_txt_dialog(Panel, "No selected processes", "Tracer", ?wxICON_EXCLAMATION),
 	    {noreply, State};
-	Pids ->
+	^Pids ->
 	    observer_trace_wx:add_processes(Pids),
 	    {noreply,  State}
     end;
@@ -502,13 +502,13 @@ table_holder(#holder{info=Info, attrs=Attrs,
 	{get_attr, From, Row} ->
 	    get_attr(From, Row, Attrs),
 	    table_holder(S0);
-        {procs_info, Backend, Procs} ->
+        {procs_info, ^Backend, Procs} ->
 	    State = handle_update(Procs, S0),
 	    table_holder(State);
-        {'EXIT', Backend, normal} when Old =:= false ->
+        {'EXIT', ^Backend, normal} when Old =:= false ->
             S1 = update_complete(S0),
             table_holder(S1#holder{backend_pid=undefined});
-	{Backend, EtopInfo=#etop_info{}} ->
+	{^Backend, EtopInfo=#etop_info{}} ->
 	    State = handle_update_old(EtopInfo, S0),
 	    table_holder(State#holder{backend_pid=undefined});
 	refresh when is_pid(Backend)->
@@ -562,18 +562,18 @@ table_holder(#holder{info=Info, attrs=Attrs,
 	{dump, Fd} ->
             Collector = spawn_link(Node, observer_backend, etop_collect,[self()]),
             receive
-                {Collector, EtopInfo=#etop_info{}} ->
+                {^Collector, EtopInfo=#etop_info{}} ->
                     etop_txt:do_update(Fd, EtopInfo, #etop_info{}, #opts{node=Node}),
                     file:close(Fd),
                     table_holder(S0);
-                {'EXIT', Collector, _} ->
+                {'EXIT', ^Collector, _} ->
                     table_holder(S0)
             end;
 	stop ->
 	    ok;
-        {'EXIT', Backend, normal} ->
+        {'EXIT', ^Backend, normal} ->
             table_holder(S0);
-        {'EXIT', Backend, _Reason} ->
+        {'EXIT', ^Backend, _Reason} ->
             %% Node crashed will be noticed soon..
             table_holder(S0#holder{backend_pid=undefined});
 	_What ->

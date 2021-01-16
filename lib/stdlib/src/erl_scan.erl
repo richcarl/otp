@@ -293,7 +293,7 @@ opts(Options, [Key|Keys], L) ->
     V = case lists:keyfind(Key, 1, Options) of
             {reserved_word_fun,F} when ?RESWORDFUN(F) ->
                 {ok,F};
-            {Key,_} ->
+            {^Key,_} ->
                 badarg;
             false ->
                 {ok,default_option(Key)}

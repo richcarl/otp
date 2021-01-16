@@ -128,11 +128,11 @@ proxy_loop(Ref, CtrlNode) ->
 		    halt()
 	    end;
 
-	{nodedown, CtrlNode} ->
+	{nodedown, ^CtrlNode} ->
 	    ?LOG("received nodedown for controller node - terminate", []), 
 	    halt();
 
-	{'DOWN', Ref, process, _, _} ->
+	{'DOWN', ^Ref, process, _, _} ->
 	    ?LOG("received DOWN message for controller - terminate", []),
 	    %% The controller has terminated, time to die
 	    halt()

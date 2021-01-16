@@ -1353,40 +1353,40 @@ get_port(B) ->
 strip_last_char(<<>>, _) -> <<>>;
 strip_last_char(Input, [C0]) ->
     case binary:last(Input) of
-        C0 ->
+        ^C0 ->
             init_binary(Input);
         _Else ->
             Input
     end;
 strip_last_char(Input, [C0,C1]) ->
     case binary:last(Input) of
-        C0 ->
+        ^C0 ->
             init_binary(Input);
-        C1 ->
+        ^C1 ->
             init_binary(Input);
         _Else ->
             Input
     end;
 strip_last_char(Input, [C0,C1,C2]) ->
     case binary:last(Input) of
-        C0 ->
+        ^C0 ->
             init_binary(Input);
-        C1 ->
+        ^C1 ->
             init_binary(Input);
-        C2 ->
+        ^C2 ->
             init_binary(Input);
         _Else ->
             Input
     end;
 strip_last_char(Input, [C0,C1,C2,C3]) ->
     case binary:last(Input) of
-        C0 ->
+        ^C0 ->
             init_binary(Input);
-        C1 ->
+        ^C1 ->
             init_binary(Input);
-        C2 ->
+        ^C2 ->
             init_binary(Input);
-        C3 ->
+        ^C3 ->
             init_binary(Input);
         _Else ->
             Input
@@ -2380,7 +2380,7 @@ normalize_tftp(Map, Port) ->
 
 normalize_port(Map, Port, Default) ->
     case Port of
-        Default ->
+        ^Default ->
             maps:remove(port, Map);
         _Else ->
             Map

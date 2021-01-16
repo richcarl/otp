@@ -939,7 +939,7 @@ do_traverse(Fun, Acc, Tab, Ref) ->
         Proc ->
             try
                 do_trav(Proc, Acc, Fun)
-            catch {Ref, Result} ->
+            catch {^Ref, Result} ->
                 Result
             end
     end.
@@ -1199,7 +1199,7 @@ options(Options, [Key | Keys], L) when is_list(Options) ->
                 {ok, {select, MS}};
             {value, {traverse, first_next}} ->
                 {ok, first_next};
-	    {value, {Key, _}} ->
+	    {value, {^Key, _}} ->
 		badarg;
 	    false ->
 		Default = default_option(Key),
@@ -1239,9 +1239,9 @@ req(Proc, R) ->
     Ref = erlang:monitor(process, Proc),
     Proc ! ?DETS_CALL(self(), R),
     receive 
-	{'DOWN', Ref, process, Proc, _Info} ->
+	{'DOWN', ^Ref, process, ^Proc, _Info} ->
             badarg;
-	{Proc, Reply} ->
+	{^Proc, Reply} ->
 	    erlang:demonitor(Ref, [flush]),
 	    Reply
     end.
@@ -1531,7 +1531,7 @@ apply_op(Op, From, Head, N) ->
 	    {H2, Res} = fmatch(Head, MP, Spec, NObjs, Safe, From),
 	    From ! {self(), Res},
 	    H2;
-	{member, _Key} = Op ->
+	{member, _Key} ->
 	    stream_op(Op, From, [], Head, N);
 	{next, Key} ->
 	    {H2, Res} = fnext(Head, Key),
@@ -1888,7 +1888,7 @@ do_delete_all_objects(Head) ->
 ffirst(H) ->
     Ref = make_ref(),
     case catch {Ref, ffirst1(H)} of
-	{Ref, {NH, R}} -> 
+	{^Ref, {NH, R}} -> 
 	    {NH, {ok, R}};
 	{NH, R} when is_record(NH, head) -> 
 	    {NH, {error, R}}
@@ -1951,7 +1951,7 @@ do_safe_fixtable(Head, Pid, true) ->
 	    Head#head{fixed = Fixed, freelists = {Ftab, Ftab}};
 	{TimeStamp, Counters} ->
 	    case lists:keysearch(Pid, 1, Counters) of
-		{value, {Pid, Counter}} -> % when Counter > 1
+		{value, {^Pid, Counter}} -> % when Counter > 1
 		    NewCounters = lists:keyreplace(Pid, 1, Counters, 
 						   {Pid, Counter+1}),
 		    Head#head{fixed = {TimeStamp, NewCounters}};
@@ -1971,7 +1971,7 @@ remove_fix(Head, Pid, How) ->
 	{TimeStamp, Counters} ->
 	    case lists:keysearch(Pid, 1, Counters) of
 		%% How =:= close when Pid closes the table.
-		{value, {Pid, Counter}} when Counter =:= 1; How =:= close ->
+		{value, {^Pid, Counter}} when Counter =:= 1; How =:= close ->
 		    unlink(Pid),
 		    case lists:keydelete(Pid, 1, Counters) of
 			[] -> 
@@ -1982,7 +1982,7 @@ remove_fix(Head, Pid, How) ->
 			NewCounters ->
 			    Head#head{fixed = {TimeStamp, NewCounters}}
 		    end;
-		{value, {Pid, Counter}} ->
+		{value, {^Pid, Counter}} ->
 		    NewCounters = lists:keyreplace(Pid, 1, Counters, 
 						   {Pid, Counter-1}),
 		    Head#head{fixed = {TimeStamp, NewCounters}};
@@ -2428,7 +2428,7 @@ fnext(Head, Key) ->
     Slot = dets_v9:db_hash(Key, Head),
     Ref = make_ref(),
     case catch {Ref, fnext(Head, Key, Slot)} of
-	{Ref, {H, R}} -> 
+	{^Ref, {H, R}} -> 
 	    {H, {ok, R}};
 	{NewHead, _} = HeadError when is_record(NewHead, head) ->
 	    HeadError
@@ -2863,7 +2863,7 @@ fsck_copy1([SzData | L], Head, Bulk, NoDups) ->
 	    dets_utils:file_error(FileName, Err)
     end,
     case file:position(Out, Pos) of
-        {ok, Pos} -> ok;
+        {ok, ^Pos} -> ok;
         Err2 ->
 	    close_files(Bulk, L, Head),
 	    dets_utils:file_error(Head#head.filename, Err2)
@@ -3237,7 +3237,7 @@ view(FileName) ->
             try dets_v9:check_file_header(FH, Fd) of
                 {ok, H0} ->
                     case dets_v9:check_file_header(FH, Fd) of
-                        {ok, H0} ->
+                        {ok, ^H0} ->
                             H = dets_v9:init_freelist(H0),
                             v_free_list(H),
                             dets_v9:v_segments(H),

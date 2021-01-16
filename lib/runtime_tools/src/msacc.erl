@@ -326,7 +326,7 @@ percentage(Divident, Divisor) ->
 
 keyfind(Key, Value, [H|T]) ->
     case maps:find(Key, H) of
-        {ok, Value} ->
+        {ok, ^Value} ->
             H;
         _ ->
             keyfind(Key, Value, T)
@@ -336,7 +336,7 @@ keyfind(_, _, []) ->
 
 keyreplace(Key, Value, NewMap, [H|T]) ->
     case maps:find(Key, H) of
-        {ok, Value} ->
+        {ok, ^Value} ->
             [NewMap|T];
         _ ->
             [H|keyreplace(Key, Value, NewMap, T)]

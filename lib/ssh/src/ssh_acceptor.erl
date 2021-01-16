@@ -126,7 +126,7 @@ acceptor_init(Parent, Port, Address, Opts, AcceptTimeout) ->
     of
         {LSock, SockOwner} ->
             case inet:sockname(LSock) of
-                {ok,{_,Port}} -> % A usable, open LSock
+                {ok,{_,^Port}} -> % A usable, open LSock
                     proc_lib:init_ack(Parent, {ok, self()}),
                     request_ownership(LSock, SockOwner),
                     {_, Callback, _} =  ?GET_OPT(transport, Opts),
@@ -162,7 +162,7 @@ try_listen(Port, Opts, N, Nmax) ->
 request_ownership(LSock, SockOwner) ->
     SockOwner ! {request_control,LSock,self()},
     receive
-	{its_yours,LSock} -> ok
+	{its_yours,^LSock} -> ok
     end.
     
 %%%----------------------------------------------------------------    

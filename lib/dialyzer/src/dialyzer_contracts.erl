@@ -186,7 +186,7 @@ check_contracts(Contracts, Callgraph, FunTypes, ModOpaques) ->
 	  {ok, {M,F,A} = MFA} ->
 	    case orddict:find(MFA, Contracts) of
 	      {ok, Contract} ->
-                {M, Opaques} = lists:keyfind(M, 1, ModOpaques),
+                {^M, Opaques} = lists:keyfind(M, 1, ModOpaques),
 		case check_contract(Contract, Type, Opaques) of
 		  ok ->
 		    case erl_bif_types:is_known(M, F, A) of
@@ -583,7 +583,7 @@ constraints_fixpoint(OldVarTab, Module, MFA, Constrs, RecDict, ExpTypes,
     constraints_to_dict(Constrs, Module, MFA, RecDict, ExpTypes, RecordTable,
                         OldVarTab, Cache),
   case NewVarTab of
-    OldVarTab ->
+    ^OldVarTab ->
       Fun =
 	fun(Key, Value, Acc) ->
 	    [{subtype, erl_types:t_var(Key), Value}|Acc]
@@ -672,8 +672,8 @@ remove_cycles(G, Vs) ->
   lists:foreach(fun(V) ->
                         case digraph:get_cycle(G, V) of
                           false -> true;
-                          [V] -> digraph:del_edge(G, {V, V});
-                          [V, V1|_] -> digraph:del_edge(G, {V, V1})
+                          [^V] -> digraph:del_edge(G, {V, V});
+                          [^V, V1|_] -> digraph:del_edge(G, {V, V1})
                         end
                     end, Vs),
   case digraph:no_edges(G) =:= NumberOfEdges of
@@ -790,7 +790,7 @@ get_invalid_contract_warnings_funs([{MFA, {FileLine, Contract, _Xtra}}|Left],
 	  {error, Msg} ->
 	    [{?WARN_CONTRACT_SYNTAX, WarningInfo, Msg}|Acc];
 	  ok ->
-	    {M, F, A} = MFA,
+	    {^M, F, A} = MFA,
 	    CSig0 = get_contract_signature(Contract),
 	    CSig = erl_types:subst_all_vars_to_any(CSig0),
 	    case erl_bif_types:is_known(M, F, A) of

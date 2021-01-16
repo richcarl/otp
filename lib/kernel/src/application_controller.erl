@@ -192,9 +192,9 @@ start(KernelApp) ->
     Init = self(),
     AC = spawn_link(fun() -> init(Init, KernelApp) end),
     receive
-	{ack, AC, ok} ->
+	{ack, ^AC, ok} ->
 	    {ok, AC};
-	{ack, AC, {error, Reason}} ->
+	{ack, ^AC, {error, Reason}} ->
 	    to_string(Reason); % init doesn't want error tuple, only a reason
 	{'EXIT', _Pid, Reason} ->
 	    to_string(Reason)
@@ -685,7 +685,7 @@ handle_call({start_application, AppName, RestartType}, From, S) ->
 		{error, _R} = Error ->
 		    {reply, Error, S}
 	    end;
-	{AppName, _FromX} ->
+	{^AppName, _FromX} ->
 	    SS = S#state{start_req = [{AppName, From} | Start_req]},
 	    {noreply, SS}
     end;
@@ -752,7 +752,7 @@ handle_call({permit_application, AppName, Bool}, From, S) ->
 				 start_req = [{AppName, From} | Start_req]},
 		    {noreply, SS};
 		%% started but not running
-		{true, {true, Appl}, _, _, {value, {AppName, RestartType}}, false} ->
+		{true, {true, Appl}, _, _, {value, {^AppName, RestartType}}, false} ->
 		    update_permissions(AppName, Bool),
 		    spawn_starter(From, Appl, S, normal),
 		    SS = S#state{starting = [{AppName, RestartType, normal, From} | Starting], 
@@ -953,7 +953,7 @@ handle_application_started(AppName, Res, S) ->
 			true ->
 			    #state{running = StopRunning, started = StopStarted} = NewS,
 			    case lists:keyfind(AppName, 1, StopRunning) of
-				{_AppName, Id} ->
+				{^_AppName, ^Id} ->
 				    {_AppName2, Type} =
 					lists:keyfind(AppName, 1, StopStarted),
 				    stop_appl(AppName, Id, Type),
@@ -1070,7 +1070,7 @@ handle_info({ac_change_application_req, AppName, Msg}, S) ->
     Started = S#state.started,
     Starting = S#state.starting,
     case {keyfind(AppName, 1, Running), keyfind(AppName, 1, Started)} of
-	{{AppName, Id}, {_AppName2, Type}} ->
+	{{^AppName, Id}, {_AppName2, Type}} ->
 	    case Msg of
 		{started, Node} ->
 		    stop_appl(AppName, Id, Type),
@@ -1141,7 +1141,7 @@ handle_info({ac_change_application_req, AppName, Msg}, S) ->
 			    NewS = do_start(AppName, undefined, normal, From, S),
 			    {noreply, NewS};
 			%% started but not running
-			{{true, _Appl}, _, {value, {AppName, _RestartType}}, false} ->
+			{{true, _Appl}, _, {value, {^AppName, _RestartType}}, false} ->
 			    NewS = do_start(AppName, undefined, normal, undefined, S),
 			    SS = NewS#state{started = keydelete(AppName, 1, Started)},
 			    {noreply, SS}
@@ -1204,14 +1204,14 @@ terminate(Reason, S) ->
 		    exit(Id, shutdown),
 		    receive
 			%% Proc died before link
-			{'EXIT', Id, _} -> ok
+			{'EXIT', ^Id, _} -> ok
 		    after 0 ->
 			    receive
-				{'DOWN', Ref, process, Id, _} -> ok
+				{'DOWN', ^Ref, process, ^Id, _} -> ok
 			    after ShutdownTimeout ->
 				    exit(Id, kill),
 				    receive
-					{'DOWN', Ref, process, Id, _} -> ok
+					{'DOWN', ^Ref, process, ^Id, _} -> ok
 				    end
 			    end
 		    end;
@@ -1733,12 +1733,12 @@ do_config_change([{App, _Id} | Apps], EnvBefore, Errors) ->
     AppEnvBefore = case lists:keyfind(App, 1, EnvBefore) of
 		       false ->
 			   [];
-		       {App, AppEnvBeforeT} ->
+		       {^App, AppEnvBeforeT} ->
 			   lists:sort(AppEnvBeforeT)
 		   end,
     Res = 
 	case AppEnvNow of
-	    AppEnvBefore ->
+	    ^AppEnvBefore ->
 		ok;
 	    _ ->
 		case do_config_diff(AppEnvNow, AppEnvBefore) of
@@ -1789,9 +1789,9 @@ do_config_diff(AppEnvNow, [], {Changed, New}) ->
     {Changed, AppEnvNow++New, []};
 do_config_diff([{Env, Value} | AppEnvNow], AppEnvBefore, {Changed, New}) ->
     case lists:keyfind(Env, 1, AppEnvBefore) of
-	{Env, Value} ->
+	{^Env, ^Value} ->
 	    do_config_diff(AppEnvNow, lists:keydelete(Env,1,AppEnvBefore), {Changed, New});
-	{Env, _OtherValue} ->
+	{^Env, _OtherValue} ->
 	    do_config_diff(AppEnvNow, lists:keydelete(Env,1,AppEnvBefore), 
 			   {[{Env, Value} | Changed], New});
 	false ->
@@ -2095,7 +2095,7 @@ reply_to_requester(AppName, Start_req, Res) ->
 
     lists:foldl(fun(Sp, AccIn) ->
 			case Sp of
-			    {AppName, From} ->
+			    {^AppName, From} ->
 				reply(From, R),
 				AccIn;
 			    _ ->

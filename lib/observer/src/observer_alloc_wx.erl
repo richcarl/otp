@@ -94,8 +94,8 @@ setup_time(Config) ->
 handle_event(#wx{id=?ID_REFRESH_INTERVAL, event=#wxCommand{type=command_menu_selected}},
 	     #state{active=Active, panel=Panel, appmon=Old, wins=Wins0, time=#ti{fetch=F0} = Ti0} = State) ->
     case interval_dialog(Panel, Ti0) of
-	Ti0 -> {noreply, State};
-	#ti{fetch=F0} = Ti -> %% Same fetch interval force refresh
+	^Ti0 -> {noreply, State};
+	#ti{fetch=^F0} = Ti -> %% Same fetch interval force refresh
 	    Wins = [W#win{max=undefined} || W <- Wins0],
 	    {noreply, precalc(State#state{time=Ti, wins=Wins})};
 	Ti when not Active ->
@@ -169,7 +169,7 @@ handle_info({refresh, _S}, #state{}=State) ->
 handle_info({active, Node}, State = #state{parent=Parent, panel=Panel, appmon=Old}) ->
     create_menus(Parent, []),
     try
-	Node = Old,
+	^Node = Old,
 	wxWindow:refresh(Panel),
 	{noreply, precalc(State#state{active=true})}
     catch _:_ ->

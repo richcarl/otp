@@ -114,7 +114,7 @@ parse_preprocessed_file(Epp, File, InCorrectFile) ->
     case epp:parse_erl_form(Epp) of
 	{ok,Form} ->
 	    case Form of
-		{attribute,_,file,{File,_}} ->
+		{attribute,_,file,{^File,_}} ->
 		    parse_preprocessed_file(Epp, File, true);
 		{attribute,_,file,{_OtherFile,_}} ->
 		    parse_preprocessed_file(Epp, File, false);

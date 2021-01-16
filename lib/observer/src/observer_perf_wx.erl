@@ -151,8 +151,8 @@ setup_graph_drawing(Panels) ->
 handle_event(#wx{id=?ID_REFRESH_INTERVAL, event=#wxCommand{type=command_menu_selected}},
 	     #state{panel=Panel, appmon=Old, wins=Wins0, time=#ti{fetch=F0} = Ti0} = State) ->
     case interval_dialog(Panel, Ti0) of
-	Ti0 -> {noreply, State};
-	#ti{fetch=F0} = Ti -> %% Same fetch interval force refresh
+	^Ti0 -> {noreply, State};
+	#ti{fetch=^F0} = Ti -> %% Same fetch interval force refresh
 	    Wins = [W#win{max=undefined} || W <- Wins0],
 	    {noreply, precalc(State#state{time=Ti, wins=Wins})};
 	Ti when Old =:= undefined ->
@@ -226,7 +226,7 @@ handle_info({refresh, _}, State) ->
 handle_info({active, Node}, #state{parent=Parent, panel=Panel, appmon=Old} = State) ->
     create_menus(Parent, []),
     try
-	Node = node(Old),
+	^Node = node(Old),
 	wxWindow:refresh(Panel),
 	erlang:send_after(1000 div ?DISP_FREQ, self(), {refresh, 0}),
 	{noreply, State#state{active=true}}
@@ -312,7 +312,7 @@ add_data_3(#win{name=Id, max={{OldMax, OldEntry},_,_,_},
 	       _ -> Drop0
 	   end,
     case {max_value(Max), Drop =:= OldEntry} of
-	{OldMax, false} ->
+	{^OldMax, false} ->
 	    #{Id:=V4} = Last,
 	    {{value, #{Id:=V3}},Q2} = queue:out_r(Q1),
 	    {{value, #{Id:=V2}},Q3} = queue:out_r(Q2),
@@ -455,7 +455,7 @@ precalc(#state{samples=Data0, paint=Paint, time=Ti, wins=Wins0}=State) ->
 precalc(Ti, {NoSamples,Q}, Paint, #win{name=Id, panel=Panel}=Win) ->
     Size = wxWindow:getClientSize(Panel),
     case Win of
-	#win{max=Max, no_samples=NoSamples, size=Size} when is_tuple(Max) ->
+	#win{max=Max, no_samples=^NoSamples, size=^Size} when is_tuple(Max) ->
 	    Win;
 	_SomeThingChanged ->
 	    Hs = [Vals || #{Id:=Vals} <- queue:to_list(Q)],

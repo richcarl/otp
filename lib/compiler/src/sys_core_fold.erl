@@ -135,7 +135,7 @@ find_fixpoint(_OptFun, Core, 0) ->
     Core;
 find_fixpoint(OptFun, Core0, Max) ->
     case OptFun(Core0) of
-	Core0 -> Core0;
+	^Core0 -> Core0;
 	Core -> find_fixpoint(OptFun, Core, Max-1)
     end.
 
@@ -578,7 +578,7 @@ bin_un_utf_1([], _) -> [].
 bin_un_utf_eval(Bitstr, Anno) ->
     Segments = [Bitstr],
     case eval_binary(#c_binary{anno=Anno,segments=Segments}) of
-	#c_literal{anno=Anno,val=Bytes} when is_binary(Bytes) ->
+	#c_literal{anno=^Anno,val=Bytes} when is_binary(Bytes) ->
 	    [#c_bitstr{anno=Anno,
 		       val=#c_literal{anno=Anno,val=B},
 		       size=#c_literal{anno=Anno,val=8},
@@ -2012,7 +2012,7 @@ opt_not_in_let_1(V, Call, Body) ->
     case Call of
 	#c_call{module=#c_literal{val=erlang},
 		name=#c_literal{val='not'},
-		args=[#c_var{name=V}]} ->
+		args=[#c_var{name=^V}]} ->
 	    opt_not_in_let_2(Body, Call);
 	_ ->
 	    no
@@ -2285,7 +2285,7 @@ opt_build_stacktrace(#c_let{vars=[#c_var{name=Cooked}],
     case Body of
         #c_call{module=#c_literal{val=erlang},
                 name=#c_literal{val=raise},
-                args=[Class,Exp,#c_var{name=Cooked}]} ->
+                args=[Class,Exp,#c_var{name=^Cooked}]} ->
             case core_lib:is_var_used(Cooked, #c_cons{hd=Class,tl=Exp}) of
                 true ->
                     %% Not safe. The stacktrace is used in the class or
@@ -2443,7 +2443,7 @@ delay_build_expr(Core, {Type,Arity}=TypeSig) ->
 	    delay_build_expr_1(Core, TypeSig);
 	true ->
 	    case {cerl:data_type(Core),cerl:data_arity(Core)} of
-		{Type,Arity} ->
+		{^Type,^Arity} ->
 		    core_lib:make_values(cerl:data_es(Core));
 		{_,_} ->
 		    throw(impossible)
@@ -2508,7 +2508,7 @@ opt_simple_let_2(Let0, Vs0, Arg0, Body, PrevBody, Sub) ->
 	{[],#c_values{es=[]},_} ->
 	    %% No variables left.
 	    Body;
-	{[#c_var{name=V}=Var]=Vars0,Arg1,Body} ->
+	{[#c_var{name=V}=Var]=Vars0,Arg1,^Body} ->
             case core_lib:is_var_used(V, Body) of
                 false ->
                     %% If the variable is not used in the body, we can
@@ -2730,7 +2730,7 @@ add_warning(Core, Term) ->
 	    File = get_file(Anno),
 	    Key = {?MODULE,warnings},
 	    case get(Key) of
-		[{File,[{Line,?MODULE,Term}]}|_] ->
+		[{^File,[{^Line,?MODULE,^Term}]}|_] ->
 		    ok;				%We already have
 						%an identical warning.
 		Ws ->

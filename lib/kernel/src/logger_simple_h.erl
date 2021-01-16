@@ -34,9 +34,9 @@ adding_handler(#{id:=simple}=Config) ->
             {Pid,Ref} = spawn_opt(fun() -> init(Me) end,
                                   [link,monitor,{message_queue_data,off_heap}]),
             receive
-                {'DOWN',Ref,process,Pid,Reason} ->
+                {'DOWN',^Ref,process,^Pid,Reason} ->
                     {error,Reason};
-                {Pid,started} ->
+                {^Pid,started} ->
                     erlang:demonitor(Ref),
                     {ok,Config}
             end;
@@ -51,7 +51,7 @@ removing_handler(#{id:=simple}) ->
         Pid ->
             Ref = erlang:monitor(process,Pid),
             Pid ! stop,
-            receive {'DOWN',Ref,process,Pid,_} ->
+            receive {'DOWN',^Ref,process,^Pid,_} ->
                     ok
             end
     end.

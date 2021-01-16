@@ -639,7 +639,7 @@ opt({inherits = Key, "-"}, Dict) ->
 
 opt({inherits = Key, Mod}, Dict) ->
     case lists:splitwith(fun(C) -> C /= $/ end, Mod) of
-        {Mod, ""} ->
+        {^Mod, ""} ->
             dict:append(Key, [0, {word, 0, Mod}], Dict);
         {From, [$/|To]} ->
             dict:store(Key,
@@ -994,7 +994,7 @@ vendor_id_mismatch(_, _, _, _, _, _) ->
 
 grouped_flags(Name, Code, Dict, Line) ->
     case find({avp_types, Name}, Dict) of
-        [L, {_, _, Code}, {_, _, "Grouped"}, Flags] ->
+        [L, {_, _, ^Code}, {_, _, "Grouped"}, Flags] ->
             {L, Flags};
         [_, {_, L, C}, {_, _, "Grouped"}, _Flags] ->
             ?RETURN(grouped_avp_code_mismatch, [Name, Line, Code, C, L]);
@@ -1253,7 +1253,7 @@ find_avps(Names, Avps) ->
 
 acc_avp({Name, _Code, _Type, _Flags} = A, {Found, Not} = Acc) ->
     case lists:keyfind(Name, 3, Not) of
-        {_, Line, Name} ->
+        {_, Line, ^Name} ->
             {[{Line, A} | Found], lists:keydelete(Name, 3, Not)};
         false ->
             Acc
@@ -1340,7 +1340,7 @@ avp_is_defined(Name, Dict, Line) ->
     case find({avp_types, Name}, Dict) of
         [_Line, _Code, _Type, _Flags] ->   %% local
             true;
-        [0, _, _, _, {Name, _Code, _Type, _Flags}] ->  %% inherited
+        [0, _, _, _, {^Name, _Code, _Type, _Flags}] ->  %% inherited
             true;
         [] ->
             ?RETURN(avp_not_defined, [Name, Line])

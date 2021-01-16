@@ -122,7 +122,7 @@ control_if_range(_Path, Info, FileInfo, EtagOrDate) ->
 	bad_date ->
 	    FileEtag=httpd_util:create_etag(FileInfo),
 	    case FileEtag of
-		EtagOrDate ->
+		^EtagOrDate ->
 		    continue;
 		_ ->
 		    {if_range,send_file}

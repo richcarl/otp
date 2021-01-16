@@ -347,7 +347,7 @@ select(MenuItem, Bool) ->
 %%--------------------------------------------------------------------
 add_break(WinInfo, Menu, {{Mod,Line},[Status|_Options]}=Break) ->
     case WinInfo#winInfo.editor of
-	{Mod, Editor} ->
+	{^Mod, Editor} ->
 	    dbg_wx_code:add_break_to_code(Editor, Line, Status);
 	_ -> ok
     end,
@@ -371,7 +371,7 @@ add_break_to_menu(WinInfo, Menu, {Point, [Status|_Options]=Options}) ->
 %%--------------------------------------------------------------------
 update_break(WinInfo, {{Mod,Line},[Status|_Options]}=Break) ->
     case WinInfo#winInfo.editor of
-	{Mod, Editor} ->
+	{^Mod, Editor} ->
 	    dbg_wx_code:add_break_to_code(Editor, Line, Status);
 	_ -> ok
     end,
@@ -393,7 +393,7 @@ update_break_in_menu(WinInfo, {Point, [Status|_Options]=Options}) ->
 %%--------------------------------------------------------------------
 delete_break(WinInfo, {Mod,Line}=Point) ->
     case WinInfo#winInfo.editor of
-	{Mod, Editor} -> dbg_wx_code:del_break_from_code(Editor, Line);
+	{^Mod, Editor} -> dbg_wx_code:del_break_from_code(Editor, Line);
 	_ -> ignore
     end,
     delete_break_from_menu(WinInfo, Point).
@@ -920,7 +920,7 @@ buttons() ->
 
 is_button(Name) ->
     case lists:keyfind(Name, 1, buttons()) of
-	{Name, Button} -> {true, Button};
+	{^Name, Button} -> {true, Button};
 	false -> false
     end.
 

@@ -94,7 +94,7 @@ verify_ocsp_nonce(ResponseData, Nonce) ->
     } = ResponseData,
 
     case get_nonce_value(ResponseExtns) of
-        Nonce ->
+        ^Nonce ->
             {ok, Responses};
         _Other ->
             {error, nonce_mismatch}

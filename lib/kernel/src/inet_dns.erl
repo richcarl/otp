@@ -381,7 +381,7 @@ encode_type(Type) ->
 	?S_ANY -> ?T_ANY;
 	?S_URI -> ?T_URI;
 	?S_CAA -> ?T_CAA;
-	Type when is_integer(Type) -> Type    %% raw unknown type
+	^Type when is_integer(Type) -> Type    %% raw unknown type
     end.
 
 %%
@@ -403,7 +403,7 @@ encode_class(Class) ->
 	chaos -> ?C_CHAOS;
 	hs -> ?C_HS;
 	any -> ?C_ANY;
-	Class when is_integer(Class) -> Class    %% raw unknown class
+	^Class when is_integer(Class) -> Class    %% raw unknown class
     end.
 
 decode_opcode(Opcode) ->

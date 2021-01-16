@@ -53,7 +53,7 @@ check_simpleType(Name,Value,S) when is_list(Name) ->
 check_simpleType(string,Value,_S) ->
     case [X||X <- Value,
 	     xmerl_lib:is_char(X)] of
-	Value ->
+	^Value ->
 	    {ok,Value};
 	_ ->
 	    {error,{value_not_string,Value}}
@@ -61,7 +61,7 @@ check_simpleType(string,Value,_S) ->
 check_simpleType(normalizedString,Value,_S) ->
     case [X||X <- Value,xmerl_lib:is_char(X),
 	     ns_whitespace(X)==false] of
-	Value ->
+	^Value ->
 	    {ok,Value};
 	_ ->
 	    {error,{value_not_normalizedString,Value}}
@@ -120,7 +120,7 @@ check_simpleType(hexBinary,Value,_S) ->
     case [X|| X<-Value,
 	      IsEven(length(Value)),
 	      IsHex(X)] of
-	Value ->
+	^Value ->
 	    {ok,Value};
 	_ -> {error,{value_not_hexBinary,Value}}
     end;
@@ -265,7 +265,7 @@ check_duration_date("",_) ->
     {ok,""};
 check_duration_date(Date,[H|T]) ->
     case string:tokens(Date,H) of
-	[Date] ->
+	[^Date] ->
 	    check_duration_date(Date,T);
 	[DateItem] ->
 	    {ok,_} = check_positive_integer(DateItem);
@@ -286,7 +286,7 @@ check_duration_time("T"++Time,TTokens) ->
     check_duration_time(Time,tl(TTokens));
 check_duration_time(Time,[H|T]) ->
     case string:tokens(Time,H) of
-	[Time] ->
+	[^Time] ->
 	    check_duration_time(Time,T);
 	[TimeItem] ->
 	    {ok,_} = check_positive_integer(TimeItem);
@@ -375,7 +375,7 @@ check_dateTime(DateTime) ->
     check_time(Time).
 
 check_year(Y) when length(Y)>4 ->
-    Y = string:strip(Y,left,$0),
+    ^Y = string:strip(Y,left,$0),
     {ok,list_to_integer(Y)};
 check_year(Y) ->
     case list_to_integer(Y) of

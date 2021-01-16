@@ -694,7 +694,7 @@ reset_1(_I, E, _D) when is_integer(E) ->
 reset_1(I, E, D) ->
     Indx = I+1,
     case element(Indx, E) of
-	D -> throw(default);
+	^D -> throw(default);
 	_ -> setelement(I+1, E, D)
     end.
 
@@ -866,7 +866,7 @@ sparse_push_tuple(0, _D, _T, L) ->
     L;
 sparse_push_tuple(N, D, T, L) ->
     case element(N, T) of
-	D -> sparse_push_tuple(N - 1, D, T, L);
+	^D -> sparse_push_tuple(N - 1, D, T, L);
 	E -> sparse_push_tuple(N - 1, D, T, [E | L])
     end.
 
@@ -1143,7 +1143,7 @@ sparse_push_tuple_pairs(0, _I, _D, _T, L) ->
     L;
 sparse_push_tuple_pairs(N, I, D, T, L) ->
     case element(N, T) of
-	D -> sparse_push_tuple_pairs(N-1, I-1, D, T, L);
+	^D -> sparse_push_tuple_pairs(N-1, I-1, D, T, L);
 	E -> sparse_push_tuple_pairs(N-1, I-1, D, T, [{I, E} | L])
     end.
 
@@ -1242,7 +1242,7 @@ from_orddict_1(Ix, Ix, Xs, N, _D, As) ->
     {Xs, E, N};
 from_orddict_1(Ix, Max, Xs, N0, D, As) ->
     case Xs of
-	[{Ix, Val} | Xs1] ->
+	[{^Ix, Val} | Xs1] ->
 	    N = Ix+1,
 	    from_orddict_1(N, Max, Xs1, N, D, [Val | As]);
 	[{Ix1, _} | _] when is_integer(Ix1), Ix1 > Ix ->
@@ -1525,7 +1525,7 @@ sparse_map_2_1(_I, _E, L) ->
 
 sparse_map_3(I, T, Ix, F, D, L) when I =< ?LEAFSIZE ->
     case element(I, T) of
-	D -> sparse_map_3(I+1, T, Ix+1, F, D, [D | L]);
+	^D -> sparse_map_3(I+1, T, Ix+1, F, D, [D | L]);
 	E -> sparse_map_3(I+1, T, Ix+1, F, D, [F(Ix, E) | L])
     end;
 sparse_map_3(_I, _E, _Ix, _F, _D, L) ->
@@ -1680,7 +1680,7 @@ sparse_foldl_2(I, E, A, Ix, F, D, N, R, S) ->
 
 sparse_foldl_3(I, T, A, Ix, F, D, N) when I =< N ->
     case element(I, T) of
-	D -> sparse_foldl_3(I+1, T, A, Ix+1, F, D, N);
+	^D -> sparse_foldl_3(I+1, T, A, Ix+1, F, D, N);
 	E -> sparse_foldl_3(I+1, T, F(Ix, E, A), Ix+1, F, D, N)
     end;
 sparse_foldl_3(_I, _T, A, _Ix, _F, _D, _N) ->
@@ -1843,7 +1843,7 @@ sparse_foldr_3(0, _T, _Ix, A, _F, _D) ->
     A;
 sparse_foldr_3(I, T, Ix, A, F, D) ->
     case element(I, T) of
-	D -> sparse_foldr_3(I-1, T, Ix, A, F, D);
+	^D -> sparse_foldr_3(I-1, T, Ix, A, F, D);
 	E -> sparse_foldr_3(I-1, T, Ix, F(Ix+I, E, A), F, D)
     end.
 

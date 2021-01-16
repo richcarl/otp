@@ -217,7 +217,7 @@ whereis_check_node(Node, Name) ->
 	    monitor_node(Node, true),
 	    gen_server:cast({global_group, Node},{find_name, self(), Name}),
 	    receive
-		{nodedown, Node} ->
+		{nodedown, ^Node} ->
 		    node_down;
 		{find_name_res, Result} ->
 		    monitor_node(Node, false),
@@ -251,7 +251,7 @@ names_check_node(Node) ->
 	    monitor_node(Node, true),
 	    gen_server:cast({global_group, Node},{registered_names, self()}),
 	    receive
-		{nodedown, Node} ->
+		{nodedown, ^Node} ->
 		    node_down;
 		{registered_names_res, Result} ->
 		    monitor_node(Node, false),

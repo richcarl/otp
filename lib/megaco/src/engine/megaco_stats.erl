@@ -110,7 +110,7 @@ do_get_stats(Ets, [Handle|Handles], Acc) ->
 
 get_stats(Ets, GlobalCounter) when is_atom(GlobalCounter) ->
     case (catch ets:lookup(Ets, GlobalCounter)) of
-	[{GlobalCounter, Val}] ->
+	[{^GlobalCounter, Val}] ->
 	    {ok, Val};
 	[] ->
 	    {error, {no_such_counter, GlobalCounter}}
@@ -128,7 +128,7 @@ get_stats(Ets, Handle) ->
 get_stats(Ets, Handle, Counter) when is_atom(Counter) ->
     Key = {Handle, Counter}, 
     case (catch ets:lookup(Ets, Key)) of
-	[{Key, Val}] ->
+	[{^Key, Val}] ->
 	    {ok, Val};
 	_ ->
 	    {error, {undefined_counter, Counter}}
@@ -156,7 +156,7 @@ do_reset_stats(Ets, [Handle|Handles], Acc) ->
 reset_stats(Ets, GlobalCounter) when is_atom(GlobalCounter) ->
     %% First get the current value of the counter
     case (catch ets:lookup(Ets, GlobalCounter)) of
-	[{GlobalCounter, Val}] ->
+	[{^GlobalCounter, Val}] ->
 	    ets:insert(Ets, {GlobalCounter, 0}),
 	    {ok, Val};
 	[] -> %% Oooups

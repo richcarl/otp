@@ -224,7 +224,7 @@ map_call(Fun, [Name | Names], Res) ->
     case Fun(Name) of
 	 ok ->
 	    map_call(Fun, Names, Res);
-	{error, {no_exists, Name}} ->
+	{error, {no_exists, ^Name}} ->
 	    map_call(Fun, Names, Res);
 	{error, Reason} ->
 	    %% BUGBUG: We may end up with some checkpoint retainers
@@ -574,11 +574,11 @@ call(Name, Msg) ->
 	    Pid ! {self(), Msg},
 	    Self = self(),
 	    receive
-		{'EXIT', Pid, Reason} ->
+		{'EXIT', ^Pid, Reason} ->
 		    {error, {"Got exit", [Name, Reason]}};
-		{'DOWN', Monitor, _, Pid, Reason} ->
+		{'DOWN', ^Monitor, _, ^Pid, Reason} ->
 		    {error, {"Got exit", [Name, Reason]}};
-		{Name, Self, Reply} ->
+		{^Name, ^Self, Reply} ->
 		    erlang:demonitor(Monitor),
 		    Reply
 	    end;
@@ -1057,7 +1057,7 @@ do_add_copy(Cp, Tab, Node) when Node /= node()->
 		    send_retainer(Cp, R, Node);
 		false ->
 		    case tm_remote_prepare(Node, Cp) of
-			{ok, Name, _IgnoreNew, Node} ->
+			{ok, ^Name, _IgnoreNew, ^Node} ->
 			    case lists:member(schema, Cp#checkpoint_args.max) of
 				true ->
 				    %% We need to send schema retainer somewhere

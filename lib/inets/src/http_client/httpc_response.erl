@@ -596,7 +596,7 @@ format_response({StatusLine, Headers, Body}) ->
 	case Length of
 	    -1 -> % When no length indicator is provided
 		{Body, <<>>};
-	    Length when (Length =< size(Body)) ->
+	    ^Length when (Length =< size(Body)) ->
 		<<BodyThisReq:Length/binary, Next/binary>> = Body,
 		{BodyThisReq, Next};
 	    _ -> %% Connection prematurely ended. 

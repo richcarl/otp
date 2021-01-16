@@ -189,9 +189,9 @@ do_within_time(Fun,Timeout) ->
 			end),
     ConnPid = get(conn_pid),
     receive
-	{TmpPid,Result} ->
+	{^TmpPid,Result} ->
 	    Result;
-	{'EXIT',ConnPid,_Reason}=M ->
+	{'EXIT',^ConnPid,_Reason}=M ->
 	    unlink(TmpPid),
 	    exit(TmpPid,kill),
 	    self() ! M,
@@ -200,12 +200,12 @@ do_within_time(Fun,Timeout) ->
 	Timeout ->
 	    exit(TmpPid,kill),
 	    receive
-		{TmpPid,Result} ->
+		{^TmpPid,Result} ->
 		    %% TmpPid just managed to send the result at the same time
 		    %% as the timeout expired.
-		    receive {'EXIT',TmpPid,_reason} -> ok end,
+		    receive {'EXIT',^TmpPid,_reason} -> ok end,
 		    Result;
-		{'EXIT',TmpPid,killed} ->
+		{'EXIT',^TmpPid,killed} ->
 		    %% TmpPid did not send the result before the timeout expired.
 		    {error,timeout}
 	    end
@@ -233,16 +233,16 @@ do_start(Opts) ->
     Pid = spawn(fun() -> init_gen(Self, Opts) end),
     MRef = erlang:monitor(process,Pid),
     receive
-	{connected,Pid} ->
+	{connected,^Pid} ->
 	    erlang:demonitor(MRef, [flush]),
 	    ct_util:register_connection(Opts#gen_opts.name,
 					Opts#gen_opts.address,
 					Opts#gen_opts.callback, Pid),
 	    {ok,Pid};
-	{Error,Pid} ->
-	    receive {'DOWN',MRef,process,_,_} -> ok end,
+	{Error,^Pid} ->
+	    receive {'DOWN',^MRef,process,_,_} -> ok end,
 	    Error;
-	{'DOWN',MRef,process,_,Reason} ->
+	{'DOWN',^MRef,process,_,Reason} ->
 	    log("ct_gen_conn:start",
 		"Connection process died: ~tp\n",
 		[Reason]),
@@ -273,7 +273,7 @@ call(Pid, Msg, Timeout) ->
     Ref = make_ref(),
     Pid ! {Msg,{self(),Ref}},
     receive
-	{Ref, Result} ->
+	{^Ref, Result} ->
 	    erlang:demonitor(MRef, [flush]),
 	    case Result of
 		{retry,_Data} ->
@@ -281,7 +281,7 @@ call(Pid, Msg, Timeout) ->
 		Other ->
 		    Other
 	    end;
-	{'DOWN',MRef,process,_,Reason}  ->
+	{'DOWN',^MRef,process,_,Reason}  ->
 	    {error,{process_down,Pid,Reason}}
     after Timeout ->
 	    erlang:demonitor(MRef, [flush]),
@@ -345,7 +345,7 @@ loop(Opts) ->
 	    end;
 	{'EXIT',Pid,Reason} ->
 	    case Opts#gen_opts.ct_util_server of
-		Pid ->
+		^Pid ->
 		    exit(Reason);
 		_ ->
 		    loop(Opts)

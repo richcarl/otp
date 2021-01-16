@@ -162,7 +162,7 @@ decode_constructed_indefinite(Bin,Acc) ->
 %% by help of the pattern attribute (first argument).
 decode_primitive_incomplete([[default,TagNo]],Bin) -> %default
     case decode_tag_and_length(Bin) of
-	{Form,TagNo,V,Rest} ->
+	{Form,^TagNo,V,Rest} ->
 	    decode_incomplete2(Form,TagNo,V,[],Rest);
 	_ ->
 	    asn1_NOVALUE
@@ -170,7 +170,7 @@ decode_primitive_incomplete([[default,TagNo]],Bin) -> %default
 decode_primitive_incomplete([[default,TagNo,Directives]],Bin) ->
     %% default, constructed type, Directives points into this type
     case decode_tag_and_length(Bin) of
-	{Form,TagNo,V,Rest} ->
+	{Form,^TagNo,V,Rest} ->
 	    decode_incomplete2(Form,TagNo,V,Directives,Rest);
 	_ ->
 	    asn1_NOVALUE
@@ -178,7 +178,7 @@ decode_primitive_incomplete([[default,TagNo,Directives]],Bin) ->
 decode_primitive_incomplete([[opt,TagNo]],Bin) ->
     %% optional
     case decode_tag_and_length(Bin) of
-	{Form,TagNo,V,Rest} ->
+	{Form,^TagNo,V,Rest} ->
 	    decode_incomplete2(Form,TagNo,V,[],Rest);
 	_ ->
 	    asn1_NOVALUE
@@ -186,7 +186,7 @@ decode_primitive_incomplete([[opt,TagNo]],Bin) ->
 decode_primitive_incomplete([[opt,TagNo,Directives]],Bin) ->
     %% optional
     case decode_tag_and_length(Bin) of
-	{Form,TagNo,V,Rest} ->
+	{Form,^TagNo,V,Rest} ->
 	    decode_incomplete2(Form,TagNo,V,Directives,Rest);
 	_ ->
 	    asn1_NOVALUE
@@ -194,7 +194,7 @@ decode_primitive_incomplete([[opt,TagNo,Directives]],Bin) ->
 %% An optional that shall be undecoded
 decode_primitive_incomplete([[opt_undec,Tag]],Bin) ->
     case decode_tag_and_length(Bin) of
-	{_,Tag,_,_} ->
+	{_,^Tag,_,_} ->
 	    decode_incomplete_bin(Bin);
 	_ ->
 	    asn1_NOVALUE
@@ -202,35 +202,35 @@ decode_primitive_incomplete([[opt_undec,Tag]],Bin) ->
 %% A choice alternative that shall be undecoded
 decode_primitive_incomplete([[alt_undec,TagNo]|RestAlts],Bin) ->
     case decode_tag_and_length(Bin) of
-	{_,TagNo,_,_} ->
+	{_,^TagNo,_,_} ->
 	    decode_incomplete_bin(Bin);
 	_ ->
 	    decode_primitive_incomplete(RestAlts,Bin)
     end;
 decode_primitive_incomplete([[alt,TagNo]|RestAlts],Bin) ->
     case decode_tag_and_length(Bin) of
-	{_Form,TagNo,V,Rest} ->
+	{_Form,^TagNo,V,Rest} ->
 	    {{TagNo,V},Rest};
 	_ ->
 	    decode_primitive_incomplete(RestAlts,Bin)
     end;
 decode_primitive_incomplete([[alt,TagNo,Directives]|RestAlts],Bin) ->
     case decode_tag_and_length(Bin) of
-	{Form,TagNo,V,Rest} ->
+	{Form,^TagNo,V,Rest} ->
 	    decode_incomplete2(Form,TagNo,V,Directives,Rest);
 	_ ->
 	    decode_primitive_incomplete(RestAlts,Bin)
     end;
 decode_primitive_incomplete([[alt_parts,TagNo]],Bin) ->
     case decode_tag_and_length(Bin) of
-	{_Form,TagNo,V,Rest} ->
+	{_Form,^TagNo,V,Rest} ->
 	    {{TagNo,V},Rest};
 	_ ->
 	    asn1_NOVALUE
     end;
 decode_primitive_incomplete([[alt_parts,TagNo]|RestAlts],Bin) ->
     case decode_tag_and_length(Bin) of
-	{_Form,TagNo,V,Rest} ->
+	{_Form,^TagNo,V,Rest} ->
 	    {{TagNo,decode_parts_incomplete(V)},Rest};
 	_ ->
 	    decode_primitive_incomplete(RestAlts,Bin)
@@ -240,7 +240,7 @@ decode_primitive_incomplete([[undec,_TagNo]|_RestTag],Bin) ->
     decode_incomplete_bin(Bin);
 decode_primitive_incomplete([[parts,TagNo]|_RestTag],Bin) ->
     case decode_tag_and_length(Bin) of
-	{_Form,TagNo,V,Rest} ->
+	{_Form,^TagNo,V,Rest} ->
 	    {{TagNo,decode_parts_incomplete(V)},Rest};
 	Err ->
 	    {error,{asn1,"tag failure",TagNo,Err}}
@@ -294,10 +294,10 @@ decode_constructed_incomplete(Directives=[[Alt,_]|_],Bin)
     case incomplete_choice_alt(TagNo, Directives) of
 	{alt_undec,_} ->
 	    LenA = byte_size(Bin) - byte_size(Rest),
-	    <<A:LenA/binary,Rest/binary>> = Bin,
+	    <<A:LenA/binary,^Rest/binary>> = Bin,
 	    A;
 	{alt,InnerDirectives} ->
-	    {Tlv,Rest} = decode_primitive_incomplete(InnerDirectives,V),
+	    {Tlv,^Rest} = decode_primitive_incomplete(InnerDirectives,V),
 	    {TagNo,Tlv};
 	{alt_parts,_} ->
 	    [{TagNo,decode_parts_incomplete(V)}];
@@ -381,7 +381,7 @@ decode_selective(P,_) ->
     {error,{asn1,{partial_decode,"bad pattern",P}}}.
 
 return_value(Tag,Binary) ->
-    {ok,{Tag,RestBinary}}=get_tag(Binary),
+    {ok,{^Tag,RestBinary}}=get_tag(Binary),
     {ok,{LenVal,_RestBinary2}} = get_length_and_value(RestBinary),
     {ok,<<Tag/binary,LenVal/binary>>}.
 

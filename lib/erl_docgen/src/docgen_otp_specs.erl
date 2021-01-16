@@ -364,8 +364,8 @@ t_utype_elem(E=#xmlElement{content = Es}) ->
 	Name ->
 	    T = t_type(Es),
 	    case T of
-		[Name] -> T;    % avoid generating "Foo::Foo"
-		T -> [Name] ++ ["::"] ++ T
+		[^Name] -> T;    % avoid generating "Foo::Foo"
+		^T -> [Name] ++ ["::"] ++ T
 	    end
     end.
 
@@ -536,8 +536,8 @@ ot_utype_elem(E=#xmlElement{content = Es}) ->
             Name = {var,0,list_to_atom(N)},
 	    T = ot_type(Es),
 	    case T of
-		Name -> T;
-                T -> {ann_type,0,[Name, T]}
+		^Name -> T;
+                ^T -> {ann_type,0,[Name, T]}
 	    end
     end.
 

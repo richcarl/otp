@@ -1538,7 +1538,7 @@ get_fieldtype([Field|Rest],FieldName) ->
 		    {element(1,Field),FieldName}
 	    end;
 	_  ->
-	    get_fieldtype(Rest,FieldName)
+	    get_fieldtype(Rest,^FieldName)
     end.
 
 get_fieldcategory([],_FieldName) ->

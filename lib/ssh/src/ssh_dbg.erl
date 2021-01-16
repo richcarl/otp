@@ -407,7 +407,7 @@ try_all_types_in_all_modules(TypesOn, Arg, WriteFun, Acc0) ->
                     end, Acc1, SshModules)
           end, Acc0, TypesOn),
     case Acc of
-        Acc0 ->
+        ^Acc0 ->
             %% INFO :: any()
             WriteFun("~n~s ~p DEBUG~n~p~n", [lists:flatten(TS),PID,INFO], Acc0);
         written ->
@@ -470,7 +470,7 @@ cbuf_in(Value) ->
         {CbufMaxLen,Queue} ->
             UpdatedQueue =
                 try queue:head(Queue) of
-                    {Value, TS0, Cnt0} ->
+                    {^Value, TS0, Cnt0} ->
                         %% Same Value as last saved in the queue
                         queue:in_r({Value, TS0, Cnt0+1},
                                  queue:drop(Queue)

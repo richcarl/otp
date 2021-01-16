@@ -398,7 +398,7 @@ decode_error_code(Int) ->
         ?TFTP_ERROR_EEXIST  -> eexist;
         ?TFTP_ERROR_BADUSER -> baduser;
         ?TFTP_ERROR_BADOPT  -> badopt;
-        Int when is_integer(Int), Int >= 0, Int =< 65535 -> Int;
+        ^Int when is_integer(Int), Int >= 0, Int =< 65535 -> Int;
         _ -> exit(#tftp_msg_error{code = undef, text = "Error code outside range."})
     end.
 

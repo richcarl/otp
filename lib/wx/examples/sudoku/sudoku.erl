@@ -40,7 +40,7 @@ init(Halt) ->
     ?TC(sudoku_gui:new(self())),
     receive {gfx, GFX} -> ok end,
     case sudoku_game:init(GFX) of
-	Halt -> erlang:halt();
+	^Halt -> erlang:halt();
 	Stop -> exit(Stop)
     end.
 

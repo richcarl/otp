@@ -335,7 +335,7 @@ daemon(Host0, Port0, UserOptions0) when 0 =< Port0, Port0 =< 65535,
                                fun(Opts, Result) ->
                                        {_, Callback, _} = ?GET_OPT(transport, Opts),
                                        receive
-                                           {request_control, ListenSocket, ReqPid} ->
+                                           {request_control, ^ListenSocket, ReqPid} ->
                                                ok = Callback:controlling_process(ListenSocket, ReqPid),
                                                ReqPid ! {its_yours,ListenSocket},
                                                Result
@@ -426,7 +426,7 @@ daemon_info(DaemonRef) ->
 
 daemon_info(DaemonRef, Key) when is_atom(Key) ->
     case daemon_info(DaemonRef, [Key]) of
-        [{Key,Val}] -> {Key,Val};
+        [{^Key,Val}] -> {Key,Val};
         Other -> Other
     end;
 daemon_info(DaemonRef, Keys) ->
@@ -726,7 +726,7 @@ handle_daemon_args(any, Opts) ->
 handle_daemon_args(IPaddr, Opts) when is_tuple(IPaddr) ; IPaddr == loopback ->
     case proplists:get_value(ip, Opts) of
         undefined -> {IPaddr, [{ip,IPaddr}|Opts]};
-        IPaddr -> {IPaddr, Opts};
+        ^IPaddr -> {IPaddr, Opts};
         IP -> {IPaddr, [{ip,IPaddr}|Opts--[{ip,IP}]]} %% Backward compatibility
     end.
 

@@ -618,7 +618,7 @@ code_change(_, State, _) ->
 	    case set_flags(SupFlags, State) of
 		{ok, State1}  ->
                     update_childspec(State1, StartSpec);
-		{invalid_type, SupFlags} ->
+		{invalid_type, ^SupFlags} ->
 		    {error, {bad_flags, SupFlags}}; % backwards compatibility
 		Error ->
 		    {error, Error}
@@ -862,9 +862,9 @@ shutdown(Pid, brutal_kill) ->
 	ok ->
 	    exit(Pid, kill),
 	    receive
-		{'DOWN', _MRef, process, Pid, killed} ->
+		{'DOWN', _MRef, process, ^Pid, killed} ->
 		    ok;
-		{'DOWN', _MRef, process, Pid, OtherReason} ->
+		{'DOWN', _MRef, process, ^Pid, OtherReason} ->
 		    {error, OtherReason}
 	    end;
 	{error, Reason} ->      
@@ -875,14 +875,14 @@ shutdown(Pid, Time) ->
 	ok ->
 	    exit(Pid, shutdown), %% Try to shutdown gracefully
 	    receive 
-		{'DOWN', _MRef, process, Pid, shutdown} ->
+		{'DOWN', _MRef, process, ^Pid, shutdown} ->
 		    ok;
-		{'DOWN', _MRef, process, Pid, OtherReason} ->
+		{'DOWN', _MRef, process, ^Pid, OtherReason} ->
 		    {error, OtherReason}
 	    after Time ->
 		    exit(Pid, kill),  %% Force termination.
 		    receive
-			{'DOWN', _MRef, process, Pid, OtherReason} ->
+			{'DOWN', _MRef, process, ^Pid, OtherReason} ->
 			    {error, OtherReason}
 		    end
 	    end;
@@ -903,9 +903,9 @@ monitor_child(Pid) ->
     receive
 	%% If the child dies before the unlik we must empty
 	%% the mail-box of the 'EXIT'-message and the 'DOWN'-message.
-	{'EXIT', Pid, Reason} -> 
+	{'EXIT', ^Pid, Reason} -> 
 	    receive 
-		{'DOWN', _, process, Pid, _} ->
+		{'DOWN', _, process, ^Pid, _} ->
 		    {error, Reason}
 	    end
     after 0 -> 
@@ -970,7 +970,7 @@ wait_dynamic_children(_Child, _Pids, 0, TRef, EStack) ->
 	%% mail-box of the 'timeout'-message.
     _ = erlang:cancel_timer(TRef),
     receive
-        {timeout, TRef, kill} ->
+        {timeout, ^TRef, kill} ->
             EStack
     after 0 ->
             EStack
@@ -1004,7 +1004,7 @@ wait_dynamic_children(Child, Pids, Sz, TRef, EStack) ->
             wait_dynamic_children(Child, maps:remove(Pid, Pids), Sz-1,
                                   TRef, maps_prepend(Reason, Pid, EStack));
 
-        {timeout, TRef, kill} ->
+        {timeout, ^TRef, kill} ->
             maps:fold(fun(P, _, _) -> exit(P, kill) end, ok, Pids),
             wait_dynamic_children(Child, Pids, Sz, undefined, EStack)
     end.

@@ -74,7 +74,7 @@ start(Mode, SFile) ->
 	    CallingPid = self(),
 	    Pid = spawn(fun () -> init(CallingPid, Mode, SFile) end),
 	    receive
-		{initialization_complete, Pid} ->
+		{initialization_complete, ^Pid} ->
 		    {ok, Pid};
 		Error ->
 		    Error
@@ -96,7 +96,7 @@ stop() ->
 	    link(Pid),
 	    Pid ! stop,
 	    receive
-		{'EXIT', Pid, stop} ->
+		{'EXIT', ^Pid, stop} ->
 		    process_flag(trap_exit, Flag),
 		    ok
 	    end
@@ -417,7 +417,7 @@ gui_cmd({'Trace Window', TraceWin}, State) ->
 	false -> ignore;
 	{Flags, {dbg_wx_trace, start, StartFlags}} ->
 	    case trace_function(State2) of
-		{_, _, StartFlags} -> ignore;
+		{_, _, ^StartFlags} -> ignore;
 		NewFunction -> % {_, _, NewStartFlags}
 		    int:auto_attach(Flags, NewFunction)
 	    end;
@@ -505,7 +505,7 @@ int_cmd({new_status, Pid, Status, Info}, State) ->
     %% Update window
     dbg_wx_mon_win:update_process(State2#state.win, Pid, Status, Info),
     case State2#state.focus of
-	#pinfo{pid=Pid} ->
+	#pinfo{pid=^Pid} ->
 	    gui_enable_functions(PInfo2),
 	    State2#state{focus=PInfo2};
 	_ ->

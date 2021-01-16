@@ -49,7 +49,7 @@ lookup_listener(IP, Port) ->
     try ets:lookup(dtls_listener_sup, {IP, Port}) of
         [] ->
             undefined;
-        [{{IP, Port}, {Owner, Handler}}] ->
+        [{{^IP, ^Port}, {Owner, Handler}}] ->
             case erlang:is_process_alive(Handler) of 
                 true ->
                     case (Owner =/= undefined) andalso

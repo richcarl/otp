@@ -158,7 +158,7 @@ construct_trap(Trap, Varbinds) ->
 %% Variable value (without oid processing)
 alias_to_oid({Alias, Val}) when is_atom(Alias) ->
     case alias2oid(Alias) of
-	Alias ->
+	^Alias ->
             {{keep, Alias}, {value, Val}};
 	Oid ->
             {{keep, Oid}, {value, Val}}
@@ -169,7 +169,7 @@ alias_to_oid({Oid, Val}) when is_list(Oid) ->
 %% Variable value (with oid processing)
 alias_to_oid({{Process, Alias}, Val}) when is_atom(Alias) ->
     case alias2oid(Alias) of
-	Alias ->
+	^Alias ->
             {{Process, Alias}, {value, Val}};
 	Oid ->
             {{Process, Oid}, {value, Val}}
@@ -180,7 +180,7 @@ alias_to_oid({{Process, Oid}, Val}) when is_list(Oid) ->
 %% Table Column value
 alias_to_oid({Alias, RowIndex, Val}) when is_atom(Alias) ->
     case alias2oid(Alias, RowIndex) of
-        Alias ->
+        ^Alias ->
             {Alias, RowIndex, {value, Val}};
 	Oid ->
             {{keep, Oid}, {value, Val}}

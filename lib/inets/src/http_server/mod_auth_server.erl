@@ -218,7 +218,7 @@ handle_call({update_password, Dir, Old, New},_From,State) ->
 	case getPassword(State, Dir) of
 	    OldPwd when is_binary(OldPwd) ->
 		case erlang:md5(Old) of
-		    OldPwd ->
+		    ^OldPwd ->
 			%% The old password is right =>
 			%% update the password to the new
 			do_update_password(Dir,New,State),
@@ -256,7 +256,7 @@ api_call(Addr, Port, Profile, Dir, Func, Args,Password,State) ->
 	ok->
 	    ConfigName = httpd_util:make_name("httpd_conf", Addr, Port, Profile),
 	    case ets:match_object(ConfigName, {directory, {Dir, '$1'}}) of
-		[{directory, {Dir, DirData}}] ->
+		[{directory, {^Dir, DirData}}] ->
 		    AuthMod = auth_mod_name(DirData),
 		    (catch apply(AuthMod, Func, [DirData|Args]));
 		_ ->
@@ -273,7 +273,7 @@ controlPassword(Password,State,Dir) ->
     case getPassword(State,Dir) of
 	Pwd when is_binary(Pwd) ->
 	    case erlang:md5(Password) of
-		Pwd ->
+		^Pwd ->
 		    ok;
 		_->
 		    bad_password

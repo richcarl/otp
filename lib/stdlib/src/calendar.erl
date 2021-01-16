@@ -304,11 +304,11 @@ local_time_to_universal_time_dst(DateTime) ->
     Lt    = erlang:universaltime_to_localtime(Ut),
     %% Return the valid universal times
     case {LtDst,Lt} of
-	{DateTime,DateTime} when UtDst =/= Ut ->
+	{^DateTime,^DateTime} when UtDst =/= Ut ->
 	    [UtDst,Ut];
-	{DateTime,_} ->
+	{^DateTime,_} ->
 	    [UtDst];
-	{_,DateTime} ->
+	{_,^DateTime} ->
 	    [Ut];
 	{_,_} ->
 	    []

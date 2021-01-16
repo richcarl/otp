@@ -202,7 +202,7 @@ bin_gen_field({bin_element,_,{string,_,S},default,default},
            end,
     Size = length(S),
     case Bin of
-        <<Bits:Size/binary,Rest/bitstring>> ->
+        <<^Bits:Size/binary,Rest/bitstring>> ->
             {match,Bs,BBs,Rest};
         <<_:Size/binary,Rest/bitstring>> ->
             {nomatch,Rest};
@@ -293,7 +293,7 @@ match_field_1({bin_element,_,{string,_,S},default,default},
               Bin, Bs, BBs, _Mfun, _Efun) ->
     Bits = list_to_binary(S), % fails if there are characters > 255
     Size = byte_size(Bits),
-    <<Bits:Size/binary,Rest/binary-unit:1>> = Bin,
+    <<^Bits:Size/binary,Rest/binary-unit:1>> = Bin,
     {Bs,BBs,Rest};
 match_field_1({bin_element,Line,{string,SLine,S},Size0,Options0},
               Bin0, Bs0, BBs0, Mfun, Efun) ->
@@ -419,6 +419,6 @@ make_bit_type(Line, default, Type0) ->
     end;
 make_bit_type(_Line, Size, Type0) -> %Size evaluates to an integer or 'all'
     case erl_bits:set_bit_type(Size, Type0) of
-        {ok,Size,Bt} -> {Size,erl_bits:as_list(Bt)};
+        {ok,^Size,Bt} -> {Size,erl_bits:as_list(Bt)};
         {error,Reason} -> erlang:raise(error, Reason, ?STACKTRACE)
     end.

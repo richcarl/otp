@@ -1073,7 +1073,7 @@ parse_term(Tokens) ->
 	    catch
 		_:_R -> {error,{location(?anno(Expr)),?MODULE,"bad term"}}
 	    end;
-	{ok,{function,_Af,f,A,[{clause,_Ac,[],[],[_E1,E2|_Es]}]}} ->
+	{ok,{function,_Af,f,^A,[{clause,_Ac,[],[],[_E1,E2|_Es]}]}} ->
 	    {error,{location(?anno(E2)),?MODULE,"bad term"}};
 	{error,_} = Err -> Err
     end.
@@ -1300,7 +1300,7 @@ build_fun(Anno, Cs) ->
     case Name of
         'fun' ->
             {'fun',Anno,{clauses,CheckedCs}};
-        Name ->
+        ^Name ->
             {named_fun,Anno,Name,CheckedCs}
     end.
 

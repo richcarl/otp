@@ -489,7 +489,7 @@ read_all_but_useless_chunks(File0) when is_atom(File0);
     {ok, Module, ChunkIds0} = scan_beam(File, info),
     ChunkIds = [Name || {Name,_,_} <- ChunkIds0,
 			not is_useless_chunk(Name)],
-    {ok, Module, Chunks} = scan_beam(File, ChunkIds),
+    {ok, ^Module, Chunks} = scan_beam(File, ChunkIds),
     {ok, {Module, lists:reverse(Chunks)}}.
 
 is_useless_chunk("CInf") -> true;
@@ -535,7 +535,7 @@ read_all_chunks(File0) when is_atom(File0);
         File = beam_filename(File0),
         {ok, Module, ChunkIds0} = scan_beam(File, info),
         ChunkIds = [Name || {Name,_,_} <- ChunkIds0],
-        {ok, Module, Chunks} = scan_beam(File, ChunkIds),
+        {ok, ^Module, Chunks} = scan_beam(File, ChunkIds),
         {ok, Module, lists:reverse(Chunks)}
     catch Error -> Error end.
 
@@ -975,7 +975,7 @@ mandatory_chunks() ->
 decrypt_chunk(Type, Module, File, Id, Bin) ->
     try
 	KeyString = get_crypto_key({debug_info, Type, Module, File}),
-	{Type,Key,IVec,_BlockSize} = make_crypto_key(Type, KeyString),
+	{^Type,Key,IVec,_BlockSize} = make_crypto_key(Type, KeyString),
 	ok = start_crypto(),
 	NewBin = crypto:crypto_one_time(des_ede3_cbc, Key, IVec, Bin, false),
 	binary_to_term(NewBin)

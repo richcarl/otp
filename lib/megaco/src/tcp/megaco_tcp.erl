@@ -539,7 +539,7 @@ resetup(Pid, Reason, State) ->
 	"~n   Pid:    ~p"
 	"~n   Reason: ~p", [Pid, Reason]),
     case lists:keysearch(Pid, 1, State#state.linkdb) of
-	{value, {Pid, {TcpRec, Listener}}} ->
+	{value, {^Pid, {TcpRec, Listener}}} ->
 	    ?d1("resetup -> found accept process: "
 		"~n   TcpRec:   ~p"
 		"~n   Listener: ~p", [TcpRec, Listener]),
@@ -556,7 +556,7 @@ resetup(Pid, Reason, State) ->
 		    NewList = lists:keyreplace(Pid, 1, State#state.linkdb,
 					       {NewPid, {TcpRec, Listener}}),
 		    State#state{linkdb = NewList};
-		{error, Reason} ->
+		{error, ^Reason} ->
 		    ?d1("resetup -> failed starting new accept process: "
 			"~n   :Reason ~p", [Reason]),
 		    ?tcp_debug(TcpRec, 

@@ -154,7 +154,7 @@ close(Epp) ->
     %% cases that test for resource leaks.
     Ref = erlang:monitor(process, Epp),
     R = epp_request(Epp, close),
-    receive {'DOWN',Ref,_,_,_} -> ok end,
+    receive {'DOWN',^Ref,_,_,_} -> ok end,
     R.
 
 scan_erl_form(Epp) ->
@@ -340,7 +340,7 @@ set_encoding(File, Default) ->
     Encoding = read_encoding_from_file(File, true),
     Enc = case Encoding of
               none -> Default;
-              Encoding -> Encoding
+              ^Encoding -> Encoding
           end,
     ok = io:setopts(File, [{encoding, Enc}]),
     Encoding.
@@ -393,7 +393,7 @@ read_encoding_from_file(File, InComment) ->
         throw:no ->
             none
     after
-        {ok, Pos0} = file:position(File, Pos0),
+        {ok, ^Pos0} = file:position(File, Pos0),
         ok = io:setopts(File, [Binary0, Encoding0])
     end.
 
@@ -1700,11 +1700,11 @@ epp_reply(From, Rep) ->
 
 wait_epp_reply(Epp, Mref) ->
     receive
-	{epp_reply,Epp,Rep} ->
+	{epp_reply,^Epp,Rep} ->
 	    erlang:demonitor(Mref, [flush]),
 	    Rep;
-	{'DOWN',Mref,_,_,E} ->
-	    receive {epp_reply,Epp,Rep} -> Rep
+	{'DOWN',^Mref,_,_,E} ->
+	    receive {epp_reply,^Epp,Rep} -> Rep
 	    after 0 -> exit(E)
 	    end
     end.
@@ -1805,7 +1805,7 @@ interpret_file_attr([{attribute,Anno,file,{File,Line}}=Form | Forms],
             %% -include or -include_lib
             % true = L =:= Line,
             case Fs of
-                [_, File | Fs1] -> % end of included file
+                [_, ^File | Fs1] -> % end of included file
                     [Form | interpret_file_attr(Forms, 0, [File | Fs1])];
                 _ -> % start of included file
                     [Form | interpret_file_attr(Forms, 0, [File | Fs])]
