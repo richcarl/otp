@@ -595,7 +595,7 @@ cli(Config) when is_list(Config) ->
     ssh_connection:shell(ConnectionRef, ChannelId),
     ssh_connection:send(ConnectionRef, ChannelId, <<"q">>),
     receive 
-	{ssh_cm, ConnectionRef,
+	{ssh_cm, ^ConnectionRef,
 	 {data,0,0, <<"\r\nYou are accessing a dummy, type \"q\" to exit\r\n\n">>}} ->
 	    ssh_connection:send(ConnectionRef, ChannelId, <<"q">>)
     after 
@@ -603,7 +603,7 @@ cli(Config) when is_list(Config) ->
     end,
     
     receive 
-     	{ssh_cm, ConnectionRef,{closed, ChannelId}} ->
+     	{ssh_cm, ^ConnectionRef,{closed, ^ChannelId}} ->
      	    ok
     after 
 	30000 -> ct:fail("timeout ~p:~p",[?MODULE,?LINE])
@@ -633,21 +633,21 @@ cli_exit_normal(Config) when is_list(Config) ->
     ssh_connection:shell(ConnectionRef, ChannelId),
 
     receive
-        {ssh_cm, ConnectionRef,{eof, ChannelId}} ->
+        {ssh_cm, ^ConnectionRef,{eof, ^ChannelId}} ->
             ok
     after
     30000 -> ct:fail("timeout ~p:~p",[?MODULE,?LINE])
     end,
 
     receive
-        {ssh_cm, ConnectionRef,{exit_status,ChannelId,0}} ->
+        {ssh_cm, ^ConnectionRef,{exit_status,^ChannelId,0}} ->
             ok
     after
     30000 -> ct:fail("timeout ~p:~p",[?MODULE,?LINE])
     end,
 
     receive
-        {ssh_cm, ConnectionRef,{closed, ChannelId}} ->
+        {ssh_cm, ^ConnectionRef,{closed, ^ChannelId}} ->
             ok
     after
     30000 -> ct:fail("timeout ~p:~p",[?MODULE,?LINE])
@@ -677,21 +677,21 @@ cli_exit_status(Config) when is_list(Config) ->
     ssh_connection:shell(ConnectionRef, ChannelId),
 
     receive
-        {ssh_cm, ConnectionRef,{eof, ChannelId}} ->
+        {ssh_cm, ^ConnectionRef,{eof, ^ChannelId}} ->
             ok
     after
     30000 -> ct:fail("timeout ~p:~p",[?MODULE,?LINE])
     end,
 
     receive
-        {ssh_cm, ConnectionRef,{exit_status,ChannelId,7}} ->
+        {ssh_cm, ^ConnectionRef,{exit_status,^ChannelId,7}} ->
             ok
     after
     30000 -> ct:fail("timeout ~p:~p",[?MODULE,?LINE])
     end,
 
     receive
-        {ssh_cm, ConnectionRef,{closed, ChannelId}} ->
+        {ssh_cm, ^ConnectionRef,{closed, ^ChannelId}} ->
             ok
     after
     30000 -> ct:fail("timeout ~p:~p",[?MODULE,?LINE])
@@ -730,7 +730,7 @@ daemon_error_closes_port(Config) ->
         {error,Error} ->
             ct:log("Strange error: ~p",[Error]),
             {fail, "Strange error"};
-        {Pid, _Host, Port} ->
+        {Pid, _Host, ^Port} ->
             %% Ok
             ssh:stop_daemon(Pid)
     end.
@@ -788,7 +788,7 @@ known_hosts(Config) when is_list(Config) ->
 					  silently_accept_hosts]),
     {ok, Binary2} = file:read_file(KnownHosts),
     case Binary of
-        Binary2 -> ok;
+        ^Binary2 -> ok;
         _ -> ct:log("2nd differ~n~p", [Binary2]),
              ct:fail("wrong num lines", [])
     end,
@@ -802,7 +802,7 @@ known_hosts(Config) when is_list(Config) ->
     ct:log("New known_hosts:~n~p",[Binary3]),
     {ok, Binary4} = file:read_file(KnownHosts),
     case Binary3 of
-        Binary4 -> ok;
+        ^Binary4 -> ok;
         _ -> ct:log("2nd differ~n~p", [Binary4]),
              ct:fail("wrong num lines", [])
     end,
@@ -1070,17 +1070,17 @@ peername_sockname(Config) when is_list(Config) ->
 	ssh:connection_info(ConnectionRef, [sockname]),
     ct:log("Client: ~p ~p", [ClientPeer, ClientSock]),
     receive
-	{ssh_cm, ConnectionRef, {data, ChannelId, _, Response}} ->
+	{ssh_cm, ^ConnectionRef, {data, ^ChannelId, _, Response}} ->
 	    {PeerNameSrv,SockNameSrv} = binary_to_term(Response),
 	    {HostPeerSrv,PortPeerSrv} = PeerNameSrv,
 	    {HostSockSrv,PortSockSrv} = SockNameSrv,
 	    ct:log("Server: ~p ~p", [PeerNameSrv, SockNameSrv]),
 	    host_equal(HostPeerSrv, HostSockClient),
-	    PortPeerSrv = PortSockClient,
+	    ^PortPeerSrv = PortSockClient,
 	    host_equal(HostSockSrv, HostPeerClient),
-	    PortSockSrv = PortPeerClient,
+	    ^PortSockSrv = PortPeerClient,
 	    host_equal(HostSockSrv, Host),
-	    PortSockSrv = Port
+	    ^PortSockSrv = Port
     after 10000 ->
 	    ct:fail("timeout ~p:~p",[?MODULE,?LINE])
     end.
@@ -1113,7 +1113,7 @@ close(Config) when is_list(Config) ->
     
     ssh:stop_daemon(Server),
     receive 
-	{ssh_cm, Client,{closed, ChannelId}} ->  
+	{ssh_cm, ^Client,{closed, ^ChannelId}} ->  
 	    ok
     after 5000 ->
 	    ct:fail("timeout ~p:~p",[?MODULE,?LINE])
@@ -1234,10 +1234,10 @@ packet_size(Config) ->
 
 rec(Server, Conn, Ch, MaxSz) ->
     receive
-        {ssh_cm,Conn,{data,Ch,_,M}} when size(M) =< MaxSz ->
+        {ssh_cm,^Conn,{data,^Ch,_,M}} when size(M) =< MaxSz ->
             ct:log("~p: ~p",[MaxSz,M]),
             rec(Server, Conn, Ch, MaxSz);
-        {ssh_cm,Conn,{data,Ch,_,_}} = M ->
+        {ssh_cm,^Conn,{data,^Ch,_,_}} = M ->
             ct:log("Max pkt size=~p. Got ~p",[MaxSz,M]),
             ssh:close(Conn),
             ssh:stop_daemon(Server),
@@ -1486,7 +1486,7 @@ setopts_getopts(Config) ->
         ssh:get_sock_opts(ConnectionRef, [delay_send]),
     DS1 = not DS0,
     ok = ssh:set_sock_opts(ConnectionRef, [{delay_send,DS1}]),
-    {ok,[{delay_send,DS1}]} =
+    {ok,[{delay_send,^DS1}]} =
         ssh:get_sock_opts(ConnectionRef, [delay_send]),
     
      ssh:stop_daemon(Pid).
@@ -1553,23 +1553,23 @@ new_do_shell(IO, N, Ops=[{Order,Arg}|More]) ->
 	
 	<<P1,"> ">> when (P1-$0)==N -> 
 	    new_do_shell_prompt(IO, N, Order, Arg, More);
-	<<"(",Pfx:PfxSize/binary,")",P1,"> ">> when (P1-$0)==N -> 
+	<<"(",^Pfx:PfxSize/binary,")",P1,"> ">> when (P1-$0)==N -> 
 	    new_do_shell_prompt(IO, N, Order, Arg, More);
-	<<"('",Pfx:PfxSize/binary,"')",P1,"> ">> when (P1-$0)==N -> 
+	<<"('",^Pfx:PfxSize/binary,"')",P1,"> ">> when (P1-$0)==N -> 
 	    new_do_shell_prompt(IO, N, Order, Arg, More);
 
 	<<P1,P2,"> ">> when (P1-$0)*10 + (P2-$0) == N -> 
 	    new_do_shell_prompt(IO, N, Order, Arg, More);
-	<<"(",Pfx:PfxSize/binary,")",P1,P2,"> ">> when (P1-$0)*10 + (P2-$0) == N -> 
+	<<"(",^Pfx:PfxSize/binary,")",P1,P2,"> ">> when (P1-$0)*10 + (P2-$0) == N -> 
 	    new_do_shell_prompt(IO, N, Order, Arg, More);
-	<<"('",Pfx:PfxSize/binary,"')",P1,P2,"> ">> when (P1-$0)*10 + (P2-$0) == N -> 
+	<<"('",^Pfx:PfxSize/binary,"')",P1,P2,"> ">> when (P1-$0)*10 + (P2-$0) == N -> 
 	    new_do_shell_prompt(IO, N, Order, Arg, More);
 
 	<<P1,P2,P3,"> ">> when (P1-$0)*100 + (P2-$0)*10 + (P3-$0) == N -> 
 	    new_do_shell_prompt(IO, N, Order, Arg, More);
-	<<"(",Pfx:PfxSize/binary,")",P1,P2,P3,"> ">> when (P1-$0)*100 + (P2-$0)*10 + (P3-$0) == N -> 
+	<<"(",^Pfx:PfxSize/binary,")",P1,P2,P3,"> ">> when (P1-$0)*100 + (P2-$0)*10 + (P3-$0) == N -> 
 	    new_do_shell_prompt(IO, N, Order, Arg, More);
-	<<"('",Pfx:PfxSize/binary,"')",P1,P2,P3,"> ">> when (P1-$0)*100 + (P2-$0)*10 + (P3-$0) == N -> 
+	<<"('",^Pfx:PfxSize/binary,"')",P1,P2,P3,"> ">> when (P1-$0)*100 + (P2-$0)*10 + (P3-$0) == N -> 
 	    new_do_shell_prompt(IO, N, Order, Arg, More);
 
 	Err when element(1,Err)==error ->

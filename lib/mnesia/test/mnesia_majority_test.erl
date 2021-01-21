@@ -62,7 +62,7 @@ write(Config) when is_list(Config) ->
     ?match({atomic,ok},
 	   mnesia:transaction(fun() -> mnesia:write({t,1,a}) end)),
     mnesia_test_lib:kill_mnesia([N2]),
-    ?match({aborted,{no_majority,Tab}},
+    ?match({aborted,{no_majority,^Tab}},
 	   mnesia:transaction(fun() -> mnesia:write({t,1,a}) end)).
 
 wread(suite) -> [];
@@ -76,7 +76,7 @@ wread(Config) when is_list(Config) ->
     ?match({atomic,[]},
 	   mnesia:transaction(fun() -> mnesia:read(t,1,write) end)),
     mnesia_test_lib:kill_mnesia([N2]),
-    ?match({aborted,{no_majority,Tab}},
+    ?match({aborted,{no_majority,^Tab}},
 	   mnesia:transaction(fun() -> mnesia:read(t,1,write) end)).
 
 delete(suite) -> [];
@@ -100,7 +100,7 @@ delete(Config) when is_list(Config) ->
     ?match({atomic,[{t,1,a}]},
 	   mnesia:transaction(fun() -> mnesia:read({t,1}) end)),
     mnesia_test_lib:kill_mnesia([N2]),
-    ?match({aborted,{no_majority,Tab}},
+    ?match({aborted,{no_majority,^Tab}},
 	   mnesia:transaction(fun() -> mnesia:delete({t,1}) end)).
 
 clear_table(suite) -> [];
@@ -123,7 +123,7 @@ clear_table(Config) when is_list(Config) ->
     ?match({atomic,[{t,1,a}]},
 	   mnesia:transaction(fun() -> mnesia:read({t,1}) end)),
     mnesia_test_lib:kill_mnesia([N2]),
-    ?match({aborted,{no_majority,Tab}}, mnesia:clear_table(t)).
+    ?match({aborted,{no_majority,^Tab}}, mnesia:clear_table(t)).
 
 frag(suite) -> [];
 frag(Config) when is_list(Config) ->

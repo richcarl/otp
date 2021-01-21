@@ -96,7 +96,7 @@ calendarCtrl(Config) ->
 	    ?m({0,243,0,255}, wxCalendarDateAttr:getBackgroundColour(DateAttr1))
     end,
 
-    ?m({YMD, _},wxCalendarCtrl:getDate(Cal)),
+    ?m({^YMD, _},wxCalendarCtrl:getDate(Cal)),
 
     wxCalendarCtrl:connect(Cal, calendar_weekday_clicked),
     wxCalendarCtrl:connect(Cal, calendar_day_changed),
@@ -143,7 +143,7 @@ treeCtrl(Config) ->
 
     {true, {X0,Y0,W0,H0}} = ?m({_,_},wxTreeCtrl:getBoundingRect(Tree, Item1, [{textOnly, true}])),
     ?m({true, {_,Y1,_,_}} when Y1 > Y0, wxTreeCtrl:getBoundingRect(Tree, Item2)),
-    ?m({Item1, _}, wxTreeCtrl:hitTest(Tree, {X0+W0 div 2, Y0+H0 div 2})),
+    ?m({^Item1, _}, wxTreeCtrl:hitTest(Tree, {X0+W0 div 2, Y0+H0 div 2})),
     ?m(true, wxTreeCtrl:isTreeItemIdOk(Item1)),
     ?m({0, _}, wxTreeCtrl:hitTest(Tree, {X0+W0+W0, Y0+H0+4*H0})),
     ?m(false, wxTreeCtrl:isTreeItemIdOk(0)),
@@ -654,8 +654,8 @@ modal(Config) ->
 	    M2 = receive {dialog, W2, 2} -> timer:sleep(1200), ets:insert(test_state, {W2, ready}), W2 end,
 
 	    receive done -> ok end,
-	    receive {dialog_done, M2, 2} -> M2 end,
-	    receive {dialog_done, M1, 1} -> M1 end,
+	    receive {dialog_done, ^M2, 2} -> M2 end,
+	    receive {dialog_done, ^M1, 1} -> M1 end,
 
 	    wxUpdateUIEvent:setUpdateInterval(Upd),
 	    wx_test_lib:wx_destroy(Frame,Config)

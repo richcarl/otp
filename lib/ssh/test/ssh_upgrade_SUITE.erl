@@ -183,7 +183,7 @@ test_connection(FileName, FileContents,
     case ssh_sftp:write_file(ChannelPid, FileName, FileContents) of
 	ok ->
 	    case ssh_sftp:read_file(ChannelPid, FileName) of
-		{ok,FileContents} ->
+		{ok,^FileContents} ->
 			    State;
 		{ok,Unexpected} ->
 		    ct:fail("Expected ~p but got ~p from sftp:read_file(~p,..) in RootDir ~p",

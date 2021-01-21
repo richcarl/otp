@@ -104,7 +104,7 @@ c_compiler(Vars) ->
 	UsedCompiler = case erlang:system_info(c_compiler_used) of
 			   {UsedCmplr, _} ->
 			       case lists:keysearch(UsedCmplr, 1, CompTests) of
-				   {value, {UsedCmplr, CompTest}} ->
+				   {value, {^UsedCmplr, CompTest}} ->
 				       CompTest(Vars);
 				   _ -> 
 				       ok

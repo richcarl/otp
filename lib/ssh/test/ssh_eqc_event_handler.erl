@@ -17,14 +17,14 @@
 add_report_handler() ->
     error_logger:add_report_handler(?MODULE, [self(),Ref=make_ref()]),
     receive
-	{event_handler_started,HandlerPid,Ref} ->
+	{event_handler_started,HandlerPid,^Ref} ->
 	    {ok,HandlerPid}
     end.
 
 get_reports(Pid) ->
     Pid ! {get_reports,self(),Ref=make_ref()},
     receive
-	{reports,Reports,Ref} ->
+	{reports,Reports,^Ref} ->
 	    {ok,Reports}
     end.
 

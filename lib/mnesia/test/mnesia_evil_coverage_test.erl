@@ -119,8 +119,8 @@ system_info(Config) when is_list(Config) ->
     Nodes = ?acquire_nodes(all, Config),
     Ns = ?sort(Nodes),
     ?match(yes, mnesia:system_info(is_running)),
-    ?match(Ns, ?sort(mnesia:system_info(db_nodes))),
-    ?match(Ns, ?sort(mnesia:system_info(running_db_nodes))),
+    ?match(^Ns, ?sort(mnesia:system_info(db_nodes))),
+    ?match(^Ns, ?sort(mnesia:system_info(running_db_nodes))),
     ?match(A when is_atom(A), mnesia:system_info(debug)),
     ?match(L when is_list(L), mnesia:system_info(directory)),
     ?match(L when is_list(L), mnesia:system_info(log_version)),
@@ -177,11 +177,11 @@ table_info(Config) when is_list(Config) ->
 
     case mnesia_test_lib:diskless(Config) of
 	true -> 
-	    ?match(Nodes, mnesia:table_info(Tab, ram_copies));
+	    ?match(^Nodes, mnesia:table_info(Tab, ram_copies));
 	false ->              
-	    ?match([Node3], mnesia:table_info(Tab, ext_ets)),
-	    ?match([Node2], mnesia:table_info(Tab, ram_copies)),
-	    ?match([Node1], mnesia:table_info(Tab, mnesia_test_lib:storage_type(disc_only_copies, Config)))
+	    ?match([^Node3], mnesia:table_info(Tab, ext_ets)),
+	    ?match([^Node2], mnesia:table_info(Tab, ram_copies)),
+	    ?match([^Node1], mnesia:table_info(Tab, mnesia_test_lib:storage_type(disc_only_copies, Config)))
     end,
     Read = [Node1, Node2, Node3],
     Write = ?sort([Node1, Node2, Node3]),
@@ -189,7 +189,7 @@ table_info(Config) when is_list(Config) ->
     {[ok,ok,ok], []} = rpc:multicall(Nodes, ?MODULE, info_check,
 				     [Tab, Read, Write, Size, Type, ValPos, Arity, Attrs]),
 
-    ?match({atomic, Attrs}, mnesia:transaction(fun() -> mnesia:table_info(Tab, attributes) end)),
+    ?match({atomic, ^Attrs}, mnesia:transaction(fun() -> mnesia:table_info(Tab, attributes) end)),
 
     ?match(L when is_list(L), mnesia:table_info(Tab, all)),
 
@@ -205,14 +205,14 @@ table_info(Config) when is_list(Config) ->
 
 info_check(Tab, Read, Write, Size, Type, ValPos, Arity, Attrs) ->
     ?match(true, lists:member(mnesia:table_info(Tab, where_to_read), Read)),
-    ?match(Write, ?sort(mnesia:table_info(Tab, where_to_write))),
+    ?match(^Write, ?sort(mnesia:table_info(Tab, where_to_write))),
     ?match(Mem when is_integer(Mem), mnesia:table_info(Tab, memory)),
-    ?match(Size, mnesia:table_info(Tab, size)),
-    ?match(Type, mnesia:table_info(Tab, type)),
-    ?match([ValPos], mnesia:table_info(Tab, index)),
-    ?match(Arity, mnesia:table_info(Tab, arity)),
-    ?match(Attrs, mnesia:table_info(Tab, attributes)),
-    ?match({Tab, '_', '_'}, mnesia:table_info(Tab, wild_pattern)),
+    ?match(^Size, mnesia:table_info(Tab, size)),
+    ?match(^Type, mnesia:table_info(Tab, type)),
+    ?match([^ValPos], mnesia:table_info(Tab, index)),
+    ?match(^Arity, mnesia:table_info(Tab, arity)),
+    ?match(^Attrs, mnesia:table_info(Tab, attributes)),
+    ?match({^Tab, '_', '_'}, mnesia:table_info(Tab, wild_pattern)),
     ok.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -273,31 +273,31 @@ db_node_lifecycle(Config) when is_list(Config) ->
     ?match(false, mnesia:system_info(use_dir)),
     ?match([ram_copies, disc_copies, disc_only_copies], mnesia:system_info(backend_types)),
     ?match({atomic, ok}, mnesia:create_table(Tab, [])),
-    ?match({aborted, {has_no_disc, Node1}}, mnesia:dump_tables([Tab])),
-    ?match({aborted, {has_no_disc, Node1}}, mnesia:change_table_copy_type(Tab, node(), disc_copies)),
-    ?match({aborted, {has_no_disc, Node1}}, mnesia:change_table_copy_type(Tab, node(), disc_only_copies)),
+    ?match({aborted, {has_no_disc, ^Node1}}, mnesia:dump_tables([Tab])),
+    ?match({aborted, {has_no_disc, ^Node1}}, mnesia:change_table_copy_type(Tab, node(), disc_copies)),
+    ?match({aborted, {has_no_disc, ^Node1}}, mnesia:change_table_copy_type(Tab, node(), disc_only_copies)),
 
     ?match(stopped, mnesia:stop()),
 
     ?match(ok, mnesia:create_schema(AllNodes, ?BACKEND)),
     ?match([], mnesia_test_lib:start_mnesia(AllNodes)),
 
-    ?match([SNs, SNs, SNs], 
+    ?match([^SNs, ^SNs, ^SNs], 
 	   lists:map(fun lists:sort/1,
 		     element(1, rpc:multicall(AllNodes, mnesia, table_info, 
 					      [schema, disc_copies])))),
 
-    ?match({aborted, {already_exists, schema, Node2, _}},
+    ?match({aborted, {already_exists, schema, ^Node2, _}},
            mnesia:change_table_copy_type(schema, Node2, disc_copies)),
     ?match({atomic, ok},
            mnesia:change_table_copy_type(schema, Node2, ram_copies)),
-    ?match({aborted, {already_exists, schema, Node2, _}},
+    ?match({aborted, {already_exists, schema, ^Node2, _}},
            mnesia:change_table_copy_type(schema, Node2, ram_copies)),
     
     ?match({atomic, ok},
            mnesia:change_table_copy_type(schema, Node2, disc_copies)),
 
-    ?match([SNs, SNs, SNs], 
+    ?match([^SNs, ^SNs, ^SNs], 
 	   lists:map(fun lists:sort/1,
 		     element(1, rpc:multicall(AllNodes, mnesia, table_info, 
 					      [schema, disc_copies])))),
@@ -320,11 +320,11 @@ db_node_lifecycle(Config) when is_list(Config) ->
 
     [?match({atomic, ok}, mnesia:create_table(T)) || T <- Tabs ],
 
-    ?match({aborted, {active, _, Node2}}, 
+    ?match({aborted, {active, _, ^Node2}}, 
 	   mnesia:del_table_copy(schema, Node2)),
 
     ?match([], mnesia_test_lib:stop_mnesia([Node1])),
-    ?match({aborted, {node_not_running, Node1}}, 
+    ?match({aborted, {node_not_running, ^Node1}}, 
 	   mnesia:del_table_copy(schema, Node2)),
 
     ?match([], mnesia_test_lib:start_mnesia([Node1],[Tab2,Tab4,Tab6])),
@@ -334,13 +334,13 @@ db_node_lifecycle(Config) when is_list(Config) ->
     %% Check
     RemNodes = AllNodes -- [Node2],
 
-    ?match(RemNodes, mnesia:system_info(db_nodes)),
-    ?match([Node1], Who(Tab)),
-    ?match(RemNodes, Who(Tab2)),
-    ?match([Node3], Who(Tab3)),
-    ?match([Node1], Who(Tab4)),
+    ?match(^RemNodes, mnesia:system_info(db_nodes)),
+    ?match([^Node1], Who(Tab)),
+    ?match(^RemNodes, Who(Tab2)),
+    ?match([^Node3], Who(Tab3)),
+    ?match([^Node1], Who(Tab4)),
     ?match({'EXIT', {aborted, {no_exists, _, _}}}, Who(Tab5)),
-    ?match([Node1], Who(Tab6)),
+    ?match([^Node1], Who(Tab6)),
 
     ?match({atomic, ok}, mnesia:change_table_copy_type(Tab2, Node3, ram_copies)),
 
@@ -348,11 +348,11 @@ db_node_lifecycle(Config) when is_list(Config) ->
 
     ?match([], mnesia_test_lib:stop_mnesia([Node3])),
     ?match({atomic, ok}, mnesia:del_table_copy(schema, Node3)),
-    ?match([Node1], mnesia:system_info(db_nodes)),
-    ?match([Node1], Who(Tab)),
-    ?match([Node1], Who(Tab2)),
+    ?match([^Node1], mnesia:system_info(db_nodes)),
+    ?match([^Node1], Who(Tab)),
+    ?match([^Node1], Who(Tab2)),
     ?match({'EXIT', {aborted, {no_exists, _, _}}}, Who(Tab3)),
-    ?match([Node1], Who(Tab4)),
+    ?match([^Node1], Who(Tab4)),
     ?match({'EXIT', {aborted, {no_exists, _, _}}}, Who(Tab5)),
 
     ?verify_mnesia([Node1], []).
@@ -373,8 +373,8 @@ evil_delete_db_node(Config) when is_list(Config) ->
     
     RemNodes = AllNodes -- [Node2],
     
-    ?match(RemNodes, mnesia:system_info(db_nodes)),
-    ?match(RemNodes, mnesia:table_info(Tab, disc_copies)),
+    ?match(^RemNodes, mnesia:system_info(db_nodes)),
+    ?match(^RemNodes, mnesia:table_info(Tab, disc_copies)),
     
     ?verify_mnesia([Node1], []).
 
@@ -429,12 +429,12 @@ checkpoint(NodeConfig, Config) ->
     ?match({error, _}, rpc:call(Node1, mnesia, activate_checkpoint, [MinArgs])),
 
     MaxArgs = [{name, CpName}, {max, Tabs}, {allow_remote, true}],
-    ?match({ok, CpName, L} when is_list(L),
+    ?match({ok, ^CpName, L} when is_list(L),
 	   rpc:call(Node1, mnesia, activate_checkpoint, [MaxArgs])),
     ?match(ok, rpc:call(Node1, mnesia, deactivate_checkpoint, [CpName])),
 
     Args = [{name, CpName}, {min, Tabs}, {allow_remote, true}],
-    ?match({ok, CpName, L} when is_list(L),
+    ?match({ok, ^CpName, L} when is_list(L),
            rpc:call(Node1, mnesia, activate_checkpoint, [Args])),
     Recs2 = ?sort([{T, K, 0} || {T, K, _} <- Recs]),
     lists:foreach(fun(R) -> ?match(ok, mnesia:dirty_write(R)) end, Recs2),
@@ -570,10 +570,10 @@ table_lifecycle(Config) when is_list(Config) ->
     ?match({aborted, _}, mnesia:create_table(ets_table, [{ram_copies, [Node1]}])),
     ets:delete(ets_table),
     ?match({atomic, ok}, mnesia:create_table(ets_table, [{ram_copies, [Node1]}])),
-    ?match(Node1, rpc:call(Node1, mnesia_lib, val, [{ets_table,where_to_read}])),
-    ?match(Node1, rpc:call(Node2, mnesia_lib, val, [{ets_table,where_to_read}])),
+    ?match(^Node1, rpc:call(Node1, mnesia_lib, val, [{ets_table,where_to_read}])),
+    ?match(^Node1, rpc:call(Node2, mnesia_lib, val, [{ets_table,where_to_read}])),
     ?match({atomic, ok}, mnesia:change_table_copy_type(ets_table, Node1, disc_only_copies)),    
-    ?match(Node1, rpc:call(Node2, mnesia_lib, val, [{ets_table,where_to_read}])),
+    ?match(^Node1, rpc:call(Node2, mnesia_lib, val, [{ets_table,where_to_read}])),
     
     ?verify_mnesia(Nodes, []).
 
@@ -598,12 +598,12 @@ storage_options(Config) when is_list(Config) ->
     ?match([{a,1,1}], mnesia:dirty_read({a,1})),
     mnesia:dump_log(),
     W2C1 = [{N2, disc_only_copies}, {N1, ram_copies}],
-    ?match(W2C1, lists:sort(rpc:call(N2, mnesia_lib, val, [{a, where_to_commit}]))),
-    ?match(W2C1, lists:sort(rpc:call(N3, mnesia_lib, val, [{a, where_to_commit}]))),
+    ?match(^W2C1, lists:sort(rpc:call(N2, mnesia_lib, val, [{a, where_to_commit}]))),
+    ?match(^W2C1, lists:sort(rpc:call(N3, mnesia_lib, val, [{a, where_to_commit}]))),
     ?match({atomic,ok}, mnesia:change_table_copy_type(a, N1, disc_only_copies)),
     W2C2 = [{N2, disc_only_copies}, {N1, disc_only_copies}],
-    ?match(W2C2, lists:sort(rpc:call(N2, mnesia_lib, val, [{a, where_to_commit}]))),
-    ?match(W2C2, lists:sort(rpc:call(N3, mnesia_lib, val, [{a, where_to_commit}]))),
+    ?match(^W2C2, lists:sort(rpc:call(N2, mnesia_lib, val, [{a, where_to_commit}]))),
+    ?match(^W2C2, lists:sort(rpc:call(N3, mnesia_lib, val, [{a, where_to_commit}]))),
     ?match(undefined, ets:info(a, compressed)),
     ?match(5000, dets:info(a, auto_save)),
     ?match({atomic,ok}, mnesia:change_table_copy_type(a, N1, disc_copies)),
@@ -641,16 +641,16 @@ clear_table_during_load(Config) when is_list(Config) ->
 
     Test = fun(N) ->
 		   Pid = spawn_link(Node2, StopAndStart),
-		   receive {Pid, stopped} -> ok end,
+		   receive {^Pid, stopped} -> ok end,
 		   Pid ! start_node,
 		   timer:sleep(N*10),
 		   {atomic, ok} = mnesia:clear_table(cleartab),
 		   receive
-		       {Pid, ok} -> ok;
+		       {^Pid, ok} -> ok;
 		       {failed, What} ->
 			   io:format("Failed in ~p tries, with ~p~n",[N, What]),
 			   exit({error, What});
-		       {'EXIT', Pid, Reason} ->
+		       {'EXIT', ^Pid, Reason} ->
 			   exit({died, Reason})
 		   end
 	   end,
@@ -722,7 +722,7 @@ add_copy_when_going_down(Config) ->
 			   end
 		   end,
     Locker = spawn(fun() -> mnesia:transaction(WriteAndWait) end),
-    receive {Locker, got_lock} -> ok end,
+    receive {^Locker, got_lock} -> ok end,
 
     spawn_link(fun() -> Res = rpc:call(Node2, mnesia, add_table_copy,
 				       [a, Node2, ram_copies]),
@@ -857,7 +857,7 @@ replica_management(Config) when is_list(Config) ->
     ?match([], ?vrl(Tab, [Node2], [Node3], [], Nodes)),
     %% - DO R
     ?match({aborted, _}, mnesia:del_table_copy(Tab, Node1)),
-    ?match(Tab, ets:new(Tab, [named_table])),
+    ?match(^Tab, ets:new(Tab, [named_table])),
     ?match({aborted, _}, mnesia:add_table_copy(Tab, Node1, disc_copies)),
     ?match(true, ets:delete(Tab)),
     ?match({atomic, ok}, mnesia:add_table_copy(Tab, Node1, disc_copies)),
@@ -884,7 +884,7 @@ replica_management(Config) when is_list(Config) ->
     ?match([10,10,10], ?SS(rpc:multicall(Nodes, mnesia, table_info, [Tab, size]))),
 
     %% DO D R
-    ?match(Tab, ets:new(Tab, [named_table])),
+    ?match(^Tab, ets:new(Tab, [named_table])),
     ?match({aborted, _}, mnesia:change_table_copy_type(Tab, Node1, ram_copies)),
     ?match(true, ets:delete(Tab)),
     ?match({atomic, ok}, mnesia:change_table_copy_type(Tab, Node1, ram_copies)),
@@ -950,7 +950,7 @@ replica_management(Config) when is_list(Config) ->
     ?match([], mnesia_test_lib:start_mnesia([Node3])),
     ?match([], ?vrl(Tab, [], [Node3], [Node2], Nodes)),
     %% - D ER
-    ?match([{Tab,43,sync_me}], mnesia:dirty_read({Tab,43})),
+    ?match([{^Tab,43,sync_me}], mnesia:dirty_read({Tab,43})),
     
     %%
     %% Transformer
@@ -969,7 +969,7 @@ replica_management(Config) when is_list(Config) ->
     ERlist = [#new_replica_management{k = K, v = K+2, extra = K*2} || K <- lists:seq(1, 10)],
     ARlist = [hd(mnesia:dirty_read(Tab, K)) || K <- lists:seq(1, 10)],
 
-    ?match(ERlist, ARlist),
+    ?match(^ERlist, ARlist),
 
     ?match({aborted,  Reason56} when element(1, Reason56) == bad_type,
            mnesia:transform_table(Tab, Transformer, 0)),
@@ -988,7 +988,7 @@ replica_management(Config) when is_list(Config) ->
     ?match({atomic, ok}, mnesia:transform_table(Tab, ignore, 
                                                 NewAttrs ++ [dummy], last_rec)),
 
-    ARlist = [hd(mnesia:dirty_read(Tab, K)) || K <- lists:seq(1, 10)],
+    ^ARlist = [hd(mnesia:dirty_read(Tab, K)) || K <- lists:seq(1, 10)],
     ?match({'EXIT',{aborted,{bad_type,_}}},
            mnesia:dirty_write(Tab, #new_replica_management{})),
     ?match(ok, mnesia:dirty_write(Tab, {last_rec, k, v, e, dummy})),
@@ -1008,12 +1008,12 @@ schema_availability(Config) when is_list(Config) ->
 
     N = 10,
     ?match(ok, mnesia:sync_dirty(fun() -> [mnesia:write({Tab, K, K + 2}) || K <- lists:seq(1, N)], ok end)),
-    ?match({[N,0,N], []}, rpc:multicall(Nodes, mnesia, table_info, [Tab, size])),
+    ?match({[^N,0,^N], []}, rpc:multicall(Nodes, mnesia, table_info, [Tab, size])),
     ?match([], mnesia_test_lib:kill_mnesia([N3])),
-    ?match({[N,0,0], []}, rpc:multicall(Nodes, mnesia, table_info, [Tab, size])),
+    ?match({[^N,0,0], []}, rpc:multicall(Nodes, mnesia, table_info, [Tab, size])),
 
     ?match([], mnesia_test_lib:start_mnesia([N3], [Tab])),
-    ?match({[N,0,N], []}, rpc:multicall(Nodes, mnesia, table_info, [Tab, size])),
+    ?match({[^N,0,^N], []}, rpc:multicall(Nodes, mnesia, table_info, [Tab, size])),
     ?match([], mnesia_test_lib:kill_mnesia([N3])),
 
     ?match({atomic, ok}, mnesia:clear_table(Tab)),
@@ -1053,9 +1053,9 @@ local_content(Config) when is_list(Config) ->
     ?match(ok, rpc:call(Node1, mnesia, dirty_write, [{Tab3, 1, Node1}])),
     ?match(ok, rpc:call(Node1, mnesia, dirty_write, [{Tab4, 1, Node1}])),
 
-    ?match(?badrpc(Tab2), rpc:call(Node2, mnesia, dirty_write, [{Tab2, 1, Node2}])),
-    ?match(?badrpc(Tab3), rpc:call(Node2, mnesia, dirty_write, [{Tab3, 1, Node2}])),
-    ?match(?badrpc(Tab4), rpc:call(Node2, mnesia, dirty_write, [{Tab4, 1, Node2}])),
+    ?match(?badrpc(^Tab2), rpc:call(Node2, mnesia, dirty_write, [{Tab2, 1, Node2}])),
+    ?match(?badrpc(^Tab3), rpc:call(Node2, mnesia, dirty_write, [{Tab3, 1, Node2}])),
+    ?match(?badrpc(^Tab4), rpc:call(Node2, mnesia, dirty_write, [{Tab4, 1, Node2}])),
 
     ?match({atomic, ok}, rpc:call(Node1, mnesia, add_table_copy, [Tab2, Node2, ram_copies])),    
     ?match({atomic, ok}, rpc:call(Node2, mnesia, add_table_copy, [Tab3, Node2, disc_copies])),
@@ -1068,17 +1068,17 @@ local_content(Config) when is_list(Config) ->
     ?match(ok, rpc:call(Node2, mnesia, dirty_write, [{Tab3, 1, Node2}])),
     ?match(ok, rpc:call(Node2, mnesia, dirty_write, [{Tab4, 1, Node2}])),
 
-    ?match([{Tab1, 1, Node1}], rpc:call(Node1, mnesia, dirty_read, [{Tab1, 1}])),
-    ?match([{Tab2, 1, Node1}], rpc:call(Node1, mnesia, dirty_read, [{Tab2, 1}])),
-    ?match([{Tab3, 1, Node1}], rpc:call(Node1, mnesia, dirty_read, [{Tab3, 1}])),
-    ?match([{Tab4, 1, Node1}], rpc:call(Node1, mnesia, dirty_read, [{Tab4, 1}])),
+    ?match([{^Tab1, 1, ^Node1}], rpc:call(Node1, mnesia, dirty_read, [{Tab1, 1}])),
+    ?match([{^Tab2, 1, ^Node1}], rpc:call(Node1, mnesia, dirty_read, [{Tab2, 1}])),
+    ?match([{^Tab3, 1, ^Node1}], rpc:call(Node1, mnesia, dirty_read, [{Tab3, 1}])),
+    ?match([{^Tab4, 1, ^Node1}], rpc:call(Node1, mnesia, dirty_read, [{Tab4, 1}])),
 
-    ?match([{Tab1, 1, Node2}], rpc:call(Node2, mnesia, dirty_read, [{Tab1, 1}])),
-    ?match([{Tab2, 1, Node2}], rpc:call(Node2, mnesia, dirty_read, [{Tab2, 1}])),
-    ?match([{Tab3, 1, Node2}], rpc:call(Node2, mnesia, dirty_read, [{Tab3, 1}])),
-    ?match([{Tab4, 1, Node2}], rpc:call(Node2, mnesia, dirty_read, [{Tab4, 1}])),
+    ?match([{^Tab1, 1, ^Node2}], rpc:call(Node2, mnesia, dirty_read, [{Tab1, 1}])),
+    ?match([{^Tab2, 1, ^Node2}], rpc:call(Node2, mnesia, dirty_read, [{Tab2, 1}])),
+    ?match([{^Tab3, 1, ^Node2}], rpc:call(Node2, mnesia, dirty_read, [{Tab3, 1}])),
+    ?match([{^Tab4, 1, ^Node2}], rpc:call(Node2, mnesia, dirty_read, [{Tab4, 1}])),
 
-    ?match([{Tab1, 1, Node3}], rpc:call(Node3, mnesia, dirty_read, [{Tab1, 1}])),
+    ?match([{^Tab1, 1, ^Node3}], rpc:call(Node3, mnesia, dirty_read, [{Tab1, 1}])),
     ?match(?badrpc([_Tab2, 1]), rpc:call(Node3, mnesia, dirty_read, [{Tab2, 1}])),
     ?match(?badrpc([_Tab3, 1]), rpc:call(Node3, mnesia, dirty_read, [{Tab3, 1}])),
     ?match(?badrpc([_Tab4, 1]), rpc:call(Node3, mnesia, dirty_read, [{Tab4, 1}])),
@@ -1134,15 +1134,15 @@ change_table_access_mode(Config) when is_list(Config) ->
     ?match({'EXIT', {aborted, _}}, mnesia:dirty_write({Tab, 1, [nok]})),
     ?match({aborted, _}, rpc:call(Node2, mnesia, transaction, [Write, [nok]])),
     ?match({aborted, _}, rpc:call(Node3, mnesia, transaction, [Write, [nok]])),
-    ?match({atomic, [{Tab, 1, test_ok}]}, mnesia:transaction(Read)),
+    ?match({atomic, [{^Tab, 1, test_ok}]}, mnesia:transaction(Read)),
     %% test read_write
     ?match({atomic, ok}, mnesia:change_table_access_mode(Tab, read_write)),
     ?match({atomic, ok}, mnesia:transaction(Write, [test_ok1])),
-    ?match({atomic, [{Tab, 1, test_ok1}]}, mnesia:transaction(Read)),
+    ?match({atomic, [{^Tab, 1, test_ok1}]}, mnesia:transaction(Read)),
     ?match({atomic, ok}, rpc:call(Node2, mnesia, transaction, [Write, [test_ok2]])),
-    ?match({atomic, [{Tab, 1, test_ok2}]}, mnesia:transaction(Read)),
+    ?match({atomic, [{^Tab, 1, test_ok2}]}, mnesia:transaction(Read)),
     ?match({atomic, ok}, rpc:call(Node3, mnesia, transaction, [Write, [test_ok3]])),
-    ?match({atomic, [{Tab, 1, test_ok3}]}, mnesia:transaction(Read)),
+    ?match({atomic, [{^Tab, 1, test_ok3}]}, mnesia:transaction(Read)),
 
     ?match({atomic, ok}, mnesia:delete_table(Tab)),
 
@@ -1225,29 +1225,29 @@ set_master_nodes(Config) when is_list(Config) ->
     ?match([], mnesia:table_info(Tab1, master_nodes)),
 
     ?match(ok, mnesia:set_master_nodes(schema, [Node3, Node1])),
-    ?match([Node3, Node1], mnesia:table_info(schema, master_nodes)),
+    ?match([^Node3, ^Node1], mnesia:table_info(schema, master_nodes)),
     ?match(ok, mnesia:set_master_nodes(Tab1, [Node2])),
-    ?match([Node2], mnesia:table_info(Tab1, master_nodes)),
+    ?match([^Node2], mnesia:table_info(Tab1, master_nodes)),
     ?match(ok, mnesia:set_master_nodes(Tab1, [Node2, Node1])),
-    ?match([Node2, Node1], mnesia:table_info(Tab1, master_nodes)),
+    ?match([^Node2, ^Node1], mnesia:table_info(Tab1, master_nodes)),
     ?match(ok, mnesia:set_master_nodes(Tab2, [Node2])),  % Should set where_to_read to Node2!
-    ?match([Node2], mnesia:table_info(Tab2, master_nodes)),
+    ?match([^Node2], mnesia:table_info(Tab2, master_nodes)),
     ?match(ok, mnesia:set_master_nodes(Tab3, [Node3])),
-    ?match([Node3], mnesia:table_info(Tab3, master_nodes)),
+    ?match([^Node3], mnesia:table_info(Tab3, master_nodes)),
     ?match(ok, mnesia:set_master_nodes(Tab3, [])),
     ?match([], mnesia:table_info(Tab3, master_nodes)),
 
     ?match(ok, mnesia:set_master_nodes([Node1])),
-    ?match([Node1], mnesia:table_info(schema, master_nodes)),
-    ?match([Node1], mnesia:table_info(Tab1, master_nodes)),
+    ?match([^Node1], mnesia:table_info(schema, master_nodes)),
+    ?match([^Node1], mnesia:table_info(Tab1, master_nodes)),
     ?match([], mnesia:table_info(Tab2, master_nodes)),
-    ?match([Node1], mnesia:table_info(Tab3, master_nodes)),
+    ?match([^Node1], mnesia:table_info(Tab3, master_nodes)),
 
     ?match(ok, mnesia:set_master_nodes([Node1, Node2])),
-    ?match([Node1, Node2], mnesia:table_info(schema, master_nodes)),
-    ?match([Node1, Node2], mnesia:table_info(Tab1, master_nodes)),
-    ?match([Node2], mnesia:table_info(Tab2, master_nodes)),
-    ?match([Node1], mnesia:table_info(Tab3, master_nodes)),
+    ?match([^Node1, ^Node2], mnesia:table_info(schema, master_nodes)),
+    ?match([^Node1, ^Node2], mnesia:table_info(Tab1, master_nodes)),
+    ?match([^Node2], mnesia:table_info(Tab2, master_nodes)),
+    ?match([^Node1], mnesia:table_info(Tab3, master_nodes)),
 
     ?verify_mnesia(Nodes, []).
 
@@ -1271,7 +1271,7 @@ offline_set_master_nodes(Config) when is_list(Config) ->
     ?match(ok, mnesia:set_master_nodes(Tab2, [Node])),
     ?match(ok, mnesia:set_master_nodes(Tab3, [Node])),
     ?match([], mnesia_test_lib:start_mnesia([Node])),
-    ?match(Tabs, ?sort(mnesia:system_info(master_node_tables))),
+    ?match(^Tabs, ?sort(mnesia:system_info(master_node_tables))),
 
     ?match([], mnesia_test_lib:stop_mnesia([Node])),
     ?match(ok, mnesia:set_master_nodes(Tab1, [])),
@@ -1284,7 +1284,7 @@ offline_set_master_nodes(Config) when is_list(Config) ->
     ?match(ok, mnesia:set_master_nodes([Node])),
     ?match([], mnesia_test_lib:start_mnesia([Node])),
     AllTabs = ?sort([schema | Tabs]),
-    ?match(AllTabs, ?sort(mnesia:system_info(master_node_tables))),
+    ?match(^AllTabs, ?sort(mnesia:system_info(master_node_tables))),
 
     ?match([], mnesia_test_lib:stop_mnesia([Node])),
     ?match(ok, mnesia:set_master_nodes([])),
@@ -1313,21 +1313,21 @@ dump_tables(Config) when is_list(Config) ->
 
     AllKeys = fun() -> ?sort(mnesia:all_keys(Tab)) end,
 
-    ?match({atomic, Keys}, mnesia:transaction(AllKeys)),
+    ?match({atomic, ^Keys}, mnesia:transaction(AllKeys)),
     ?match({atomic, ok}, mnesia:dump_tables([Tab])),
 
     %% Delete one record
     ?match(ok, mnesia:dirty_delete({Tab, 5})),
     Keys2 = lists:delete(5, Keys),
 
-    ?match({atomic, Keys2}, mnesia:transaction(AllKeys)),
+    ?match({atomic, ^Keys2}, mnesia:transaction(AllKeys)),
 
     %% Check that all 10 is restored after a stop
     ?match([], mnesia_test_lib:stop_mnesia([Node1, Node2])),
     ?match([], mnesia_test_lib:start_mnesia([Node1, Node2])),
     ?match(ok, mnesia:wait_for_tables([Tab], infinity)),
 
-    ?match({atomic, Keys}, mnesia:transaction(AllKeys)),
+    ?match({atomic, ^Keys}, mnesia:transaction(AllKeys)),
 
     ?match({aborted,Reason} when element(1, Reason) == no_exists,
            mnesia:dump_tables([foo])),
@@ -1400,10 +1400,10 @@ force_load_table(Config) when is_list(Config) ->
     mnesia_test_lib:kill_mnesia([Node2]),
     %%    timer:sleep(timer:seconds(5)),
     ?match(ok, mnesia:start()),
-    ?match({timeout, [Tab]}, mnesia:wait_for_tables([Tab], 5)),
+    ?match({timeout, [^Tab]}, mnesia:wait_for_tables([Tab], 5)),
     ?match({'EXIT', _}, mnesia:dirty_read({Tab, 1})),
     ?match(yes, mnesia:force_load_table(Tab)),
-    ?match([{Tab, 1, test_ok}], mnesia:dirty_read({Tab, 1})),
+    ?match([{^Tab, 1, test_ok}], mnesia:dirty_read({Tab, 1})),
 
     ?match({error, _}, mnesia:force_load_table(error_tab)),
     ?verify_mnesia([Node1], [Node2]).
@@ -1437,11 +1437,11 @@ user_properties(Config) when is_list(Config) ->
     ?match([], mnesia:table_info(Tab2, user_properties)),
     ?match([], mnesia:table_info(Tab3, user_properties)),
 
-    ?match({'EXIT', {aborted, {no_exists, {Tab1, user_property, PropKey}}}},
+    ?match({'EXIT', {aborted, {no_exists, {^Tab1, user_property, ^PropKey}}}},
 	   mnesia:read_table_property(Tab1, PropKey)),
-    ?match({'EXIT', {aborted, {no_exists, {Tab2, user_property, PropKey}}}},
+    ?match({'EXIT', {aborted, {no_exists, {^Tab2, user_property, ^PropKey}}}},
 	   mnesia:read_table_property(Tab2, PropKey)),
-    ?match({'EXIT', {aborted, {no_exists, {Tab3, user_property, PropKey}}}},
+    ?match({'EXIT', {aborted, {no_exists, {^Tab3, user_property, ^PropKey}}}},
 	   mnesia:read_table_property(Tab3, PropKey)),
 
     ?match({atomic, ok}, mnesia:write_table_property(Tab1, Prop)),
@@ -1451,46 +1451,46 @@ user_properties(Config) when is_list(Config) ->
     ?match({atomic, ok}, mnesia:write_table_property(Tab2, YourProp)),
     ?match({atomic, ok}, mnesia:write_table_property(Tab3, YourProp)),
 
-    ?match(Prop, mnesia:read_table_property(Tab1, PropKey)),
-    ?match(Prop, mnesia:read_table_property(Tab2, PropKey)),
-    ?match(Prop, mnesia:read_table_property(Tab3, PropKey)),
+    ?match(^Prop, mnesia:read_table_property(Tab1, PropKey)),
+    ?match(^Prop, mnesia:read_table_property(Tab2, PropKey)),
+    ?match(^Prop, mnesia:read_table_property(Tab3, PropKey)),
 
     ?match({atomic, ok}, mnesia:write_table_property(Tab1, Prop2)),
     ?match({atomic, ok}, mnesia:write_table_property(Tab2, Prop2)),
     ?match({atomic, ok}, mnesia:write_table_property(Tab3, Prop2)),
-    ?match(Prop2, mnesia:read_table_property(Tab1, PropKey)),
-    ?match(Prop2, mnesia:read_table_property(Tab2, PropKey)),
-    ?match(Prop2, mnesia:read_table_property(Tab3, PropKey)),
+    ?match(^Prop2, mnesia:read_table_property(Tab1, PropKey)),
+    ?match(^Prop2, mnesia:read_table_property(Tab2, PropKey)),
+    ?match(^Prop2, mnesia:read_table_property(Tab3, PropKey)),
 
     ?match({atomic, ok}, mnesia:delete_table_property(Tab1, PropKey)),
     ?match({atomic, ok}, mnesia:delete_table_property(Tab2, PropKey)),
     ?match({atomic, ok}, mnesia:delete_table_property(Tab3, PropKey)),
 
-    ?match([YourProp], mnesia:table_info(Tab1, user_properties)),
-    ?match([YourProp], mnesia:table_info(Tab2, user_properties)),
-    ?match([YourProp], mnesia:table_info(Tab3, user_properties)),
+    ?match([^YourProp], mnesia:table_info(Tab1, user_properties)),
+    ?match([^YourProp], mnesia:table_info(Tab2, user_properties)),
+    ?match([^YourProp], mnesia:table_info(Tab3, user_properties)),
 
     Tab4 = user_properties_4,
     ?match({atomic, ok}, 
 	   mnesia:create_table(Tab4, [{user_properties, [Prop]}])),
 
-    ?match([Prop], mnesia:table_info(Tab4, user_properties)),
+    ?match([^Prop], mnesia:table_info(Tab4, user_properties)),
 
     %% Some error cases
 
-    ?match({aborted, {bad_type, Tab1, {}}},
+    ?match({aborted, {bad_type, ^Tab1, {}}},
 	   mnesia:write_table_property(Tab1, {})),
-    ?match({aborted, {bad_type, Tab1, ali}},
+    ?match({aborted, {bad_type, ^Tab1, ali}},
 	   mnesia:write_table_property(Tab1, ali)),
 
     Tab5 = user_properties_5,
-    ?match({aborted, {bad_type, Tab5, {user_properties, {}}}}, 
+    ?match({aborted, {bad_type, ^Tab5, {user_properties, {}}}}, 
 	   mnesia:create_table(Tab5, [{user_properties, {}}])),
-    ?match({aborted, {bad_type, Tab5, {user_properties, ali}}}, 
+    ?match({aborted, {bad_type, ^Tab5, {user_properties, ali}}}, 
 	   mnesia:create_table(Tab5, [{user_properties, ali}])),
-    ?match({aborted, {bad_type, Tab5, {user_properties, [{}]}}}, 
+    ?match({aborted, {bad_type, ^Tab5, {user_properties, [{}]}}}, 
 	   mnesia:create_table(Tab5, [{user_properties, [{}]}])),
-    ?match({aborted, {bad_type, Tab5, {user_properties, [ali]}}}, 
+    ?match({aborted, {bad_type, ^Tab5, {user_properties, [ali]}}}, 
 	   mnesia:create_table(Tab5, [{user_properties, [ali]}])),
 
     ?verify_mnesia(Nodes, []).
@@ -1607,7 +1607,7 @@ snmp_close_table(Config) when is_list(Config) ->
 				      [Transform(Tab1, Key) || Key <- Keys],
 				      ok
 			      end)),
-    ?match([{Tab1, {1, 1}, 1, 44}], mnesia:dirty_read(Tab1, {1, 1})),
+    ?match([{^Tab1, {1, 1}, 1, 44}], mnesia:dirty_read(Tab1, {1, 1})),
     ?match({atomic, ok}, mnesia:snmp_open_table(Tab1, [{key,{integer,integer}}])),
 
     ?match({atomic, ok}, mnesia:snmp_close_table(Tab2)),
@@ -1743,7 +1743,7 @@ snmp_get_row(Config) when is_list(Config) ->
 		{success, Res11} = 
 		    ?match({ok, [1]}, mnesia:snmp_get_next_index(Tab1,[])),
 		{ok, Index11} = Res11,
-		?match({ok, {Tab1,1,1}}, mnesia:snmp_get_row(Tab1, Index11)),    
+		?match({ok, {^Tab1,1,1}}, mnesia:snmp_get_row(Tab1, Index11)),    
 		?match(endOfTable, mnesia:snmp_get_next_index(Tab1, Index11)),
 		?match({'EXIT',_}, mnesia:snmp_get_row(Tab1, endOfTable)),
 		?match(undefined, mnesia:snmp_get_row(Tab1, [73])),
@@ -1874,9 +1874,9 @@ snmp_update_counter(Config) when is_list(Config) ->
     Oid = {Tab, 1},
     ?match([], mnesia:dirty_read(Oid)),
     ?match(ok, mnesia:dirty_write({Tab, 1, 1})),
-    ?match([{Tab, _Key, 1}], mnesia:dirty_read(Oid)),
+    ?match([{^Tab, _Key, 1}], mnesia:dirty_read(Oid)),
     ?match(3, mnesia:dirty_update_counter(Oid, 2)),
-    ?match([{Tab, _Key, 3}], mnesia:dirty_read(Oid)),
+    ?match([{^Tab, _Key, 3}], mnesia:dirty_read(Oid)),
     ?verify_mnesia(Nodes, []).
 
 snmp_order(doc) ->
@@ -1899,13 +1899,13 @@ snmp_order(Config) when is_list(Config) ->
     
     Test1 = fun() ->
 		    Keys0 = get_keys(Tab, []),
-		    ?match(Keys0, lists:sort(Keys0)),
+		    ?match(^Keys0, lists:sort(Keys0)),
 		    ?match([[1,2,2]|_], Keys0),
 		    Keys1 = get_keys(Tab, [5]),
-		    ?match(Keys1, lists:sort(Keys1)),
+		    ?match(^Keys1, lists:sort(Keys1)),
 		    ?match([[5,2,2]|_], Keys1),
 		    Keys2 = get_keys(Tab, [7, 4]),
-		    ?match(Keys2, lists:sort(Keys2)),
+		    ?match(^Keys2, lists:sort(Keys2)),
 		    ?match([[7,4,2]|_], Keys2),
 		    ok
 	    end,
@@ -1919,15 +1919,15 @@ snmp_order(Config) when is_list(Config) ->
 		    mnesia:write(Tab, {Tab,{10,10,2},updated}, write),
 		    Keys0 = get_keys(Tab, []),
 		    ?match([[0,0,2],[1,2,2]|_], Keys0),
-		    ?match(Keys0, lists:sort(Keys0)),
+		    ?match(^Keys0, lists:sort(Keys0)),
 		    
 		    Keys1 = get_keys(Tab, [5]),
 		    ?match([[5,2,2],[5,3,2]|_], Keys1),
-		    ?match(Keys1, lists:sort(Keys1)),
+		    ?match(^Keys1, lists:sort(Keys1)),
 		    
 		    Keys2 = get_keys(Tab, [7,4]),
 		    ?match([[7,4,2]|_], Keys2),
-		    ?match(Keys2, lists:sort(Keys2)),
+		    ?match(^Keys2, lists:sort(Keys2)),
 		    ?match([10,10,2], lists:last(Keys0)),
 		    ?match([10,10,2], lists:last(Keys1)),
 		    ?match([10,10,2], lists:last(Keys2)),
@@ -1975,33 +1975,33 @@ subscribe_extended(Config) when is_list(Config) ->
     Def3 = [{Storage, [N1, N2]}],
     ?match({atomic, ok}, mnesia:create_table(Tab3, Def3)),
 
-    ?match({ok, N1}, mnesia:subscribe({table, Tab1, detailed})),
-    ?match({ok, N1}, mnesia:subscribe({table, Tab2, detailed})),
-    ?match({ok, N1}, mnesia:subscribe({table, Tab3, detailed})),
+    ?match({ok, ^N1}, mnesia:subscribe({table, Tab1, detailed})),
+    ?match({ok, ^N1}, mnesia:subscribe({table, Tab2, detailed})),
+    ?match({ok, ^N1}, mnesia:subscribe({table, Tab3, detailed})),
 
     ?match({error, {already_exists, _}}, mnesia:subscribe({table, Tab1, simple})),
-    ?match({error, {badarg, {table, Tab1, bad}}}, mnesia:subscribe({table, Tab1, bad})),
+    ?match({error, {badarg, {table, ^Tab1, bad}}}, mnesia:subscribe({table, Tab1, bad})),
 
-    ?match({ok, N1}, mnesia:subscribe(activity)),
+    ?match({ok, ^N1}, mnesia:subscribe(activity)),
     test_ext_sub(Tab1, Tab2, Tab3),
     
-    ?match({ok, N1}, mnesia:unsubscribe(activity)),
-    ?match({ok, N1}, mnesia:subscribe({table, Tab1, detailed})),
+    ?match({ok, ^N1}, mnesia:unsubscribe(activity)),
+    ?match({ok, ^N1}, mnesia:subscribe({table, Tab1, detailed})),
     ?match({atomic, ok}, mnesia:clear_table(Tab1)),
-    ?match({mnesia_table_event, {delete, schema, {schema, Tab1}, [{schema, Tab1, _}],_}}, recv_event()),
-    ?match({mnesia_table_event, {write, schema, {schema, Tab1, _}, [], _}}, recv_event()),
+    ?match({mnesia_table_event, {delete, schema, {schema, ^Tab1}, [{schema, ^Tab1, _}],_}}, recv_event()),
+    ?match({mnesia_table_event, {write, schema, {schema, ^Tab1, _}, [], _}}, recv_event()),
 
     ?match({atomic, ok}, mnesia:clear_table(Tab2)),
-    ?match({mnesia_table_event, {delete, schema, {schema, Tab2}, [{schema, Tab2, _}],_}}, 
+    ?match({mnesia_table_event, {delete, schema, {schema, ^Tab2}, [{schema, ^Tab2, _}],_}}, 
 	   recv_event()),
-    ?match({mnesia_table_event, {write, schema, {schema, Tab2, _}, [], _}}, recv_event()),
+    ?match({mnesia_table_event, {write, schema, {schema, ^Tab2, _}, [], _}}, recv_event()),
 
-    ?match({ok, N1}, mnesia:unsubscribe({table, Tab2, detailed})),    
+    ?match({ok, ^N1}, mnesia:unsubscribe({table, Tab2, detailed})),    
     {ok, _, _} = mnesia:activate_checkpoint([{name, testing}, 
 					     {ram_overrides_dump, true}, 
 					     {max, [Tab1, Tab2]}]),
-    ?match({ok, N1}, mnesia:subscribe({table, Tab2, detailed})),
-    ?match({ok, N1}, mnesia:subscribe(activity)),
+    ?match({ok, ^N1}, mnesia:subscribe({table, Tab2, detailed})),
+    ?match({ok, ^N1}, mnesia:subscribe(activity)),
     test_ext_sub(Tab1, Tab2, Tab3),
 
     ?verify_mnesia(Nodes, []).
@@ -2030,62 +2030,62 @@ test_ext_sub(Tab1, Tab2, Tab3) ->
     D = {dirty, self()},
     %% SET 
     ?match(ok, mnesia:dirty_write(Rec1)),
-    ?match({mnesia_table_event, {write, Tab1, Rec1, [], D}}, recv_event()), 
+    ?match({mnesia_table_event, {write, ^Tab1, ^Rec1, [], ^D}}, recv_event()), 
     ?match(ok, mnesia:dirty_write(Rec3)),
-    ?match({mnesia_table_event, {write, Tab1, Rec3, [], D}}, recv_event()),    
+    ?match({mnesia_table_event, {write, ^Tab1, ^Rec3, [], ^D}}, recv_event()),    
     ?match(ok, mnesia:dirty_write(Rec1)),
-    ?match({mnesia_table_event, {write, Tab1, Rec1, [Rec1], D}}, recv_event()),
+    ?match({mnesia_table_event, {write, ^Tab1, ^Rec1, [^Rec1], ^D}}, recv_event()),
     ?match({atomic, ok}, Write(Tab1, Rec2)),
-    ?match({mnesia_table_event, {write, Tab1, Rec2, [Rec1], {tid,_,S}}}, recv_event()),    
-    ?match({mnesia_activity_event, {complete, {tid,_,S}}}, recv_event()),
+    ?match({mnesia_table_event, {write, ^Tab1, ^Rec2, [^Rec1], {tid,_,^S}}}, recv_event()),    
+    ?match({mnesia_activity_event, {complete, {tid,_,^S}}}, recv_event()),
     ?match(ok, mnesia:dirty_delete({Tab1, 2})),
-    ?match({mnesia_table_event, {delete, Tab1, {Tab1, 2}, [Rec3], D}}, recv_event()),
+    ?match({mnesia_table_event, {delete, ^Tab1, {^Tab1, 2}, [^Rec3], ^D}}, recv_event()),
     ?match({atomic, ok}, DelObj(Tab1, Rec2)),
-    ?match({mnesia_table_event, {delete, Tab1, Rec2, [Rec2], {tid,_,S}}}, recv_event()),
-    ?match({mnesia_activity_event, {complete, {tid,_,S}}}, recv_event()),
+    ?match({mnesia_table_event, {delete, ^Tab1, ^Rec2, [^Rec2], {tid,_,^S}}}, recv_event()),
+    ?match({mnesia_activity_event, {complete, {tid,_,^S}}}, recv_event()),
 
     ?match({atomic, ok}, Delete(Tab1, 1)),
-    ?match({mnesia_table_event, {delete, Tab1, {Tab1, 1}, [], {tid,_,S}}}, recv_event()),
-    ?match({mnesia_activity_event, {complete, {tid,_,S}}}, recv_event()),
+    ?match({mnesia_table_event, {delete, ^Tab1, {^Tab1, 1}, [], {tid,_,^S}}}, recv_event()),
+    ?match({mnesia_activity_event, {complete, {tid,_,^S}}}, recv_event()),
     ?match({ok, _N1}, mnesia:unsubscribe({table, Tab1, detailed})),
 
     %% BAG 
 
     ?match({atomic, ok}, Write(Tab2, Rec1)),
-    ?match({mnesia_table_event, {write, Tab2, Rec1, [], {tid,_,S}}}, recv_event()),
-    ?match({mnesia_activity_event, {complete, {tid,_,S}}}, recv_event()),
+    ?match({mnesia_table_event, {write, ^Tab2, ^Rec1, [], {tid,_,^S}}}, recv_event()),
+    ?match({mnesia_activity_event, {complete, {tid,_,^S}}}, recv_event()),
     ?match({atomic, ok}, Write(Tab2, Rec4)),
-    ?match({mnesia_table_event, {write, Tab2, Rec4, [], {tid,_,S}}}, recv_event()),    
-    ?match({mnesia_activity_event, {complete, {tid,_,S}}}, recv_event()),
+    ?match({mnesia_table_event, {write, ^Tab2, ^Rec4, [], {tid,_,^S}}}, recv_event()),    
+    ?match({mnesia_activity_event, {complete, {tid,_,^S}}}, recv_event()),
     ?match({atomic, ok}, Write(Tab2, Rec3)),
-    ?match({mnesia_table_event, {write, Tab2, Rec3, [Rec4], {tid,_,S}}}, recv_event()),    
-    ?match({mnesia_activity_event, {complete, {tid,_,S}}}, recv_event()),
+    ?match({mnesia_table_event, {write, ^Tab2, ^Rec3, [^Rec4], {tid,_,^S}}}, recv_event()),    
+    ?match({mnesia_activity_event, {complete, {tid,_,^S}}}, recv_event()),
     ?match({atomic, ok}, Write(Tab2, Rec2)),
-    ?match({mnesia_table_event, {write, Tab2, Rec2, [Rec1], {tid,_,S}}}, recv_event()),    
-    ?match({mnesia_activity_event, {complete, {tid,_,S}}}, recv_event()),
+    ?match({mnesia_table_event, {write, ^Tab2, ^Rec2, [^Rec1], {tid,_,^S}}}, recv_event()),    
+    ?match({mnesia_activity_event, {complete, {tid,_,^S}}}, recv_event()),
     ?match({atomic, ok}, Write(Tab2, Rec1)),
-    ?match({mnesia_table_event, {write, Tab2, Rec1, [Rec1, Rec2], {tid,_,S}}}, recv_event()),
-    ?match({mnesia_activity_event, {complete, {tid,_,S}}}, recv_event()),
+    ?match({mnesia_table_event, {write, ^Tab2, ^Rec1, [^Rec1, ^Rec2], {tid,_,^S}}}, recv_event()),
+    ?match({mnesia_activity_event, {complete, {tid,_,^S}}}, recv_event()),
     ?match({atomic, ok}, DelObj(Tab2, Rec2)),
-    ?match({mnesia_table_event, {delete, Tab2, Rec2, [Rec2], {tid,_,S}}}, recv_event()),
-    ?match({mnesia_activity_event, {complete, {tid,_,S}}}, recv_event()),
+    ?match({mnesia_table_event, {delete, ^Tab2, ^Rec2, [^Rec2], {tid,_,^S}}}, recv_event()),
+    ?match({mnesia_activity_event, {complete, {tid,_,^S}}}, recv_event()),
     ?match({atomic, ok}, Delete(Tab2, 1)),
-    ?match({mnesia_table_event, {delete, Tab2, {Tab2, 1}, [Rec1], {tid,_,S}}}, recv_event()),
-    ?match({mnesia_activity_event, {complete, {tid,_,S}}}, recv_event()),
+    ?match({mnesia_table_event, {delete, ^Tab2, {^Tab2, 1}, [^Rec1], {tid,_,^S}}}, recv_event()),
+    ?match({mnesia_activity_event, {complete, {tid,_,^S}}}, recv_event()),
     ?match({atomic, ok}, Delete(Tab2, 2)),
-    ?match({mnesia_table_event, {delete, Tab2, {Tab2, 2}, [Rec4, Rec3], {tid,_,S}}}, recv_event()),
-    ?match({mnesia_activity_event, {complete, {tid,_,S}}}, recv_event()),
+    ?match({mnesia_table_event, {delete, ^Tab2, {^Tab2, 2}, [^Rec4, ^Rec3], {tid,_,^S}}}, recv_event()),
+    ?match({mnesia_activity_event, {complete, {tid,_,^S}}}, recv_event()),
 
     %% COUNTERS
 
     Rec5 = {Tab3, counter, 0},
     ?match(ok, mnesia:dirty_write(Rec5)),
-    ?match({mnesia_table_event, {write, Tab3, Rec5, [], D}}, recv_event()),
+    ?match({mnesia_table_event, {write, ^Tab3, ^Rec5, [], ^D}}, recv_event()),
     ?match(1, mnesia:dirty_update_counter({Tab3, counter}, 1)),
-    ?match({mnesia_table_event, {write, Tab3, {Tab3,counter,1}, [Rec5], D}}, recv_event()),
+    ?match({mnesia_table_event, {write, ^Tab3, {^Tab3,counter,1}, [^Rec5], ^D}}, recv_event()),
     ?match(ok, mnesia:dirty_delete({Tab3, counter})),
-    ?match({mnesia_table_event, {delete, Tab3, {Tab3,counter},
-				 [{Tab3,counter,1}], D}}, recv_event()),
+    ?match({mnesia_table_event, {delete, ^Tab3, {^Tab3,counter},
+				 [{^Tab3,counter,1}], ^D}}, recv_event()),
     ok.
 
 
@@ -2106,16 +2106,16 @@ subscribe_standard(Config) when is_list(Config)->
     ?match({error, badarg}, mnesia:unsubscribe({table, foo})),
     mnesia:unsubscribe(activity),
 
-    ?match({ok, N1}, mnesia:subscribe(system)),
-    ?match({ok, N1}, mnesia:subscribe(activity)),
+    ?match({ok, ^N1}, mnesia:subscribe(system)),
+    ?match({ok, ^N1}, mnesia:subscribe(activity)),
 
     ?match([], mnesia_test_lib:kill_mnesia([N2])),
-    ?match({mnesia_system_event, {mnesia_down, N2}}, recv_event()),
+    ?match({mnesia_system_event, {mnesia_down, ^N2}}, recv_event()),
     ?match(timeout, recv_event()),
 
     ?match([], mnesia_test_lib:start_mnesia([N2], [Tab])),
     ?match({mnesia_activity_event, _}, recv_event()),
-    ?match({mnesia_system_event,{mnesia_up, N2}}, recv_event()),
+    ?match({mnesia_system_event,{mnesia_up, ^N2}}, recv_event()),
 
     ?match(true, lists:member(self(), mnesia:system_info(subscribers))),
     ?match([], mnesia_test_lib:kill_mnesia([N1])),
@@ -2124,26 +2124,26 @@ subscribe_standard(Config) when is_list(Config)->
     ?match([], mnesia_test_lib:start_mnesia([N1], [Tab])),
     ?match(timeout, recv_event()),
 
-    ?match({ok, N1}, mnesia:subscribe(system)),
+    ?match({ok, ^N1}, mnesia:subscribe(system)),
     ?match({error, {already_exists, system}}, mnesia:subscribe(system)),
     ?match(stopped, mnesia:stop()),
-    ?match({mnesia_system_event, {mnesia_down, N1}}, recv_event()),
-    ?match({error, {node_not_running, N1}}, mnesia:subscribe(system)),
+    ?match({mnesia_system_event, {mnesia_down, ^N1}}, recv_event()),
+    ?match({error, {node_not_running, ^N1}}, mnesia:subscribe(system)),
     ?match([], mnesia_test_lib:start_mnesia([N1, N2], [Tab])),
 
     %% Check table events
-    ?match({ok, N1}, mnesia:subscribe(activity)),
+    ?match({ok, ^N1}, mnesia:subscribe(activity)),
     Old_Level = mnesia:set_debug_level(trace),
-    ?match({ok, N1}, mnesia:subscribe({table,Tab})),
+    ?match({ok, ^N1}, mnesia:subscribe({table,Tab})),
 
     ?match({atomic, ok},
 	   mnesia:transaction(fun() -> mnesia:write(#tab{i=155}) end)),
     Self = self(),
     ?match({mnesia_table_event, {write, _, _}}, recv_event()),
-    ?match({mnesia_activity_event, {complete, {tid, _, Self}}}, recv_event()),
+    ?match({mnesia_activity_event, {complete, {tid, _, ^Self}}}, recv_event()),
 
-    ?match({ok, N1}, mnesia:unsubscribe({table,Tab})),
-    ?match({ok, N1}, mnesia:unsubscribe(activity)),
+    ?match({ok, ^N1}, mnesia:unsubscribe({table,Tab})),
+    ?match({ok, ^N1}, mnesia:unsubscribe(activity)),
 
     ?match({atomic, ok},
 	   mnesia:transaction(fun() -> mnesia:write(#tab{i=255}) end)),
@@ -2153,8 +2153,8 @@ subscribe_standard(Config) when is_list(Config)->
 
     %% Check deletion of replica
 
-    ?match({ok, N1}, mnesia:subscribe({table,Tab})),
-    ?match({ok, N1}, mnesia:subscribe(activity)),
+    ?match({ok, ^N1}, mnesia:subscribe({table,Tab})),
+    ?match({ok, ^N1}, mnesia:subscribe(activity)),
     ?match(ok, mnesia:dirty_write(#tab{i=355})),
     ?match({mnesia_table_event, {write, _, _}}, recv_event()),
     ?match({atomic, ok}, mnesia:del_table_copy(Tab, N1)),
@@ -2164,7 +2164,7 @@ subscribe_standard(Config) when is_list(Config)->
 
     ?match({atomic, ok}, mnesia:move_table_copy(Tab, N2, N1)),
     ?match({mnesia_activity_event, _}, recv_event()),
-    ?match({ok, N1}, mnesia:subscribe({table,Tab})),
+    ?match({ok, ^N1}, mnesia:subscribe({table,Tab})),
     ?match(ok, mnesia:dirty_write(#tab{i=555})),
     ?match({mnesia_table_event, {write, _, _}}, recv_event()),
     ?match({atomic, ok}, mnesia:move_table_copy(Tab, N1, N2)),
@@ -2174,8 +2174,8 @@ subscribe_standard(Config) when is_list(Config)->
 
     ?match({atomic, ok}, mnesia:add_table_copy(Tab, N1, ram_copies)),
     ?match({mnesia_activity_event, _}, recv_event()),
-    ?match({ok, N1}, mnesia:subscribe({table,Tab})),
-    ?match({error, {already_exists, {table,Tab, simple}}}, 
+    ?match({ok, ^N1}, mnesia:subscribe({table,Tab})),
+    ?match({error, {already_exists, {table,^Tab, simple}}}, 
 	   mnesia:subscribe({table,Tab})),
     ?match(ok, mnesia:dirty_write(#tab{i=755})),
     ?match({mnesia_table_event, {write, _, _}}, recv_event()),
@@ -2237,15 +2237,15 @@ foldl(Config) when is_list(Config) ->
     ?match({aborted, _}, mnesia:transaction(Fold2, [Tab1, read_lock])),
 
     %% Success
-    ?match({atomic, Tab1Els}, sort_res(mnesia:transaction(Fold, [Tab1]))),
-    ?match({atomic, Tab2Els}, sort_res(mnesia:transaction(Fold, [Tab2]))),
-    ?match({atomic, Tab3Els}, mnesia:transaction(Fold, [Tab3])),        
+    ?match({atomic, ^Tab1Els}, sort_res(mnesia:transaction(Fold, [Tab1]))),
+    ?match({atomic, ^Tab2Els}, sort_res(mnesia:transaction(Fold, [Tab2]))),
+    ?match({atomic, ^Tab3Els}, mnesia:transaction(Fold, [Tab3])),        
 
-    ?match({atomic, Tab1Els}, sort_res(mnesia:transaction(Fold2, [Tab1, read]))),
-    ?match({atomic, Tab1Els}, sort_res(mnesia:transaction(Fold2, [Tab1, write]))),
+    ?match({atomic, ^Tab1Els}, sort_res(mnesia:transaction(Fold2, [Tab1, read]))),
+    ?match({atomic, ^Tab1Els}, sort_res(mnesia:transaction(Fold2, [Tab1, write]))),
 
-    ?match(Tab1Els, sort_res(mnesia:sync_dirty(Fold, [Tab1]))),
-    ?match(Tab2Els, sort_res(mnesia:async_dirty(Fold, [Tab2]))),
+    ?match(^Tab1Els, sort_res(mnesia:sync_dirty(Fold, [Tab1]))),
+    ?match(^Tab2Els, sort_res(mnesia:async_dirty(Fold, [Tab2]))),
 
     ?verify_mnesia(Nodes, []).	   
 
@@ -2377,7 +2377,7 @@ record_name_dirty_access(Storage, Config) ->
 	      {Storage, Nodes}],
     ?match({atomic, ok}, mnesia:create_table(Tab, TabDef)),
 
-    ?match(RecName, mnesia:table_info(Tab, record_name)),
+    ?match(^RecName, mnesia:table_info(Tab, record_name)),
 
     ?match(ok, mnesia:dirty_write(Tab, {RecName, 2, 20})),
     ?match(ok, mnesia:dirty_write(Tab, {RecName, 2, 21})),
@@ -2387,52 +2387,52 @@ record_name_dirty_access(Storage, Config) ->
     BupFile = List ++ ".BUP",
     CpName = cpname,
     CpArgs = [{name, CpName}, {min, [Tab]}, {ram_overrides_dump, true}],
-    ?match({ok, CpName, _}, mnesia:activate_checkpoint(CpArgs)),
+    ?match({ok, ^CpName, _}, mnesia:activate_checkpoint(CpArgs)),
     ?match(ok, mnesia:backup_checkpoint(CpName, BupFile)),
     ?match(ok, mnesia:deactivate_checkpoint(CpName)),
 
     ?match(ok, mnesia:dirty_write(Tab, {RecName, 1, 10})),
-    ?match({ok, Node1}, mnesia:subscribe({table, Tab})),
+    ?match({ok, ^Node1}, mnesia:subscribe({table, Tab})),
     ?match(ok, mnesia:dirty_write(Tab, {RecName, 3, 10})),
 
     Twos =?sort( [{RecName, 2, 20}, {RecName, 2, 21}, {RecName, 2, 22}]),
-    ?match(Twos, ?sort(mnesia:dirty_read(Tab, 2))),
+    ?match(^Twos, ?sort(mnesia:dirty_read(Tab, 2))),
 
     ?match(ok, mnesia:dirty_delete_object(Tab, {RecName, 2, 21})),
 
     Tens = ?sort([{RecName, 1, 10}, {RecName, 3, 10}]),
     TenPat = {RecName, '_', 10},
-    ?match(Tens, ?sort(mnesia:dirty_match_object(Tab, TenPat))),
-    ?match(Tens, ?sort(mnesia:dirty_select(Tab, [{TenPat, [], ['$_']}]))),
+    ?match(^Tens, ?sort(mnesia:dirty_match_object(Tab, TenPat))),
+    ?match(^Tens, ?sort(mnesia:dirty_select(Tab, [{TenPat, [], ['$_']}]))),
 
     %% Subscription test
     E = mnesia_table_event,
-    ?match_receive({E, {write, {Tab, 3, 10}, _}}),
-    ?match_receive({E, {delete_object, {Tab, 2, 21}, _}}),
-    ?match({ok, Node1}, mnesia:unsubscribe({table, Tab})),
+    ?match_receive({^E, {write, {^Tab, 3, 10}, _}}),
+    ?match_receive({^E, {delete_object, {^Tab, 2, 21}, _}}),
+    ?match({ok, ^Node1}, mnesia:unsubscribe({table, Tab})),
 
     ?match([], mnesia_test_lib:stop_mnesia([Node1])),
     ?match([], mnesia_test_lib:start_mnesia(Nodes, [Tab])),
 
-    ?match(Tens, ?sort(mnesia:dirty_index_match_object(Tab, TenPat, Attr) )),
-    ?match(Tens, ?sort(mnesia:dirty_index_read(Tab, 10, Attr))),
+    ?match(^Tens, ?sort(mnesia:dirty_index_match_object(Tab, TenPat, Attr) )),
+    ?match(^Tens, ?sort(mnesia:dirty_index_read(Tab, 10, Attr))),
 
     ?match([1, 2, 3], ?sort(mnesia:dirty_all_keys(Tab))),
 
-    ?match({ok, Node1}, mnesia:subscribe({table, Tab})),
+    ?match({ok, ^Node1}, mnesia:subscribe({table, Tab})),
     ?match(ok, mnesia:dirty_delete(Tab, 2)),
     ?match([], mnesia:dirty_read(Tab, 2)),
 
-    ?match_receive({E, {delete, {Tab, 2}, _}}),
+    ?match_receive({^E, {delete, {^Tab, 2}, _}}),
     ?match([], mnesia_test_lib:flush()),
-    ?match({ok, Node1}, mnesia:unsubscribe({table, Tab})),
+    ?match({ok, ^Node1}, mnesia:unsubscribe({table, Tab})),
 
     %% Restore test
-    ?match({atomic, [Tab]}, mnesia:restore(BupFile, [{recreate_tables, [Tab]}])),
-    ?match(RecName, mnesia:table_info(Tab, record_name)),
+    ?match({atomic, [^Tab]}, mnesia:restore(BupFile, [{recreate_tables, [Tab]}])),
+    ?match(^RecName, mnesia:table_info(Tab, record_name)),
 
-    ?match(Twos, ?sort(mnesia:dirty_match_object(Tab, mnesia:table_info(Tab, wild_pattern)))),
-    ?match(Twos, ?sort(mnesia:dirty_select(Tab, 
+    ?match(^Twos, ?sort(mnesia:dirty_match_object(Tab, mnesia:table_info(Tab, wild_pattern)))),
+    ?match(^Twos, ?sort(mnesia:dirty_select(Tab, 
 					   [{mnesia:table_info(Tab, wild_pattern),
 					     [],['$_']}]))),
 
@@ -2455,7 +2455,7 @@ record_name_dirty_access(Storage, Config) ->
 		  end
           end,
 
-    ?match({ok, {Twos, []}}, mnesia:traverse_backup(BupFile, mnesia_backup, 
+    ?match({ok, {^Twos, []}}, mnesia:traverse_backup(BupFile, mnesia_backup, 
 						    dummy, read_only, 
 						    Fun, {[], []})),
     ?match(ok, file:delete(BupFile)),
@@ -2471,7 +2471,7 @@ record_name_dirty_access(Storage, Config) ->
     ?match(10, mnesia:dirty_update_counter(CounterTab, C, 10)),
     ?match(11, mnesia:dirty_update_counter(CounterTab, C, 1)),
     ?match(4711, mnesia:dirty_update_counter(CounterTab, C, 4700)),
-    ?match([{some_counter, C, 4711}], mnesia:dirty_read(CounterTab, C)),
+    ?match([{some_counter, ^C, 4711}], mnesia:dirty_read(CounterTab, C)),
     ?match(0, mnesia:dirty_update_counter(CounterTab, C, -4747)),
 
     %% Registry tests
@@ -2484,7 +2484,7 @@ record_name_dirty_access(Storage, Config) ->
 	?match([_ | _], mnesia_registry_test:dump_registry(node(), RegTab)),
 
     R = ?sort(RegRecs),
-    ?match(R, ?sort(mnesia_registry_test:restore_registry(node(), RegTab))),
+    ?match(^R, ?sort(mnesia_registry_test:restore_registry(node(), RegTab))),
 
     ?verify_mnesia(Nodes, []).
 
@@ -2513,19 +2513,19 @@ sorted_ets(Config) when is_list(Config) ->
 				   end)),
 
     List = mnesia:dirty_match_object({Tab, '_', '_'}),
-    ?match(List, ?sort(List)),
-    ?match(List, rpc:call(N2, mnesia, dirty_match_object, [{Tab, '_', '_'}])),
-    ?match(List, rpc:call(N3, mnesia, dirty_match_object, [{Tab, '_', '_'}])),
+    ?match(^List, ?sort(List)),
+    ?match(^List, rpc:call(N2, mnesia, dirty_match_object, [{Tab, '_', '_'}])),
+    ?match(^List, rpc:call(N3, mnesia, dirty_match_object, [{Tab, '_', '_'}])),
 
     mnesia_test_lib:stop_mnesia(All),
     mnesia_test_lib:start_mnesia(All, [sorted_tab]),
 
-    List = mnesia:dirty_match_object({Tab, '_', '_'}),
-    ?match(List, ?sort(List)),
-    ?match(List, rpc:call(N2, mnesia, dirty_match_object, [{Tab, '_', '_'}])),
-    ?match(List, rpc:call(N3, mnesia, dirty_match_object, [{Tab, '_', '_'}])),
+    ^List = mnesia:dirty_match_object({Tab, '_', '_'}),
+    ?match(^List, ?sort(List)),
+    ?match(^List, rpc:call(N2, mnesia, dirty_match_object, [{Tab, '_', '_'}])),
+    ?match(^List, rpc:call(N3, mnesia, dirty_match_object, [{Tab, '_', '_'}])),
 
-    ?match(List, rpc:call(N3, mnesia, dirty_select, [Tab, [{{Tab, '_', '_'},[],['$_']}]])),
+    ?match(^List, rpc:call(N3, mnesia, dirty_select, [Tab, [{{Tab, '_', '_'},[],['$_']}]])),
 
     TransMatch = fun() ->
 			 mnesia:write({Tab, {trans, 0}, 0}),
@@ -2540,14 +2540,14 @@ sorted_ets(Config) when is_list(Config) ->
 
     TList = mnesia:transaction(TransMatch),
     STList = ?sort(TList),
-    ?match(STList, TList),
-    ?match(STList, rpc:call(N2, mnesia, transaction, [TransMatch])),
-    ?match(STList, rpc:call(N3, mnesia, transaction, [TransMatch])),
+    ?match(^STList, TList),
+    ?match(^STList, rpc:call(N2, mnesia, transaction, [TransMatch])),
+    ?match(^STList, rpc:call(N3, mnesia, transaction, [TransMatch])),
 
     TSel = mnesia:transaction(TransSelect),
-    ?match(STList, TSel),
-    ?match(STList, rpc:call(N2, mnesia, transaction, [TransSelect])),
-    ?match(STList, rpc:call(N3, mnesia, transaction, [TransSelect])),
+    ?match(^STList, TSel),
+    ?match(^STList, rpc:call(N2, mnesia, transaction, [TransSelect])),
+    ?match(^STList, rpc:call(N3, mnesia, transaction, [TransSelect])),
 
     ?match({atomic, ok}, mnesia:create_table(rec, [{type, ordered_set}])),
     [ok = mnesia:dirty_write(R) || R <- [{rec,1,1}, {rec,2,1}]],
@@ -2596,12 +2596,12 @@ index_cleanup(Config) when is_list(Config) ->
 
 
     Recs = [Add(Tab) || Tab <- Tabs],
-    ?match(Recs, [IRead(Tab) || Tab <- Tabs]),
+    ?match(^Recs, [IRead(Tab) || Tab <- Tabs]),
     [Delete(Rec) || Rec <- lists:flatten(Recs)],
 
-    [?match({Tab,0}, {Tab,mnesia:table_info(Tab, size)}) || Tab <- Tabs],
+    [?match({^Tab,0}, {Tab,mnesia:table_info(Tab, size)}) || Tab <- Tabs],
 
-    [?match({Tab,Node,0, _}, rpc:call(Node, ?MODULE, index_size, [Tab]))
+    [?match({^Tab,^Node,0, _}, rpc:call(Node, ?MODULE, index_size, [Tab]))
      || Node <- All, Tab <- Tabs],
     ?verify_mnesia(All, []).
 

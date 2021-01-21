@@ -247,16 +247,16 @@ dsa_pem(Config) when is_list(Config) ->
 
     DSAKey = public_key:der_decode('DSAPrivateKey', DerDSAKey),
 
-    DSAKey = public_key:pem_entry_decode(Entry0),
+    ^DSAKey = public_key:pem_entry_decode(Entry0),
 
     {ok, DSAPubPem} = file:read_file(filename:join(Datadir, "dsa_pub.pem")),
     [{'SubjectPublicKeyInfo', _, _} = PubEntry0] =
         public_key:pem_decode(DSAPubPem),
     DSAPubKey = public_key:pem_entry_decode(PubEntry0),
     true = check_entry_type(DSAPubKey, 'DSAPublicKey'),
-    PubEntry0 = public_key:pem_entry_encode('SubjectPublicKeyInfo', DSAPubKey),
+    ^PubEntry0 = public_key:pem_entry_encode('SubjectPublicKeyInfo', DSAPubKey),
     DSAPubPemNoEndNewLines = strip_superfluous_newlines(DSAPubPem),
-    DSAPubPemNoEndNewLines = strip_superfluous_newlines(public_key:pem_encode([PubEntry0])).
+    ^DSAPubPemNoEndNewLines = strip_superfluous_newlines(public_key:pem_encode([PubEntry0])).
 
 dsa_priv_pkcs8() ->
     [{doc, "DSA PKCS8 private key decode/encode"}].
@@ -265,11 +265,11 @@ dsa_priv_pkcs8(Config) when is_list(Config) ->
     {ok, DsaPem} = file:read_file(filename:join(Datadir, "dsa_key_pkcs8.pem")),
     [{'PrivateKeyInfo', DerDSAKey, not_encrypted} = Entry0 ] = public_key:pem_decode(DsaPem),
     DSAKey = public_key:der_decode('PrivateKeyInfo', DerDSAKey),
-    DSAKey = public_key:pem_entry_decode(Entry0),
+    ^DSAKey = public_key:pem_entry_decode(Entry0),
     true = check_entry_type(DSAKey, 'DSAPrivateKey'),
     PrivEntry0 = public_key:pem_entry_encode('PrivateKeyInfo', DSAKey),
     DSAPemNoEndNewLines = strip_superfluous_newlines(DsaPem),
-    DSAPemNoEndNewLines = strip_superfluous_newlines(public_key:pem_encode([PrivEntry0])).
+    ^DSAPemNoEndNewLines = strip_superfluous_newlines(public_key:pem_encode([PrivEntry0])).
 
 %%--------------------------------------------------------------------
 
@@ -282,7 +282,7 @@ rsa_pem(Config) when is_list(Config) ->
 
     RSAKey0 = public_key:der_decode('RSAPrivateKey', DerRSAKey),
 
-    RSAKey0 = public_key:pem_entry_decode(Entry0),
+    ^RSAKey0 = public_key:pem_entry_decode(Entry0),
     
     [{'RSAPrivateKey', _, {_,_}} = Entry1] =
 	erl_make_certs:pem_to_der(filename:join(Datadir, "rsa.pem")),
@@ -295,16 +295,16 @@ rsa_pem(Config) when is_list(Config) ->
         public_key:pem_decode(RSAPubPem),
     RSAPubKey = public_key:pem_entry_decode(PubEntry0),
     true = check_entry_type(RSAPubKey, 'RSAPublicKey'),
-    PubEntry0 = public_key:pem_entry_encode('SubjectPublicKeyInfo', RSAPubKey),
+    ^PubEntry0 = public_key:pem_entry_encode('SubjectPublicKeyInfo', RSAPubKey),
     RSAPubPemNoEndNewLines = strip_superfluous_newlines(RSAPubPem),
-    RSAPubPemNoEndNewLines = strip_superfluous_newlines(public_key:pem_encode([PubEntry0])),
+    ^RSAPubPemNoEndNewLines = strip_superfluous_newlines(public_key:pem_encode([PubEntry0])),
 
     {ok, RSARawPem} = file:read_file(filename:join(Datadir, "rsa_pub_key.pem")),
     [{'RSAPublicKey', _, _} = PubEntry1] =
         public_key:pem_decode(RSARawPem),
-    RSAPubKey = public_key:pem_entry_decode(PubEntry1),
+    ^RSAPubKey = public_key:pem_entry_decode(PubEntry1),
     RSARawPemNoEndNewLines = strip_superfluous_newlines(RSARawPem),
-    RSARawPemNoEndNewLines = strip_superfluous_newlines(public_key:pem_encode([PubEntry1])).
+    ^RSARawPemNoEndNewLines = strip_superfluous_newlines(public_key:pem_encode([PubEntry1])).
 
 rsa_pss_pss_pem() ->
     [{doc, "RSA PKCS8 RSASSA-PSS private key decode/encode"}].
@@ -313,11 +313,11 @@ rsa_pss_pss_pem(Config) when is_list(Config) ->
     {ok, RsaPem} = file:read_file(filename:join(Datadir, "rsa_pss_pss_key.pem")),
     [{'PrivateKeyInfo', DerRSAKey, not_encrypted} = Entry0 ] = public_key:pem_decode(RsaPem),
     {RSAKey, Parms} = public_key:der_decode('PrivateKeyInfo', DerRSAKey),
-    {RSAKey, Parms} = public_key:pem_entry_decode(Entry0),
+    {^RSAKey, ^Parms} = public_key:pem_entry_decode(Entry0),
     true = check_entry_type(RSAKey, 'RSAPrivateKey'),
     PrivEntry0 = public_key:pem_entry_encode('PrivateKeyInfo', {RSAKey, Parms}),
     RSAPemNoEndNewLines = strip_superfluous_newlines(RsaPem),
-    RSAPemNoEndNewLines = strip_superfluous_newlines(public_key:pem_encode([PrivEntry0])).
+    ^RSAPemNoEndNewLines = strip_superfluous_newlines(public_key:pem_encode([PrivEntry0])).
 
 rsa_priv_pkcs8() ->
     [{doc, "RSA PKCS8 private key decode/encode"}].
@@ -326,11 +326,11 @@ rsa_priv_pkcs8(Config) when is_list(Config) ->
     {ok, RsaPem} = file:read_file(filename:join(Datadir, "rsa_key_pkcs8.pem")),
     [{'PrivateKeyInfo', DerRSAKey, not_encrypted} = Entry0 ] = public_key:pem_decode(RsaPem),
     RSAKey = public_key:der_decode('PrivateKeyInfo', DerRSAKey),
-    RSAKey = public_key:pem_entry_decode(Entry0),
+    ^RSAKey = public_key:pem_entry_decode(Entry0),
     true = check_entry_type(RSAKey, 'RSAPrivateKey'),
     PrivEntry0 = public_key:pem_entry_encode('PrivateKeyInfo', RSAKey),
     RSAPemNoEndNewLines = strip_superfluous_newlines(RsaPem),
-    RSAPemNoEndNewLines = strip_superfluous_newlines(public_key:pem_encode([PrivEntry0])).
+    ^RSAPemNoEndNewLines = strip_superfluous_newlines(public_key:pem_encode([PrivEntry0])).
 
 %%--------------------------------------------------------------------
 
@@ -343,9 +343,9 @@ ec_pem(Config) when is_list(Config) ->
         public_key:pem_decode(ECPubPem),
     ECPubKey = public_key:pem_entry_decode(PubEntry0),
     true = check_entry_type(ECPubKey, 'ECPoint'),
-    PubEntry0 = public_key:pem_entry_encode('SubjectPublicKeyInfo', ECPubKey),
+    ^PubEntry0 = public_key:pem_entry_encode('SubjectPublicKeyInfo', ECPubKey),
     ECPubPemNoEndNewLines = strip_superfluous_newlines(ECPubPem),
-    ECPubPemNoEndNewLines = strip_superfluous_newlines(public_key:pem_encode([PubEntry0])),
+    ^ECPubPemNoEndNewLines = strip_superfluous_newlines(public_key:pem_encode([PubEntry0])),
     
     {ok, ECPrivPem} = file:read_file(filename:join(Datadir, "ec_key.pem")),
     [{'EcpkParameters', _, not_encrypted} = Entry1,
@@ -357,7 +357,7 @@ ec_pem(Config) when is_list(Config) ->
     true = check_entry_type(ECPrivKey, 'ECPrivateKey'),
     true = check_entry_type(ECPrivKey#'ECPrivateKey'.parameters, 'EcpkParameters'),
     ECPemNoEndNewLines = strip_superfluous_newlines(ECPrivPem),
-    ECPemNoEndNewLines = strip_superfluous_newlines(public_key:pem_encode([Entry1, Entry2])).
+    ^ECPemNoEndNewLines = strip_superfluous_newlines(public_key:pem_encode([Entry1, Entry2])).
     
 ec_pem2() ->
     [{doc, "EC key w/explicit params PEM-file decode/encode"}].
@@ -376,7 +376,7 @@ ec_pem2(Config) when is_list(Config) ->
     true = check_entry_type(ECPrivKey, 'ECPrivateKey'),
     true = check_entry_type(ECPrivKey#'ECPrivateKey'.parameters, 'EcpkParameters'),
     ECPemNoEndNewLines = strip_superfluous_newlines(ECPrivPem),
-    ECPemNoEndNewLines = strip_superfluous_newlines(public_key:pem_encode([Entry1, Entry2])).
+    ^ECPemNoEndNewLines = strip_superfluous_newlines(public_key:pem_encode([Entry1, Entry2])).
 
 ec_priv_pkcs8() ->
     [{doc, "EC PKCS8 private key decode/encode"}].
@@ -389,7 +389,7 @@ ec_priv_pkcs8(Config) when is_list(Config) ->
     true = check_entry_type(ECPrivKey#'ECPrivateKey'.parameters, 'EcpkParameters'),
     PrivEntry0 = public_key:pem_entry_encode('PrivateKeyInfo', ECPrivKey),
     ECPemNoEndNewLines = strip_superfluous_newlines(ECPrivPem),
-    ECPemNoEndNewLines = strip_superfluous_newlines(public_key:pem_encode([PrivEntry0])).
+    ^ECPemNoEndNewLines = strip_superfluous_newlines(public_key:pem_encode([PrivEntry0])).
 
 init_ec_pem_encode_generated(Config) ->
     case catch true = lists:member('secp384r1', crypto:ec_curves()) of
@@ -423,10 +423,10 @@ encrypted_pem(Config) when is_list(Config) ->
     Salt0 = crypto:strong_rand_bytes(8),
     Entry0 = public_key:pem_entry_encode('RSAPrivateKey', RSAKey,
 					 {{"DES-EDE3-CBC", Salt0}, "1234abcd"}),
-    RSAKey = public_key:pem_entry_decode(Entry0,"1234abcd"),
+    ^RSAKey = public_key:pem_entry_decode(Entry0,"1234abcd"),
     Des3KeyFile = filename:join(Datadir, "des3_client_key.pem"),
     erl_make_certs:der_to_pem(Des3KeyFile, [Entry0]),
-    [{'RSAPrivateKey', _, {"DES-EDE3-CBC", Salt0}}] =
+    [{'RSAPrivateKey', _, {"DES-EDE3-CBC", ^Salt0}}] =
 	erl_make_certs:pem_to_der(Des3KeyFile),
 
     Salt1 = crypto:strong_rand_bytes(8),
@@ -434,7 +434,7 @@ encrypted_pem(Config) when is_list(Config) ->
 					   {{"DES-CBC", Salt1}, "4567efgh"}),
     DesKeyFile = filename:join(Datadir, "des_client_key.pem"),
     erl_make_certs:der_to_pem(DesKeyFile, [Entry1]),
-    [{'RSAPrivateKey', _, {"DES-CBC", Salt1}} =Entry2] =
+    [{'RSAPrivateKey', _, {"DES-CBC", ^Salt1}} =Entry2] =
 	erl_make_certs:pem_to_der(DesKeyFile),
     {ok, Pem} = file:read_file(DesKeyFile),
     check_encapsulated_header(Pem),
@@ -499,9 +499,9 @@ encrypt_decrypt(Config) when is_list(Config) ->
     PublicKey = #'RSAPublicKey'{modulus=Mod, publicExponent=Exp},
     Msg = list_to_binary(lists:duplicate(5, "Foo bar 100")),
     RsaEncrypted = public_key:encrypt_private(Msg, PrivateKey),
-    Msg = public_key:decrypt_public(RsaEncrypted, PublicKey),
+    ^Msg = public_key:decrypt_public(RsaEncrypted, PublicKey),
     RsaEncrypted2 = public_key:encrypt_public(Msg, PublicKey),
-    Msg = public_key:decrypt_private(RsaEncrypted2, PrivateKey),
+    ^Msg = public_key:decrypt_private(RsaEncrypted2, PrivateKey),
     ok.
        
 %%--------------------------------------------------------------------
@@ -590,16 +590,16 @@ pkix(Config) when is_list(Config) ->
     TestTransform = fun({'Certificate', CertDer, not_encrypted}) ->
 			    PlainCert = public_key:pkix_decode_cert(CertDer, plain),
 			    OtpCert = public_key:pkix_decode_cert(CertDer, otp),
-			    CertDer = 
+			    ^CertDer = 
 				public_key:pkix_encode('OTPCertificate', OtpCert, otp),
-			    CertDer = 
+			    ^CertDer = 
 				public_key:pkix_encode('Certificate', PlainCert, plain),
 			    OTPTBS = OtpCert#'OTPCertificate'.tbsCertificate,
 			    OTPSubj = OTPTBS#'OTPTBSCertificate'.subject, 
 			    DNEncoded = public_key:pkix_encode('Name', OTPSubj, otp),
 			    PlainTBS = PlainCert#'Certificate'.tbsCertificate,
 			    Subj2 = PlainTBS#'TBSCertificate'.subject,
-			    DNEncoded = public_key:pkix_encode('Name', Subj2, plain),
+			    ^DNEncoded = public_key:pkix_encode('Name', Subj2, plain),
 
 			    false = public_key:pkix_is_fixed_dh_cert(CertDer)
 		    end,
@@ -617,7 +617,7 @@ pkix(Config) when is_list(Config) ->
 	public_key:pkix_issuer_id(Peer, other),
     
     {ok, Id} = public_key:pkix_issuer_id(Root, self),
-    Id = public_key:pkix_subject_id(Root),
+    ^Id = public_key:pkix_subject_id(Root),
 
     true = lists:member(IssuerId, CaIds),
 
@@ -628,7 +628,7 @@ pkix(Config) when is_list(Config) ->
     VerifyStr = {rdnSequence, 
 		 [[{'AttributeTypeAndValue', {2,5,4,3},{printableString,"erlangca"}}],
 		  [{'AttributeTypeAndValue', {2,5,4,3},{printableString,"erlang ca"}}]]},   
-    VerifyStr = public_key:pkix_normalize_name(TestStr).
+    ^VerifyStr = public_key:pkix_normalize_name(TestStr).
     
   
 %%--------------------------------------------------------------------
@@ -973,7 +973,7 @@ pkix_crl(Config) when is_list(Config) ->
 			 distributionPoint =  Point} = public_key:pkix_dist_point(IDPCert),
     #'DistributionPoint'{cRLIssuer = asn1_NOVALUE,
 			 reasons = asn1_NOVALUE,
-			 distributionPoint =  Point} = public_key:pkix_dist_point(OTPIDPCert).
+			 distributionPoint =  ^Point} = public_key:pkix_dist_point(OTPIDPCert).
 
 general_name() ->
     [{doc, "Test that decoding of general name filed may have other values"
@@ -981,7 +981,7 @@ general_name() ->
 
 general_name(Config) when is_list(Config) ->
     DummyRfc822Name = "CN=CNDummy, OU=OUDummy, O=ODummy, C=SE",
-    {ok, {1,  DummyRfc822Name}} = 
+    {ok, {1,  ^DummyRfc822Name}} = 
 	pubkey_cert:cert_auth_key_id(
 	  #'AuthorityKeyIdentifier'{authorityCertIssuer = 
 					[{rfc822Name, DummyRfc822Name}],
@@ -1096,7 +1096,7 @@ short_cert_issuer_hash(Config) when is_list(Config) ->
     #'OTPCertificate'{tbsCertificate = #'OTPTBSCertificate'{issuer = Issuer}} =
 	public_key:pkix_decode_cert(CertDER, otp),
 
-    CertIssuerHash = public_key:short_name_hash(Issuer).
+    ^CertIssuerHash = public_key:short_name_hash(Issuer).
 
 %%--------------------------------------------------------------------
 short_crl_issuer_hash() ->
@@ -1113,7 +1113,7 @@ short_crl_issuer_hash(Config) when is_list(Config) ->
 
     Issuer = public_key:pkix_crl_issuer(CrlDER),
 
-    CrlIssuerHash = public_key:short_name_hash(Issuer).
+    ^CrlIssuerHash = public_key:short_name_hash(Issuer).
 
 %%--------------------------------------------------------------------
 gen_ec_param_prime_field() ->
@@ -1134,8 +1134,8 @@ gen_ec_param_char_2_field(Config) when is_list(Config) ->
 %%--------------------------------------------------------------------
 asn1_encode_decode({Asn1Type, Der, not_encrypted} = Entry) ->
     Decoded = public_key:der_decode(Asn1Type, Der),
-    Decoded = public_key:pem_entry_decode(Entry),
-    Entry = public_key:pem_entry_encode(Asn1Type, Decoded),
+    ^Decoded = public_key:pem_entry_decode(Entry),
+    ^Entry = public_key:pem_entry_encode(Asn1Type, Decoded),
     ok.
     
 check_countryname({rdnSequence,DirName}) ->

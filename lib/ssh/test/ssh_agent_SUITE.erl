@@ -136,8 +136,8 @@ sign_request(_Config) ->
     SignResponse = ssh_agent:send(SignRequest, Opts),
 
     #ssh_agent_sign_response{signature = #ssh_agent_signature{format = Format, blob = Sig}} = SignResponse,
-    Format = <<"ssh-rsa">>,
-    Sig = <<"signature">>,
+    ^Format = <<"ssh-rsa">>,
+    ^Sig = <<"signature">>,
 
     ok.
 

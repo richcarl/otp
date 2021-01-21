@@ -134,7 +134,7 @@ app_dies2(Test, N) ->
     receive
 	{'EXIT', _, {oops, Server, What}} ->
 	    Ref = erlang:monitor(process, Server),
-	    receive {'DOWN', Ref, _, _, _} -> ok end,
+	    receive {'DOWN', ^Ref, _, _, _} -> ok end,
 	    timer:sleep(100),
 	    What =/= last andalso app_dies2(Test, N+1)
     end.

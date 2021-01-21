@@ -320,7 +320,7 @@ cmd(Cmd, Env) ->
 eval_cmd(Port, Cmd) ->
     receive 
 	{Port, {data, _}} ->
-	    eval_cmd(Port, Cmd);
+	    eval_cmd(^Port, Cmd);
 	{Port, eof} ->
 	    ok
     end,

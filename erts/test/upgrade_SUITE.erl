@@ -259,7 +259,7 @@ fix_relup_inets_ftp(Dir) ->
     Filename = filename:join(Dir,"relup"),
     {ok,[{ToVsn,Up,Down}]} = file:consult(Filename),
     [{FromVsn,UpDescr,UpInstr}] = Up,
-    [{FromVsn,DownDescr,DownInstr}] = Down,
+    [{^FromVsn,DownDescr,DownInstr}] = Down,
 
     Fun = fun(point_of_no_return) -> false;
              (_) -> true
@@ -286,32 +286,32 @@ do_upgrade(FromVsn,FromApps,ToRel,ToApps,InstallDir) ->
     Start = filename:join([InstallDir,bin,start]),
     {ok,Node} = start_node(Start,permanent,FromVsn,FromApps),
 
-    [{"OTP upgrade test",FromVsn,_,permanent}] =
+    [{"OTP upgrade test",^FromVsn,_,permanent}] =
 	rpc:call(Node,release_handler,which_releases,[]),
     ToRelName = filename:basename(ToRel),
     copy_file(ToRel++".tar.gz",
 	      filename:join([InstallDir,releases,ToRelName++".tar.gz"])),
     {ok,ToVsn} = rpc:call(Node,release_handler,unpack_release,[ToRelName]),
-    [{"OTP upgrade test",ToVsn,_,unpacked},
-     {"OTP upgrade test",FromVsn,_,permanent}] =
+    [{"OTP upgrade test",^ToVsn,_,unpacked},
+     {"OTP upgrade test",^FromVsn,_,permanent}] =
 	rpc:call(Node,release_handler,which_releases,[]),
     case rpc:call(Node,release_handler,install_release,[ToVsn]) of
-	{ok,FromVsn,_} ->
+	{ok,^FromVsn,_} ->
 	    ok;
-	{continue_after_restart,FromVsn,_} ->
+	{continue_after_restart,^FromVsn,_} ->
 	    wait_node_up(current,ToVsn,ToApps)
     end,
-    [{"OTP upgrade test",ToVsn,_,current},
-     {"OTP upgrade test",FromVsn,_,permanent}] =
+    [{"OTP upgrade test",^ToVsn,_,current},
+     {"OTP upgrade test",^FromVsn,_,permanent}] =
 	rpc:call(Node,release_handler,which_releases,[]),
     ok = rpc:call(Node,release_handler,make_permanent,[ToVsn]),
-    [{"OTP upgrade test",ToVsn,_,permanent},
-     {"OTP upgrade test",FromVsn,_,old}] =
+    [{"OTP upgrade test",^ToVsn,_,permanent},
+     {"OTP upgrade test",^FromVsn,_,old}] =
 	rpc:call(Node,release_handler,which_releases,[]),
     
     erlang:monitor_node(Node,true),
     _ = rpc:call(Node,init,stop,[]),
-    receive {nodedown,Node} -> ok end,
+    receive {nodedown,^Node} -> ok end,
 
     ok.
 
@@ -438,7 +438,7 @@ subst([], _Vars, Result) ->
 subst_var([$%| Rest], Vars, Result, VarAcc) ->
     Key = lists:reverse(VarAcc),
     case lists:keysearch(Key, 1, Vars) of
-        {value, {Key, Value}} ->
+        {value, {^Key, Value}} ->
             subst(Rest, Vars, lists:reverse(Value, Result));
         false ->
             subst(Rest, Vars, [$%| VarAcc ++ [$%| Result]])
@@ -474,9 +474,9 @@ wait_node_up(Node,ExpStatus,ExpVsn,ExpApps,N) ->
     timer:sleep(2000),
     case {rpc:call(Node,release_handler,which_releases,[ExpStatus]),
 	  rpc:call(Node, application, which_applications, [])} of
-	{[{_,ExpVsn,_,_}],Apps} when is_list(Apps) ->
+	{[{_,^ExpVsn,_,_}],Apps} when is_list(Apps) ->
 	    case [{A,V} || {A,_,V} <- lists:keysort(1,Apps)] of
-		ExpApps -> {ok,Node};
+		^ExpApps -> {ok,Node};
 		_ -> wait_node_up(Node,ExpStatus,ExpVsn,ExpApps,N-1)
 	    end;
 	_ ->

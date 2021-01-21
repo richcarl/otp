@@ -38,7 +38,7 @@ incr_timetrap(Config, Times) ->
     KeyPos = 1,
     NewTime = 
 	case lists:keysearch(Key, KeyPos, Config) of
-	    {value, {Key, OldTime}} ->
+	    {value, {^Key, OldTime}} ->
 		(timer:minutes(1) + OldTime) * Times;
 	    false ->
 		timer:minutes(1) * Times
@@ -81,7 +81,7 @@ reset_kill_timer(Config) ->
 
 lookup_config(Key,Config) ->
     case lists:keysearch(Key, 1, Config) of
-	{value,{Key,Val}} ->
+	{value,{^Key,Val}} ->
 	    Val;
 	_ ->
 	    []
@@ -117,11 +117,11 @@ wx_init_per_suite(Config) ->
 			      exit(normal)			      
 		      end),
     receive
-	{'DOWN', Ref, _, _, normal} ->
+	{'DOWN', ^Ref, _, _, normal} ->
 	    init_per_suite(Config);	    
-	{'DOWN', Ref, _, _, {skipped, _} = Skipped} ->
+	{'DOWN', ^Ref, _, _, {skipped, _} = Skipped} ->
 	    Skipped;
-	{'DOWN', Ref, _, _, Reason} ->
+	{'DOWN', ^Ref, _, _, Reason} ->
 	    exit({wx_init_per_suite, Reason})
     after timer:minutes(1) ->
 	    exit({wx_init_per_suite, timeout})
@@ -330,22 +330,22 @@ test_case_evaluator(Mod, Fun, [Config]) ->
 
 wait_for_evaluator(Pid, Mod, Fun, Config) ->
     receive
-	{'EXIT', Pid, {test_case_ok, _PidRes}} ->
+	{'EXIT', ^Pid, {test_case_ok, _PidRes}} ->
 	    Errors = flush(),
 	    Res = 
 		case Errors of
 		    [] -> ok;
-		    Errors -> failed
+		    ^Errors -> failed
 		end,
 	    {Res, {Mod, Fun}, Errors};
-	{'EXIT', Pid, {skipped, Reason}} ->
+	{'EXIT', ^Pid, {skipped, Reason}} ->
 	    log("<WARNING> Test case ~w skipped, because ~p~n",
 		[{Mod, Fun}, Reason]),
             Res = {skipped, {Mod, Fun}, Reason},
             CommonTestRes = common_test_res(Res),
 	    Mod:end_per_testcase(Fun, [{tc_status,CommonTestRes}|Config]),
 	    Res;
-	{'EXIT', Pid, Reason} ->
+	{'EXIT', ^Pid, Reason} ->
 	    log("<ERROR> Eval process ~w exited, because\n\t~p~n",
 		[{Mod, Fun}, Reason]),
             Res = {crash, {Mod, Fun}, Reason},

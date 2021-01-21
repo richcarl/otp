@@ -110,7 +110,7 @@ init_per_testcase(TestCase, Config) ->
                                                   ssh_sftpd_file_alt}]),
 		[{subsystems, [Spec]}];
 	    "root_dir" ->
-                PrivDir = proplists:get_value(priv_dir, Config),
+                ^PrivDir = proplists:get_value(priv_dir, Config),
 		Root = filename:join(PrivDir, root),
 		file:make_dir(Root),
 		Spec = ssh_sftpd:subsystem_spec([{root,Root}]),
@@ -164,7 +164,7 @@ close_file(Config) when is_list(Config) ->
 
     {ok, <<_/binary>>} = ssh_sftp:read_file(Sftp, FileName),
 
-    NumOfPorts = length(erlang:ports()).
+    ^NumOfPorts = length(erlang:ports()).
 
 %%--------------------------------------------------------------------
 quit(Config) when is_list(Config) ->
@@ -243,7 +243,7 @@ root_dir(Config) when is_list(Config) ->
     FileName = "test.txt",
     Bin =  <<"Test file for root dir option">>,
     ok = ssh_sftp:write_file(Sftp, FileName, Bin),
-    {ok, Bin} = ssh_sftp:read_file(Sftp, FileName),
+    {ok, ^Bin} = ssh_sftp:read_file(Sftp, FileName),
     {ok, Listing} =
 	ssh_sftp:list_dir(Sftp, "."),
     ct:log("Listing: ~p~n", [Listing]).
@@ -269,7 +269,7 @@ ver6_basic(Config) when is_list(Config) ->
 %%--------------------------------------------------------------------
 alt_file_handler_check(Msg) ->
     receive
-	Msg ->
+	^Msg ->
 	    ok;
 	Other ->
 	    ct:fail({Msg, Other})

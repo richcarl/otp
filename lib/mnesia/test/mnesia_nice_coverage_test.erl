@@ -90,13 +90,13 @@ dirty_access(Node1) ->
     TwoFive  = #nice_tab{key=25, val=25}, 
     ?match([], mnesia:dirty_slot(nice_tab, 0)), 
     ?match(ok, mnesia:dirty_write(TwoThree)), 
-    ?match([TwoThree], mnesia:dirty_read({nice_tab, 23})), 
+    ?match([^TwoThree], mnesia:dirty_read({nice_tab, 23})), 
     ?match(ok, mnesia:dirty_write(TwoFive)), 
     ?match(ok, mnesia:dirty_delete_object(TwoFive)), 
 
     ?match(23, mnesia:dirty_first(nice_tab)), 
     ?match('$end_of_table', mnesia:dirty_next(nice_tab, 23)), 
-    ?match([TwoThree], mnesia:dirty_match_object(TwoThree)), 
+    ?match([^TwoThree], mnesia:dirty_match_object(TwoThree)), 
     ?match(ok, mnesia:dirty_delete({nice_tab, 23})), 
 
     CounterSchema = [{ram_copies, [Node1]}], 
@@ -105,7 +105,7 @@ dirty_access(Node1) ->
     ?match(ok, mnesia:dirty_write(TwoFour)), 
     ?match(34, mnesia:dirty_update_counter({nice_counter_tab, 24}, 10)), 
     TF = {nice_counter_tab, 24, 34}, 
-    ?match([TF], mnesia:dirty_read({nice_counter_tab, 24})), 
+    ?match([^TF], mnesia:dirty_read({nice_counter_tab, 24})), 
     ?match(ok, mnesia:dirty_delete({nice_counter_tab, 24})), 
     ?match(ok, mnesia:dirty_delete_object(TF)),
     ok.
@@ -116,7 +116,7 @@ success_and_fail() ->
     BadFun =
 	fun() ->
 		Two = #nice_tab{key=2, val=12}, 
-		?match([Two], mnesia:match_object(#nice_tab{key='$1', val=12})), 
+		?match([^Two], mnesia:match_object(#nice_tab{key='$1', val=12})), 
 		?match([#nice_tab{key=3, val=13}], mnesia:wread({nice_tab, 3})), 
 		?match(ok, mnesia:delete({nice_tab, 1})), 
 		?match(ok, mnesia:delete_object(Two)), 
@@ -137,7 +137,7 @@ good_trans() ->
 
     Records = [ #nice_tab{key=K, val=K+10} || K <- lists:seq(1, 10) ], 
     Ok = [ ok || _ <- Records], 
-    ?match(Ok, lists:map(fun(R) -> mnesia:write(R) end, Records)), 
+    ?match(^Ok, lists:map(fun(R) -> mnesia:write(R) end, Records)), 
     a_good_trans.
 
 
@@ -155,17 +155,17 @@ index_mgt() ->
 
     IndexFun =
 	fun() ->
-		?match([UniversalRec], 
+		?match([^UniversalRec], 
 		       mnesia:index_read(nice_tab, 4711, ValPos)), 
 		Pat = #nice_tab{key='$1', val=4711}, 
-		?match([UniversalRec], 
+		?match([^UniversalRec], 
 		       mnesia:index_match_object(Pat, ValPos)), 
 		index_trans
 	end, 
     ?match({atomic, index_trans}, mnesia:transaction(IndexFun, infinity)), 
-    ?match([UniversalRec], 
+    ?match([^UniversalRec], 
 	   mnesia:dirty_index_read(nice_tab, 4711, ValPos)), 
-    ?match([UniversalRec], 
+    ?match([^UniversalRec], 
 	   mnesia:dirty_index_match_object(#nice_tab{key='$1', val=4711}, ValPos)), 
 
     ?match({atomic, ok}, mnesia:del_table_index(nice_tab, ValPos)),
@@ -173,7 +173,7 @@ index_mgt() ->
 
 adm(Attrs, Node1, Node2) ->
     This = node(), 
-    ?match({ok, This}, mnesia:subscribe(system)), 
+    ?match({ok, ^This}, mnesia:subscribe(system)), 
     ?match({atomic, ok}, 
 	   mnesia:add_table_copy(nice_tab, Node2, disc_only_copies)), 
     ?match({atomic, ok}, 
@@ -231,7 +231,7 @@ snmp(Node1, Node2) ->
     Tab = nice_snmp, 
     Def = [{disc_copies, [Node1]}, {ram_copies, [Node2]}], 
     ?match({atomic, ok}, mnesia:create_table(Tab, Def)),
-    ?match({aborted, {badarg, Tab, _}}, mnesia:snmp_open_table(Tab, [])),
+    ?match({aborted, {badarg, ^Tab, _}}, mnesia:snmp_open_table(Tab, [])),
     ?match({atomic, ok}, mnesia:snmp_open_table(Tab, [{key, integer}])),
     ?match(endOfTable, mnesia:snmp_get_next_index(Tab, [0])), 
     ?match(undefined, mnesia:snmp_get_row(Tab, [0])), 

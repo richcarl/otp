@@ -244,7 +244,7 @@ remove_duplicates(List) ->
       lists:foldl(fun({Key,Val},Acc) ->
 			  R = make_ref(),
 			  case proplists:get_value(Key,Acc,R) of
-			      R -> [{Key,Val}|Acc];
+			      ^R -> [{Key,Val}|Acc];
 			      _Else ->
 				  Acc
 			  end

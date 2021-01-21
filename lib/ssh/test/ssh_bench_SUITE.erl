@@ -235,7 +235,7 @@ connect_measure(Port, Cipher, Mac, Data, Options) ->
 send_wait_acc(C, Ch, Data) ->
     ssh_connection:send(C, Ch, Data),
     receive
-        {ssh_cm, C, {data, Ch, 0, <<"READY">>}} -> ok
+        {ssh_cm, ^C, {data, ^Ch, 0, <<"READY">>}} -> ok
     end.
             
 

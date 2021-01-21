@@ -214,7 +214,7 @@ do_simple_exec(ConnectionRef) ->
 				  "echo testing", infinity),
     %% receive response to input
     receive
-	{ssh_cm, ConnectionRef, {data, ChannelId0, 0, <<"testing\n">>}} ->
+	{ssh_cm, ^ConnectionRef, {data, ^ChannelId0, 0, <<"testing\n">>}} ->
 	    ok
     after 
 	10000 -> ct:fail("timeout ~p:~p",[?MODULE,?LINE])
@@ -222,19 +222,19 @@ do_simple_exec(ConnectionRef) ->
 
     %% receive close messages
     receive
-	{ssh_cm, ConnectionRef, {eof, ChannelId0}} ->
+	{ssh_cm, ^ConnectionRef, {eof, ^ChannelId0}} ->
 	    ok
     after 
 	10000 -> ct:fail("timeout ~p:~p",[?MODULE,?LINE])
     end,
     receive
-	{ssh_cm, ConnectionRef, {exit_status, ChannelId0, 0}} ->
+	{ssh_cm, ^ConnectionRef, {exit_status, ^ChannelId0, 0}} ->
 	    ok
     after 
 	10000 -> ct:fail("timeout ~p:~p",[?MODULE,?LINE])
     end,
     receive
-	{ssh_cm, ConnectionRef,{closed, ChannelId0}} ->
+	{ssh_cm, ^ConnectionRef,{closed, ^ChannelId0}} ->
 	    ok
     after 
 	10000 -> ct:fail("timeout ~p:~p",[?MODULE,?LINE])
@@ -278,7 +278,7 @@ small_cat(Config) when is_list(Config) ->
 
     %% receive response to input
     receive
-	{ssh_cm, ConnectionRef, {data, ChannelId0, 0, Data}} ->
+	{ssh_cm, ^ConnectionRef, {data, ^ChannelId0, 0, ^Data}} ->
 	    ok
     after 
 	10000 -> ct:fail("timeout ~p:~p",[?MODULE,?LINE])
@@ -286,19 +286,19 @@ small_cat(Config) when is_list(Config) ->
 
     %% receive close messages
     receive
-	{ssh_cm, ConnectionRef, {eof, ChannelId0}} ->
+	{ssh_cm, ^ConnectionRef, {eof, ^ChannelId0}} ->
 	    ok
     after 
 	10000 -> ct:fail("timeout ~p:~p",[?MODULE,?LINE])
     end,
     receive
-	{ssh_cm, ConnectionRef, {exit_status, ChannelId0, 0}} ->
+	{ssh_cm, ^ConnectionRef, {exit_status, ^ChannelId0, 0}} ->
 	    ok
     after 
 	10000 -> ct:fail("timeout ~p:~p",[?MODULE,?LINE])
     end,
     receive
-	{ssh_cm, ConnectionRef,{closed, ChannelId0}} ->
+	{ssh_cm, ^ConnectionRef,{closed, ^ChannelId0}} ->
 	    ok
     after 
 	10000 -> ct:fail("timeout ~p:~p",[?MODULE,?LINE])
@@ -323,7 +323,7 @@ big_cat(Config) when is_list(Config) ->
 
     %% collect echoed data until eof
     case big_cat_rx(ConnectionRef, ChannelId0) of
-	{ok, Data} ->
+	{ok, ^Data} ->
 	    ok;
 	{ok, Other} ->
 	    case size(Data) =:= size(Other) of
@@ -341,13 +341,13 @@ big_cat(Config) when is_list(Config) ->
 
     %% receive close messages (eof already consumed)
     receive
-	{ssh_cm, ConnectionRef, {exit_status, ChannelId0, 0}} ->
+	{ssh_cm, ^ConnectionRef, {exit_status, ^ChannelId0, 0}} ->
 	    ok 
     after 
 	10000 -> ct:fail("timeout ~p:~p",[?MODULE,?LINE])
     end,
     receive
-	{ssh_cm, ConnectionRef,{closed, ChannelId0}} ->
+	{ssh_cm, ^ConnectionRef,{closed, ^ChannelId0}} ->
 	    ok
     after 
 	10000 -> ct:fail("timeout ~p:~p",[?MODULE,?LINE])
@@ -364,19 +364,19 @@ send_after_exit(Config) when is_list(Config) ->
     success = ssh_connection:exec(ConnectionRef, ChannelId0,
 				  "false", infinity),
     receive
-	{ssh_cm, ConnectionRef, {eof, ChannelId0}} ->
+	{ssh_cm, ^ConnectionRef, {eof, ^ChannelId0}} ->
 	    ok
     after 
 	10000 -> ct:fail("timeout ~p:~p",[?MODULE,?LINE])
     end,
     receive
-	{ssh_cm, ConnectionRef, {exit_status, ChannelId0, ExitStatus}} when ExitStatus=/=0 ->
+	{ssh_cm, ^ConnectionRef, {exit_status, ^ChannelId0, ExitStatus}} when ExitStatus=/=0 ->
 	    ok
     after 
 	10000 -> ct:fail("timeout ~p:~p",[?MODULE,?LINE])
     end,
     receive
-	{ssh_cm, ConnectionRef,{closed, ChannelId0}} ->
+	{ssh_cm, ^ConnectionRef,{closed, ^ChannelId0}} ->
 	    ok
     after 
 	10000 -> ct:fail("timeout ~p:~p",[?MODULE,?LINE])
@@ -407,7 +407,7 @@ encode_decode_pty_opts(_Config) ->
     case ssh_connection:encode_pty_opts(Opts) of
         Bin when is_binary(Bin) ->
             case ssh_connection:decode_pty_opts(Bin) of
-                Opts ->
+                ^Opts ->
                     ok;
                 Other ->
                     ct:log("Expected ~p~nGot ~p~nBin = ~p",[Opts,Other,Bin]),
@@ -427,7 +427,7 @@ ptty_alloc_default(Config) when is_list(Config) ->
                  true -> success;
                  false -> failure
              end,
-    Expect = ssh_connection:ptty_alloc(ConnectionRef, ChannelId, []),
+    ^Expect = ssh_connection:ptty_alloc(ConnectionRef, ChannelId, []),
     ssh:close(ConnectionRef).
 
 %%--------------------------------------------------------------------
@@ -439,7 +439,7 @@ ptty_alloc(Config) when is_list(Config) ->
                  true -> success;
                  false -> failure
              end,
-    Expect = ssh_connection:ptty_alloc(ConnectionRef, ChannelId, 
+    ^Expect = ssh_connection:ptty_alloc(ConnectionRef, ChannelId, 
                                        [{term, os:getenv("TERM", ?DEFAULT_TERMINAL)}, {width, 70}, {height, 20}]),
     ssh:close(ConnectionRef).
 
@@ -453,7 +453,7 @@ ptty_alloc_pixel(Config) when is_list(Config) ->
                  true -> success;
                  false -> failure
              end,
-    Expect = ssh_connection:ptty_alloc(ConnectionRef, ChannelId, 
+    ^Expect = ssh_connection:ptty_alloc(ConnectionRef, ChannelId, 
                                        [{term, os:getenv("TERM", ?DEFAULT_TERMINAL)}, {pixel_widh, 630}, {pixel_hight, 470}]),
     ssh:close(ConnectionRef).
 
@@ -505,7 +505,7 @@ do_interrupted_send(Config, SendSize, EchoSize) ->
 				  Result = 
 				      try collect_data(ConnectionRef, ChannelId, EchoSize)
 				      of
-					  ExpectedData -> 
+					  ^ExpectedData -> 
 					      ct:log("~p:~p got expected data",[?MODULE,?LINE]),
 					      ok;
 					  Other ->
@@ -522,29 +522,29 @@ do_interrupted_send(Config, SendSize, EchoSize) ->
 		  end),
     
     receive
-	{ResultPid, channelId, error, Other} ->
+	{^ResultPid, channelId, error, Other} ->
 	    ct:log("~p:~p channelId error ~p", [?MODULE,?LINE,Other]),
 	    ssh:close(ConnectionRef),
 	    ssh:stop_daemon(Pid),
 	    {fail, "ssh_connection:subsystem"};
 
-	{ResultPid, channelId, ChannelId} ->
+	{^ResultPid, channelId, ChannelId} ->
 	    ct:log("~p:~p ~p going to send ~p bytes", [?MODULE,?LINE,self(),size(Data)]),
 	    SenderPid = spawn(fun() ->
 				      Parent ! {self(),  ssh_connection:send(ConnectionRef, ChannelId, Data, 30000)}
 			      end),
 	    receive
-	    	{ResultPid, result, {fail, Fail}} ->
+	    	{^ResultPid, result, {fail, Fail}} ->
 		    ct:log("~p:~p Listener failed: ~p", [?MODULE,?LINE,Fail]),
 		    {fail, Fail};
 
-		{ResultPid, result, Result} ->
+		{^ResultPid, result, Result} ->
 		    ct:log("~p:~p Got result: ~p", [?MODULE,?LINE,Result]),
 		    ssh:close(ConnectionRef),
 		    ssh:stop_daemon(Pid),
 		    ct:log("~p:~p Check sender", [?MODULE,?LINE]),
 		    receive
-			{SenderPid, {error, closed}} ->
+			{^SenderPid, {error, closed}} ->
 			    ct:log("~p:~p {error,closed} - That's what we expect :)",[?MODULE,?LINE]),
 			    ok;
 			Msg ->
@@ -552,10 +552,10 @@ do_interrupted_send(Config, SendSize, EchoSize) ->
 			    {fail, "Not expected msg"}
 		    end;
 
-		{SenderPid, {error, closed}} ->
+		{^SenderPid, {error, closed}} ->
 		    ct:log("~p:~p {error,closed} - That's what we expect, but client channel handler has not reported yet",[?MODULE,?LINE]),
 		    receive
-			{ResultPid, result, Result} ->
+			{^ResultPid, result, Result} ->
 			    ct:log("~p:~p Now got the result: ~p", [?MODULE,?LINE,Result]),
 			    ssh:close(ConnectionRef),
 			    ssh:stop_daemon(Pid),
@@ -769,15 +769,15 @@ start_exec_direct_fun1_read_write(Config) ->
     ok = ssh_connection:send(C, Ch, "quit.\n", 5000),
     ssh_test_lib:receive_exec_result_or_fail({ssh_cm,C,{data,Ch,0,<<"{1,inputs}">>}}),
     receive
-        {ssh_cm,C,{exit_status,Ch,0}} -> ok
+        {ssh_cm,^C,{exit_status,^Ch,0}} -> ok
     after 5000 -> go_on
     end,
     receive
-        {ssh_cm,C,{eof,Ch}} -> ok
+        {ssh_cm,^C,{eof,^Ch}} -> ok
     after 5000 -> go_on
     end,
     receive
-        {ssh_cm,C,{closed,Ch}} -> ok
+        {ssh_cm,^C,{closed,^Ch}} -> ok
     after 5000 -> go_on
     end,
     receive
@@ -823,15 +823,15 @@ start_exec_direct_fun1_read_write_advanced(Config) ->
     ok = ssh_connection:send(C, Ch, "bad_input.\n", 5000),
     ssh_test_lib:receive_exec_result_or_fail({ssh_cm,C,{data,Ch,1,<<"**Error** {bad_input,3}">>}}),
     receive
-        {ssh_cm,C,{exit_status,Ch,255}} -> ok
+        {ssh_cm,^C,{exit_status,^Ch,255}} -> ok
     after 5000 -> go_on
     end,
     receive
-        {ssh_cm,C,{eof,Ch}} -> ok
+        {ssh_cm,^C,{eof,^Ch}} -> ok
     after 5000 -> go_on
     end,
     receive
-        {ssh_cm,C,{closed,Ch}} -> ok
+        {ssh_cm,^C,{closed,^Ch}} -> ok
     after 5000 -> go_on
     end,
     receive
@@ -884,7 +884,7 @@ do_start_shell_exec_fun(Fun, Command, Expect, ExpectType, Config) ->
     success = ssh_connection:exec(ConnectionRef, ChannelId0, Command, infinity),
 
     receive
-	{ssh_cm, ConnectionRef, {data, _ChannelId, ExpectType, Expect}} ->
+	{ssh_cm, ^ConnectionRef, {data, _ChannelId, ^ExpectType, ^Expect}} ->
 	    ok
     after 5000 ->
             receive
@@ -924,7 +924,7 @@ start_shell_sock_exec_fun(Config) when is_list(Config) ->
 				  "testing", infinity),
 
     receive
-	{ssh_cm, ConnectionRef, {data, _ChannelId, 0, <<"echo testing\r\n">>}} ->
+	{ssh_cm, ^ConnectionRef, {data, _ChannelId, 0, <<"echo testing\r\n">>}} ->
 	    ok
     after 5000 ->
 	    ct:fail("Exec Timeout")
@@ -963,7 +963,7 @@ start_shell_sock_daemon_exec(Config) ->
 				  "testing", infinity),
 
     receive
-	{ssh_cm, ConnectionRef, {data, _ChannelId, 0, <<"echo testing\r\n">>}} ->
+	{ssh_cm, ^ConnectionRef, {data, _ChannelId, 0, <<"echo testing\r\n">>}} ->
 	    ok
     after 5000 ->
 	    ct:fail("Exec Timeout")
@@ -988,7 +988,7 @@ gracefull_invalid_version(Config) when is_list(Config) ->
 	Verstring ->
 	    ct:log("Server version: ~p~n", [Verstring]),
 	    receive
-		{tcp_closed, S} ->
+		{tcp_closed, ^S} ->
 		    ok
 	    end
     after 
@@ -1010,7 +1010,7 @@ gracefull_invalid_start(Config) when is_list(Config) ->
 	Verstring ->
 	    ct:log("Server version: ~p~n", [Verstring]),
 	    receive
-		{tcp_closed, S} ->
+		{tcp_closed, ^S} ->
 		    ok
 	    end
     after 
@@ -1032,7 +1032,7 @@ gracefull_invalid_long_start(Config) when is_list(Config) ->
 	Verstring ->
 	    ct:log("Server version: ~p~n", [Verstring]),
 	    receive
-		{tcp_closed, S} ->
+		{tcp_closed, ^S} ->
 		    ok
 	    end
     after 
@@ -1055,7 +1055,7 @@ gracefull_invalid_long_start_no_nl(Config) when is_list(Config) ->
 	Verstring ->
 	    ct:log("Server version: ~p~n", [Verstring]),
 	    receive
-		{tcp_closed, S} ->
+		{tcp_closed, ^S} ->
 		    ok
 	    end
     after 
@@ -1091,7 +1091,7 @@ stop_listener(Config) when is_list(Config) ->
     success = ssh_connection:exec(ConnectionRef0, ChannelId0,
 				  "testing", infinity),
     receive
-	{ssh_cm, ConnectionRef0, {data, ChannelId0, 0, <<"echo testing\r\n">>}} ->
+	{ssh_cm, ^ConnectionRef0, {data, ^ChannelId0, 0, <<"echo testing\r\n">>}} ->
 	    ok
     after 5000 ->
 	    ct:fail("Exec Timeout")
@@ -1101,7 +1101,7 @@ stop_listener(Config) when is_list(Config) ->
                                     {user_dir, UserDir},
                                     {password, "potatis"},
                                     {exec, fun ssh_exec_echo/1}]) of
-	{Pid1, Host, Port} ->
+	{Pid1, ^Host, ^Port} ->
 	    ConnectionRef1 = ssh_test_lib:connect(Host, Port, [{silently_accept_hosts, true},
 							       {user, "foo"},
 							       {password, "potatis"},
@@ -1194,7 +1194,7 @@ max_channels_option(Config) when is_list(Config) ->
     %%%---- Channel 1(3): shell
     ok = ssh_connection:shell(ConnectionRef,ChannelId0),
     receive
-	{ssh_cm,ConnectionRef, {data, ChannelId0, 0, <<"Eshell",_/binary>>}} ->
+	{ssh_cm,^ConnectionRef, {data, ^ChannelId0, 0, <<"Eshell",_/binary>>}} ->
 	    ok
     after 5000 ->
 	    ct:fail("CLI Timeout")
@@ -1206,7 +1206,7 @@ max_channels_option(Config) when is_list(Config) ->
     %%%---- Channel 3(3): exec. This closes itself.
     success = ssh_connection:exec(ConnectionRef, ChannelId2, "testing1.\n", infinity),
     receive
-	{ssh_cm, ConnectionRef, {data, ChannelId2, 0, <<"testing1",_/binary>>}} ->
+	{ssh_cm, ^ConnectionRef, {data, ^ChannelId2, 0, <<"testing1",_/binary>>}} ->
 	    ok
     after 5000 ->
 	    ct:fail("Exec #1 Timeout")
@@ -1223,7 +1223,7 @@ max_channels_option(Config) when is_list(Config) ->
     
     %%%---- wait for the subsystem to terminate
     receive
-	{ssh_cm,ConnectionRef,{closed,ChannelId0}} -> ok
+	{ssh_cm,^ConnectionRef,{closed,^ChannelId0}} -> ok
     after 5000 ->
 	    ct:log("Timeout waiting for '{ssh_cm,~p,{closed,~p}}'~n"
 		   "Message queue:~n~p",
@@ -1259,10 +1259,10 @@ test_shell_is_disabled(ConnectionRef, Expect, NotExpect) ->
     ExpSz = size(Expect),
     NotExpSz = size(NotExpect),
     receive
-        {ssh_cm, ConnectionRef, {data, ChannelId, 1, <<Expect:ExpSz/binary, _/binary>>}} ->
+        {ssh_cm, ^ConnectionRef, {data, ^ChannelId, 1, <<^Expect:ExpSz/binary, _/binary>>}} ->
             flush_msgs();
 
-        {ssh_cm, ConnectionRef, {data, ChannelId, 0, <<NotExpect:NotExpSz/binary, _/binary>>}} ->
+        {ssh_cm, ^ConnectionRef, {data, ^ChannelId, 0, <<^NotExpect:NotExpSz/binary, _/binary>>}} ->
             ct:fail("Could start disabled shell!");
 
         R ->
@@ -1277,7 +1277,7 @@ test_exec_is_disabled(ConnectionRef) ->
     {ok, ChannelId} = ssh_connection:session_channel(ConnectionRef, infinity),
     success = ssh_connection:exec(ConnectionRef, ChannelId, "1+2.", infinity),
     receive
-        {ssh_cm, ConnectionRef, {data,ChannelId,1,<<"Prohibited.">>}} ->
+        {ssh_cm, ^ConnectionRef, {data,^ChannelId,1,<<"Prohibited.">>}} ->
             flush_msgs();
         R ->
             ct:log("~p:~p Got unexpected ~p",[?MODULE,?LINE,R]),
@@ -1294,7 +1294,7 @@ test_shell_is_enabled(ConnectionRef, Expect) ->
     ok = ssh_connection:shell(ConnectionRef,ChannelId),
     ExpSz = size(Expect),
     receive
-	{ssh_cm,ConnectionRef, {data, ChannelId, 0, <<Expect:ExpSz/binary, _/binary>>}} ->
+	{ssh_cm,^ConnectionRef, {data, ^ChannelId, 0, <<^Expect:ExpSz/binary, _/binary>>}} ->
 	    flush_msgs();
 
         R ->
@@ -1314,7 +1314,7 @@ test_exec_is_enabled(ConnectionRef, Exec, Expect) ->
     success = ssh_connection:exec(ConnectionRef, ChannelId, Exec, infinity),
     ExpSz = size(Expect),
     receive
-        {ssh_cm, ConnectionRef, {data, ChannelId, 0, <<Expect:ExpSz/binary, _/binary>>}} = R ->
+        {ssh_cm, ^ConnectionRef, {data, ^ChannelId, 0, <<^Expect:ExpSz/binary, _/binary>>}} = R ->
             ct:log("~p:~p Got expected ~p",[?MODULE,?LINE,R]);
         Other ->
             ct:log("~p:~p Got unexpected ~p",[?MODULE,?LINE,Other])
@@ -1328,11 +1328,11 @@ big_cat_rx(ConnectionRef, ChannelId) ->
 
 big_cat_rx(ConnectionRef, ChannelId, Acc) ->
     receive
-	{ssh_cm, ConnectionRef, {data, ChannelId, 0, Data}} ->
+	{ssh_cm, ^ConnectionRef, {data, ^ChannelId, 0, Data}} ->
 	    %% ssh_connection:adjust_window(ConnectionRef, ChannelId, size(Data)),
 	    %% window was pre-adjusted, don't adjust again here
 	    big_cat_rx(ConnectionRef, ChannelId, [Data | Acc]);
-	{ssh_cm, ConnectionRef, {eof, ChannelId}} ->
+	{ssh_cm, ^ConnectionRef, {eof, ^ChannelId}} ->
 	    {ok, iolist_to_binary(lists:reverse(Acc))}
     after ?EXEC_TIMEOUT ->
 	    timeout
@@ -1345,15 +1345,15 @@ collect_data(ConnectionRef, ChannelId, EchoSize) ->
 collect_data(ConnectionRef, ChannelId, EchoSize, Acc, Sum) ->
     TO = 5000,
     receive
-	{ssh_cm, ConnectionRef, {data, ChannelId, 0, Data}} when is_binary(Data) ->
+	{ssh_cm, ^ConnectionRef, {data, ^ChannelId, 0, Data}} when is_binary(Data) ->
 	    ct:log("~p:~p collect_data: received ~p bytes. total ~p bytes,  want ~p more",
 		   [?MODULE,?LINE,size(Data),Sum+size(Data),EchoSize-Sum]),
 	    ssh_connection:adjust_window(ConnectionRef, ChannelId, size(Data)),
 	    collect_data(ConnectionRef, ChannelId, EchoSize, [Data | Acc], Sum+size(Data));
-	{ssh_cm, ConnectionRef, Msg={eof, ChannelId}} ->
+	{ssh_cm, ^ConnectionRef, Msg={eof, ^ChannelId}} ->
 	    collect_data_report_end(Acc, Msg, EchoSize);
 
-	{ssh_cm, ConnectionRef, Msg={closed,ChannelId}} ->
+	{ssh_cm, ^ConnectionRef, Msg={closed,^ChannelId}} ->
 	    collect_data_report_end(Acc, Msg, EchoSize);
 
 	Msg ->

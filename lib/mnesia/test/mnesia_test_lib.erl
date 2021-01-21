@@ -440,7 +440,7 @@ default_module(DefaultModule, TestCases) when is_list(TestCases) ->
 		  case T of
 		      {group, _} -> {true, {DefaultModule, T}};
 		      {_, _} -> true;
-		      T -> {true, {DefaultModule, T}}
+		      ^T -> {true, {DefaultModule, T}}
 		  end
 	  end,
     lists:zf(Fun, TestCases).
@@ -502,20 +502,20 @@ flush() ->
 
 wait_for_evaluator(Pid, Mod, Fun, Config) ->
     receive
-	{'EXIT', Pid, {test_case_ok, _PidRes}} ->
+	{'EXIT', ^Pid, {test_case_ok, _PidRes}} ->
 	    Errors = flush(),
 	    Res =
 		case Errors of
 		    [] -> ok;
-		    Errors -> failed
+		    ^Errors -> failed
 		end,
 	    {Res, {Mod, Fun}, Errors};
-	{'EXIT', Pid, {skipped, Reason}} ->
+	{'EXIT', ^Pid, {skipped, Reason}} ->
 	    log("<WARNING> Test case ~w skipped, because ~p~n",
 		[{Mod, Fun}, Reason]),
 	    Mod:end_per_testcase(Fun, Config),
 	    {skip, {Mod, Fun}, Reason};
-	{'EXIT', Pid, Reason} ->
+	{'EXIT', ^Pid, Reason} ->
 	    log("<>ERROR<> Eval process ~w exited, because ~p~n",
 		[{Mod, Fun}, Reason]),
 	    Mod:end_per_testcase(Fun, Config),
@@ -591,7 +591,7 @@ diskless(Config) ->
 start_transactions(Pids) ->
     Fun = fun(Pid) ->
 		  Pid ! begin_trans,
-		  ?match_receive({Pid, begin_trans})
+		  ?match_receive({^Pid, begin_trans})
 	  end,
     mapl(Fun, Pids).
 
@@ -600,7 +600,7 @@ start_sync_transactions(Pids) ->
     Fun = fun(Pid) ->
 		  sync_trans_tid_serial(Nodes),
 		  Pid ! begin_trans,
-		  ?match_receive({Pid, begin_trans})
+		  ?match_receive({^Pid, begin_trans})
 	  end,
     mapl(Fun, Pids).
 
@@ -608,7 +608,7 @@ start_sync_transactions(Pids) ->
 start_transactions(Pids, MaxRetries) ->
     Fun = fun(Pid) ->
 		  Pid ! {begin_trans, MaxRetries},
-		  ?match_receive({Pid, begin_trans})
+		  ?match_receive({^Pid, begin_trans})
 	  end,
     mapl(Fun, Pids).
 
@@ -617,7 +617,7 @@ start_sync_transactions(Pids, MaxRetries) ->
     Fun = fun(Pid) ->
 		  sync_trans_tid_serial(Nodes),
 		  Pid ! {begin_trans, MaxRetries},
-		  ?match_receive({Pid, begin_trans})
+		  ?match_receive({^Pid, begin_trans})
 	  end,
     mapl(Fun, Pids).
 
@@ -778,7 +778,7 @@ node_to_name_and_host(Node) ->
 
 lookup_config(Key,Config) ->
     case lists:keysearch(Key,1,Config) of
-	{value,{Key,Val}} ->
+	{value,{^Key,Val}} ->
 	    Val;
 	_ ->
 	    []
@@ -827,7 +827,7 @@ remote_start(mnesia, Config, Nodes) ->
 remote_start(Appl, _Config, _Nodes) ->
     Res =
 	case application:start(Appl) of
-	    {error, {already_started, Appl}} ->
+	    {error, {already_started, ^Appl}} ->
 		ok;
 	    Other ->
 		Other
@@ -864,11 +864,11 @@ send_wait([], _Tabs, Pids) ->
 
 rec_wait([Pid | Pids], BadRes) ->
     receive
-	{'EXIT', Pid, R} ->
+	{'EXIT', ^Pid, R} ->
 	    rec_wait(Pids, [{node(Pid), bad_wait, R} | BadRes]);
-	{Pid, ok} ->
+	{^Pid, ok} ->
 	    rec_wait(Pids, BadRes);
-	{Pid, {error, R}} ->
+	{^Pid, {error, R}} ->
 	    rec_wait(Pids, [{node(Pid), bad_wait, R} | BadRes])
     end;
 rec_wait([], BadRes) ->
@@ -1043,15 +1043,15 @@ verify_replica_location(Tab, DiscOnly0, Ram0, Disc0, AliveNodes0) ->
 
     timer:sleep(100),
 
-    S1 = ?match(AliveNodes, lists:sort(mnesia:system_info(running_db_nodes))),
-    S2 = ?match(DiscOnly, lists:sort(mnesia:table_info(Tab, disc_only_copies))),
-    S3 = ?match(Ram, lists:sort(mnesia:table_info(Tab, ram_copies) ++
+    S1 = ?match(^AliveNodes, lists:sort(mnesia:system_info(running_db_nodes))),
+    S2 = ?match(^DiscOnly, lists:sort(mnesia:table_info(Tab, disc_only_copies))),
+    S3 = ?match(^Ram, lists:sort(mnesia:table_info(Tab, ram_copies) ++
 				    mnesia:table_info(Tab, ext_ets))),
-    S4 = ?match(Disc, lists:sort(mnesia:table_info(Tab, disc_copies))),
-    S5 = ?match(Write, lists:sort(mnesia:table_info(Tab, where_to_write))),
+    S4 = ?match(^Disc, lists:sort(mnesia:table_info(Tab, disc_copies))),
+    S5 = ?match(^Write, lists:sort(mnesia:table_info(Tab, where_to_write))),
     S6 = case lists:member(This, Read) of
 	     true ->
-		 ?match(This, mnesia:table_info(Tab, where_to_read));
+		 ?match(^This, mnesia:table_info(Tab, where_to_read));
 	     false ->
 		 ?match(true, lists:member(mnesia:table_info(Tab, where_to_read), Read))
 	 end,
@@ -1065,8 +1065,8 @@ ignore_dead(Nodes, AliveNodes) ->
 remote_activate_debug_fun(N, I, F, C, File, Line) ->
     Pid = spawn_link(N, ?MODULE, do_remote_activate_debug_fun, [self(), I, F, C, File, Line]),
     receive
-	{activated, Pid} -> ok;
-	{'EXIT', Pid, Reason} -> {error, Reason}
+	{activated, ^Pid} -> ok;
+	{'EXIT', ^Pid, Reason} -> {error, Reason}
     end.
 
 do_remote_activate_debug_fun(From, I, F, C, File, Line) ->

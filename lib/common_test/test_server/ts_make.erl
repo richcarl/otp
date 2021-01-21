@@ -57,10 +57,10 @@ make(Make, Dir, Makefile) ->
 
 get_port_data(Port, Last0, Complete0) ->
     receive
-	{Port,{data,Bytes}} ->
+	{^Port,{data,Bytes}} ->
 	    {Last, Complete} = update_last(Bytes, Last0, Complete0),
 	    get_port_data(Port, Last, Complete);
-	{Port, eof} ->
+	{^Port, eof} ->
 	    Result = update_last(eof, Last0, Complete0),
 	    unlink(Port),
 	    exit(Port, die),

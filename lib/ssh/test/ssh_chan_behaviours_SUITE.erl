@@ -90,10 +90,9 @@ end_per_testcase(_TC, Config) ->
     
 
 -define(EXPECT(What, Bind),
-        Bind =
             (fun() ->
-                     receive What ->
-                             ct:log("~p:~p ~p got ~p",[?MODULE,?LINE,self(),What]),
+                     receive (What)=WhAt ->
+                             ct:log("~p:~p ~p got ~p",[?MODULE,?LINE,self(),WhAt]),
                              Bind
                      after 5000 ->
                              ct:log("~p:~p ~p Flushed:~n~p",[?MODULE,?LINE,self(),flush()]),
@@ -111,7 +110,7 @@ noexist_subsystem(Config) ->
     {ok, Ch} = ssh_connection:session_channel(C, infinity),
     failure = ssh_connection:subsystem(C, Ch, "noexist", infinity),
     ok = ssh_connection:close(C, Ch),
-    ?EXPECT({ssh_cm,C,{closed,Ch}},[]),
+    ?EXPECT({ssh_cm,^C,{closed,^Ch}},[]),
     ok.
 
 %% Try to start a subsystem with a known name, but without any callback file
@@ -120,7 +119,7 @@ undefined_subsystem(Config) ->
     {ok, Ch} = ssh_connection:session_channel(C, infinity),
     failure = ssh_connection:subsystem(C, Ch, "bad_cb", infinity),
     ok = ssh_connection:close(C, Ch),
-    ?EXPECT({ssh_cm,C,{closed,Ch}},[]), % self() is instead of a proper channel handler
+    ?EXPECT({ssh_cm,^C,{closed,^Ch}},[]), % self() is instead of a proper channel handler
     ok.
 
 %% Try to start and stop a subsystem with known name and defined callback file
@@ -132,8 +131,8 @@ defined_subsystem(Config) ->
     IDsrv = ?EXPECT({{_Csrv,_Ch1srv}, {ssh_channel_up,_Ch1srv,_Csrv}}, {_Csrv,_Ch1srv}),
 
     ok = ssh_connection:close(C, Ch1),
-    ?EXPECT({IDsrv, {terminate,normal}}, []),
-    ?EXPECT({ssh_cm, C, {closed,Ch1}}, []), % self() is instead of a proper channel handler
+    ?EXPECT({^IDsrv, {terminate,normal}}, []),
+    ?EXPECT({ssh_cm, ^C, {closed,^Ch1}}, []), % self() is instead of a proper channel handler
     ok.
 
 %% Try to start and stop a subsystem from a ssh_client_channel behviour
@@ -141,12 +140,12 @@ subsystem_client(Config) ->
     C = proplists:get_value(connref, Config),
 
     {ok,ChRef} = ssh_chan_behaviours_client:start_link(C),
-    IDclt = ?EXPECT({{C,_Ch1clt},     {ssh_channel_up,_Ch1clt,C}},     {C,_Ch1clt}),
+    IDclt = ?EXPECT({{^C,_Ch1clt},     {ssh_channel_up,_Ch1clt,^C}},    {C,_Ch1clt}),
     IDsrv = ?EXPECT({{_Csrv,_Ch1srv}, {ssh_channel_up,_Ch1srv,_Csrv}}, {_Csrv,_Ch1srv}),
 
     ok = ssh_chan_behaviours_client:stop(ChRef),
-    ?EXPECT({IDclt, {terminate,normal}}, []), % From the proper channel handler
-    ?EXPECT({IDsrv, {terminate,normal}}, []),
+    ?EXPECT({^IDclt, {terminate,normal}}, []), % From the proper channel handler
+    ?EXPECT({^IDsrv, {terminate,normal}}, []),
     ok.
 
 %%%================================================================

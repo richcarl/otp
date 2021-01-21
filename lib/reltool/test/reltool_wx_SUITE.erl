@@ -103,9 +103,9 @@ wait_terminate([]) ->
     ok;
 wait_terminate([{Win,P}|Rest]) ->
     receive
-	{'DOWN',_,process,P,shutdown} ->
+	{'DOWN',_,process,^P,shutdown} ->
 	    wait_terminate(Rest);
-	{'DOWN',_,process,P,Reason} ->
+	{'DOWN',_,process,^P,Reason} ->
 	    ct:log("~p window terminated with unexpected reason:~n~p",
 		   [Win,Reason]),
 	    ct:fail("unexpected exit reason from window")

@@ -254,18 +254,18 @@ old_pbe(Config) when is_list(Config) ->
     PemAes256CbcEntries = public_key:pem_decode(PemAes256Cbc),
     ct:print("Pem entry: ~p" , [PemAes256CbcEntries]),
     [{'RSAPrivateKey', _, {"AES-256-CBC",_}} = Aes256CbcEntry] = PemAes256CbcEntries,
-    Key = public_key:pem_entry_decode(Aes256CbcEntry, "hello_aes").
+    ^Key = public_key:pem_entry_decode(Aes256CbcEntry, "hello_aes").
     
 decode_encode_key_file(File, Password, Cipher, Config) ->
     Datadir = proplists:get_value(data_dir, Config),
     {ok, PemKey} = file:read_file(filename:join(Datadir, File)),
     
     PemEntry = public_key:pem_decode(PemKey),
-    [{Asn1Type, _, {Cipher,_} = CipherInfo} = PubEntry] = PemEntry,
+    [{Asn1Type, _, {^Cipher,_} = CipherInfo} = PubEntry] = PemEntry,
     #'RSAPrivateKey'{} = KeyInfo = public_key:pem_entry_decode(PubEntry, Password),
     PemKey1 = public_key:pem_encode([public_key:pem_entry_encode(Asn1Type, KeyInfo, {CipherInfo, Password})]),
     Pem = strip_ending_newlines(PemKey),
-    Pem = strip_ending_newlines(PemKey1).
+    ^Pem = strip_ending_newlines(PemKey1).
 
 strip_ending_newlines(Bin) ->
     string:strip(binary_to_list(Bin), right, 10).

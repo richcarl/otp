@@ -162,7 +162,7 @@ get_chnl_no(NodeName) when is_atom(NodeName) ->
 chk_display(Term, Expect) when is_list(Expect) ->
     Dstr = erts_debug:display(Term),
     case Expect ++ io_lib:nl() of
-        Dstr ->
+        ^Dstr ->
             io:format("Test of \"~p\" succeeded.~n"
                       "  Expected and got: ~s~n",
                       [Term, io_lib:write_string(Dstr)]);
@@ -232,7 +232,7 @@ port_prog_killer(EProc, OSProc) when is_pid(EProc), is_list(OSProc) ->
     process_flag(trap_exit, true),
     Ref = erlang:monitor(process, EProc),
     receive
-        {'DOWN', Ref, _, _, Reason} when is_tuple(Reason),
+        {'DOWN', ^Ref, _, _, Reason} when is_tuple(Reason),
                                          element(1, Reason)
                                          == timetrap_timeout ->
             Cmd = "kill -9 " ++ OSProc,
@@ -245,7 +245,7 @@ port_prog_killer(EProc, OSProc) when is_pid(EProc), is_list(OSProc) ->
                 OsCmdRes ->
                     io:format("             ~s", [OsCmdRes])
             end;
-        {'DOWN', Ref, _, _, _} ->
+        {'DOWN', ^Ref, _, _, _} ->
             %% OSProc is assumed to have terminated by itself
             ok
     end.
@@ -254,23 +254,23 @@ get_line(_Port, eol, Data) ->
     Data;
 get_line(Port, noeol, Data) ->
     receive
-        {Port, {data, {Flag, NextData}}} ->
+        {^Port, {data, {Flag, NextData}}} ->
             get_line(Port, Flag, Data ++ NextData);
-        {Port, eof} ->
+        {^Port, eof} ->
             ct:fail(port_prog_unexpectedly_closed)
     end.
 
 read_case_data(Port, TestCase) ->
     receive
-        {Port, {data, {eol, [?SUCCESS_MARKER]}}} ->
+        {^Port, {data, {eol, [?SUCCESS_MARKER]}}} ->
             ok;
-        {Port, {data, {Flag, [?SUCCESS_MARKER | CommentStart]}}} ->
+        {^Port, {data, {Flag, [?SUCCESS_MARKER | CommentStart]}}} ->
             {comment, get_line(Port, Flag, CommentStart)};
-        {Port, {data, {Flag, [?SKIPPED_MARKER | CommentStart]}}} ->
+        {^Port, {data, {Flag, [?SKIPPED_MARKER | CommentStart]}}} ->
             {skipped, get_line(Port, Flag, CommentStart)};
-        {Port, {data, {Flag, [?FAILED_MARKER | ReasonStart]}}} ->
+        {^Port, {data, {Flag, [?FAILED_MARKER | ReasonStart]}}} ->
             ct:fail(get_line(Port, Flag, ReasonStart));
-        {Port, {data, {eol, [?PID_MARKER | PidStr]}}} ->
+        {^Port, {data, {eol, [?PID_MARKER | PidStr]}}} ->
             io:format("Port program pid: ~s~n", [PidStr]),
             CaseProc = self(),
             _ = list_to_integer(PidStr), % Sanity check
@@ -279,10 +279,10 @@ read_case_data(Port, TestCase) ->
                       end,
                       [{priority, max}, link]),
             read_case_data(Port, TestCase);
-        {Port, {data, {Flag, LineStart}}} ->
+        {^Port, {data, {Flag, LineStart}}} ->
             io:format("~s~n", [get_line(Port, Flag, LineStart)]),
             read_case_data(Port, TestCase);
-        {Port, eof} ->
+        {^Port, eof} ->
             ct:fail(port_prog_unexpectedly_closed)
     end.
 
@@ -308,7 +308,7 @@ run_case(Config, TestArgs, Fun) ->
             Fun(Port),
             CaseResult = read_case_data(Port, Test),
             receive
-                {Port, eof} ->
+                {^Port, eof} ->
                     ok
             end,
             CaseResult;

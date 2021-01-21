@@ -419,8 +419,8 @@ read_file(Config) when is_list(Config) ->
     SftpFileName = w2l(Config, FileName),
     {Sftp, _} = proplists:get_value(sftp, Config),
     {ok, Data} = ssh_sftp:read_file(Sftp, SftpFileName),
-    {ok, Data} = ssh_sftp:read_file(Sftp, SftpFileName),
-    {ok, Data} = file:read_file(FileName).
+    {ok, ^Data} = ssh_sftp:read_file(Sftp, SftpFileName),
+    {ok, ^Data} = file:read_file(FileName).
 
 %%--------------------------------------------------------------------
 read_dir(Config) when is_list(Config) ->
@@ -439,7 +439,7 @@ write_file(Config) when is_list(Config) ->
     Data = proplists:get_value(data, Config),
     Expected = unicode:characters_to_binary(Data),
     ok = ssh_sftp:write_file(Sftp, SftpFileName, [Data]),
-    {ok, Expected} = file:read_file(FileName).
+    {ok, ^Expected} = file:read_file(FileName).
 
 %%--------------------------------------------------------------------
 write_file_iolist(Config) when is_list(Config) ->
@@ -455,7 +455,7 @@ write_file_iolist(Config) when is_list(Config) ->
 	      Expected = try iolist_to_binary(D)
                          catch _:_ -> unicode:characters_to_binary(D)
 			 end,
-	      {ok, Expected} = file:read_file(FileName)
+	      {ok, ^Expected} = file:read_file(FileName)
       end,
       [Data, [Data,Data], [[Data],[Data]], [[[Data]],[[[[Data]],Data]]],
        [[[[Data]],Data],DataB],
@@ -472,7 +472,7 @@ write_big_file(Config) when is_list(Config) ->
             proplists:get_value(data, Config)],
     ok = ssh_sftp:write_file(Sftp, SftpFileName, Data),
     Expected = unicode:characters_to_binary(Data),
-    {ok, Expected} = file:read_file(FileName).
+    {ok, ^Expected} = file:read_file(FileName).
 
 %%--------------------------------------------------------------------
 sftp_read_big_file(Config) when is_list(Config) ->
@@ -484,7 +484,7 @@ sftp_read_big_file(Config) when is_list(Config) ->
             proplists:get_value(data, Config)],
     ok = ssh_sftp:write_file(Sftp, SftpFileName, Data),
     Expected = unicode:characters_to_binary(Data),
-    {ok, Expected} = ssh_sftp:read_file(Sftp, SftpFileName).
+    {ok, ^Expected} = ssh_sftp:read_file(Sftp, SftpFileName).
 
 %%--------------------------------------------------------------------
 remove_file(Config) when is_list(Config) ->
@@ -549,7 +549,7 @@ links(Config) when is_list(Config) ->
             SftpLinkFileName = w2l(Config, LinkFileName),
 
 	    ok = ssh_sftp:make_symlink(Sftp, SftpLinkFileName, SftpFileName),
-	    {ok, FileName} = ssh_sftp:read_link(Sftp, SftpLinkFileName)
+	    {ok, ^FileName} = ssh_sftp:read_link(Sftp, SftpLinkFileName)
     end.
 
 %%--------------------------------------------------------------------
@@ -616,7 +616,7 @@ async_read(Config) when is_list(Config) ->
     {async, Ref} = ssh_sftp:aread(Sftp, Handle, 20),
 
     receive
-	{async_reply, Ref, {ok, Data}} ->
+	{async_reply, ^Ref, {ok, Data}} ->
 	    ct:log("Data: ~p~n", [Data]),
 	    ok;
 	Msg ->
@@ -635,8 +635,8 @@ async_write(Config) when is_list(Config) ->
     {async, Ref} = ssh_sftp:awrite(Sftp, Handle, Data),
 
     receive
-	{async_reply, Ref, ok} ->
-	    {ok, Expected} = file:read_file(FileName);
+	{async_reply, ^Ref, ok} ->
+	    {ok, ^Expected} = file:read_file(FileName);
 	Msg ->
 	    ct:fail(Msg)
     end.
@@ -686,7 +686,7 @@ pos_read(Config) when is_list(Config) ->
     {async,Ref} = ssh_sftp:apread(Sftp, Handle, {bof, Len1}, Len2),
 
     receive
-	{async_reply, Ref, {ok,Expect2}} ->
+	{async_reply, ^Ref, {ok,^Expect2}} ->
 	    ok;
 	Msg ->
 	    ct:fail(Msg)
@@ -694,7 +694,7 @@ pos_read(Config) when is_list(Config) ->
 	30000 -> ct:fail("timeout ~p:~p",[?MODULE,?LINE])
     end,
 
-   {ok,Expect1} = ssh_sftp:pread(Sftp, Handle, {bof,0}, Len1).
+   {ok,^Expect1} = ssh_sftp:pread(Sftp, Handle, {bof,0}, Len1).
 
 %%--------------------------------------------------------------------
 pos_write(Config) when is_list(Config) ->
@@ -710,7 +710,7 @@ pos_write(Config) when is_list(Config) ->
     NewData = list_to_binary(" see you tomorrow"),
     {async, Ref} = ssh_sftp:apwrite(Sftp, Handle, {bof, 4}, NewData),
     receive
-	{async_reply, Ref, ok} ->
+	{async_reply, ^Ref, ok} ->
 	    ok;
 	Msg ->
 	    ct:fail(Msg)
@@ -722,7 +722,7 @@ pos_write(Config) when is_list(Config) ->
     ok = ssh_sftp:pwrite(Sftp, Handle, eof, LastData),
 
     NewData1 = unicode:characters_to_binary("Bye, see you tomorrow" ++ LastData),
-    {ok, NewData1} = ssh_sftp:read_file(Sftp, SftpFileName).
+    {ok, ^NewData1} = ssh_sftp:read_file(Sftp, SftpFileName).
 
 %%--------------------------------------------------------------------
 start_channel_sock(Config) ->
@@ -958,7 +958,7 @@ simple_crypto_tar_big(Config) ->
 
 stuff(Bin) -> << <<C,C>> || <<C>> <= Bin >>.
 
-unstuff(Bin) -> << <<C>> || <<C,C>> <= Bin >>.
+unstuff(Bin) -> << <<C>> || <<C,C1>> <= Bin, C1 =:= C >>.
 
 %%--------------------------------------------------------------------
 read_tar(Config) ->

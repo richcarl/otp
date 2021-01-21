@@ -156,7 +156,7 @@ erlang_shell_client_openssh_server(Config) when is_list(Config) ->
             receive_normal_exit(Shell),
             %% Check that the connection is closed:
             ct:log("Expects ~p", [Prev]),
-            ?wait_match(Prev, lists:usort(supervisor:which_children(sshc_sup)));
+            ?wait_match(^Prev, lists:usort(supervisor:which_children(sshc_sup)));
         false ->
             ct:log("~p:~p  ptty unsupported", [?MODULE,?LINE]),
             receive_exit(Shell,
@@ -454,7 +454,7 @@ send_rcv(Txt, From, To) ->
     ct:log("Send ~p from ~p to ~p", [Txt, From, To]),
     ok = gen_tcp:send(From, Txt),
     ct:log("Recv ~p on ~p", [Txt, To]),
-    {ok,Txt} = gen_tcp:recv(To, 0, 5000),
+    {ok,^Txt} = gen_tcp:recv(To, 0, 5000),
     ok.    
 
 %%--------------------------------------------------------------------
@@ -507,7 +507,7 @@ receive_normal_exit(Shell) ->
 
 receive_exit(Shell, F) when is_function(F,1) ->
     receive
-        {'EXIT', Shell, Reason} ->
+        {'EXIT', ^Shell, Reason} ->
             case F(Reason) of
                 true ->
                     ok;
@@ -550,7 +550,7 @@ no_forwarding() ->
                                 Parent ! {self(), os:cmd(Cmnd)}
                         end),
             receive
-                {Pid, Txt} ->
+                {^Pid, Txt} ->
                     case re:run(Txt, FailRegExp) of
                         {match,_} -> {true,Txt};
                         _ -> {false,Txt}

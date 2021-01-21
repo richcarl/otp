@@ -141,11 +141,11 @@ read(Config) when is_list(Config) ->
 	   mnesia:transaction(fun() -> mnesia:read({Tab, 1}) end)),
     ?match({atomic, ok},
 	   mnesia:transaction(fun() -> mnesia:write(OneRec) end)),
-    ?match({atomic, [OneRec]},
+    ?match({atomic, [^OneRec]},
 	   mnesia:transaction(fun() -> mnesia:read({Tab, 1}) end)),
     ?match({atomic, ok},
 	   mnesia:transaction(fun() -> mnesia:write(TwoRec) end)),
-    ?match({atomic, [OneRec, TwoRec]},
+    ?match({atomic, [^OneRec, ^TwoRec]},
 	   mnesia:transaction(fun() -> mnesia:read({Tab, 1}) end)),
 
     ?match({'EXIT', {aborted, no_transaction}},  mnesia:read({Tab, 1})),
@@ -174,18 +174,18 @@ wread(Config) when is_list(Config) ->
     ?match({atomic, ok},
 	   mnesia:transaction(fun() -> mnesia:write(OneRec) end)),
 
-    ?match({atomic, [OneRec]},
+    ?match({atomic, [^OneRec]},
 	   mnesia:transaction(fun() -> mnesia:wread({Tab, 1}) end)),
     ?match({atomic, ok},
 	   mnesia:transaction(fun() -> mnesia:write(TwoRec) end)),
-    ?match({atomic, [TwoRec]},
+    ?match({atomic, [^TwoRec]},
 	   mnesia:transaction(fun() -> mnesia:wread({Tab, 1}) end)),
 
     ?match({'EXIT', {aborted, no_transaction}},  mnesia:wread({Tab, 1})),
 
     ?match({atomic, ok},
 	   mnesia:transaction(fun() -> mnesia:write(Tab, {Tab, 42, a}, sticky_write) end)),
-    ?match({atomic, [{Tab,42, a}]},
+    ?match({atomic, [{^Tab,42, a}]},
 	   rpc:call(N2, mnesia, transaction, [fun() -> mnesia:wread({Tab, 42}) end])),
     ?verify_mnesia(Nodes, []).
 
@@ -256,7 +256,7 @@ delete_object(Node1, Type) ->
 	   mnesia:transaction(fun() -> mnesia:write(OneRec) end)),
     ?match({atomic, ok},
 	   mnesia:transaction(fun() ->
-                                      [OneRec] = mnesia:read(Tab, 1),
+                                      [^OneRec] = mnesia:read(Tab, 1),
                                       ok = mnesia:delete_object(OneRec),
                                       [] = mnesia:read(Tab, 1),
                                       ok
@@ -270,7 +270,7 @@ delete_object(Node1, Type) ->
 	   mnesia:transaction(fun() -> mnesia:write(OneRec) end)),
     ?match({atomic, ok},
 	   mnesia:transaction(fun() ->
-                                      [OneRec] = mnesia:read(Tab, 1),
+                                      [^OneRec] = mnesia:read(Tab, 1),
                                       ok = mnesia:delete_object(OneRec),
                                       [] = mnesia:read(Tab, 1),
                                       ok
@@ -294,25 +294,25 @@ delete_object(Node1, Type) ->
                                       [] = mnesia:read(Tab, 1),
                                       ok = mnesia:write(OneRec),
                                       ok = mnesia:delete_object(OtherRec),
-                                      [OneRec] = mnesia:read(Tab, 1),
+                                      [^OneRec] = mnesia:read(Tab, 1),
                                       ok
                               end)),
-    ?match([OneRec], mnesia:dirty_read(Tab, 1)),
+    ?match([^OneRec], mnesia:dirty_read(Tab, 1)),
 
     %% Delete other object than already existing
     ?match({atomic, ok},
 	   mnesia:transaction(fun() ->
-                                      [OneRec] = mnesia:read(Tab, 1),
+                                      [^OneRec] = mnesia:read(Tab, 1),
                                       ok = mnesia:delete_object(OtherRec),
-                                      [OneRec] = mnesia:read(Tab, 1),
+                                      [^OneRec] = mnesia:read(Tab, 1),
                                       ok
                               end)),
-    ?match([OneRec], mnesia:dirty_read(Tab, 1)),
+    ?match([^OneRec], mnesia:dirty_read(Tab, 1)),
 
     %% Delete object in combination with delete
     ?match({atomic, ok},
 	   mnesia:transaction(fun() ->
-                                      [OneRec] = mnesia:read(Tab, 1),
+                                      [^OneRec] = mnesia:read(Tab, 1),
                                       ok = mnesia:delete({Tab, 1}),
                                       ok = mnesia:delete_object(OtherRec),
                                       [] = mnesia:read(Tab, 1),
@@ -325,7 +325,7 @@ delete_object(Node1, Type) ->
 	   mnesia:transaction(fun() -> mnesia:write(OneRec) end)),
     ?match({atomic, ok},
 	   mnesia:transaction(fun() ->
-                                      [OneRec] = mnesia:read(Tab, 1),
+                                      [^OneRec] = mnesia:read(Tab, 1),
                                       ok = mnesia:delete_object(OneRec),
                                       ok = mnesia:delete_object(OtherRec),
                                       [] = mnesia:read(Tab, 1),
@@ -335,9 +335,9 @@ delete_object(Node1, Type) ->
 
     ?match({'EXIT', {aborted, no_transaction}},  mnesia:delete_object(OneRec)),
 
-    ?match({aborted, {bad_type, Tab, _}},
+    ?match({aborted, {bad_type, ^Tab, _}},
 	   mnesia:transaction(fun() -> mnesia:delete_object({Tab, {['_']}, 21}) end)),
-    ?match({aborted, {bad_type, Tab, _}},
+    ?match({aborted, {bad_type, ^Tab, _}},
 	   mnesia:transaction(fun() -> mnesia:delete_object({Tab, {['$5']}, 21}) end)),
 
     ?match({atomic, ok},  mnesia:delete_table(Tab)),
@@ -358,7 +358,7 @@ match_object(Config) when is_list(Config) ->
 	   mnesia:transaction(fun() -> mnesia:match_object(OnePat) end)),
     ?match({atomic, ok},
 	   mnesia:transaction(fun() -> mnesia:write(OneRec) end)),
-    ?match({atomic, [OneRec]},
+    ?match({atomic, [^OneRec]},
 	   mnesia:transaction(fun() -> mnesia:match_object(OnePat) end)),
 
     ?match({aborted, _},
@@ -386,7 +386,7 @@ select(Config) when is_list(Config) ->
 	   mnesia:transaction(fun() -> mnesia:write(OneRec) end)),
     ?match({atomic, ok},
 	   mnesia:transaction(fun() -> mnesia:write(TwoRec) end)),
-    ?match({atomic, [OneRec]},
+    ?match({atomic, [^OneRec]},
 	   mnesia:transaction(fun() -> mnesia:select(Tab, OnePat) end)),
 
     ?match({aborted, _},
@@ -439,8 +439,8 @@ select14(Config) when is_list(Config) ->
 		?match({atomic, []}, Trans(fun() -> Loop(Tab, OnePat) end)),
 		?match({atomic, ok},   mnesia:transaction(fun() -> mnesia:write(OneRec) end)),
 		?match({atomic, ok},   mnesia:transaction(fun() -> mnesia:write(TwoRec) end)),
-		?match({atomic, [OneRec]}, Trans(fun() -> Loop(Tab, OnePat) end)),
-		?match({atomic, All}, Trans(fun() -> Loop(Tab, AllPat) end)),
+		?match({atomic, [^OneRec]}, Trans(fun() -> Loop(Tab, OnePat) end)),
+		?match({atomic, ^All}, Trans(fun() -> Loop(Tab, AllPat) end)),
 
 		{atomic,{_, ContOne}} = Trans(fun() -> mnesia:select(Tab, OnePat, 1, read) end),
 		?match({aborted, wrong_transaction}, Trans(fun() -> mnesia:select(ContOne) end)),
@@ -508,28 +508,28 @@ transaction(Config) when is_list(Config) ->
     ?start_transactions([A, B, C, D, E, F, G, H]),
 
     A ! fun() -> mnesia:abort(abort_bad_trans) end,
-    ?match_receive({A, {aborted, abort_bad_trans}}),
+    ?match_receive({^A, {aborted, abort_bad_trans}}),
 
     B ! fun() -> erlang:error(exit_here) end,
-    ?match_receive({B, {aborted, _}}),
+    ?match_receive({^B, {aborted, _}}),
 
     C ! fun() -> throw(throw_bad_trans) end,
-    ?match_receive({C, {aborted, {throw, throw_bad_trans}}}),
+    ?match_receive({^C, {aborted, {throw, throw_bad_trans}}}),
 
     D ! fun() -> exit(exit_bad_trans) end,
-    ?match_receive({D, {aborted, exit_bad_trans}}),
+    ?match_receive({^D, {aborted, exit_bad_trans}}),
 
     E ! fun() -> exit(normal) end,
-    ?match_receive({E, {aborted, normal}}),
+    ?match_receive({^E, {aborted, normal}}),
 
     F ! fun() -> exit(abnormal) end,
-    ?match_receive({F, {aborted, abnormal}}),
+    ?match_receive({^F, {aborted, abnormal}}),
 
     G ! fun() -> exit(G, abnormal) end,
-    ?match_receive({'EXIT', G, abnormal}),
+    ?match_receive({'EXIT', ^G, abnormal}),
 
     H ! fun() -> exit(H, kill) end,
-    ?match_receive({'EXIT', H, killed}),
+    ?match_receive({'EXIT', ^H, killed}),
 
     ?match({atomic, ali_baba},
            mnesia:transaction(fun() -> ali_baba end, infinity)),
@@ -627,7 +627,7 @@ do_nested(How) ->
 		    spawn(?MODULE,  do_nested,  [{spawned,  self()}])],
 	    ?match({info, _, _}, mnesia_tm:get_info(2000)),
 	    lists:foreach(fun(P) -> receive
-					{P,  ok} -> ok
+					{^P,  ok} -> ok
 				    end
 			  end,  Pids),
 	    ?match([],  [Tab || Tab <- ets:all(), mnesia_trans_store == ets:info(Tab, name)]);
@@ -725,13 +725,13 @@ nested_transactions(Config, Child, Father) ->
     %% Syncronize things!!
     ?match({atomic, ok}, mnesia:sync_transaction(fun() -> mnesia:write({Tab, sync, sync}) end)),
 
-    ?match(ChildRes, rpc:call(Node1, mnesia, dirty_read, [{Tab, child}])),
-    ?match(ChildRes, rpc:call(Node2, mnesia, dirty_read, [{Tab, child}])),
-    ?match(ChildRes, rpc:call(Node3, mnesia, dirty_read, [{Tab, child}])),
+    ?match(^ChildRes, rpc:call(Node1, mnesia, dirty_read, [{Tab, child}])),
+    ?match(^ChildRes, rpc:call(Node2, mnesia, dirty_read, [{Tab, child}])),
+    ?match(^ChildRes, rpc:call(Node3, mnesia, dirty_read, [{Tab, child}])),
 
-    ?match(FatherRes, rpc:call(Node1, mnesia, dirty_read, [{Tab, father}])),
-    ?match(FatherRes, rpc:call(Node2, mnesia, dirty_read, [{Tab, father}])),
-    ?match(FatherRes, rpc:call(Node3, mnesia, dirty_read, [{Tab, father}])),
+    ?match(^FatherRes, rpc:call(Node1, mnesia, dirty_read, [{Tab, father}])),
+    ?match(^FatherRes, rpc:call(Node2, mnesia, dirty_read, [{Tab, father}])),
+    ?match(^FatherRes, rpc:call(Node3, mnesia, dirty_read, [{Tab, father}])),
     ?verify_mnesia(Nodes, []).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -765,7 +765,7 @@ mix_of_nested_activities(Config) when is_list(Config) ->
     Foreach =
 	fun(Test,No) ->
 		Result = lists:reverse(Test),
-		?match({No,Result},{No,catch apply_op({Tab,No},Test)}),
+		?match({^No,^Result},{No,catch apply_op({Tab,No},Test)}),
 		No+1
 	end,
     lists:foldl(Foreach, 0, Tests),
@@ -825,7 +825,7 @@ index_match_object(Config) when is_list(Config) ->
     Imatch = fun(Patt, Pos) ->
 		     mnesia:transaction(fun() -> lists:sort(mnesia:index_match_object(Patt, Pos)) end)
 	     end,
-    ?match({atomic, [OneRec]}, Imatch(OnePat, ValPos)),
+    ?match({atomic, [^OneRec]}, Imatch(OnePat, ValPos)),
     ?match({aborted, _}, Imatch(OnePat, BadValPos)),
     ?match({aborted, _}, Imatch({foo, '$1', 2, '_'}, ValPos)),
     ?match({aborted, _}, Imatch({[], '$1', 2, '_'}, ValPos)),
@@ -838,22 +838,22 @@ index_match_object(Config) when is_list(Config) ->
     ?match({atomic, ok},
 	   mnesia:transaction(fun() -> mnesia:write({Tab, {4, 4}, 3, {4, 4}}) end)),
 
-    ?match({atomic, [OneRec]}, Imatch({Tab, {1,1}, 2, {1,1}}, ValPos)),
-    ?match({atomic, [OneRec]}, Imatch({Tab, {1,1}, 2, '$1'}, ValPos)),
-    ?match({atomic, [OneRec]}, Imatch({Tab, '$1', 2, {1,1}}, ValPos)),
-    ?match({atomic, [OneRec]}, Imatch({Tab, '$1', 2, '$1'}, ValPos)),
-    ?match({atomic, [OneRec]}, Imatch({Tab, {1, '$1'}, 2, '_'}, ValPos)),
-    ?match({atomic, [OneRec]}, Imatch({Tab, {'$2', '$1'}, 2, {'_', '$1'}}, ValPos)),
-    ?match({atomic, [OneRec, Another]}, Imatch({Tab, '_', 2, '_'}, ValPos)),
+    ?match({atomic, [^OneRec]}, Imatch({Tab, {1,1}, 2, {1,1}}, ValPos)),
+    ?match({atomic, [^OneRec]}, Imatch({Tab, {1,1}, 2, '$1'}, ValPos)),
+    ?match({atomic, [^OneRec]}, Imatch({Tab, '$1', 2, {1,1}}, ValPos)),
+    ?match({atomic, [^OneRec]}, Imatch({Tab, '$1', 2, '$1'}, ValPos)),
+    ?match({atomic, [^OneRec]}, Imatch({Tab, {1, '$1'}, 2, '_'}, ValPos)),
+    ?match({atomic, [^OneRec]}, Imatch({Tab, {'$2', '$1'}, 2, {'_', '$1'}}, ValPos)),
+    ?match({atomic, [^OneRec, ^Another]}, Imatch({Tab, '_', 2, '_'}, ValPos)),
 
     ?match({atomic, ok},
 	   mnesia:transaction(fun() -> mnesia:write({Tab, 4, 5, {7, 4}}) end)),
     ?match({atomic, ok},
 	   mnesia:transaction(fun() -> mnesia:write({Tab, 7, 5, {7, 5}}) end)),
 
-    ?match({atomic, [{Tab, 4, 5, {7, 4}}]}, Imatch({Tab, '$1', 5, {'_', '$1'}}, ValPos)),
+    ?match({atomic, [{^Tab, 4, 5, {7, 4}}]}, Imatch({Tab, '$1', 5, {'_', '$1'}}, ValPos)),
 
-    ?match({atomic, [OneRec]}, rpc:call(Node2, mnesia, transaction,
+    ?match({atomic, [^OneRec]}, rpc:call(Node2, mnesia, transaction,
 					[fun() ->
 						lists:sort(mnesia:index_match_object({Tab, {1,1}, 2,
 										      {1,1}}, ValPos))
@@ -877,7 +877,7 @@ index_read(Config) when is_list(Config) ->
 	   mnesia:transaction(fun() -> mnesia:index_read(Tab, 2, ValPos) end)),
     ?match({atomic, ok},
 	   mnesia:transaction(fun() -> mnesia:write(OneRec) end)),
-    ?match({atomic, [OneRec]},
+    ?match({atomic, [^OneRec]},
 	   mnesia:transaction(fun() -> mnesia:index_read(Tab, 2, ValPos) end)),
     ?match({aborted, _},
 	   mnesia:transaction(fun() -> mnesia:index_read(Tab, 2, BadValPos) end)),
@@ -911,32 +911,32 @@ index_update_set(Config)when is_list(Config) ->
 	   mnesia:transaction(fun() -> mnesia:index_read(Tab, 2, ValPos) end)),
     ?match({atomic, ok},
 	   mnesia:transaction(fun() -> mnesia:write(Rec1) end)),
-    ?match({atomic, [Rec1]},
+    ?match({atomic, [^Rec1]},
 	   mnesia:transaction(fun() -> mnesia:index_read(Tab, 2, ValPos) end)),
 
     ?match({atomic, ok},
 	   mnesia:transaction(fun() -> mnesia:write(Rec2) end)),
     {atomic, R1} = mnesia:transaction(fun() -> mnesia:index_read(Tab, 2, ValPos) end),
-    ?match([Rec1, Rec2], lists:sort(R1)),
+    ?match([^Rec1, ^Rec2], lists:sort(R1)),
 
     ?match({atomic, ok},
 	   mnesia:transaction(fun() -> mnesia:write(Rec3) end)),
     {atomic, R2} = mnesia:transaction(fun() -> mnesia:index_read(Tab, 2, ValPos) end),
-    ?match([Rec2], lists:sort(R2)),
-    ?match({atomic, [Rec2]},
+    ?match([^Rec2], lists:sort(R2)),
+    ?match({atomic, [^Rec2]},
 	   mnesia:transaction(fun() -> mnesia:index_match_object(Pat1, ValPos) end)),
 
     {atomic, R3} = mnesia:transaction(fun() -> mnesia:match_object(Pat2) end),
-    ?match([Rec3, Rec2], lists:sort(R3)),
+    ?match([^Rec3, ^Rec2], lists:sort(R3)),
 
     ?match({atomic, ok},
 	   mnesia:transaction(fun() -> mnesia:write(Rec4) end)),
     {atomic, R4} = mnesia:transaction(fun() -> mnesia:index_read(Tab, 2, ValPos) end),
-    ?match([Rec2, Rec4], lists:sort(R4)),
+    ?match([^Rec2, ^Rec4], lists:sort(R4)),
 
     ?match({atomic, ok},
 	   mnesia:transaction(fun() -> mnesia:delete({Tab, 4}) end)),
-    ?match({atomic, [Rec2]},
+    ?match({atomic, [^Rec2]},
 	   mnesia:transaction(fun() -> mnesia:index_read(Tab, 2, ValPos) end)),
 
     ?match({atomic, ok}, mnesia:del_table_index(Tab, ValPos)),
@@ -945,36 +945,36 @@ index_update_set(Config)when is_list(Config) ->
     ?match({atomic, ok}, mnesia:add_table_index(Tab, ValPos2)),
 
     {atomic, R5} = mnesia:transaction(fun() -> mnesia:match_object(Pat2) end),
-    ?match([Rec3, Rec2, Rec4], lists:sort(R5)),
+    ?match([^Rec3, ^Rec2, ^Rec4], lists:sort(R5)),
 
     {atomic, R6} = mnesia:transaction(fun() -> mnesia:index_read(Tab, 2, ValPos) end),
-    ?match([Rec2, Rec4], lists:sort(R6)),
+    ?match([^Rec2, ^Rec4], lists:sort(R6)),
 
     ?match({atomic, []},
 	   mnesia:transaction(fun() -> mnesia:index_read(Tab, 4, ValPos2) end)),
     {atomic, R7} = mnesia:transaction(fun() -> mnesia:index_read(Tab, 14, ValPos2) end),
-    ?match([Rec3, Rec2, Rec4], lists:sort(R7)),
+    ?match([^Rec3, ^Rec2, ^Rec4], lists:sort(R7)),
 
     ?match({atomic, ok}, mnesia:transaction(fun() -> mnesia:write(Rec1) end)),
     {atomic, R8} = mnesia:transaction(fun() -> mnesia:index_read(Tab, 2, ValPos) end),
-    ?match([Rec1, Rec2, Rec4], lists:sort(R8)),
-    ?match({atomic, [Rec1]},
+    ?match([^Rec1, ^Rec2, ^Rec4], lists:sort(R8)),
+    ?match({atomic, [^Rec1]},
 	   mnesia:transaction(fun() -> mnesia:index_read(Tab, 4, ValPos2) end)),
     {atomic, R9} = mnesia:transaction(fun() -> mnesia:index_read(Tab, 14, ValPos2) end),
-    ?match([Rec2, Rec4], lists:sort(R9)),
+    ?match([^Rec2, ^Rec4], lists:sort(R9)),
 
     ?match({atomic, ok}, mnesia:transaction(fun() -> mnesia:delete_object(Rec2) end)),
     {atomic, R10} = mnesia:transaction(fun() -> mnesia:index_read(Tab, 2, ValPos) end),
-    ?match([Rec1, Rec4], lists:sort(R10)),
-    ?match({atomic, [Rec1]},
+    ?match([^Rec1, ^Rec4], lists:sort(R10)),
+    ?match({atomic, [^Rec1]},
 	   mnesia:transaction(fun() -> mnesia:index_read(Tab, 4, ValPos2) end)),
-    ?match({atomic, [Rec4]},
+    ?match({atomic, [^Rec4]},
 	   mnesia:transaction(fun() -> mnesia:index_read(Tab, 14, ValPos2) end)),
 
     ?match({atomic, ok}, mnesia:transaction(fun() -> mnesia:delete({Tab, 4}) end)),
     {atomic, R11} = mnesia:transaction(fun() -> mnesia:index_read(Tab, 2, ValPos) end),
-    ?match([Rec1], lists:sort(R11)),
-    ?match({atomic, [Rec1]},mnesia:transaction(fun() -> mnesia:index_read(Tab, 4, ValPos2) end)),
+    ?match([^Rec1], lists:sort(R11)),
+    ?match({atomic, [^Rec1]},mnesia:transaction(fun() -> mnesia:index_read(Tab, 4, ValPos2) end)),
     ?match({atomic, []},mnesia:transaction(fun() -> mnesia:index_read(Tab, 14, ValPos2) end)),
 
     ?verify_mnesia(Nodes, []).
@@ -1007,37 +1007,37 @@ index_update_bag(Config)when is_list(Config) ->
 	   mnesia:transaction(fun() -> mnesia:index_read(Tab, 2, ValPos) end)),
     ?match({atomic, ok},
 	   mnesia:transaction(fun() -> mnesia:write(Rec1) end)),
-    ?match({atomic, [Rec1]},
+    ?match({atomic, [^Rec1]},
 	   mnesia:transaction(fun() -> mnesia:index_read(Tab, 2, ValPos) end)),
 
     ?match({atomic, ok}, mnesia:transaction(fun() -> mnesia:delete_object(Rec5) end)),
-    ?match({atomic, [Rec1]},
+    ?match({atomic, [^Rec1]},
 	   mnesia:transaction(fun() -> mnesia:index_read(Tab, 2, ValPos) end)),
 
     ?match({atomic, ok},
 	   mnesia:transaction(fun() -> mnesia:write(Rec2) end)),
     {atomic, R1} = mnesia:transaction(fun() -> mnesia:index_read(Tab, 2, ValPos) end),
-    ?match([Rec1, Rec2], lists:sort(R1)),
+    ?match([^Rec1, ^Rec2], lists:sort(R1)),
 
     ?match({atomic, ok},
 	   mnesia:transaction(fun() -> mnesia:write(Rec3) end)),
     {atomic, R2} = mnesia:transaction(fun() -> mnesia:index_read(Tab, 2, ValPos) end),
-    ?match([Rec1, Rec2], lists:sort(R2)),
+    ?match([^Rec1, ^Rec2], lists:sort(R2)),
 
     {atomic, R3} = mnesia:transaction(fun() -> mnesia:index_match_object(Pat1, ValPos) end),
-    ?match([Rec1, Rec2], lists:sort(R3)),
+    ?match([^Rec1, ^Rec2], lists:sort(R3)),
 
     {atomic, R4} = mnesia:transaction(fun() -> mnesia:match_object(Pat2) end),
-    ?match([Rec1, Rec3, Rec2], lists:sort(R4)),
+    ?match([^Rec1, ^Rec3, ^Rec2], lists:sort(R4)),
 
     ?match({atomic, ok},
 	   mnesia:transaction(fun() -> mnesia:write(Rec4) end)),
     {atomic, R5} = mnesia:transaction(fun() -> mnesia:index_read(Tab, 2, ValPos) end),
-    ?match([Rec1, Rec2, Rec4], lists:sort(R5)),
+    ?match([^Rec1, ^Rec2, ^Rec4], lists:sort(R5)),
 
     ?match({atomic, ok}, mnesia:transaction(fun() -> mnesia:delete({Tab, 4}) end)),
     {atomic, R6} = mnesia:transaction(fun() -> mnesia:index_read(Tab, 2, ValPos) end),
-    ?match([Rec1, Rec2], lists:sort(R6)),
+    ?match([^Rec1, ^Rec2], lists:sort(R6)),
 
     %% OTP-6587  Needs some whitebox testing to see that the index table is cleaned correctly
 
@@ -1048,13 +1048,13 @@ index_update_bag(Config)when is_list(Config) ->
 
     ?match({atomic, ok}, mnesia:transaction(fun() -> mnesia:write(Rec5) end)),
     {atomic, R60} = mnesia:transaction(fun() -> mnesia:index_read(Tab, 2, ValPos) end),
-    ?match([Rec1,Rec5,Rec2], lists:sort(R60)),
+    ?match([^Rec1,^Rec5,^Rec2], lists:sort(R60)),
 
     %?match([{2,1},{2,2},{12,1}], lists:keysort(1,ets:tab2list(ITab))),
 
     ?match({atomic, ok}, mnesia:transaction(fun() -> mnesia:delete_object(Rec3) end)),
     {atomic, R61} = mnesia:transaction(fun() -> mnesia:index_read(Tab, 2, ValPos) end),
-    ?match([Rec1,Rec5,Rec2], lists:sort(R61)),
+    ?match([^Rec1,^Rec5,^Rec2], lists:sort(R61)),
     {atomic, R62} = mnesia:transaction(fun() -> mnesia:index_read(Tab,12, ValPos) end),
     ?match([], lists:sort(R62)),
     %% ?match([{2,1},{2,2}], lists:keysort(1,ets:tab2list(ITab))),
@@ -1062,15 +1062,15 @@ index_update_bag(Config)when is_list(Config) ->
     %% reset for rest of testcase
     ?match({atomic, ok}, mnesia:transaction(fun() -> mnesia:write(Rec3) end)),
     ?match({atomic, ok}, mnesia:transaction(fun() -> mnesia:delete_object(Rec5) end)),
-    {atomic, R6} = mnesia:transaction(fun() -> mnesia:index_read(Tab, 2, ValPos) end),
-    ?match([Rec1, Rec2], lists:sort(R6)),
+    {atomic, ^R6} = mnesia:transaction(fun() -> mnesia:index_read(Tab, 2, ValPos) end),
+    ?match([^Rec1, ^Rec2], lists:sort(R6)),
     %% OTP-6587
 
     ?match({atomic, ok}, mnesia:transaction(fun() -> mnesia:delete_object(Rec1) end)),
-    ?match({atomic, [Rec2]},
+    ?match({atomic, [^Rec2]},
 	   mnesia:transaction(fun() -> mnesia:index_read(Tab, 2, ValPos) end)),
     {atomic, R7} = mnesia:transaction(fun() -> mnesia:match_object(Pat2) end),
-    ?match([Rec3, Rec2], lists:sort(R7)),
+    ?match([^Rec3, ^Rec2], lists:sort(R7)),
 
     %% Two indexies
     ?match({atomic, ok}, mnesia:del_table_index(Tab, ValPos)),
@@ -1080,43 +1080,43 @@ index_update_bag(Config)when is_list(Config) ->
     ?match({atomic, ok}, mnesia:add_table_index(Tab, ValPos2)),
 
     {atomic, R8} = mnesia:transaction(fun() -> mnesia:index_read(Tab, 2, ValPos) end),
-    ?match([Rec1, Rec2, Rec4], lists:sort(R8)),
+    ?match([^Rec1, ^Rec2, ^Rec4], lists:sort(R8)),
 
     {atomic, R9} = mnesia:transaction(fun() -> mnesia:index_read(Tab, 4, ValPos2) end),
-    ?match([Rec1, Rec4], lists:sort(R9)),
+    ?match([^Rec1, ^Rec4], lists:sort(R9)),
     {atomic, R10} = mnesia:transaction(fun() -> mnesia:index_read(Tab, 14, ValPos2) end),
-    ?match([Rec3, Rec2], lists:sort(R10)),
+    ?match([^Rec3, ^Rec2], lists:sort(R10)),
 
     ?match({atomic, ok}, mnesia:transaction(fun() -> mnesia:write(Rec5) end)),
     {atomic, R11} = mnesia:transaction(fun() -> mnesia:index_read(Tab, 2, ValPos) end),
-    ?match([Rec1, Rec5, Rec2, Rec4], lists:sort(R11)),
+    ?match([^Rec1, ^Rec5, ^Rec2, ^Rec4], lists:sort(R11)),
     {atomic, R12} = mnesia:transaction(fun() -> mnesia:index_read(Tab, 4, ValPos2) end),
-    ?match([Rec1, Rec4], lists:sort(R12)),
+    ?match([^Rec1, ^Rec4], lists:sort(R12)),
     {atomic, R13} = mnesia:transaction(fun() -> mnesia:index_read(Tab, 14, ValPos2) end),
-    ?match([Rec5, Rec3, Rec2], lists:sort(R13)),
+    ?match([^Rec5, ^Rec3, ^Rec2], lists:sort(R13)),
 
     ?match({atomic, ok}, mnesia:transaction(fun() -> mnesia:delete_object(Rec1) end)),
     {atomic, R14} = mnesia:transaction(fun() -> mnesia:index_read(Tab, 2, ValPos) end),
-    ?match([Rec5, Rec2, Rec4], lists:sort(R14)),
-    ?match({atomic, [Rec4]},
+    ?match([^Rec5, ^Rec2, ^Rec4], lists:sort(R14)),
+    ?match({atomic, [^Rec4]},
 	   mnesia:transaction(fun() -> mnesia:index_read(Tab, 4, ValPos2) end)),
     {atomic, R15} = mnesia:transaction(fun() -> mnesia:index_read(Tab, 14, ValPos2) end),
-    ?match([Rec5, Rec3, Rec2], lists:sort(R15)),
+    ?match([^Rec5, ^Rec3, ^Rec2], lists:sort(R15)),
 
     ?match({atomic, ok}, mnesia:transaction(fun() -> mnesia:delete_object(Rec5) end)),
     {atomic, R16} = mnesia:transaction(fun() -> mnesia:index_read(Tab, 2, ValPos) end),
-    ?match([Rec2, Rec4], lists:sort(R16)),
-    ?match({atomic, [Rec4]}, mnesia:transaction(fun()->mnesia:index_read(Tab, 4, ValPos2) end)),
+    ?match([^Rec2, ^Rec4], lists:sort(R16)),
+    ?match({atomic, [^Rec4]}, mnesia:transaction(fun()->mnesia:index_read(Tab, 4, ValPos2) end)),
     {atomic, R17} = mnesia:transaction(fun() -> mnesia:index_read(Tab, 14, ValPos2) end),
-    ?match([Rec3, Rec2], lists:sort(R17)),
+    ?match([^Rec3, ^Rec2], lists:sort(R17)),
 
     ?match({atomic, ok}, mnesia:transaction(fun() -> mnesia:write(Rec1) end)),
     ?match({atomic, ok}, mnesia:transaction(fun() -> mnesia:delete({Tab, 1}) end)),
     {atomic, R18} = mnesia:transaction(fun() -> mnesia:index_read(Tab, 2, ValPos) end),
-    ?match([Rec2, Rec4], lists:sort(R18)),
-    ?match({atomic, [Rec4]}, mnesia:transaction(fun()->mnesia:index_read(Tab, 4, ValPos2) end)),
+    ?match([^Rec2, ^Rec4], lists:sort(R18)),
+    ?match({atomic, [^Rec4]}, mnesia:transaction(fun()->mnesia:index_read(Tab, 4, ValPos2) end)),
     {atomic, R19} = mnesia:transaction(fun() -> mnesia:index_read(Tab, 14, ValPos2) end),
-    ?match([Rec2], lists:sort(R19)),
+    ?match([^Rec2], lists:sort(R19)),
 
     ?verify_mnesia(Nodes, []).
 
@@ -1156,10 +1156,10 @@ index_write(Config)when is_list(Config) ->
 
     Pids = [spawn(Update) || _ <- lists:seq(1,5)],
 
-    Gather = fun(Pid, Acc) -> receive {Pid, Res} -> [Res|Acc] end end,
+    Gather = fun(Pid, Acc) -> receive {^Pid, Res} -> [Res|Acc] end end,
     Results = lists:foldl(Gather, [], Pids),
     Expected = hd(Results),
-    Check = fun(Res) -> ?match(Expected, Res) end,
+    Check = fun(Res) -> ?match(^Expected, Res) end,
     lists:foreach(Check, Results),
     ?verify_mnesia(Nodes, []).
 
@@ -1236,7 +1236,7 @@ create_live_table_index(Config, Storage) ->
     ?match({atomic, ok}, mnesia:transaction(Fun)),
     ?match({atomic, ok}, mnesia:add_table_index(Tab, ValPos)),
     IRead = fun() -> lists:sort(mnesia:index_read(Tab, 2, ValPos)) end,
-    ?match({atomic, [{Tab, 1, 2},{Tab, 2, 2}]}, mnesia:transaction(IRead)),
+    ?match({atomic, [{^Tab, 1, 2},{^Tab, 2, 2}]}, mnesia:transaction(IRead)),
     ?match({atomic, ok}, mnesia:del_table_index(Tab, ValPos)),
 
     %% Bug when adding index when table is still unloaded
@@ -1261,8 +1261,8 @@ create_live_table_index(Config, Storage) ->
 
     ?match({atomic, ok}, mnesia:add_table_index(Tab, ValPos)),
 
-    ?match({atomic, [{Tab, 1, 2},{Tab, 2, 2}]}, mnesia:transaction(IRead)),
-    ?match({atomic, [{Tab, 1, 2},{Tab, 2, 2}]},
+    ?match({atomic, [{^Tab, 1, 2},{^Tab, 2, 2}]}, mnesia:transaction(IRead)),
+    ?match({atomic, [{^Tab, 1, 2},{^Tab, 2, 2}]},
 	   rpc:call(N2, mnesia, transaction, [IRead])),
 
     ?verify_mnesia(Nodes, []).
@@ -1337,44 +1337,44 @@ idx_schema_changes(Config, Storage) ->
 	    end,
 
     [mnesia:sync_transaction(Write, [N]) || N <- lists:seq(1, 10)],
-    ?match([{Tab, 1, 51}], rpc:call(N1, mnesia, dirty_index_read, [Tab, 51, Idx])),
-    ?match([{Tab, 1, 51}], rpc:call(N2, mnesia, dirty_index_read, [Tab, 51, Idx])),
+    ?match([{^Tab, 1, 51}], rpc:call(N1, mnesia, dirty_index_read, [Tab, 51, Idx])),
+    ?match([{^Tab, 1, 51}], rpc:call(N2, mnesia, dirty_index_read, [Tab, 51, Idx])),
 
     ?match({atomic, ok}, mnesia:change_table_copy_type(Tab, N1, Storage1)),
 
     ?match({atomic, ok}, rpc:call(N1, mnesia, sync_transaction, [Write, [17]])),
     ?match({atomic, ok}, rpc:call(N2, mnesia, sync_transaction, [Write, [18]])),
 
-    ?match([{Tab, 17, 67}], rpc:call(N2, mnesia, dirty_index_read, [Tab, 67, Idx])),
-    ?match([{Tab, 18, 68}], rpc:call(N1, mnesia, dirty_index_read, [Tab, 68, Idx])),
+    ?match([{^Tab, 17, 67}], rpc:call(N2, mnesia, dirty_index_read, [Tab, 67, Idx])),
+    ?match([{^Tab, 18, 68}], rpc:call(N1, mnesia, dirty_index_read, [Tab, 68, Idx])),
 
     ?match({atomic, ok}, mnesia:del_table_copy(Tab, N1)),
     ?match({atomic, ok}, rpc:call(N1, mnesia, sync_transaction, [Write, [11]])),
     ?match({atomic, ok}, rpc:call(N2, mnesia, sync_transaction, [Write, [12]])),
 
-    ?match([{Tab, 11, 61}], rpc:call(N2, mnesia, dirty_index_read, [Tab, 61, Idx])),
-    ?match([{Tab, 12, 62}], rpc:call(N1, mnesia, dirty_index_read, [Tab, 62, Idx])),
+    ?match([{^Tab, 11, 61}], rpc:call(N2, mnesia, dirty_index_read, [Tab, 61, Idx])),
+    ?match([{^Tab, 12, 62}], rpc:call(N1, mnesia, dirty_index_read, [Tab, 62, Idx])),
 
     ?match({atomic, ok}, mnesia:move_table_copy(Tab, N2, N1)),
     ?match({atomic, ok}, rpc:call(N1, mnesia, sync_transaction, [Write, [19]])),
     ?match({atomic, ok}, rpc:call(N2, mnesia, sync_transaction, [Write, [20]])),
 
-    ?match([{Tab, 19, 69}], rpc:call(N2, mnesia, dirty_index_read, [Tab, 69, Idx])),
-    ?match([{Tab, 20, 70}], rpc:call(N1, mnesia, dirty_index_read, [Tab, 70, Idx])),
+    ?match([{^Tab, 19, 69}], rpc:call(N2, mnesia, dirty_index_read, [Tab, 69, Idx])),
+    ?match([{^Tab, 20, 70}], rpc:call(N1, mnesia, dirty_index_read, [Tab, 70, Idx])),
 
     ?match({atomic, ok}, mnesia:add_table_copy(Tab, N2, Storage)),
     ?match({atomic, ok}, rpc:call(N1, mnesia, sync_transaction, [Write, [13]])),
     ?match({atomic, ok}, rpc:call(N2, mnesia, sync_transaction, [Write, [14]])),
 
-    ?match([{Tab, 13, 63}], rpc:call(N2, mnesia, dirty_index_read, [Tab, 63, Idx])),
-    ?match([{Tab, 14, 64}], rpc:call(N1, mnesia, dirty_index_read, [Tab, 64, Idx])),
+    ?match([{^Tab, 13, 63}], rpc:call(N2, mnesia, dirty_index_read, [Tab, 63, Idx])),
+    ?match([{^Tab, 14, 64}], rpc:call(N1, mnesia, dirty_index_read, [Tab, 64, Idx])),
 
     ?match({atomic, ok}, mnesia:change_table_copy_type(Tab, N2, Storage2)),
 
     ?match({atomic, ok}, rpc:call(N1, mnesia, sync_transaction, [Write, [15]])),
     ?match({atomic, ok}, rpc:call(N2, mnesia, sync_transaction, [Write, [16]])),
 
-    ?match([{Tab, 15, 65}], rpc:call(N2, mnesia, dirty_index_read, [Tab, 65, Idx])),
-    ?match([{Tab, 16, 66}], rpc:call(N1, mnesia, dirty_index_read, [Tab, 66, Idx])),
+    ?match([{^Tab, 15, 65}], rpc:call(N2, mnesia, dirty_index_read, [Tab, 65, Idx])),
+    ?match([{^Tab, 16, 66}], rpc:call(N1, mnesia, dirty_index_read, [Tab, 66, Idx])),
 
     ?verify_mnesia(Nodes, []).

@@ -107,7 +107,7 @@ several_apps(Config) ->
 	    || N <- lists:seq(1,4)],
     process_flag(trap_exit,true),
     Wait = fun(Pid,Acc) ->
-		   receive {complete, Pid} -> Acc
+		   receive {complete, ^Pid} -> Acc
 		   after 20000 -> [Pid|Acc]
 		   end
 	   end,
@@ -138,7 +138,7 @@ several_apps(Parent, N, Config) ->
     wxFrame:connect(Frame,size),
     ?m(true,wxWindow:show(Frame, [])),
     receive 
-	#wx{obj=Frame, event=#wxSize{}} ->
+	#wx{obj=^Frame, event=#wxSize{}} ->
 	    Parent ! {complete, self()}
     end,
     receive quit -> ok end,
@@ -254,7 +254,7 @@ wx_misc(_Config) ->
 		  <<1:8, 0:24>> -> true;
 		  <<0:24,1:16>> -> false
 	      end,
-    ?m(IsLitte, wx_misc:isPlatformLittleEndian()),
+    ?m(^IsLitte, wx_misc:isPlatformLittleEndian()),
     ?m(true, is_boolean(wx_misc:isPlatform64Bit())),
     
     ?mr(wxMouseState, wx_misc:getMouseState()),
@@ -343,9 +343,9 @@ data_types(_Config) ->
     DateTime = {Date, _Time} = calendar:now_to_datetime(os:timestamp()),
     io:format("DateTime ~p ~n",[DateTime]),
     Cal = ?mt(wxCalendarCtrl, wxCalendarCtrl:new(Frame, ?wxID_ANY, [{date,DateTime}])),
-    ?m({Date,_}, wxCalendarCtrl:getDate(Cal)),
+    ?m({^Date,_}, wxCalendarCtrl:getDate(Cal)),
     ?m(true, is_boolean(wxCalendarCtrl:setDate(Cal,DateTime))),
-    ?m({Date,_}, wxCalendarCtrl:getDate(Cal)),
+    ?m({^Date,_}, wxCalendarCtrl:getDate(Cal)),
 
     %% Images, test sending and reading binaries
     Colors = << <<200:8, 199:8, 198:8 >> || _ <- lists:seq(1, 128*64) >>,
@@ -353,13 +353,13 @@ data_types(_Config) ->
     ImgRGB = ?mt(wxImage, wxImage:new(128, 64, Colors)),
     ?m(true, wxImage:ok(ImgRGB)),
     ?m(false, wxImage:hasAlpha(ImgRGB)),
-    ?m(ok, case wxImage:getData(ImgRGB) of Colors -> ok; Other -> Other end),
+    ?m(ok, case wxImage:getData(ImgRGB) of ^Colors -> ok; Other -> Other end),
 
     ImgRGBA = ?mt(wxImage, wxImage:new(128, 64, Colors, Alpha)),
     ?m(true, wxImage:ok(ImgRGBA)),
     ?m(true, wxImage:hasAlpha(ImgRGBA)),
-    ?m(ok, case wxImage:getData(ImgRGBA) of Colors -> ok; Other -> Other end),
-    ?m(ok, case wxImage:getAlpha(ImgRGBA) of Alpha -> ok; Other -> Other end),
+    ?m(ok, case wxImage:getData(ImgRGBA) of ^Colors -> ok; Other -> Other end),
+    ?m(ok, case wxImage:getAlpha(ImgRGBA) of ^Alpha -> ok; Other -> Other end),
 
     wxClientDC:destroy(CDC),
     %%wx_test_lib:wx_destroy(Frame,Config).
@@ -385,23 +385,23 @@ wx_object(Config) ->
     timer:sleep(500),
     ?m(ok, check_events(flush())),
 
-    Me = self(),
-    ?m({call, foobar, {Me, _}}, wx_object:call(Frame, foobar)),
+    ^Me = self(),
+    ?m({call, foobar, {^Me, _}}, wx_object:call(Frame, foobar)),
     ?m(ok, wx_object:cast(Frame, foobar2)),
     ?m([{cast, foobar2}|_], flush()),
 
-    ?m(Frame, wx_obj_test:who_are_you(Frame)),
-    {call, {Frame,Panel}, _} = wx_object:call(Frame, fun(US) -> US end),
+    ?m(^Frame, wx_obj_test:who_are_you(Frame)),
+    {call, {^Frame,Panel}, _} = wx_object:call(Frame, fun(US) -> US end),
     ?m(false, wxWindow:getParent(Panel) =:= Frame),
     ?m(true, wx:equal(wxWindow:getParent(Panel),Frame)),
     flush(),
     ReqId = wx_object:send_request(Frame, fun(_US) -> timer:sleep(10), yes1 end),
     timeout = wx_object:wait_response(ReqId, 0),
-    {reply, {call, yes1, {Me,_}}} = wx_object:wait_response(ReqId, 1000),
+    {reply, {call, yes1, {^Me,_}}} = wx_object:wait_response(ReqId, 1000),
     ReqId2 = wx_object:send_request(Frame, yes2),
     [Msg] = flush(),
     no_reply = wx_object:check_response(Msg, ReqId),
-    {reply, {call, yes2, {Me,_}}} = wx_object:check_response(Msg, ReqId2),
+    {reply, {call, yes2, {^Me,_}}} = wx_object:check_response(Msg, ReqId2),
 
     FramePid = wx_object:get_pid(Frame),
     io:format("wx_object pid ~p~n",[FramePid]),
@@ -432,7 +432,7 @@ wx_object(Config) ->
 	    wx_test_lib:wait_for_close()
     end,
     ?m(ok, receive
-	       {'DOWN', Monitor, _, _, _} ->
+	       {'DOWN', ^Monitor, _, _, _} ->
 		   ?m([{terminate, wx_deleted}], flush()),
 		   ok
 	   after 1000 ->
@@ -452,7 +452,7 @@ undef_handle_event(_Config) ->
     %% Mock a call to handle_event
     Pid ! {wx, a, b, c, d},
     ok = receive
-        {'DOWN', MRef, process, Pid,
+        {'DOWN', ^MRef, process, ^Pid,
          {undef, [{wx_oc_object, handle_event, _, _}|_]}} ->
             ok
     after 5000 ->
@@ -482,7 +482,7 @@ undef_handle_cast(_Config) ->
     MRef = monitor(process, Pid),
     wx_object:cast(Frame, cast_msg),
     ok = receive
-        {'DOWN', MRef, process, Pid,
+        {'DOWN', ^MRef, process, ^Pid,
          {undef, [{wx_oc_object, handle_cast, _, _}|_]}} ->
             ok
     after 5000 ->
@@ -498,7 +498,7 @@ undef_handle_info(_Config) ->
     MRef = monitor(process, Pid),
     Pid ! test,
     receive
-        {'DOWN', MRef, process, Pid, _} ->
+        {'DOWN', ^MRef, process, ^Pid, _} ->
             ct:fail(should_not_crash)
     after 500 ->
         ok
@@ -536,7 +536,7 @@ terminate(ArgsTl, Reason) ->
     MRef = monitor(process, Pid),
     ok = apply(wx_object, stop, [Pid|ArgsTl]),
     receive
-        {'DOWN', MRef, process, Pid, Reason} ->
+        {'DOWN', ^MRef, process, ^Pid, ^Reason} ->
             ok
     after 1000 ->
         ct:fail(failed)
@@ -554,7 +554,7 @@ undef_in_handle_info(_Config) ->
     MRef = monitor(process, Pid),
     Pid ! {call_undef_fun, {wx_obj_test, handle_info}},
     receive
-        {'DOWN', MRef, process, Pid,
+        {'DOWN', ^MRef, process, ^Pid,
          {undef, [{wx_obj_test, handle_info, _, _}|_]}} ->
             ok
     after 1000 ->

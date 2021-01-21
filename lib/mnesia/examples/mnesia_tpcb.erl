@@ -475,7 +475,7 @@ list2rec(List, [F|Fields], [D|Defaults], Acc) ->
 	case lists:keysearch(F, 1, List) of
 	    false ->
 		{D, List};
-	    {value, {F, NewVal}} ->
+	    {value, {^F, NewVal}} ->
 		{NewVal, lists:keydelete(F, 1, List)}
 	end,
     list2rec(List2, Fields, Defaults, Acc ++ [Val]).
@@ -491,7 +491,7 @@ stop() ->
 sync_stop(Pid) ->
     Pid ! {self(), stop},
     receive
-	{Pid, {stopped, Res}} ->  Res
+	{^Pid, {stopped, Res}} ->  Res
     after timer:minutes(1) ->
 	    exit(Pid, kill),
 	    {error, brutal_kill}
@@ -713,7 +713,7 @@ run(Args) ->
 
     Pid = spawn_link(?MODULE, reporter_init, [self(), RunConfig]),
     receive
-	{Pid, {stopped, Res}} ->
+	{^Pid, {stopped, Res}} ->
 	    Res; % Stopped by other process
 	Else ->
 	    {tpcb_got, Else}   
@@ -875,9 +875,9 @@ calc_reports([Pid|Drivers], State) ->
     receive
 	{'EXIT', P, Reason} when P =:= State#reporter_state.starter_pid ->
 	    exit({starter_died, P, Reason});
-	{'EXIT', Pid, Reason} ->
+	{'EXIT', ^Pid, Reason} ->
 	    exit({driver_died, Pid, Reason});
-	{Pid, Time} when is_record(Time, time) ->
+	{^Pid, Time} when is_record(Time, time) ->
 	    %% io:format("~w: ~w~n", [Pid, Time]),
 	    A = add_time(State#reporter_state.acc, Time),
 	    C = add_time(State#reporter_state.curr, Time),

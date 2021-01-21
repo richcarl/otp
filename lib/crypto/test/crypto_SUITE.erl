@@ -659,7 +659,7 @@ node_supports_cache(_Config) ->
     ECs = crypto:supports(curves),
     {ok,Node} = start_slave_node(random_node_name(?MODULE)),
     case ?at_node(Node, crypto, supports, [curves]) of
-        ECs ->
+        ^ECs ->
             test_server:stop_node(Node);
         OtherECs ->
             ct:log("At master:~p~nAt slave:~p~n"
@@ -738,7 +738,7 @@ poly1305(Config) ->
     lists:foreach(
       fun({Key, Txt, Expect}) ->
               case crypto:poly1305(Key,Txt) of
-                  Expect ->
+                  ^Expect ->
                       ok;
                   Other ->
                       ct:fail({{crypto, poly1305, [Key, Txt]}, {expected, Expect}, {got, Other}})
@@ -805,7 +805,7 @@ api_ng_cipher_increment({Type, Key, IV, PlainText0, ExpectedEncText}=_X) ->
     case ExpectedEncText of
         undefined ->
             ok;
-        Enc ->
+        ^Enc ->
             ok;
         _ ->
             ct:log("encode~nIn: ~p~nExpected: ~p~nEnc: ~p~n", [{Type,Key,IV,PlainTexts}, ExpectedEncText, Enc]),
@@ -815,7 +815,7 @@ api_ng_cipher_increment({Type, Key, IV, PlainText0, ExpectedEncText}=_X) ->
     DecTexts = api_ng_cipher_increment_loop(RefDec, EncTexts),
     DecFinal =  crypto:crypto_final(RefDec),
     case iolist_to_binary(DecTexts++[DecFinal]) of
-        Plain ->
+        ^Plain ->
             ok;
         OtherPT ->
             ct:log("decode~nIn: ~p~nExpected: ~p~nDec: ~p~n", [{Type,Key,IV,EncTexts}, Plain, OtherPT]),
@@ -880,14 +880,14 @@ do_api_ng_one_shot({Type, Key, IV, PlainText0, ExpectedEncText}=_X) ->
     case ExpectedEncText of
         undefined ->
             ok;
-        EncTxt ->
+        ^EncTxt ->
             ok;
         _ ->
             ct:log("encode~nIn: ~p~nExpected: ~p~nEnc: ~p~n", [{Type,Key,IV,PlainText}, ExpectedEncText, EncTxt]),
             ct:fail("api_ng_one_time (encode)",[])
     end,
     case crypto:crypto_one_time(Type, Key, IV, EncTxt, false) of
-        PlainText ->
+        ^PlainText ->
             ok;
         OtherPT ->
             ct:log("decode~nIn: ~p~nExpected: ~p~nDec: ~p~n", [{Type,Key,IV,EncTxt}, PlainText, OtherPT]),
@@ -919,10 +919,10 @@ do_api_ng_tls({Type, Key, IV, PlainText0, ExpectedEncText}) ->
     case ExpectedEncText of
         undefined ->
             ok;
-        EncTxt ->
+        ^EncTxt ->
             %% Now check that the state is NOT updated:
             case crypto:crypto_dyn_iv_update(Renc, PlainText, IV) of
-                EncTxt ->
+                ^EncTxt ->
                     ok;
                 EncTxt2 ->
                     ct:log("2nd encode~nIn: ~p~nExpected: ~p~nEnc: ~p~n", [{Type,Key,IV,PlainText}, EncTxt, EncTxt2]),
@@ -933,10 +933,10 @@ do_api_ng_tls({Type, Key, IV, PlainText0, ExpectedEncText}) ->
             ct:fail("api_ng_tls (encode)",[])
     end,
     case crypto:crypto_dyn_iv_update(Rdec, EncTxt, IV) of
-        PlainText ->
+        ^PlainText ->
             %% Now check that the state is NOT updated:
             case crypto:crypto_dyn_iv_update(Rdec, EncTxt, IV) of
-                PlainText ->
+                ^PlainText ->
                     ok;
                 PlainText2 ->
                     ct:log("2nd decode~nIn: ~p~nExpected: ~p~nDec: ~p~n", [{Type,Key,IV,EncTxt}, PlainText, PlainText2]),
@@ -993,7 +993,7 @@ cipher_padding_test({Cipher, Padding}) ->
         end,
 
     case split_binary(TdecryptPadded, size(TdecryptPadded) - PadSize) of
-        {Tplain, _} ->
+        {^Tplain, _} ->
             ok;
         {Tdecrypt,Tpad} ->
             ct:log("Key = ~p~nIV = ~p~nTplain = ~p~nTcrypt = ~p~nTdecrypt = ~p~nPadding = ~p",
@@ -1154,7 +1154,7 @@ compute_bug(_Config) ->
     G = 2,
     DHParameters = [P, G],
     case crypto:compute_key(dh, OthersPublicKey, MyPrivateKey, DHParameters) of
-        ExpectedSecret ->
+        ^ExpectedSecret ->
             ok;
         Others ->
             ct:log("Got ~p",[Others]),
@@ -1314,7 +1314,7 @@ rand_threads(Config) when is_list(Config) ->
     receive after 10 * 1000 -> ok end, % 10 seconds
     spawn_link(fun () -> receive after 5000 -> exit(timeout) end end),
     [exit(Pid, stop) || {Pid,_Ref} <- PidRefs],
-    [receive {'DOWN',Ref,_,_,stop} -> ok end || {_Pid,Ref} <- PidRefs],
+    [receive {'DOWN',^Ref,_,_,stop} -> ok end || {_Pid,Ref} <- PidRefs],
     ok.
 
 %%--------------------------------------------------------------------
@@ -1371,7 +1371,7 @@ hash(_, [], []) ->
     ok;
 hash(Type, [Msg | RestMsg], [Digest| RestDigest]) ->
     case crypto:hash(Type, Msg) of
-	Digest ->
+	^Digest ->
 	    hash(Type, RestMsg, RestDigest);
 	Other ->
 	    ct:fail({{crypto, hash, [Type, Msg]}, {expected, Digest}, {got, Other}})
@@ -1380,7 +1380,7 @@ hash(Type, [Msg | RestMsg], [Digest| RestDigest]) ->
 hash_increment(Type, Increments, Digest) ->
     State = crypto:hash_init(Type),
     case hash_increment(State, Increments) of
-	Digest ->
+	^Digest ->
 	    ok;
 	Other ->
 	    ct:fail({{crypto, "hash_init/update/final", [Type, Increments]}, {expected, Digest}, {got, Other}})  
@@ -1405,7 +1405,7 @@ hmac_check({hmac, Type, Key, Data, Expected}) ->
 do_hmac_check(Type, Key, Data, Expected) ->
     try crypto:hmac(Type, Key, Data)
     of
-	Expected ->
+	^Expected ->
 	    ok;
 	Other ->
 	    ct:fail({{crypto,hmac,[Type,Key,Data]}, {expected,Expected}, {got,Other}})
@@ -1419,7 +1419,7 @@ do_hmac_check(Type, Key, Data, Expected) ->
 do_hmac_check(Type, Key, Data, MacLength, Expected) ->
     try crypto:hmac(Type, Key, Data, MacLength)
     of
-	Expected ->
+	^Expected ->
 	    ok;
 	Other ->
 	    ct:fail({{crypto,hmac,[Type,Key,Data,MacLength]}, {expected,Expected}, {got,Other}})
@@ -1438,7 +1438,7 @@ hmac_increment(Type) ->
     Expected = crypto:hmac(Type, Key, lists:flatten(Increments)),
     State = crypto:hmac_init(Type, Key),
     case hmac_increment(State, Increments) of
-	Expected ->
+	^Expected ->
 	    ok;
 	Other ->
 	    ct:fail({{crypto, "hmac_init/update/final", [Type, Increments]}, {expected, Expected}, {got, Other}})  
@@ -1528,7 +1528,7 @@ block_cipher_increment({_,_,_}) ->
 block_cipher_increment(Type, Key, IV0, _IV, [], Plain, Acc) ->
     CipherText = iolist_to_binary(lists:reverse(Acc)),
     case crypto:block_decrypt(Type, Key, IV0, CipherText) of
-	Plain ->
+	^Plain ->
 	    ok;
 	Other ->
 	    ct:fail({{crypto, block_decrypt, [Type, Key, IV0, CipherText]}, {expected, Plain}, {got, Other}})
@@ -1539,7 +1539,7 @@ block_cipher_increment(Type, Key, IV0, IV, [PlainText | PlainTexts], Plain, Acc)
     block_cipher_increment(Type, Key, IV0, NextIV, PlainTexts, Plain, [CipherText | Acc]).
 block_cipher_increment(Type, Key, IV0, _IV, [], _Plain, CipherText, Acc) ->
     case iolist_to_binary(lists:reverse(Acc)) of
-	CipherText ->
+	^CipherText ->
 	    ok;
 	Other ->
 	    ct:fail({{crypto, block_decrypt, [Type, Key, IV0, CipherText]}, {expected, CipherText}, {got, Other}})
@@ -1556,7 +1556,7 @@ stream_cipher({Type, Key, PlainText0}) ->
     StateD = crypto:stream_init(Type, Key),
     {_, CipherText} = crypto:stream_encrypt(StateE, PlainText),
     case crypto:stream_decrypt(StateD, CipherText) of
-	{_, Plain} ->
+	{_, ^Plain} ->
 	    ok;
 	Other ->
 	    ct:fail({{crypto, stream_decrypt, [StateD, CipherText]}, {expected, PlainText}, {got, Other}})
@@ -1568,7 +1568,7 @@ stream_cipher({Type, Key, IV, PlainText0}) ->
     StateD = crypto:stream_init(Type, Key, IV),
     {_, CipherText} = crypto:stream_encrypt(StateE, PlainText),
     case crypto:stream_decrypt(StateD, CipherText) of
-	{_, Plain} ->
+	{_, ^Plain} ->
 	    ok;
 	Other ->
 	    ct:fail({{crypto, stream_decrypt, [StateD, CipherText]}, {expected, PlainText}, {got, Other}})
@@ -1579,13 +1579,13 @@ stream_cipher({Type, Key, IV, PlainText0, CipherText}) ->
     StateE = crypto:stream_init(Type, Key, IV),
     StateD = crypto:stream_init(Type, Key, IV),
     case crypto:stream_encrypt(StateE, PlainText) of
-        {_, CipherText} ->
+        {_, ^CipherText} ->
             ok;
         {_, Other0} ->
             ct:fail({{crypto, stream_encrypt, [StateE, Type, Key, IV, Plain]}, {expected, CipherText}, {got, Other0}})
     end,
     case crypto:stream_decrypt(StateD, CipherText) of
-        {_, Plain} ->
+        {_, ^Plain} ->
             ok;
         Other1 ->
             ct:fail({{crypto, stream_decrypt, [StateD, CipherText]}, {expected, PlainText}, {got, Other1}})
@@ -1605,7 +1605,7 @@ stream_cipher_incment({Type, Key, IV, PlainTexts, _CipherText}) ->
 stream_cipher_incment_loop(_State, OrigState, [], Acc, Plain) ->
     CipherText = iolist_to_binary(lists:reverse(Acc)),
     case crypto:stream_decrypt(OrigState, CipherText) of
-	{_, Plain} ->
+	{_, ^Plain} ->
 	    ok;
 	Other ->
 	    ct:fail({{crypto, stream_decrypt, [OrigState, CipherText]}, {expected, Plain}, {got, Other}})
@@ -1676,7 +1676,7 @@ cipher_test(T, F, E) ->
 
 cipher_test(Tag, T, F, E) ->
     try F() of
-        E -> ok;
+        ^E -> ok;
         Other -> {other, {Tag,T,Other}}
     catch
         error:Error -> {error, {Tag,T,Error}}
@@ -1709,7 +1709,7 @@ do_cipher_tests(F, TestVectors) when is_function(F,1) ->
 
 mk_bad_tag(CipherTag) ->
     case <<0:(size(CipherTag))/unit:8>> of
-        CipherTag -> % The correct tag may happen to be a suite of zeroes
+        ^CipherTag -> % The correct tag may happen to be a suite of zeroes
             <<1:(size(CipherTag))/unit:8>>;
         X ->
             X
@@ -1717,7 +1717,7 @@ mk_bad_tag(CipherTag) ->
 
 do_sign_verify({Type, undefined=Hash, Private, Public, Msg, Signature}) ->
     case crypto:sign(eddsa, Hash, Msg, [Private,Type]) of
-        Signature ->
+        ^Signature ->
             ct:log("OK crypto:sign(eddsa, ~p, Msg, [Private,~p])", [Hash,Type]),
             case crypto:verify(eddsa, Hash, Msg, Signature, [Public,Type]) of
                 true ->
@@ -1810,7 +1810,7 @@ do_public_encrypt({Type, Public, Private, Msg, Padding}) ->
             try
                 crypto:private_decrypt(Type, PublicEcn, Private, Padding)
             of
-                Msg ->
+                ^Msg ->
                     ct:log("~p:~p ok", [?MODULE,?LINE]),
                     timer:sleep(100),
                     ok;
@@ -1843,7 +1843,7 @@ do_private_encrypt({Type, Public, Private, Msg, Padding}) ->
                 ct:log("public_decrypt~nPrivEcn = ~p.", [PrivEcn]),
                 crypto:public_decrypt(Type, PrivEcn, Public, Padding)
             of
-                Msg ->
+                ^Msg ->
                     ct:log("~p:~p ok", [?MODULE,?LINE]),
                     ok;
                 Other ->
@@ -1862,11 +1862,11 @@ do_private_encrypt({Type, Public, Private, Msg, Padding}) ->
 
 do_generate_compute({srp = Type, UserPrivate, UserGenParams, UserComParams,
 		     HostPublic, HostPrivate, HostGenParams, HostComParam, SessionKey}) ->
-    {UserPublic, UserPrivate} = crypto:generate_key(Type, UserGenParams, UserPrivate),
-    {HostPublic, HostPrivate} = crypto:generate_key(Type, HostGenParams, HostPrivate),
-    SessionKey = crypto:compute_key(Type, HostPublic, {UserPublic, UserPrivate},
+    {UserPublic, ^UserPrivate} = crypto:generate_key(Type, UserGenParams, UserPrivate),
+    {^HostPublic, ^HostPrivate} = crypto:generate_key(Type, HostGenParams, HostPrivate),
+    ^SessionKey = crypto:compute_key(Type, HostPublic, {UserPublic, UserPrivate},
      				    UserComParams),
-    SessionKey = crypto:compute_key(Type, UserPublic, {HostPublic, HostPrivate},
+    ^SessionKey = crypto:compute_key(Type, UserPublic, {HostPublic, HostPrivate},
 				    HostComParam);
 
 
@@ -1875,13 +1875,13 @@ do_generate_compute({dh, P, G}) ->
     {UserPub, UserPriv} = crypto:generate_key(dh, [P, G]),
     {HostPub, HostPriv} = crypto:generate_key(dh, [P, G]),
     SharedSecret = crypto:compute_key(dh, HostPub, UserPriv, [P, G]),
-    SharedSecret = crypto:compute_key(dh, UserPub, HostPriv, [P, G]).
+    ^SharedSecret = crypto:compute_key(dh, UserPub, HostPriv, [P, G]).
     
 do_compute({ecdh = Type, Pub, Priv, Curve, SharedSecret}) ->
     ct:log("~p ~p", [Type,Curve]),
     Secret = crypto:compute_key(Type, Pub, Priv, Curve),
      case Secret of
-	 SharedSecret ->
+	 ^SharedSecret ->
 	     ok;
 	 Other ->
 	     ct:fail({{crypto, compute_key, [Type, Pub, Priv, Curve]}, {expected, SharedSecret}, {got, Other}})
@@ -1890,7 +1890,7 @@ do_compute({ecdh = Type, Pub, Priv, Curve, SharedSecret}) ->
 do_generate({Type, Curve, Priv, Pub}) when Type == ecdh ; Type == eddsa ->
     ct:log("~p ~p", [Type,Curve]),
     case crypto:generate_key(Type, Curve, Priv) of
-	{Pub, _} ->
+	{^Pub, _} ->
 	    ok;
 	{Other, _} ->
 	    ct:fail({{crypto, generate_key, [Type, Priv, Curve]}, {expected, Pub}, {got, Other}})
@@ -2025,7 +2025,7 @@ mod_pow_aux_test(_, _, _, 0) ->
     ok;
 mod_pow_aux_test(B, E, M, N) ->
     Result = crypto:bytes_to_integer(crypto:mod_pow(B, E, M)),
-    Result = ipow(B, E, M),
+    ^Result = ipow(B, E, M),
     mod_pow_aux_test(B, E*E+1, M*M+1, N-1).
 
 %% mod_exp in erlang (copied from jungerl's ssh_math.erl)
@@ -2051,14 +2051,14 @@ ipow(A, B, M, Prod)  ->
 
 do_exor(B) ->
     Z1 = zero_bin(B),
-    Z1 = crypto:exor(B, B),
+    ^Z1 = crypto:exor(B, B),
     B1 = crypto:strong_rand_bytes(100),
     B2 = crypto:strong_rand_bytes(100),
     Z2 = zero_bin(B1),
-    Z2 = crypto:exor(B1, B1),
-    Z2 = crypto:exor(B2, B2),
+    ^Z2 = crypto:exor(B1, B1),
+    ^Z2 = crypto:exor(B2, B2),
     R = xor_bytes(B1, B2),
-    R = crypto:exor(B1, B2).
+    ^R = crypto:exor(B1, B2).
 
 zero_bin(N) when is_integer(N) ->
     N8 = N * 8,
@@ -3693,8 +3693,8 @@ srp3() ->
 			    "9176A9192615DC0277AE7C12F1F6A7F6563FCA11675D809AF578BDE5"
 			    "2B51E05D440B63099A017A0B45044801"),
     UserPassHash = crypto:hash(sha, [Salt, crypto:hash(sha, [Username, <<$:>>, Password])]),
-    Verifier = crypto:mod_pow(Generator, UserPassHash, Prime), 
-    ClientPublic = crypto:mod_pow(Generator, ClientPrivate, Prime), 
+    ^Verifier = crypto:mod_pow(Generator, UserPassHash, Prime), 
+    ^ClientPublic = crypto:mod_pow(Generator, ClientPrivate, Prime), 
     srp(ClientPrivate, Generator, Prime, Version, Verifier, ServerPublic, ServerPrivate, UserPassHash, Scrambler, SessionKey).
 
 srp6() ->
@@ -3735,8 +3735,8 @@ srp6() ->
 				 "72E992AAD89095A84B6A5FADA152369AB1E350A03693BEF044DF3EDF"
 				 "0C34741F4696C30E9F675D09F58ACBEB"),
     UserPassHash = crypto:hash(sha, [Salt, crypto:hash(sha, [Username, <<$:>>, Password])]),
-    Verifier = crypto:mod_pow(Generator, UserPassHash, Prime), 
-    ClientPublic = crypto:mod_pow(Generator, ClientPrivate, Prime),
+    ^Verifier = crypto:mod_pow(Generator, UserPassHash, Prime), 
+    ^ClientPublic = crypto:mod_pow(Generator, ClientPrivate, Prime),
     srp(ClientPrivate, Generator, Prime, Version, Verifier, ServerPublic, ServerPrivate, UserPassHash, Scrambler, SessionKey).
 
 
@@ -3761,8 +3761,8 @@ srp6a_smaller_prime() ->
 
     SessionKey = hexstr2bin("65581B2302580BD26F522A5A421CF969B9CCBCE4051196B034A2A9D22065D848"),
     UserPassHash = crypto:hash(sha, [Salt, crypto:hash(sha, [Username, <<$:>>, Password])]),
-    Verifier = crypto:mod_pow(Generator, UserPassHash, Prime), 
-    ClientPublic = crypto:mod_pow(Generator, ClientPrivate, Prime),
+    ^Verifier = crypto:mod_pow(Generator, UserPassHash, Prime), 
+    ^ClientPublic = crypto:mod_pow(Generator, ClientPrivate, Prime),
     srp(ClientPrivate, Generator, Prime, Version, Verifier, ServerPublic, ServerPrivate, UserPassHash, Scrambler, SessionKey).
 
 srp6a() ->
@@ -3803,8 +3803,8 @@ srp6a() ->
 			    "3499B200210DCC1F10EB33943CD67FC88A2F39A4BE5BEC4EC0A3212D"
 			    "C346D7E474B29EDE8A469FFECA686E5A"),
     UserPassHash = crypto:hash(sha, [Salt, crypto:hash(sha, [Username, <<$:>>, Password])]),
-    Verifier = crypto:mod_pow(Generator, UserPassHash, Prime), 
-    ClientPublic = crypto:mod_pow(Generator, ClientPrivate, Prime), 
+    ^Verifier = crypto:mod_pow(Generator, UserPassHash, Prime), 
+    ^ClientPublic = crypto:mod_pow(Generator, ClientPrivate, Prime), 
     srp(ClientPrivate, Generator, Prime, Version, Verifier, ServerPublic, ServerPrivate, UserPassHash, Scrambler, SessionKey).
 
 srp(ClientPrivate, Generator, Prime, Version, Verifier, ServerPublic, ServerPrivate, UserPassHash, Scrambler, SessionKey)->

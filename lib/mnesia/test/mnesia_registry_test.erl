@@ -63,16 +63,16 @@ good_dump(Config) when is_list(Config) ->
     ?match(ok, mnesia:dirty_write(One)),
     ?match(ok, mnesia:dirty_write(Two)),
     ?match(ok, mnesia:dirty_write(Three)),
-    ?match([One], mnesia:dirty_read({T1, 1})),
+    ?match([^One], mnesia:dirty_read({T1, 1})),
     ?match([_ | _], dump_registry(Node, T1)),
 
     NewOne = {T1, 1, 0, integer, 0, 1},
     NewFour = {T1, "4", 1, string, 4, "four"},
 
-    ?match([NewOne], mnesia:dirty_read({T1, 1})),
-    ?match([Two], mnesia:dirty_read({T1, "two"})),
+    ?match([^NewOne], mnesia:dirty_read({T1, 1})),
+    ?match([^Two], mnesia:dirty_read({T1, "two"})),
     ?match([], mnesia:dirty_read({T1, 3})),
-    ?match([NewFour], mnesia:dirty_read({T1, "4"})),
+    ?match([^NewFour], mnesia:dirty_read({T1, "4"})),
 
     T2 = blixt,
     ?match({'EXIT', {aborted, {no_exists, _}}},
@@ -82,11 +82,11 @@ good_dump(Config) when is_list(Config) ->
     NewOne2 = setelement(1, NewOne, T2),
     NewFour2 = setelement(1, NewFour, T2),
 
-    ?match([NewOne2], mnesia:dirty_read({T2, 1})),
+    ?match([^NewOne2], mnesia:dirty_read({T2, 1})),
     ?match([], mnesia:dirty_read({T2, "two"})),
     ?match([], mnesia:dirty_read({T2, 3})),
-    ?match([NewFour2], mnesia:dirty_read({T2, "4"})),
-    ?match([_One2, NewFour2], lists:sort(restore_registry(Node, T2))),
+    ?match([^NewFour2], mnesia:dirty_read({T2, "4"})),
+    ?match([_One2, ^NewFour2], lists:sort(restore_registry(Node, T2))),
     
     ?verify_mnesia(Nodes, []).
 
@@ -98,10 +98,10 @@ dump_registry(Node, Tab) ->
 	    Pid ! {write, "4", 1, string, 4, "four"},
 	    Pid ! {commit, self()},
 	    receive
-		{ok, Pid} ->
+		{ok, ^Pid} ->
 		    [{Tab, "4", 1, string, 4, "four"},
 		     {Tab, 1, 0, integer, 0, 1}];
-		{'EXIT', Pid, Reason} ->
+		{'EXIT', ^Pid, Reason} ->
 		    exit(Reason)
 	    end;
 	{badrpc, Reason} ->

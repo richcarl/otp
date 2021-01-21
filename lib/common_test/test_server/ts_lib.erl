@@ -42,7 +42,7 @@ error(Reason) ->
 
 var(Name, Vars) ->
     case lists:keysearch(Name, 1, Vars) of
-	{value, {Name, Value}} ->
+	{value, {^Name, Value}} ->
 	    Value;
 	false ->
 	    error({bad_installation, {undefined_var, Name, Vars}})
@@ -248,7 +248,7 @@ do_subst_var(Cond, Rest, Vars, Result, _VarAcc) when Cond == 'IFEQ' ;
 %% variable substitution
 do_subst_var(Key, Rest, Vars, Result, VarAcc) ->
     case lists:keysearch(Key, 1, Vars) of
-	{value, {Key, Value}} ->
+	{value, {^Key, Value}} ->
 	    {lists:reverse(Value, Result),Rest};
 	false ->
 	    {[$@|VarAcc++[$@|Result]],Rest}
@@ -259,8 +259,8 @@ do_test(Rest, Vars, Test) ->
     {Arg1,Rest1} = get_arg(Rest, Vars, $,, []),
     {Arg2,Rest2} = get_arg(Rest1, Vars, 41, []), % $)
     Result = case Arg1 of
-		 Arg2 when Test == 'IFEQ'  -> true;
-		 Arg2 when Test == 'IFNEQ' -> false;
+		 ^Arg2 when Test == 'IFEQ'  -> true;
+		 ^Arg2 when Test == 'IFNEQ' -> false;
 		 _    when Test == 'IFNEQ' -> true;
 		 _                         -> false
 	     end,
@@ -317,17 +317,17 @@ discard_clause([]) ->				% parse error
 
 print_data(Port) ->
     receive
-	{Port, {data, Bytes}} ->
+	{^Port, {data, Bytes}} ->
 	    io:put_chars(Bytes),
 	    print_data(Port);
-	{Port, eof} ->
+	{^Port, eof} ->
 	    Port ! {self(), close}, 
 	    receive
-		{Port, closed} ->
+		{^Port, closed} ->
 		    true
 	    end, 
 	    receive
-		{'EXIT',  Port,  _} -> 
+		{'EXIT',  ^Port,  _} -> 
 		    ok
 	    after 1 ->				% force context switch
 		    ok

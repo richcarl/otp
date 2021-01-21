@@ -371,7 +371,7 @@ sshc_simple_exec_os_cmd(Config) ->
 		       Parent ! {result, self(), Result, "2"}
 	       end),
     receive
-	{result, Client, RawResult, Expect} ->
+	{result, ^Client, RawResult, Expect} ->
 	    Lines = string:tokens(RawResult, "\r\n"),
 	    case lists:any(fun(Line) -> Line==Expect end,
 			   Lines) of
@@ -404,7 +404,7 @@ sshd_simple_exec(Config) ->
     case ssh_test_lib:receive_exec_result(Data0) of
 	expected ->
 	    ssh_test_lib:receive_exec_end(ConnectionRef, ChannelId0);
-	{unexpected_msg,{ssh_cm, ConnectionRef, {exit_status, ChannelId0, 0}}
+	{unexpected_msg,{ssh_cm, ^ConnectionRef, {exit_status, ^ChannelId0, 0}}
 	 = ExitStatus0} ->
 	    ct:log("0: Collected data ~p", [ExitStatus0]),
 	    ssh_test_lib:receive_exec_result(Data0,
@@ -420,7 +420,7 @@ sshd_simple_exec(Config) ->
     case ssh_test_lib:receive_exec_result(Data1) of
 	expected ->
 	    ssh_test_lib:receive_exec_end(ConnectionRef, ChannelId1);
-	{unexpected_msg,{ssh_cm, ConnectionRef, {exit_status, ChannelId1, 0}}
+	{unexpected_msg,{ssh_cm, ^ConnectionRef, {exit_status, ^ChannelId1, 0}}
 	 = ExitStatus1} ->
 	    ct:log("0: Collected data ~p", [ExitStatus1]),
 	    ssh_test_lib:receive_exec_result(Data1,
@@ -454,7 +454,7 @@ split(TagA, Alg) ->
     Tag = atom_to_list(TagA),
     ssh_test_lib:to_atoms(
       case string:tokens(atom_to_list(Alg), " ") of
-          ["D:",Tag,A1,"+",A2] ->[A1,A2];
+          ["D:",^Tag,A1,"+",A2] ->[A1,A2];
           Other -> Other
       end).
 

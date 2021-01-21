@@ -116,7 +116,7 @@ silly_durability(Config) when is_list(Config) ->
 	   rpc:call(Node1, mnesia, transaction, [Read])),
     ?match({atomic, ok},
 	   rpc:call(Node1, mnesia, transaction, [Write])),
-    ?match({atomic, [{Tab, a, b}]}, 
+    ?match({atomic, [{^Tab, a, b}]}, 
 	   rpc:call(Node1, mnesia, transaction, [Read])),
     
     ?match(stopped, rpc:call(Node1, mnesia, stop, [])),
@@ -126,7 +126,7 @@ silly_durability(Config) when is_list(Config) ->
 	    skip;
 	false ->
 	    ?match(ok, rpc:call(Node1, mnesia, wait_for_tables, [[Tab], infinity])),	    
-	    ?match({atomic, [{Tab, a, b}]},
+	    ?match({atomic, [{^Tab, a, b}]},
 		   rpc:call(Node1, mnesia, transaction, [Read]))
     end,
     ?verify_mnesia([Node1], []).
@@ -150,7 +150,7 @@ silly_move(Config) when is_list(Config) ->
 	   rpc:call(Node1, mnesia, transaction, [Read])),
     ?match({atomic, ok},
 	   rpc:call(Node1, mnesia, transaction, [Write])),
-    ?match({atomic, [{Tab, a, b}]}, 
+    ?match({atomic, [{^Tab, a, b}]}, 
 	   rpc:call(Node1, mnesia, transaction, [Read])),
     
     case mnesia_test_lib:diskless(Config) of
@@ -161,13 +161,13 @@ silly_move(Config) when is_list(Config) ->
 			    change_table_copy_type, [Tab, Node2, disc_only_copies])),
 	    ?match([], mnesia_test_lib:sync_tables([Node1, Node2], [Tab]))
     end,
-    ?match({atomic, [{Tab, a, b}]}, rpc:call(Node1, mnesia, transaction, [Read])),
+    ?match({atomic, [{^Tab, a, b}]}, rpc:call(Node1, mnesia, transaction, [Read])),
 
     ?match({atomic, ok},
 	   rpc:call(Node1, mnesia,
 		    move_table_copy, [Tab, Node2, Node1])),
     ?match([], mnesia_test_lib:sync_tables([Node1, Node2], [Tab])),
-    ?match({atomic, [{Tab, a, b}]},
+    ?match({atomic, [{^Tab, a, b}]},
 	   rpc:call(Node1, mnesia, transaction, [Read])),
     ?verify_mnesia([Node1], []).
 
@@ -191,7 +191,7 @@ silly_upgrade(Config) when is_list(Config) ->
     ?match(ok, mnesia:backup(Bup)),
     Args = [{name, Name}, {ram_overrides_dump, true},
 	    {min, [Tab1, schema]}, {max, [Tab2]}],
-    ?match({ok, Name, _}, mnesia:activate_checkpoint(Args)),
+    ?match({ok, ^Name, _}, mnesia:activate_checkpoint(Args)),
 
     IgnoreState = add_more_records(Tab1, Tab2, CpState),
     ?match(match, verify_state(Tab1, Tab2, IgnoreState)),

@@ -960,7 +960,7 @@ fixup_race_forward_helper(CurrFun, CurrFunLabel, Fun, FunLabel,
        NewNestingLevel};
     [Head|Tail] ->
       case Head of
-        {^^InitFun, InitFun} when CurrFun =:= InitFun, Fun =:= InitFun ->
+        {^InitFun, InitFun} when CurrFun =:= InitFun, Fun =:= InitFun ->
           NewCallsToAnalyze = lists:delete(Head, CallsToAnalyze),
           NewRaceVarMap =
             race_var_map(Args, NewFunArgs, RaceVarMap, bind),

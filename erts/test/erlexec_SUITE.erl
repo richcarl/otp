@@ -329,7 +329,7 @@ otp_7461_do(Config) ->
     io:format("Ping ok towards ~p\n", [Slave]),
     
     Port ! { self(), {command, "K"}}, % Kill child process group
-    {Port, {data, "K"}} = receive Msg2 -> Msg2 end,
+    {^Port, {data, "K"}} = receive Msg2 -> Msg2 end,
     port_close(Port),
     
     %% Now the actual test. Detached node should still be alive.
@@ -339,7 +339,7 @@ otp_7461_do(Config) ->
     %% Halt node
     rpc:cast(Slave, ?MODULE, otp_7461_remote, [[halt, self()]]),
     
-    {nodedown, Slave} = receive
+    {nodedown, ^Slave} = receive
                             Msg3 -> Msg3
                         after 20*1000 -> timeout
                         end,
@@ -368,7 +368,7 @@ zdbbl_dist_buf_busy_limit(Config) when is_list(Config) ->
 	" +zdbbl " ++ integer_to_list(LimKB),
     open_port({spawn,Cmd},[]),
     pong = loop_ping(SName,40),
-    LimB = rpc:call(SName,erlang,system_info,[dist_buf_busy_limit]),
+    ^LimB = rpc:call(SName,erlang,system_info,[dist_buf_busy_limit]),
     ok = cleanup_node(SNameS, 10),
     ok.
     
@@ -395,7 +395,7 @@ restore_env(EVar, "") when is_list(EVar) ->
     end;
 restore_env(EVar, Value) when is_list(EVar), is_list(Value) ->
     case os:getenv(EVar) of
-	Value -> ok;
+	^Value -> ok;
 	_ -> os:putenv(EVar, Value)
     end.
 

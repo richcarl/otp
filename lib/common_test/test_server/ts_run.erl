@@ -269,29 +269,29 @@ run_batch(Vars, _Spec, State) ->
 
 tricky_print_data(Port, Timeout) ->
     receive
-	{Port, {data, Bytes}} ->
+	{^Port, {data, Bytes}} ->
 	    io:put_chars(Bytes),
 	    tricky_print_data(Port, Timeout);
-	{Port, eof} ->
+	{^Port, eof} ->
 	    Port ! {self(), close}, 
 	    receive
-		{Port, closed} ->
+		{^Port, closed} ->
 		    true
 	    end, 
 	    receive
-		{'EXIT',  Port,  _} -> 
+		{'EXIT',  ^Port,  _} -> 
 		    ok
 	    after 1 ->				% force context switch
 		    ok
 	    end,
             receive
-                {Port, {exit_status, 0}} ->
+                {^Port, {exit_status, 0}} ->
                     ok;
-                {Port, {exit_status, 123 = N}} ->
+                {^Port, {exit_status, 123 = N}} ->
                     io:format(user, "Test run exited with status ~p,"
                               "aborting rest of test~n", [N]),
                     erlang:halt(123, [{flush,false}]);
-                {Port, {exit_status, N}} ->
+                {^Port, {exit_status, N}} ->
                     io:format(user, "Test run exited with status ~p~n", [N])
             after 1 ->
                     %% This shouldn't happen, but better safe then hanging

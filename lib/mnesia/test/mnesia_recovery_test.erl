@@ -409,7 +409,7 @@ reader(Tab, OP) ->
 		  Temp
 	  end,
     case Res of 
-	[{Tab, key, val}] -> ok;
+	[{^Tab, key, val}] -> ok;
 	Else -> 
 	    ?error("Expected ~p Got ~p ~n", [[{Tab, key, val}], Else]),
 	    erlang:error(test_failed)
@@ -430,7 +430,7 @@ loop_and_kill_mnesia(N, Node, Tabs) ->
     timer:sleep(100), 
     ?match([], mnesia_test_lib:start_mnesia([Node], Tabs)),
     [KN | _] = W2R= [mnesia:table_info(Tab, where_to_read) || Tab <- Tabs],
-    ?match([KN, KN,KN], W2R),
+    ?match([^KN, ^KN, ^KN], W2R),
     timer:sleep(100), 
     loop_and_kill_mnesia(N-1, KN, Tabs).
 
@@ -451,7 +451,7 @@ mnesia_down_during_startup_disk_ram(Config) when is_list(Config)->
     mnesia_test_lib:kill_mnesia([Node1]),
     timer:sleep(500),
     ?match([], mnesia_test_lib:start_mnesia([Node1], [Tab])),
-    ?match([{Tab, 876234, test_ok}], mnesia:dirty_read({Tab,876234})),
+    ?match([{^Tab, 876234, test_ok}], mnesia:dirty_read({Tab,876234})),
     ?verify_mnesia([Node1, Node2], []).
     
 mnesia_down_during_startup_init_ram(suite) -> [];
@@ -587,9 +587,9 @@ with_checkpoint(Config, Type) when is_list(Config) ->
 	   end,
 
     case Kill of
-	Node1 -> 
+	^Node1 -> 
 	    ignore;
-	Node2 ->
+	^Node2 ->
 	    mnesia_test_lib:kill_mnesia([Kill]),
 	    Wait(Wait),
 	    ?match({ok, sune, _}, mnesia:activate_checkpoint([{name, sune}, 
@@ -715,7 +715,7 @@ do_trans_loop(Tab, Father) ->
 do_trans_loop2(Tab, Father) ->
     Trans =
 	fun() ->
-		[{Tab, 1, Val}] = mnesia:read({Tab, 1}),
+		[{^Tab, 1, Val}] = mnesia:read({Tab, 1}),
 		mnesia:write({Tab, 1, Val + 1})
 	end,
     case mnesia:transaction(Trans) of
@@ -725,7 +725,7 @@ do_trans_loop2(Tab, Father) ->
 	{aborted, {node_not_running, N}} when N == node() ->
 	    timer:sleep(100),
 	    do_trans_loop2(Tab, Father);
-	{aborted, {no_exists, Tab}} ->
+	{aborted, {no_exists, ^Tab}} ->
 	    timer:sleep(100),
 	    do_trans_loop2(Tab, Father);
 	Else ->
@@ -755,7 +755,7 @@ coord_dies(Config) when is_list(Config) ->
     Tester = self(),
 
     U1 = fun(Tab) -> 
-		 [{Tab,key,Val}] = mnesia:read(Tab,key,write),
+		 [{^Tab,key,Val}] = mnesia:read(Tab,key,write),
 		 mnesia:write({Tab,key, Val+1}),
 		 Tester ! {self(),continue},
 		 receive 
@@ -763,7 +763,7 @@ coord_dies(Config) when is_list(Config) ->
 		 end
 	 end,
     U2 = fun(Tab) -> 
-		 [{Tab,key,Val}] = mnesia:read(Tab,key,write),
+		 [{^Tab,key,Val}] = mnesia:read(Tab,key,write),
 		 mnesia:write({Tab,key, Val+1}),
 		 mnesia:transaction(U1, [Tab])
 	 end,
@@ -771,7 +771,7 @@ coord_dies(Config) when is_list(Config) ->
     Pid1 = spawn(fun() -> mnesia:transaction(U2, [tab1]) end), 
     Pid2 = spawn(fun() -> mnesia:transaction(U2, [tab2]) end), 
     Pid3 = spawn(fun() -> mnesia:transaction(U2, [tab3]) end), 
-    [receive {Pid,continue} -> ok end || Pid <- [Pid1,Pid2,Pid3]],
+    [receive {^Pid,continue} -> ok end || Pid <- [Pid1,Pid2,Pid3]],
     Pid1 ! continue,    Pid2 ! continue,    Pid3 ! continue,
     ?match({atomic,[{_,key,1}]}, mnesia:transaction(fun() -> mnesia:read({tab1,key}) end)),
     ?match({atomic,[{_,key,1}]}, mnesia:transaction(fun() -> mnesia:read({tab2,key}) end)),
@@ -782,15 +782,15 @@ coord_dies(Config) when is_list(Config) ->
     Pid6 = spawn(fun() -> mnesia:transaction(U2, [tab3]) end), 
     erlang:monitor(process, Pid4),erlang:monitor(process, Pid5),erlang:monitor(process, Pid6),
     
-    [receive {Pid,continue} -> ok end || Pid <- [Pid4,Pid5,Pid6]],
+    [receive {^Pid,continue} -> ok end || Pid <- [Pid4,Pid5,Pid6]],
     exit(Pid4,crash),    
-    ?match_receive({'DOWN',_,_,Pid4, _}),
+    ?match_receive({'DOWN',_,_,^Pid4, _}),
     ?match({atomic,[{_,key,1}]}, mnesia:transaction(fun() -> mnesia:read({tab1,key}) end)),
     exit(Pid5,crash),
-    ?match_receive({'DOWN',_,_,Pid5, _}),
+    ?match_receive({'DOWN',_,_,^Pid5, _}),
     ?match({atomic,[{_,key,1}]}, mnesia:transaction(fun() -> mnesia:read({tab2,key}) end)),
     exit(Pid6,crash),
-    ?match_receive({'DOWN',_,_,Pid6, _}),
+    ?match_receive({'DOWN',_,_,^Pid6, _}),
     ?match({atomic,[{_,key,1}]}, mnesia:transaction(fun() -> mnesia:read({tab3,key}) end)),
     
     ?verify_mnesia(Nodes, []).
@@ -1336,7 +1336,7 @@ garb_of_decisions(Kill, Nodes, Tid_list, Trans_res) ->
 	    verify_garb_transient_logs(Nodes, Tid_list, aborted),
 	    %% And only when the coordinator are have died
 	    %% Else he would have restarted the transaction
-	    ?match(Kill, Coord);
+	    ?match(^Kill, Coord);
 	updated ->
 	    case length(Tid_list) of
 		1 -> 
@@ -1356,10 +1356,10 @@ garb_of_decisions(Kill, Nodes, Tid_list, Trans_res) ->
 		    case Kill of 
 			coord_pid -> 
 			    verify_garb_transient_logs(Nodes, [Tid2], committed);
-			Coord -> 
+			^Coord -> 
 			    verify_garb_transient_logs([Part1, Part2], [Tid2], committed),
 			    verify_garb_transient_logs([Coord], [Tid2], not_found);
-			Part1 ->
+			^Part1 ->
 			    verify_garb_transient_logs([Coord, Part2], [Tid2], committed),
 			    verify_garb_transient_logs([Part1], [Tid2], not_found)
 		    end
@@ -1369,7 +1369,7 @@ garb_of_decisions(Kill, Nodes, Tid_list, Trans_res) ->
 verify_garb_decision_log([], _Tids) -> ok;
 verify_garb_decision_log([Node|R], Tids) -> 
     Check = fun(Tid) ->   %% Node, Tid used in debugging!
-		    ?match({{not_found, _}, Node, Tid}, 
+		    ?match({{not_found, _}, ^Node, ^Tid}, 
 			   {outcome(Tid, [mnesia_decision]), Node, Tid})
 	    end,
     rpc:call(Node, lists, foreach, [Check, Tids]),
@@ -1381,7 +1381,7 @@ verify_garb_transient_logs([Node|R], Tids, Exp_Res) ->
 		    LatestTab = mnesia_lib:val(latest_transient_decision),
 		    PrevTabs = mnesia_lib:val(previous_transient_decisions),
 		    case outcome(Tid, [LatestTab | PrevTabs]) of
-			{found, {_, [{_,_Tid, Exp_Res}]}} -> ok;
+			{found, {_, [{_,_Tid, ^Exp_Res}]}} -> ok;
 			{not_found, _} when Exp_Res == not_found -> ok;
 			{not_found, _} when Exp_Res == aborted -> ok;
 			Else  -> ?error("Expected ~p in trans ~p on ~p got ~p~n",
@@ -1411,9 +1411,9 @@ verify_tabs([Tab|R], Nodes) ->
     [_Coord, Part1, Part2 | _rest] = Nodes, 
     Read = fun() -> mnesia:read({Tab, 1}) end,
     {success, A} = ?match({atomic, _}, mnesia:transaction(Read)),
-    ?match(A, rpc:call(Part1, mnesia, transaction, [Read])),
-    ?match(A, rpc:call(Part2, mnesia, transaction, [Read])),
-    {atomic, [{Tab, 1, Res}]} = A,
+    ?match(^A, rpc:call(Part1, mnesia, transaction, [Read])),
+    ?match(^A, rpc:call(Part2, mnesia, transaction, [Read])),
+    {atomic, [{^Tab, 1, Res}]} = A,
     verify_tabs(R, Nodes, Res).
 
 verify_tabs([], _Nodes, Res) -> 
@@ -1426,9 +1426,9 @@ verify_tabs([Tab | Rest], Nodes, Res) ->
     [Coord, Part1, Part2 | _rest] = Nodes, 
     Read = fun() -> mnesia:read({Tab, 1}) end,
     Exp = {atomic, [{Tab, 1, Res}]},
-    ?match(Exp, rpc:call(Coord, mnesia, transaction, [Read])),
-    ?match(Exp, rpc:call(Part1, mnesia, transaction, [Read])),
-    ?match(Exp, rpc:call(Part2, mnesia, transaction, [Read])),
+    ?match(^Exp, rpc:call(Coord, mnesia, transaction, [Read])),
+    ?match(^Exp, rpc:call(Part1, mnesia, transaction, [Read])),
+    ?match(^Exp, rpc:call(Part2, mnesia, transaction, [Read])),
     verify_tabs(Rest, Nodes, Res).
 
 %% Gather TIDS and send them to requesting process and exit!
@@ -1544,7 +1544,7 @@ after_corrupt_files(Config, File, Where, Behaviour) ->
     ?warning("++++++SOME OF THE after_corrupt* TEST CASES WILL INTENTIONALLY CRASH MNESIA+++++++~n", []),
     Pid = spawn_link(?MODULE, mymnesia_start, [self()]),
     receive
-	{Pid, ok} -> 
+	{^Pid, ok} -> 
 	    ?match(ok, mnesia:wait_for_tables([schema, Tab], 10000)),
 	    ?match(ok, verify_data(Tab, 100)),
 	    case mnesia_monitor:get_env(auto_repair) of
@@ -1555,7 +1555,7 @@ after_corrupt_files(Config, File, Where, Behaviour) ->
 		    ok
 	    end,
 	    ?verify_mnesia([Node], []);
-	{Pid, {error, ED}} ->
+	{^Pid, {error, ED}} ->
 	    case {mnesia_monitor:get_env(auto_repair), Behaviour} of
 		{true, repair} ->
 		    ?error("Mnesia crashed with ~p: in ~p ~p ~n",
@@ -1704,7 +1704,7 @@ garb_decision(Config) when is_list(Config) ->
     ?match(0, ets:info(TD0, size)),
     {atomic, ok} = mnesia:transaction(W,[a]),
     ?match(dumped, mnesia:dump_log()), sys:get_status(mnesia_recover), % sync   
-    ?match(TD0, mnesia_lib:val(latest_transient_decision)),
+    ?match(^TD0, mnesia_lib:val(latest_transient_decision)),
     [{atomic, ok} = mnesia:transaction(W,[a]) || _ <- lists:seq(1,30)],
     ?match(dumped, mnesia:dump_log()), sys:get_status(mnesia_recover), % sync   
     ?match(false, TD0 =:= mnesia_lib:val(latest_transient_decision)),
@@ -1723,7 +1723,7 @@ check_garb() ->
 		   (_Else) -> true
 		end,
 	Node = node(),
-	?match({Node, []}, {node(), lists:filter(Check, Ds)})
+	?match({^Node, []}, {node(), lists:filter(Check, Ds)})
     catch _:_ -> ok  
     end,
     ok.

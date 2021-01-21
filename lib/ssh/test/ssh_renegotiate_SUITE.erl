@@ -215,7 +215,7 @@ rekey_limit_daemon(Config) ->
     %% Check that it doesn't rekey without data transfer
     Kex1 = ssh_test_lib:get_kex_init(ConnectionRef),
     timer:sleep(?REKEY_DATA_TMO),
-    Kex1 = ssh_test_lib:get_kex_init(ConnectionRef),
+    ^Kex1 = ssh_test_lib:get_kex_init(ConnectionRef),
 
     %% Check that datatransfer triggers rekeying
     {ok,_} = ssh_sftp:read_file(SftpPid, DataFile1),

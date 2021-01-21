@@ -98,7 +98,7 @@
 						 wx_test_lib:pick_msg()
 					 end, TmPeXpCtEdMsGs)),
 		case AcTuAlReS of
-		    TmPeXpCtEdMsGs ->
+		    ^TmPeXpCtEdMsGs ->
 			?verbose("ok: ~p~n",[AcTuAlReS]),
 			AcTuAlReS;
 		    _ ->

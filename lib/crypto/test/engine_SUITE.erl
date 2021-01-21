@@ -252,7 +252,7 @@ engine_load_all_methods(Config) when is_list(Config) ->
         {ok, Engine} ->
             try
                 Md5Hash1 =  <<106,30,3,246,166,222,229,158,244,217,241,179,50,232,107,109>>,
-                Md5Hash1 = crypto:hash(md5, "Don't panic"),
+                ^Md5Hash1 = crypto:hash(md5, "Don't panic"),
                 Md5Hash2 =  <<0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15>>,
                 case crypto:engine_load(<<"dynamic">>,
                                         [{<<"SO_PATH">>, Engine},
@@ -260,18 +260,18 @@ engine_load_all_methods(Config) when is_list(Config) ->
                                         []) of
                     {ok, E} ->
                         case crypto:hash(md5, "Don't panic") of
-                            Md5Hash1 ->
+                            ^Md5Hash1 ->
                                 ct:fail(fail_to_load_still_original_engine);
-                            Md5Hash2 ->
+                            ^Md5Hash2 ->
                                 ok;
                             _ ->
                                 ct:fail(fail_to_load_engine)
                         end,
                         ok = crypto:engine_unload(E),
                         case crypto:hash(md5, "Don't panic") of
-                            Md5Hash2 ->
+                            ^Md5Hash2 ->
                                 ct:fail(fail_to_unload_still_test_engine);
-                            Md5Hash1 ->
+                            ^Md5Hash1 ->
                                 ok;
                             _ ->
                                 ct:fail(fail_to_unload_engine)
@@ -297,7 +297,7 @@ engine_load_some_methods(Config) when is_list(Config) ->
         {ok, Engine} ->
             try
                 Md5Hash1 =  <<106,30,3,246,166,222,229,158,244,217,241,179,50,232,107,109>>,
-                Md5Hash1 = crypto:hash(md5, "Don't panic"),
+                ^Md5Hash1 = crypto:hash(md5, "Don't panic"),
                 Md5Hash2 =  <<0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15>>,
                 EngineMethods = crypto:engine_get_all_methods() --
                     [engine_method_dh, engine_method_rand,
@@ -310,18 +310,18 @@ engine_load_some_methods(Config) when is_list(Config) ->
                                         EngineMethods) of
                     {ok, E} ->
                         case crypto:hash(md5, "Don't panic") of
-                            Md5Hash1 ->
+                            ^Md5Hash1 ->
                                 ct:fail(fail_to_load_engine_still_original);
-                            Md5Hash2 ->
+                            ^Md5Hash2 ->
                                 ok;
                             _ ->
                                 ct:fail(fail_to_load_engine)
                         end,
                         ok = crypto:engine_unload(E),
                         case crypto:hash(md5, "Don't panic") of
-                            Md5Hash2 ->
+                            ^Md5Hash2 ->
                                 ct:fail(fail_to_unload_still_test_engine);
-                            Md5Hash1 ->
+                            ^Md5Hash1 ->
                                 ok;
                             _ ->
                                 ct:fail(fail_to_unload_engine)
@@ -347,7 +347,7 @@ multiple_engine_load(Config) when is_list(Config) ->
         {ok, Engine} ->
             try
                 Md5Hash1 =  <<106,30,3,246,166,222,229,158,244,217,241,179,50,232,107,109>>,
-                Md5Hash1 = crypto:hash(md5, "Don't panic"),
+                ^Md5Hash1 = crypto:hash(md5, "Don't panic"),
                 Md5Hash2 =  <<0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15>>,
                 case crypto:engine_load(<<"dynamic">>,
                                         [{<<"SO_PATH">>, Engine},
@@ -363,36 +363,36 @@ multiple_engine_load(Config) when is_list(Config) ->
                                          <<"LOAD">>],
                                         []),
                         case crypto:hash(md5, "Don't panic") of
-                            Md5Hash1 ->
+                            ^Md5Hash1 ->
                                 ct:fail(fail_to_load_still_original_engine);
-                            Md5Hash2 ->
+                            ^Md5Hash2 ->
                                 ok;
                             _ ->
                                 ct:fail(fail_to_load_engine)
                         end,
                         ok = crypto:engine_unload(E2),
                         case crypto:hash(md5, "Don't panic") of
-                            Md5Hash1 ->
+                            ^Md5Hash1 ->
                                 ct:fail(fail_to_load_still_original_engine);
-                            Md5Hash2 ->
+                            ^Md5Hash2 ->
                                 ok;
                             _ ->
                                 ct:fail(fail_to_load_engine)
                         end,
                         ok = crypto:engine_unload(E),
                         case crypto:hash(md5, "Don't panic") of
-                            Md5Hash1 ->
+                            ^Md5Hash1 ->
                                 ct:fail(fail_to_load_still_original_engine);
-                            Md5Hash2 ->
+                            ^Md5Hash2 ->
                                 ok;
                             _ ->
                                 ct:fail(fail_to_load_engine)
                         end,
                         ok = crypto:engine_unload(E1),
                         case crypto:hash(md5, "Don't panic") of
-                            Md5Hash2 ->
+                            ^Md5Hash2 ->
                                 ct:fail(fail_to_unload_still_test_engine);
-                            Md5Hash1 ->
+                            ^Md5Hash1 ->
                                 ok;
                             _ ->
                                 ct:fail(fail_to_unload_engine)
@@ -425,7 +425,7 @@ engine_list(Config) when is_list(Config) ->
                         ok = crypto:engine_add(E),
                         [<<"MD5">>] = lists:subtract(crypto:engine_list(), EngineList0),
                         ok = crypto:engine_remove(E),
-                        EngineList0 = crypto:engine_list(),
+                        ^EngineList0 = crypto:engine_list(),
                         ok = crypto:engine_unload(E);
                     {error, bad_engine_id} ->
                         {skip, "Dynamic Engine not supported"}
@@ -712,24 +712,24 @@ ensure_load(Config) when is_list(Config) ->
         {ok, Engine} ->
             try
                 Md5Hash1 =  <<106,30,3,246,166,222,229,158,244,217,241,179,50,232,107,109>>,
-                Md5Hash1 = crypto:hash(md5, "Don't panic"),
+                ^Md5Hash1 = crypto:hash(md5, "Don't panic"),
                 Md5Hash2 =  <<0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15>>,
                 case crypto:ensure_engine_loaded(<<"MD5">>, Engine) of
                     {ok, E} ->
                         {ok, _E1} = crypto:ensure_engine_loaded(<<"MD5">>, Engine),
                         case crypto:hash(md5, "Don't panic") of
-                            Md5Hash1 ->
+                            ^Md5Hash1 ->
                                 ct:fail(fail_to_load_still_original_engine);
-                            Md5Hash2 ->
+                            ^Md5Hash2 ->
                                 ok;
                             _ ->
                                 ct:fail(fail_to_load_engine)
                         end,
                         ok = crypto:ensure_engine_unloaded(E),
                         case crypto:hash(md5, "Don't panic") of
-                            Md5Hash2 ->
+                            ^Md5Hash2 ->
                                 ct:fail(fail_to_unload_still_test_engine);
-                            Md5Hash1 ->
+                            ^Md5Hash1 ->
                                 ok;
                             _ ->
                                 ct:fail(fail_to_unload_engine)
@@ -975,7 +975,7 @@ pub_enc_priv_dec(Alg, KeyEnc, KeyDec, Padding) ->
             PlainText = <<"Hej på dig">>,
             CryptoText = crypto:public_encrypt(Alg, PlainText, KeyEnc, Padding),
             case crypto:private_decrypt(Alg, CryptoText, KeyDec, Padding) of
-                PlainText -> ok;
+                ^PlainText -> ok;
                 _ -> {fail, "Encrypt-decrypt error"}
             end;
         false ->
@@ -988,7 +988,7 @@ priv_enc_pub_dec(Alg, KeyEnc, KeyDec, Padding) ->
             PlainText = <<"Hej på dig">>,
             CryptoText = crypto:private_encrypt(Alg, PlainText, KeyEnc, Padding),
             case crypto:public_decrypt(Alg, CryptoText, KeyDec, Padding) of
-                PlainText -> ok;
+                ^PlainText -> ok;
                 _ -> {fail, "Encrypt-decrypt error"}
             end;
         false ->

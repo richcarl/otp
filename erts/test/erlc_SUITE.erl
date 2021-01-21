@@ -312,7 +312,7 @@ make_dep_options(Config) ->
     %% Test -MD
     run(Config, Cmd, FileName, "-MD", ["_OK_"]),
     MDFile = filename:join(OutDir, "erl_test_ok.Pbeam"),
-    {ok,MFBin} = file:read_file(MDFile),
+    {ok,^MFBin} = file:read_file(MDFile),
     file:delete(MDFile), %% used further down!
     false = exists(BeamFileName),
 
@@ -332,7 +332,7 @@ make_dep_options(Config) ->
     %% Test -MD -MT Target
     run(Config, Cmd, FileName, "-MD -MT target", ["_OK_"]),
     TargetMDFile = filename:join(OutDir, "erl_test_ok.Pbeam"),
-    {ok,TargetBin} = file:read_file(TargetMDFile),
+    {ok,^TargetBin} = file:read_file(TargetMDFile),
     file:delete(TargetDepFile),
     false = exists(BeamFileName),
 
@@ -376,17 +376,17 @@ make_dep_options(Config) ->
     file:delete(BeamFileName),
 
     %% Test -MMD -MF File
-    DepFile = filename:join(OutDir, "my.deps"),
+    ^DepFile = filename:join(OutDir, "my.deps"),
     run(Config, Cmd, FileName, "-MMD -MF "++DepFile, CompRE),
-    {ok,MFBin} = file:read_file(DepFile),
+    {ok,^MFBin} = file:read_file(DepFile),
     verify_result(binary_to_list(MFBin)++["_OK_"], DepRE),
     true = exists(BeamFileName),
     file:delete(BeamFileName),
 
     %% Test -MMD -MD
     run(Config, Cmd, FileName, "-MMD -MD", CompRE),
-    MDFile = filename:join(OutDir, "erl_test_ok.Pbeam"),
-    {ok,MFBin} = file:read_file(MDFile),
+    ^MDFile = filename:join(OutDir, "erl_test_ok.Pbeam"),
+    {ok,^MFBin} = file:read_file(MDFile),
     file:delete(MDFile), %% used further down!
     true = exists(BeamFileName),
     file:delete(BeamFileName),
@@ -397,10 +397,10 @@ make_dep_options(Config) ->
     file:delete(BeamFileName),
 
     %% Test -MMD -MF File -MT Target
-    TargetDepFile = filename:join(OutDir, "target.deps"),
+    ^TargetDepFile = filename:join(OutDir, "target.deps"),
     run(Config, Cmd, FileName, "-MMD -MF "++TargetDepFile++" -MT target",
         CompRE),
-    {ok,TargetBin} = file:read_file(TargetDepFile),
+    {ok,^TargetBin} = file:read_file(TargetDepFile),
     verify_result(binary_to_list(TargetBin)++["_OK_"], DepRETarget),
     file:delete(TargetDepFile),
     true = exists(BeamFileName),
@@ -408,8 +408,8 @@ make_dep_options(Config) ->
 
     %% Test -MMD -MD -MT Target
     run(Config, Cmd, FileName, "-MMD -MD -MT target", CompRE),
-    TargetMDFile = filename:join(OutDir, "erl_test_ok.Pbeam"),
-    {ok,TargetBin} = file:read_file(TargetMDFile),
+    ^TargetMDFile = filename:join(OutDir, "erl_test_ok.Pbeam"),
+    {ok,^TargetBin} = file:read_file(TargetMDFile),
     file:delete(TargetDepFile),
     true = exists(BeamFileName),
     file:delete(BeamFileName),
@@ -427,7 +427,7 @@ make_dep_options(Config) ->
     file:delete(BeamFileName),
 
     %% Test -MMD -M -MG
-    MissingHeader = filename:join(SrcDir, "erl_test_missing_header.erl"),
+    ^MissingHeader = filename:join(SrcDir, "erl_test_missing_header.erl"),
     run(Config, Cmd, MissingHeader, "-MMD -M -MG", DepREMissing_MMD),
     false = exists(BeamFileName),
     ok.

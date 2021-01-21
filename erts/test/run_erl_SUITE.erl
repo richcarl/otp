@@ -48,7 +48,7 @@ basic_1(Config, Case, Opt) ->
     erlang:port_command(ToErl, "halt().\r\n"),
 
     receive
-	{nodedown,Node} ->
+	{nodedown,^Node} ->
 	    io:format("Down: ~p\n", [Node])
     after 10000 ->
 	    ct:fail(timeout)
@@ -79,7 +79,7 @@ heavy_1(Config) ->
     erlang:port_command(ToErl, "init:stop().\r\n"),
     
     receive
-	{nodedown,Node} ->
+	{nodedown,^Node} ->
 	    io:format("Down: ~p\n", [Node])
     after 10000 ->
 	    ct:fail(timeout)
@@ -100,7 +100,7 @@ ping_me_back([Node]) ->
     
 count_new_lines(P, N) ->
     receive
-	{P,{data,S}} ->
+	{^P,{data,S}} ->
 	    count_new_lines(P, count_new_lines_1(S, N))
     after 0 ->
 	    N
@@ -155,7 +155,7 @@ heavier_1(Config) ->
     erlang:port_command(ToErl, "init:stop().\r\n"),
     receive_all(Iter, ToErl, MaxLen),
     receive
-	{nodedown,Node} ->
+	{nodedown,^Node} ->
 	    io:format("Down: ~p\n", [Node])
     after 10000 ->
 	    c:flush(),
@@ -182,7 +182,7 @@ receive_all_2(Iter, {NumChars,Pattern}, Line0, ToErl, MaxLen) ->
 	{nomatch,Line} ->
 	    %%io:format("NoMatch: ~p\n", [Line]),
 	    receive
-		{ToErl,{data,S}} ->
+		{^ToErl,{data,S}} ->
 		    %%io:format("Recv: ~p\n", [S]),
 		    receive_all_2(Iter, {NumChars,Pattern}, Line++S, ToErl, MaxLen)		    
 	    after 10000 ->
@@ -194,7 +194,7 @@ receive_all_2(Iter, {NumChars,Pattern}, Line0, ToErl, MaxLen) ->
 receive_match("\"#"++T, {NumChars,Pattern}) when length(T) >= NumChars ->
     Match = lists:sublist(T, NumChars),
     io:format("match candidate: ~p\n", [Match]),
-    Match = Pattern,
+    ^Match = Pattern,
     {match,lists:nthtail(NumChars, T)};
 receive_match("\"#"++T, _) ->
     {nomatch,"\"#"++T};
@@ -259,7 +259,7 @@ do_run_erl(Config, Case, Opt) ->
     Node = list_to_atom(NodeName++"@"++Host),
 
     receive
-	{nodeup,Node} ->
+	{nodeup,^Node} ->
 	    io:format("Up: ~p\n", [Node]);
 	Other ->
 	    ct:fail("Unexpected: ~p\n", [Other])

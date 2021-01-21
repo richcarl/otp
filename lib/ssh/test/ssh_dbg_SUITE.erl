@@ -121,13 +121,13 @@ dbg_basic(_Config) ->
     true = is_pid(whereis(ssh_dbg)),
     true = is_list(L0),
 
-    {ok,L0} = ssh_dbg:on(),
-    {ok,L0} = ssh_dbg:on(),
+    {ok,^L0} = ssh_dbg:on(),
+    {ok,^L0} = ssh_dbg:on(),
 
     L1 = [hd(L0)],
-    {ok,L1} = ssh_dbg:off(tl(L0)),
+    {ok,^L1} = ssh_dbg:off(tl(L0)),
 
-    {ok,L1} = ssh_dbg:go_on(),
+    {ok,^L1} = ssh_dbg:go_on(),
 
     {ok,[]} = ssh_dbg:off(),
     {ok,[]} = ssh_dbg:off(),
@@ -161,16 +161,16 @@ dbg_alg_terminate(Config) ->
 
     %% Daemon connection ref (D):
     D = receive
-            {daemon_c,Ref,D0} -> D0
+            {daemon_c,^Ref,D0} -> D0
         end,
     ct:log("~p:~p~nC = ~p, D=~p",[?MODULE,?LINE, C, D]),
 
-    ?DBG_RECEIVE("Negotiated algorithms:", Ref, C, Pid),
-    ?DBG_RECEIVE("Negotiated algorithms:", Ref, D, Pid),
+    ?DBG_RECEIVE("Negotiated algorithms:", ^Ref, ^C, Pid),
+    ?DBG_RECEIVE("Negotiated algorithms:", ^Ref, ^D, Pid),
     
     ssh:close(C),
-    ?DBG_RECEIVE("Connection Terminating:", Ref, C, Pid),
-    ?DBG_RECEIVE("Connection Terminating:", Ref, D, Pid),
+    ?DBG_RECEIVE("Connection Terminating:", ^Ref, ^C, Pid),
+    ?DBG_RECEIVE("Connection Terminating:", ^Ref, ^D, Pid),
 
     stop_and_fail_if_unhandled_dbg_msgs(Ref, [C,D], Pid).
 
@@ -192,7 +192,7 @@ dbg_connections(Config) ->
                                                           end},
 					     {failfun, fun ssh_test_lib:failfun/2}]),
     
-    ?DBG_RECEIVE("Starting LISTENER on ", Ref, _, Pid),
+    ?DBG_RECEIVE("Starting LISTENER on ", ^Ref, _, Pid),
 
     C = ssh_test_lib:connect(Host, Port, [{silently_accept_hosts, true},
 					  {user_dir, UserDir},
@@ -202,16 +202,16 @@ dbg_connections(Config) ->
 
     %% Daemon connection ref (D):
     D = receive
-            {daemon_c,Ref,D0} -> D0
+            {daemon_c,^Ref,D0} -> D0
         end,
     ct:log("~p:~p~nC = ~p, D=~p",[?MODULE,?LINE, C, D]),
 
-    ?DBG_RECEIVE("Starting server connection:", Ref, D, Pid),
-    ?DBG_RECEIVE("Starting client connection:", Ref, C, Pid),
+    ?DBG_RECEIVE("Starting server connection:", ^Ref, ^D, Pid),
+    ?DBG_RECEIVE("Starting client connection:", ^Ref, ^C, Pid),
     
     ssh:close(C),
-    ?DBG_RECEIVE("Connection Terminating:", Ref, C, Pid),
-    ?DBG_RECEIVE("Connection Terminating:", Ref, D, Pid),
+    ?DBG_RECEIVE("Connection Terminating:", ^Ref, ^C, Pid),
+    ?DBG_RECEIVE("Connection Terminating:", ^Ref, ^D, Pid),
 
     stop_and_fail_if_unhandled_dbg_msgs(Ref, [C,D], Pid).
 
@@ -238,13 +238,13 @@ dbg_authentication(Config) ->
                                              {user_interaction, false}]),
     Cpwd_d = daemon_connection_ref(Ref, Cpwd),
 
-    ?DBG_RECEIVE("AUTH client: Service ssh-userauth accepted", Ref, Cpwd, Pid),
-    ?DBG_RECEIVE("AUTH client: Query for accepted methods", Ref, Cpwd, Pid),
-    ?DBG_RECEIVE("AUTH srvr: Peer queries auth methods", Ref, Cpwd_d, Pid),
-    ?DBG_RECEIVE("AUTH client: Server supports", Ref, Cpwd, Pid),
-    ?DBG_RECEIVE("AUTH client: Try auth with", Ref, Cpwd, Pid),
-    ?DBG_RECEIVE("AUTH srvr: Peer client authorized", Ref, Cpwd_d, Pid),
-    ?DBG_RECEIVE("AUTH client: Success", Ref, Cpwd, Pid),
+    ?DBG_RECEIVE("AUTH client: Service ssh-userauth accepted", ^Ref, ^Cpwd, Pid),
+    ?DBG_RECEIVE("AUTH client: Query for accepted methods", ^Ref, ^Cpwd, Pid),
+    ?DBG_RECEIVE("AUTH srvr: Peer queries auth methods", ^Ref, ^Cpwd_d, Pid),
+    ?DBG_RECEIVE("AUTH client: Server supports", ^Ref, ^Cpwd, Pid),
+    ?DBG_RECEIVE("AUTH client: Try auth with", ^Ref, ^Cpwd, Pid),
+    ?DBG_RECEIVE("AUTH srvr: Peer client authorized", ^Ref, ^Cpwd_d, Pid),
+    ?DBG_RECEIVE("AUTH client: Success", ^Ref, ^Cpwd, Pid),
     ssh:close(Cpwd),
     fail_if_unhandled_dbg_msgs(Ref, [Cpwd,Cpwd_d]),
 
@@ -257,13 +257,13 @@ dbg_authentication(Config) ->
                                              {user_interaction, false}]),
     Ckbi_d = daemon_connection_ref(Ref, Ckbi),
 
-    ?DBG_RECEIVE("AUTH client: Service ssh-userauth accepted", Ref, Ckbi, Pid),
-    ?DBG_RECEIVE("AUTH client: Query for accepted methods", Ref, Ckbi, Pid),
-    ?DBG_RECEIVE("AUTH srvr: Peer queries auth methods", Ref, Ckbi_d, Pid),
-    ?DBG_RECEIVE("AUTH client: Server supports", Ref, Ckbi, Pid),
-    ?DBG_RECEIVE("AUTH client: Try auth with", Ref, Ckbi, Pid),
-    ?DBG_RECEIVE("AUTH srvr: Ask peer client for password", Ref, Ckbi_d, Pid),
-    ?DBG_RECEIVE("AUTH client: Success", Ref, Ckbi, Pid),
+    ?DBG_RECEIVE("AUTH client: Service ssh-userauth accepted", ^Ref, ^Ckbi, Pid),
+    ?DBG_RECEIVE("AUTH client: Query for accepted methods", ^Ref, ^Ckbi, Pid),
+    ?DBG_RECEIVE("AUTH srvr: Peer queries auth methods", ^Ref, ^Ckbi_d, Pid),
+    ?DBG_RECEIVE("AUTH client: Server supports", ^Ref, ^Ckbi, Pid),
+    ?DBG_RECEIVE("AUTH client: Try auth with", ^Ref, ^Ckbi, Pid),
+    ?DBG_RECEIVE("AUTH srvr: Ask peer client for password", ^Ref, ^Ckbi_d, Pid),
+    ?DBG_RECEIVE("AUTH client: Success", ^Ref, ^Ckbi, Pid),
     ssh:close(Ckbi),
     fail_if_unhandled_dbg_msgs(Ref, [Ckbi,Ckbi_d]),
 
@@ -274,13 +274,13 @@ dbg_authentication(Config) ->
                                              {user_interaction, false}]),
     Cpkey_d = daemon_connection_ref(Ref, Cpkey),
 
-    ?DBG_RECEIVE("AUTH client: Service ssh-userauth accepted", Ref, Cpkey, Pid),
-    ?DBG_RECEIVE("AUTH client: Query for accepted methods", Ref, Cpkey, Pid),
-    ?DBG_RECEIVE("AUTH srvr: Peer queries auth methods", Ref, Cpkey_d, Pid),
-    ?DBG_RECEIVE("AUTH client: Server supports", Ref, Cpkey, Pid),
-    ?DBG_RECEIVE("AUTH client: Try auth with", Ref, Cpkey, Pid),
-    ?DBG_RECEIVE("AUTH srvr: Peer client authorized", Ref, Cpkey_d, Pid),
-    ?DBG_RECEIVE("AUTH client: Success", Ref, Cpkey, Pid),
+    ?DBG_RECEIVE("AUTH client: Service ssh-userauth accepted", ^Ref, ^Cpkey, Pid),
+    ?DBG_RECEIVE("AUTH client: Query for accepted methods", ^Ref, ^Cpkey, Pid),
+    ?DBG_RECEIVE("AUTH srvr: Peer queries auth methods", ^Ref, ^Cpkey_d, Pid),
+    ?DBG_RECEIVE("AUTH client: Server supports", ^Ref, ^Cpkey, Pid),
+    ?DBG_RECEIVE("AUTH client: Try auth with", ^Ref, ^Cpkey, Pid),
+    ?DBG_RECEIVE("AUTH srvr: Peer client authorized", ^Ref, ^Cpkey_d, Pid),
+    ?DBG_RECEIVE("AUTH client: Success", ^Ref, ^Cpkey, Pid),
     ssh:close(Cpkey),
     stop_and_fail_if_unhandled_dbg_msgs(Ref, [Cpkey,Cpkey_d], Pid).
 
@@ -288,7 +288,7 @@ dbg_authentication(Config) ->
 daemon_connection_ref(Ref,C) ->
     D =
         receive
-            {daemon_c,Ref,D0} -> D0
+            {daemon_c,^Ref,D0} -> D0
         end,
     ct:log("~p:~p~nC = ~p, D=~p",[?MODULE,?LINE, C, D]),
     D.
@@ -319,70 +319,70 @@ dbg_ssh_messages(Config) ->
 
     %% Daemon connection ref (D):
     D = receive
-            {daemon_c,Ref,D0} -> D0
+            {daemon_c,^Ref,D0} -> D0
         end,
     ct:log("~p:~p~nC = ~p, D=~p",[?MODULE,?LINE, C, D]),
 
-    ?DBG_RECEIVE("Going to send hello message:", Ref, C, Pid),
-    ?DBG_RECEIVE("Received hello message:",      Ref, D, Pid),
+    ?DBG_RECEIVE("Going to send hello message:", ^Ref, ^C, Pid),
+    ?DBG_RECEIVE("Received hello message:",      ^Ref, ^D, Pid),
 
-    ?DBG_RECEIVE("Going to send hello message:", Ref, D, Pid),
-    ?DBG_RECEIVE("Received hello message:",      Ref, C, Pid),
+    ?DBG_RECEIVE("Going to send hello message:", ^Ref, ^D, Pid),
+    ?DBG_RECEIVE("Received hello message:",      ^Ref, ^C, Pid),
 
-    ?DBG_RECEIVE("Going to send SSH_MSG_KEXINIT:", Ref, C, Pid),
-    ?DBG_RECEIVE("Received SSH_MSG_KEXINIT:",      Ref, D, Pid),
+    ?DBG_RECEIVE("Going to send SSH_MSG_KEXINIT:", ^Ref, ^C, Pid),
+    ?DBG_RECEIVE("Received SSH_MSG_KEXINIT:",      ^Ref, ^D, Pid),
 
-    ?DBG_RECEIVE("Going to send SSH_MSG_KEXINIT:", Ref, D, Pid),
-    ?DBG_RECEIVE("Received SSH_MSG_KEXINIT:",      Ref, C, Pid),
+    ?DBG_RECEIVE("Going to send SSH_MSG_KEXINIT:", ^Ref, ^D, Pid),
+    ?DBG_RECEIVE("Received SSH_MSG_KEXINIT:",      ^Ref, ^C, Pid),
 
     case atom_to_list( (ssh_connection_handler:alg(C))#alg.kex ) of
         "ecdh-"++_ ->
-            ?DBG_RECEIVE("Going to send SSH_MSG_KEX_ECDH_INIT:",  Ref, C, Pid),
-            ?DBG_RECEIVE("Received SSH_MSG_KEX_ECDH_INIT:",       Ref, D, Pid),
-            ?DBG_RECEIVE("Going to send SSH_MSG_KEX_ECDH_REPLY:", Ref, D, Pid),
-            ?DBG_RECEIVE("Received SSH_MSG_KEX_ECDH_REPLY:",      Ref, C, Pid);
+            ?DBG_RECEIVE("Going to send SSH_MSG_KEX_ECDH_INIT:",  ^Ref, ^C, Pid),
+            ?DBG_RECEIVE("Received SSH_MSG_KEX_ECDH_INIT:",       ^Ref, ^D, Pid),
+            ?DBG_RECEIVE("Going to send SSH_MSG_KEX_ECDH_REPLY:", ^Ref, ^D, Pid),
+            ?DBG_RECEIVE("Received SSH_MSG_KEX_ECDH_REPLY:",      ^Ref, ^C, Pid);
 
         "diffie-hellman-group-exchange-"++_ ->
-            ?DBG_RECEIVE("Going to send SSH_MSG_KEX_DH_GEX_REQUEST:", Ref, C, Pid),
-            ?DBG_RECEIVE("Received SSH_MSG_KEX_DH_GEX_REQUEST:",      Ref, D, Pid),
-            ?DBG_RECEIVE("Going to send SSH_MSG_KEX_DH_GEX_GROUP:",   Ref, D, Pid),
-            ?DBG_RECEIVE("Received SSH_MSG_KEX_DH_GEX_GROUP:",        Ref, C, Pid),
-            ?DBG_RECEIVE("Going to send SSH_MSG_KEX_DH_GEX_INIT:",    Ref, C, Pid),
-            ?DBG_RECEIVE("Received SSH_MSG_KEX_DH_GEX_INIT:",         Ref, D, Pid),
-            ?DBG_RECEIVE("Going to send SSH_MSG_KEX_DH_GEX_REPLY:",   Ref, D, Pid),
-            ?DBG_RECEIVE("Received SSH_MSG_KEX_DH_GEX_REPLY:",        Ref, C, Pid);
+            ?DBG_RECEIVE("Going to send SSH_MSG_KEX_DH_GEX_REQUEST:", ^Ref, ^C, Pid),
+            ?DBG_RECEIVE("Received SSH_MSG_KEX_DH_GEX_REQUEST:",      ^Ref, ^D, Pid),
+            ?DBG_RECEIVE("Going to send SSH_MSG_KEX_DH_GEX_GROUP:",   ^Ref, ^D, Pid),
+            ?DBG_RECEIVE("Received SSH_MSG_KEX_DH_GEX_GROUP:",        ^Ref, ^C, Pid),
+            ?DBG_RECEIVE("Going to send SSH_MSG_KEX_DH_GEX_INIT:",    ^Ref, ^C, Pid),
+            ?DBG_RECEIVE("Received SSH_MSG_KEX_DH_GEX_INIT:",         ^Ref, ^D, Pid),
+            ?DBG_RECEIVE("Going to send SSH_MSG_KEX_DH_GEX_REPLY:",   ^Ref, ^D, Pid),
+            ?DBG_RECEIVE("Received SSH_MSG_KEX_DH_GEX_REPLY:",        ^Ref, ^C, Pid);
 
         "diffie-hellman-group"++_ ->
-            ?DBG_RECEIVE("Going to send SSH_MSG_KEXDH_INIT:",  Ref, C, Pid),
-            ?DBG_RECEIVE("Received SSH_MSG_KEXDH_INIT:",       Ref, D, Pid),
-            ?DBG_RECEIVE("Going to send SSH_MSG_KEXDH_REPLY:", Ref, D, Pid),
-            ?DBG_RECEIVE("Received SSH_MSG_KEXDH_REPLY:",      Ref, C, Pid)
+            ?DBG_RECEIVE("Going to send SSH_MSG_KEXDH_INIT:",  ^Ref, ^C, Pid),
+            ?DBG_RECEIVE("Received SSH_MSG_KEXDH_INIT:",       ^Ref, ^D, Pid),
+            ?DBG_RECEIVE("Going to send SSH_MSG_KEXDH_REPLY:", ^Ref, ^D, Pid),
+            ?DBG_RECEIVE("Received SSH_MSG_KEXDH_REPLY:",      ^Ref, ^C, Pid)
     end,
 
 
-    ?DBG_RECEIVE("Going to send SSH_MSG_NEWKEYS:", Ref, C, Pid),
-    ?DBG_RECEIVE("Received SSH_MSG_NEWKEYS:",      Ref, D, Pid),
+    ?DBG_RECEIVE("Going to send SSH_MSG_NEWKEYS:", ^Ref, ^C, Pid),
+    ?DBG_RECEIVE("Received SSH_MSG_NEWKEYS:",      ^Ref, ^D, Pid),
 
-    ?DBG_RECEIVE("Going to send SSH_MSG_NEWKEYS:", Ref, D, Pid),
-    ?DBG_RECEIVE("Received SSH_MSG_NEWKEYS:",      Ref, C, Pid),
+    ?DBG_RECEIVE("Going to send SSH_MSG_NEWKEYS:", ^Ref, ^D, Pid),
+    ?DBG_RECEIVE("Received SSH_MSG_NEWKEYS:",      ^Ref, ^C, Pid),
     
-    ?DBG_RECEIVE("Going to send SSH_MSG_SERVICE_REQUEST:", Ref, C, Pid),
-    ?DBG_RECEIVE("Received SSH_MSG_SERVICE_REQUEST:",      Ref, D, Pid),
+    ?DBG_RECEIVE("Going to send SSH_MSG_SERVICE_REQUEST:", ^Ref, ^C, Pid),
+    ?DBG_RECEIVE("Received SSH_MSG_SERVICE_REQUEST:",      ^Ref, ^D, Pid),
     
-    ?DBG_RECEIVE("Going to send SSH_MSG_SERVICE_ACCEPT:", Ref, D, Pid),
-    ?DBG_RECEIVE("Received SSH_MSG_SERVICE_ACCEPT:",      Ref, C, Pid),
+    ?DBG_RECEIVE("Going to send SSH_MSG_SERVICE_ACCEPT:", ^Ref, ^D, Pid),
+    ?DBG_RECEIVE("Received SSH_MSG_SERVICE_ACCEPT:",      ^Ref, ^C, Pid),
     
-    ?DBG_RECEIVE("Going to send SSH_MSG_USERAUTH_REQUEST:", Ref, C, Pid),
-    ?DBG_RECEIVE("Received SSH_MSG_USERAUTH_REQUEST:",      Ref, D, Pid),
+    ?DBG_RECEIVE("Going to send SSH_MSG_USERAUTH_REQUEST:", ^Ref, ^C, Pid),
+    ?DBG_RECEIVE("Received SSH_MSG_USERAUTH_REQUEST:",      ^Ref, ^D, Pid),
 
-    ?DBG_RECEIVE("Going to send SSH_MSG_USERAUTH_FAILURE:", Ref, D, Pid),
-    ?DBG_RECEIVE("Received SSH_MSG_USERAUTH_FAILURE:",      Ref, C, Pid),
+    ?DBG_RECEIVE("Going to send SSH_MSG_USERAUTH_FAILURE:", ^Ref, ^D, Pid),
+    ?DBG_RECEIVE("Received SSH_MSG_USERAUTH_FAILURE:",      ^Ref, ^C, Pid),
     
-    ?DBG_RECEIVE("Going to send SSH_MSG_USERAUTH_REQUEST:", Ref, C, Pid),
-    ?DBG_RECEIVE("Received SSH_MSG_USERAUTH_REQUEST:",      Ref, D, Pid),
+    ?DBG_RECEIVE("Going to send SSH_MSG_USERAUTH_REQUEST:", ^Ref, ^C, Pid),
+    ?DBG_RECEIVE("Received SSH_MSG_USERAUTH_REQUEST:",      ^Ref, ^D, Pid),
 
-    ?DBG_RECEIVE("Going to send SSH_MSG_USERAUTH_SUCCESS:", Ref, D, Pid),
-    ?DBG_RECEIVE("Received SSH_MSG_USERAUTH_SUCCESS:",      Ref, C, Pid),
+    ?DBG_RECEIVE("Going to send SSH_MSG_USERAUTH_SUCCESS:", ^Ref, ^D, Pid),
+    ?DBG_RECEIVE("Received SSH_MSG_USERAUTH_SUCCESS:",      ^Ref, ^C, Pid),
 
 
     UnexpectedMsgs =
@@ -429,7 +429,7 @@ dbg_channels(Config) ->
                                              },
 					     {failfun, fun ssh_test_lib:failfun/2}]),
     
-    ?DBG_RECEIVE("Starting LISTENER on ", Ref, _, Pid),
+    ?DBG_RECEIVE("Starting LISTENER on ", ^Ref, _, Pid),
 
     C = ssh_test_lib:connect(Host, Port, [{silently_accept_hosts, true},
                                           {user_dir, UserDir},
@@ -440,16 +440,16 @@ dbg_channels(Config) ->
     ok = ssh_connection:shell(C, Ch0),
     
     %% Daemon connection ref (D):
-    D = receive {daemon_c,Ref,D0} -> D0 end,
+    D = receive {daemon_c,^Ref,D0} -> D0 end,
 
     %% Daemon channel (Dch):
-    Dch = receive {daemon_channel,Ref,Dch0} -> Dch0 end,
+    Dch = receive {daemon_channel,^Ref,Dch0} -> Dch0 end,
     ct:log("~p:~p~nC = ~p, D=~p, Dch=~p~n~s",[?MODULE,?LINE, C, D, Dch, ssh_info:string()]),
 
-    ?DBG_RECEIVE("Starting server connection:", Ref, D, Pid),
-    ?DBG_RECEIVE("Starting client connection:", Ref, C, Pid),
-    ?DBG_RECEIVE("Server Channel Starting:",    Ref, _, Pid),
-    ?DBG_RECEIVE("Server Channel Terminating:", Ref, _, Pid),
+    ?DBG_RECEIVE("Starting server connection:", ^Ref, ^D, Pid),
+    ?DBG_RECEIVE("Starting client connection:", ^Ref, ^C, Pid),
+    ?DBG_RECEIVE("Server Channel Starting:",    ^Ref, _, Pid),
+    ?DBG_RECEIVE("Server Channel Terminating:", ^Ref, _, Pid),
 
     stop_and_fail_if_unhandled_dbg_msgs(Ref, [C,D], Pid).
 
@@ -464,7 +464,7 @@ all_dbg(Config) ->
     ct:log("~p:~p created the directory~nsDir0 = ~p~nDir  = ~p", [?MODULE,?LINE,Dir0,Dir]),
 
     AllTags = ssh_dbg:start(),
-    {ok,AllTags} = ssh_dbg:on(AllTags),
+    {ok,^AllTags} = ssh_dbg:on(AllTags),
 
     {_, Host, Port} =
 	ssh_test_lib:daemon([{system_dir, SystemDir},
@@ -561,7 +561,7 @@ queued_msgs(Ref, Conns) ->
 
 queued_msgs(Ref, Conns, Acc) ->
     receive
-        {Ref, [_, C, _]=Msg} ->
+        {^Ref, [_, C, _]=Msg} ->
             case is_list(Conns) andalso lists:member(C, Conns) of
                 true ->
                     queued_msgs(Ref, [Msg|Acc]);
@@ -600,10 +600,10 @@ dbg_SKIP(Ref, Prefixes) ->
 
 dbg_SKIP(Ref, Prefixes, UnexpectedAcc) ->
     receive
-        {Ref, [_, _C, Msg]} when is_tuple(Msg) ->
+        {^Ref, [_, _C, Msg]} when is_tuple(Msg) ->
             %% filter non ssh_dbg messages, for example from dbg:tp(..) etc
             dbg_SKIP(Ref, Prefixes, UnexpectedAcc);
-        {Ref, [_, _C, Msg]=M} ->
+        {^Ref, [_, _C, Msg]=M} ->
             case lists:any(
                    fun(Pfx) ->
                            try lists:prefix(Pfx, Msg)

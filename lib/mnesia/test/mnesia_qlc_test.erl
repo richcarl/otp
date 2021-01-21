@@ -112,16 +112,16 @@ dirty_nice(Config, Type) when is_list(Config) ->
     CRes = lists:sort(mnesia:dirty_match_object(a, {'_','_','_'})),
     ?match([{a,{a,5},95}], mnesia:async_dirty(FA)),
     ?match([{b,{b,95},5}], mnesia:async_dirty(FB)),
-    ?match(CRes, mnesia:async_dirty(FC)),
-    ?match(CRes, mnesia:async_dirty(FD)),
+    ?match(^CRes, mnesia:async_dirty(FC)),
+    ?match(^CRes, mnesia:async_dirty(FD)),
     ?match([{a,{a,5},95}], mnesia:sync_dirty(FA)),
     ?match([{b,{b,95},5}], mnesia:sync_dirty(FB)),
-    ?match(CRes, mnesia:sync_dirty(FC)),
+    ?match(^CRes, mnesia:sync_dirty(FC)),
     ?match([{a,{a,5},95}], mnesia:activity(async_dirty, FA)),
     ?match([{b,{b,95},5}], mnesia:activity(async_dirty, FB)),
     ?match([{a,{a,5},95}], mnesia:activity(sync_dirty, FA)),
     ?match([{b,{b,95},5}], mnesia:activity(sync_dirty, FB)),
-    ?match(CRes, mnesia:activity(async_dirty,FC)),
+    ?match(^CRes, mnesia:activity(async_dirty,FC)),
     case Type of
 	disc_only_copies -> skip;
 	_ -> 
@@ -171,8 +171,8 @@ trans_nice(Config, Type) when is_list(Config) ->
     ?match([{b,{b,95},5}], mnesia:activity(sync_transaction,FB)),
     ?match([{a,{a,9},91}], mnesia:activity(sync_transaction,FC)),
 
-    ?match({atomic, DRes}, mnesia:transaction(FD)),
-    ?match({atomic, DRes}, mnesia:transaction(FE)),
+    ?match({atomic, ^DRes}, mnesia:transaction(FD)),
+    ?match({atomic, ^DRes}, mnesia:transaction(FE)),
 
     Rest = fun(Cursor,Loop) -> 
 		   case qlc:next_answers(Cursor, 1) of
@@ -184,7 +184,7 @@ trans_nice(Config, Type) when is_list(Config) ->
 		   Cursor = qlc:cursor(QD),
 		   Rest(Cursor,Rest)
 	   end,
-    ?match({atomic, DRes}, mnesia:transaction(Loop)),
+    ?match({atomic, ^DRes}, mnesia:transaction(Loop)),
 
     ?verify_mnesia(Ns, []).
 
@@ -211,14 +211,14 @@ atomic_eval(Config) ->
 		    mnesia:system_info(held_locks)}
 	   end,
     Self = self(),
-    ?match({[{a,{a,9},91}], [{{a,'______WHOLETABLE_____'},read,{tid,_,Self}}]},
+    ?match({[{a,{a,9},91}], [{{a,'______WHOLETABLE_____'},read,{tid,_,^Self}}]},
 	   ok(Eval,[Q1])),
     
     Q2 = handle(recs(), 
 		<<"[Q || Q = #a{k={a,9}} <- mnesia:table(a)]"
 		 >>),
     
-    ?match({[{a,{a,9},91}],[{{a,{a,9}},read,{tid,_,Self}}]},
+    ?match({[{a,{a,9},91}],[{{a,{a,9}},read,{tid,_,^Self}}]},
 	   ok(Eval,[Q2])),
 
     Flush = fun(Loop) -> %% Clean queue
@@ -250,13 +250,13 @@ atomic_eval(Config) ->
 		      end
 	      end,
     
-    ?match({1,{[{a,{a,9},91}], [{{a,'______WHOLETABLE_____'},read,{tid,_,Self}}]}},
+    ?match({1,{[{a,{a,9},91}], [{{a,'______WHOLETABLE_____'},read,{tid,_,^Self}}]}},
 	   ok(Restart,[Pid1,fun() -> Eval(Q1) end])),
     
     Pid2 = spawn(fun() -> ?match(ok, ok(GrabLock, [Self])) end),
     ?match(locked,receive locked -> locked after 5000 -> timeout end), %% Wait
     put(count,0),
-    ?match({1,{[{a,{a,9},91}],[{{a,{a,9}},read,{tid,_,Self}}]}},
+    ?match({1,{[{a,{a,9},91}],[{{a,{a,9}},read,{tid,_,^Self}}]}},
 	   ok(Restart,[Pid2, fun() -> Eval(Q2) end])),
 
 %% Basic test     
@@ -471,7 +471,7 @@ handle2(Records,Expr) ->
 
     ?match(ok,file:write_file(FN,Prog)),
     {ok,Forms} = epp:parse_file(FN,"",""),
-    {ok,Mod,Bin} = compile:forms(Forms),
+    {ok,^Mod,Bin} = compile:forms(Forms),
     code:load_binary(Mod,FN,Bin),
     {ok, Mod:tmp()}.
 

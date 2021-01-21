@@ -142,7 +142,7 @@ init_per_group(G, Config0) ->
                     try common_algs(Config1, IP, Port) of
                         {ok, ServerHello, RemoteServerCommon, ClientHello, RemoteClientCommon} ->
                             case chk_hellos([ServerHello,ClientHello], Cmnt) of
-                                Cmnt ->
+                                ^Cmnt ->
                                     ok;
                                 NewCmnt ->
                                     ct:comment("~s",[NewCmnt])
@@ -351,7 +351,7 @@ reneg_tester(Parent, Ref, HostConnRef) ->
                   
 reneg_tester_loop(Parent, Ref, HostConnRef, Kex1) ->  
     case ssh_test_lib:get_kex_init(HostConnRef) of
-        Kex1 ->
+        ^Kex1 ->
             timer:sleep(500),
             reneg_tester_loop(Parent, Ref, HostConnRef, Kex1);
         _OtherKex ->
@@ -409,11 +409,11 @@ send_recv_big_with_renegotiate_otp_is_client(Config) ->
                    fun(Acc) ->
                            %%ct:log("Get more ~p",[ ExpectedSize-byte_size(Acc) ]),
                            receive
-                               {ssh_cm, C, {eof,Ch}} when Ch==Ch1 ->
+                               {ssh_cm, ^C, {eof,Ch}} when Ch==Ch1 ->
                                    %% ct:log("eof received",[]),
                                    {eof,Acc};
 
-                               {ssh_cm, C, {data,Ch,0,B}} when Ch==Ch1,
+                               {ssh_cm, ^C, {data,Ch,0,B}} when Ch==Ch1,
                                                                is_binary(B) ->
                                    %% ct:log("(1) Received ~p bytes (total ~p), missing ~p bytes",
                                    %%        [byte_size(B),
@@ -427,7 +427,7 @@ send_recv_big_with_renegotiate_otp_is_client(Config) ->
 
     ExpectedData = <<Data/binary, Data/binary>>,
     case ReceivedData of
-        ExpectedData ->
+        ^ExpectedData ->
             %% ct:log("Correct data returned",[]),
             %% receive close messages
             loop_until(fun(Left) -> %% ct:log("Expect: ~p",[Left]),
@@ -435,7 +435,7 @@ send_recv_big_with_renegotiate_otp_is_client(Config) ->
                        end,
                        fun([Next|Rest]) ->
                                receive
-                                  {ssh_cm,C,Next} -> Rest
+                                  {ssh_cm,^C,^Next} -> Rest
                                end 
                        end,
                        [%% Already received: {eof, Ch1},
@@ -528,15 +528,15 @@ result_of_exec(C, Ch) ->
 
 result_of_exec(C, Ch, ExitStatus, Acc) ->
     receive
-        {ssh_cm,C,{closed,Ch}} ->
+        {ssh_cm,^C,{closed,^Ch}} ->
             %%ct:log("CHAN ~p got *closed*",[Ch]),
             {ok, {ExitStatus, Acc}};
 
-        {ssh_cm,C,{exit_status,Ch,ExStat}} when ExitStatus == undefined ->
+        {ssh_cm,^C,{exit_status,^Ch,ExStat}} when ExitStatus == undefined ->
             %%ct:log("CHAN ~p got *exit status ~p*",[Ch,ExStat]),
             result_of_exec(C, Ch, ExStat, Acc);
 
-        {ssh_cm,C,{data,Ch,_,Data}=_X} when ExitStatus == undefined ->
+        {ssh_cm,^C,{data,^Ch,_,Data}=_X} when ExitStatus == undefined ->
             %%ct:log("CHAN ~p got ~p",[Ch,_X]),
             result_of_exec(C, Ch, ExitStatus, <<Acc/binary, Data/binary>>);
 
@@ -748,7 +748,7 @@ format_result_table_use_all_algos(FunctionName, Config, CommonAlgs, Failed) ->
         lists:mapfoldl(
           fun({T,A}, Tprev) ->
                   Tag = case T of
-                            Tprev -> "";
+                            ^Tprev -> "";
                             _ -> io_lib:format('~s~n',[T])
                         end,
                   {io_lib:format('~s     ~*s ~s~n',
@@ -997,7 +997,7 @@ remote_client_algs(Config) ->
               Parent ! {Ref,receive_hello(S)}
       end),
     receive
-        {addr,Ref,IP,Port} ->
+        {addr,^Ref,IP,Port} ->
             spawn(fun() ->
                           exec_from_docker(Config, IP, Port,
                                            "howdy.\r\n",
@@ -1005,7 +1005,7 @@ remote_client_algs(Config) ->
                                            "")
                   end),
             receive
-                {Ref, Result} ->
+                {^Ref, Result} ->
                     Result
             after 5000 ->
                     {error, {timeout,2}}
@@ -1032,7 +1032,7 @@ receive_hello(S) ->
 receive_hello(S, Ack) ->
     %% The Ack is to collect bytes until the full message is received
     receive
-        {tcp, S, Bin0} when is_binary(Bin0) ->
+        {tcp, ^S, Bin0} when is_binary(Bin0) ->
             case binary:split(<<Ack/binary, Bin0/binary>>, [<<"\r\n">>,<<"\r">>,<<"\n">>]) of
                 [Hello = <<"SSH-2.0-",_/binary>>, NextPacket] ->
                     %% ct:log("Got 2.0 hello (~p), ~p bytes to next msg",[Hello,size(NextPacket)]),
@@ -1080,7 +1080,7 @@ receive_kexinit(_S, <<PacketLen:32, PaddingLen:8, PayloadAndPadding/binary>>)
 receive_kexinit(S, Ack) ->
     ct:log("Has ~p bytes, need more",[size(Ack)]),
     receive
-        {tcp, S, Bin0} when is_binary(Bin0) ->
+        {tcp, ^S, Bin0} when is_binary(Bin0) ->
             receive_kexinit(S, <<Ack/binary, Bin0/binary>>);
         Other ->
             ct:log("Bad hello string (line ~p):~n~p",[?LINE,Other]),
@@ -1148,11 +1148,11 @@ do_check_local_directory(ServerRootDir) ->
         ["ex_tst1","mydir","tst2"] ->
             {ok,Expect} = file:read_file(filename:join(ServerRootDir,"ex_tst1")),
             case file:read_file(filename:join(ServerRootDir,"tst2")) of
-                {ok,Expect} ->
+                {ok,^Expect} ->
                     case lists:sort(ok(file:list_dir(filename:join(ServerRootDir,"mydir"))) -- [".",".."]) of
                         ["file_1","unreadable_file"] ->
                             case file:read_file(filename:join([ServerRootDir,"mydir","file_1"])) of
-                                {ok,Expect} ->
+                                {ok,^Expect} ->
                                     case file:read_file(filename:join([ServerRootDir,"mydir","unreadable_file"])) of
                                         {error,_} ->
                                             ok;
@@ -1215,7 +1215,7 @@ call_sftp_in_docker(Config, ServerIP, ServerPort, Cmnds, UserDir, Ref) ->
     case recv_log_msgs(C, Ch1) of
         ok ->
             receive
-                {kex_changed, Ref} ->
+                {kex_changed, ^Ref} ->
                     %% success
                     ct:log("Kex changed",[]),
                     ssh:close(C),
@@ -1236,13 +1236,13 @@ call_sftp_in_docker(Config, ServerIP, ServerPort, Cmnds, UserDir, Ref) ->
 
 recv_log_msgs(C, Ch) ->
     receive
-        {ssh_cm,C,{closed,Ch}} ->
+        {ssh_cm,^C,{closed,^Ch}} ->
             %% ct:log("Channel closed ~p",[{closed,1}]),
             ok;
-        {ssh_cm,C,{data,Ch,1,Msg}} ->
+        {ssh_cm,^C,{data,^Ch,1,Msg}} ->
             ct:log("*** ERROR from docker:~n~s",[Msg]),
             recv_log_msgs(C, Ch);
-        {ssh_cm,C,_Msg} ->
+        {ssh_cm,^C,_Msg} ->
             %% ct:log("Got ~p",[_Msg]),
             recv_log_msgs(C, Ch)
     after
@@ -1277,10 +1277,10 @@ test_erl_client_reneg({ok,C}, Spec) ->
     case lists:filter(
            fun(R) -> R=/=ok end,
            [receive
-                {Pid,_TestType,_Id,ok} ->
+                {^Pid,_TestType,_Id,ok} ->
                     %% ct:log("Test ~p:~p passed!", [_TestType,_Id]),
                     ok;
-                {Pid,TestType,Id,OtherResult} ->
+                {^Pid,TestType,Id,OtherResult} ->
                     ct:log("~p:~p ~p ~p~n~p",[?MODULE,?LINE,TestType,Id,OtherResult]),
                     {error,TestType,Id}
             end || Pid <- Pids])
@@ -1305,9 +1305,9 @@ one_test_erl_client(exec, Id, C) ->
                     end,
                     fun(Acc) ->
                             receive
-                                {ssh_cm, C, {eof,Ch}} ->
+                                {ssh_cm, ^C, {eof,^Ch}} ->
                                     {eof,Acc};
-                                {ssh_cm, C, {data,Ch,0,B}} when is_binary(B) ->
+                                {ssh_cm, ^C, {data,^Ch,0,B}} when is_binary(B) ->
                                     <<Acc/binary, B/binary>>
                             end
                     end,
@@ -1343,14 +1343,14 @@ one_test_erl_client(setenv, Id, C) ->
                     end,
                     fun(Acc) ->
                             receive
-                                {ssh_cm, C, {eof,Ch}} ->
+                                {ssh_cm, ^C, {eof,^Ch}} ->
                                     {eof,Acc};
-                                {ssh_cm, C, {data,Ch,0,B}} when is_binary(B) ->
+                                {ssh_cm, ^C, {data,^Ch,0,B}} when is_binary(B) ->
                                     <<Acc/binary, B/binary>>
                             end
                     end,
                     <<>>) of
-        {eof,Env} ->
+        {eof,^Env} ->
             ok;
         Other ->
             ct:log("setenv Got other ~p", [Other]),
@@ -1391,9 +1391,9 @@ do_sftp_tests_erl_client(sftp, _C, Ch, _Id, RootDir) ->
 
     %% Create and write a file:
     ok = ssh_sftp:write_file(Ch,
-                             F0 = filename:join(RootDir, FileName0),
+                             ^F0 = filename:join(RootDir, FileName0),
                              Data0 = mkbin(1234,240)),
-    {ok,Data0} = ssh_sftp:read_file(Ch, F0),
+    {ok,^Data0} = ssh_sftp:read_file(Ch, F0),
     {ok, #file_info{type=regular, access=read_write, size=1234}} = ssh_sftp:read_file_info(Ch, F0),
 
     %% Re-write:
@@ -1404,14 +1404,14 @@ do_sftp_tests_erl_client(sftp, _C, Ch, _Id, RootDir) ->
     FileContents = <<B1:16/binary, Data0_1:10/binary, B2:(1234-26)/binary>>,
 
     <<_:1/binary, Part:25/binary, _/binary>> = FileContents,
-    {ok, Part} = ssh_sftp:pread(Ch, Handle0, 1, 25),
+    {ok, ^Part} = ssh_sftp:pread(Ch, Handle0, 1, 25),
 
     %% Check:
-    {ok, FileContents} = ssh_sftp:pread(Ch, Handle0, 0, 1234),
+    {ok, ^FileContents} = ssh_sftp:pread(Ch, Handle0, 0, 1234),
     ok = ssh_sftp:close(Ch, Handle0),
 
     %% Check in another way:
-    {ok, FileContents} = ssh_sftp:read_file(Ch, F0),
+    {ok, ^FileContents} = ssh_sftp:read_file(Ch, F0),
 
     %% Remove write access rights and check that it can't be written:
     ok = ssh_sftp:write_file_info(Ch, F0, #file_info{mode=8#400}), %read}),
@@ -1419,7 +1419,7 @@ do_sftp_tests_erl_client(sftp, _C, Ch, _Id, RootDir) ->
     {error,permission_denied} = ssh_sftp:write_file(Ch, F0, mkbin(10,14)),
 
     %% Test deletion of file and dir:
-    [FileName0] = ok(ssh_sftp:list_dir(Ch, RootDir)) -- [".", ".."],
+    [^FileName0] = ok(ssh_sftp:list_dir(Ch, RootDir)) -- [".", ".."],
     ok = ssh_sftp:delete(Ch, F0),
     [] = ok(ssh_sftp:list_dir(Ch, RootDir)) -- [".", ".."],
     ok = ssh_sftp:del_dir(Ch, RootDir),
@@ -1429,7 +1429,7 @@ do_sftp_tests_erl_client(sftp, _C, Ch, _Id, RootDir) ->
 
 wait_for_async_result(Aref) ->
     receive
-        {async_reply, Aref, Result} ->
+        {async_reply, ^Aref, Result} ->
             Result
     after
         60000 ->
@@ -1451,7 +1451,7 @@ renegotiate_test(init, ConnectionRef) ->
 
 renegotiate_test(Kex1, ConnectionRef) ->
     case ssh_test_lib:get_kex_init(ConnectionRef) of
-        Kex1 ->
+        ^Kex1 ->
             ct:log("Renegotiate test failed, Kex1 == Kex2!",[]),
             error(renegotiate_failed);
         _ ->

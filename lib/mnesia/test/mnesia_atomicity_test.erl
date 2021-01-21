@@ -116,9 +116,9 @@ explicit_abort_in_middle_of_trans(Config) when is_list(Config) ->
     A ! fun() ->
 		mnesia:write(Rec1A)	% returns ok when successful
 	 end,
-    ?match_receive({A, ok}),
+    ?match_receive({^A, ok}),
     A ! end_trans,
-    ?match_receive({A, {atomic, end_trans}}),
+    ?match_receive({^A, {atomic, end_trans}}),
 
     %% second transaction: store some new objects and abort before the
     %% transaction is finished -> the new changes should be invisable
@@ -127,7 +127,7 @@ explicit_abort_in_middle_of_trans(Config) when is_list(Config) ->
 		mnesia:write(Rec1B),
 		exit(abort_by_purpose) %does that stop the process A ???
 	 end,
-    ?match_receive({A, {aborted, abort_by_purpose}}),
+    ?match_receive({^A, {aborted, abort_by_purpose}}),
 
 
     %?match_receive({A, {'EXIT', Pid, normal}}), % A died and sends EXIT
@@ -139,12 +139,12 @@ explicit_abort_in_middle_of_trans(Config) when is_list(Config) ->
     %% check, whether the interupted transaction had no influence on the db
     ?start_transactions([B]),
     B ! fun() ->
-		?match([Rec1A], mnesia:read({Tab, 1})),
+		?match([^Rec1A], mnesia:read({Tab, 1})),
 		ok
 	 end,
-    ?match_receive({B, ok}),
+    ?match_receive({^B, ok}),
     B ! end_trans,
-    ?match_receive({B, {atomic, end_trans}}),
+    ?match_receive({^B, {atomic, end_trans}}),
 
     ?verify_mnesia(Nodes, []).
 
@@ -168,9 +168,9 @@ runtime_error_in_middle_of_trans(Config) when is_list(Config) ->
     A ! fun() ->
 		mnesia:write(Rec1A)	% returns ok when successful
 	 end,
-    ?match_receive({A, ok}),
+    ?match_receive({^A, ok}),
     A ! end_trans,
-    ?match_receive({A, {atomic, end_trans}}),
+    ?match_receive({^A, {atomic, end_trans}}),
 
     %% second transaction: store some new objects and abort before the
     %% transaction is finished -> the new changes should be invisable
@@ -180,7 +180,7 @@ runtime_error_in_middle_of_trans(Config) when is_list(Config) ->
                 erlang:error(foo), % that should provoke a runtime error
 		mnesia:write(Rec1C)
 	 end,
-    ?match_receive({A, {aborted, _Reason}}),
+    ?match_receive({^A, {aborted, _Reason}}),
 
     %?match_receive({A, {'EXIT', Msg1}), % A died and sends EXIT
 
@@ -191,12 +191,12 @@ runtime_error_in_middle_of_trans(Config) when is_list(Config) ->
     %% check, whether the interupted transaction had no influence on the db
     ?start_transactions([B]),
     B ! fun() ->
-		?match([Rec1A], mnesia:read({Tab, 1})),
+		?match([^Rec1A], mnesia:read({Tab, 1})),
 		ok
 	 end,
-    ?match_receive({B, ok}),
+    ?match_receive({^B, ok}),
     B ! end_trans,
-    ?match_receive({B, {atomic, end_trans}}),
+    ?match_receive({^B, {atomic, end_trans}}),
 
     ?verify_mnesia(Nodes, []).
 
@@ -220,9 +220,9 @@ kill_self_in_middle_of_trans(Config) when is_list(Config) ->
     A ! fun() ->
 		mnesia:write(Rec1A)	% returns ok when successful
 	 end,
-    ?match_receive({A, ok}),
+    ?match_receive({^A, ok}),
     A ! end_trans,
-    ?match_receive({A, {atomic, end_trans}}),
+    ?match_receive({^A, {atomic, end_trans}}),
 
     %% second transaction: store some new objects and abort before the
     %% transaction is finished -> the new changes should be invisable
@@ -247,12 +247,12 @@ kill_self_in_middle_of_trans(Config) when is_list(Config) ->
     %% check, whether the interupted transaction had no influence on the db
     ?start_transactions([B]),
     B ! fun() ->
-		?match([Rec1A], mnesia:read({Tab, 1})),
+		?match([^Rec1A], mnesia:read({Tab, 1})),
 		ok
 	 end,
-    ?match_receive({B, ok}),
+    ?match_receive({^B, ok}),
     B ! end_trans,
-    ?match_receive({B, {atomic, end_trans}}),
+    ?match_receive({^B, {atomic, end_trans}}),
 
     ?verify_mnesia(Nodes, []).
 
@@ -276,9 +276,9 @@ throw_in_middle_of_trans(Config) when is_list(Config) ->
     A ! fun() ->
 		mnesia:write(Rec1A)	% returns ok when successful
 	 end,
-    ?match_receive({A, ok}),
+    ?match_receive({^A, ok}),
     A ! end_trans,
-    ?match_receive({A, {atomic, end_trans}}),
+    ?match_receive({^A, {atomic, end_trans}}),
 
     %% second transaction: store some new objects and abort before the
     %% transaction is finished -> the new changes should be invisable
@@ -288,7 +288,7 @@ throw_in_middle_of_trans(Config) when is_list(Config) ->
                 throw(exit_transactian_by_a_throw),
 		mnesia:write(Rec1C)
 	 end,
-    ?match_receive({A, {aborted, {throw, exit_transactian_by_a_throw}}}),
+    ?match_receive({^A, {aborted, {throw, exit_transactian_by_a_throw}}}),
     % A ! end_trans, % is A still alive ?
     % ?match_receive({A, {atomic, end_trans}}), % {'EXIT', Pid, normal}
 
@@ -300,12 +300,12 @@ throw_in_middle_of_trans(Config) when is_list(Config) ->
     %% check, whether the interupted transaction had no influence on the db
     ?start_transactions([B]),
     B ! fun() ->
-		?match([Rec1A], mnesia:read({Tab, 1})),
+		?match([^Rec1A], mnesia:read({Tab, 1})),
 		ok
 	 end,
-    ?match_receive({B, ok}),
+    ?match_receive({^B, ok}),
     B ! end_trans,
-    ?match_receive({B, {atomic, end_trans}}),
+    ?match_receive({^B, {atomic, end_trans}}),
 
     ?verify_mnesia(Nodes, []).
 
@@ -330,7 +330,7 @@ mnesia_down_during_infinite_trans(Config) when is_list(Config) ->
     %% Obtain a write lock and wait forever
     RecA = {Tab, 1, test_not_ok},
     A1 ! fun() -> mnesia:write(RecA) end,
-    ?match_receive({A1, ok}),
+    ?match_receive({^A1, ok}),
 
     A1 ! fun() -> process_flag(trap_exit, true), timer:sleep(infinity) end,
     ?match_receive(timeout),
@@ -343,7 +343,7 @@ mnesia_down_during_infinite_trans(Config) when is_list(Config) ->
     mnesia_test_lib:kill_mnesia([Node1]),
 
     %% Second transaction gets the read lock
-    ?match_receive({A2, [{Tab, 1, test_ok}]}),
+    ?match_receive({^A2, [{^Tab, 1, test_ok}]}),
     exit(A1, kill), % Needed since we trap exit
 
     ?verify_mnesia([Node2], [Node1]).
@@ -564,9 +564,9 @@ start_lock_waiter(BlockOpA, BlockOpB, Config) ->
 	    BlockOpA == rt, BlockOpB /= sw -> 1;
 	    true -> 2
 	end,
-    receive {'EXIT', B, _} -> ok
+    receive {'EXIT', ^B, _} -> ok
     after 3000 -> ?error("Timeout~n", []) end,
-    receive {'EXIT', A, Exp1} -> ?match({atomic, ExpectedCounter}, Exp1)
+    receive {'EXIT', ^A, Exp1} -> ?match({atomic, ^ExpectedCounter}, Exp1)
     after 3000 -> ?error("Timeout~n", []) end,
 
     %% the expected result depends on the transaction of
@@ -580,7 +580,7 @@ start_lock_waiter(BlockOpA, BlockOpB, Config) ->
 	    _all_other -> {TabName, 1, c}
 	end,
 
-    ?match({atomic, [ExpectedResult]},
+    ?match({atomic, [^ExpectedResult]},
 	   mnesia:transaction(fun() -> mnesia:read({TabName, 1}) end, 100)),
     ?verify_mnesia([N1], [N2]).
 
@@ -724,7 +724,7 @@ start_restart_check(RestartOp, ReplicaNeed, Config) ->
 	    end,
 
     A = spawn_link(N1, ?MODULE, perform_restarted_transaction, [Fun_A]),
-    ?match_receive({A,fun_a_is_blocked}),
+    ?match_receive({^A,fun_a_is_blocked}),
 
     %% mnesia shall be killed at that node, where A is reading
     %% the information from
@@ -757,7 +757,7 @@ start_restart_check(RestartOp, ReplicaNeed, Config) ->
 		end
 	end,
 
-    ?match_receive(ExpectedMsg),
+    ?match_receive(^ExpectedMsg),
 
     %% now mnesia has to be started again on the node KillNode
     %% because the next test suite will need it
@@ -780,7 +780,7 @@ start_restart_check(RestartOp, ReplicaNeed, Config) ->
 		end
 	end,
 
-    ?match({atomic, ExpectedResult},
+    ?match({atomic, ^ExpectedResult},
 	   mnesia:transaction(fun() -> mnesia:read({TabName, 1}) end,100)),
     ?verify_mnesia(Nodes, []).
 

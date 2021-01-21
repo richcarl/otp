@@ -84,7 +84,7 @@ is_app(App) ->
     LibDir = code:lib_dir(App),
     File = filename:join([LibDir, "ebin", atom_to_list(App) ++ ".app"]),
     case file:consult(File) of
-	{ok, [{application, App, AppFile}]} ->
+	{ok, [{application, ^App, AppFile}]} ->
 	    {ok, AppFile};
 	{error, {LineNo, Mod, Code}} ->
 	    IoList = lists:concat([File, ":", LineNo, ": ",
@@ -247,8 +247,8 @@ undef_funcs(Config) when is_list(Config) ->
     ok             = xref:set_default(XRef,
                                       [{verbose,false},{warnings,false}]),
     XRefName       = undef_funcs_make_name(App, xref_name),
-    {ok, XRefName} = xref:add_release(XRef, Root, {name,XRefName}),
-    {ok, App}      = xref:replace_application(XRef, App, EbinDir),
+    {ok, ^XRefName} = xref:add_release(XRef, Root, {name,XRefName}),
+    {ok, ^App}      = xref:replace_application(XRef, App, EbinDir),
     {ok, Undefs}   = xref:analyze(XRef, undefined_function_calls),
     xref:stop(XRef),
     analyze_undefined_function_calls(Undefs, Mods, []).
@@ -289,7 +289,7 @@ key1search(Key, L) ->
     case lists:keysearch(Key, 1, L) of
 	false ->
 	    fail({not_found, Key, L});
-	{value, {Key, Value}} ->
+	{value, {^Key, Value}} ->
 	    Value
     end.
 

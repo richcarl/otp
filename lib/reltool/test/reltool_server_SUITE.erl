@@ -242,19 +242,19 @@ get_config(_Config) ->
             ?msym({ok,{sys,[{incl_cond, exclude},
                             {erts,[]},
                             {app,kernel,[{incl_cond,include},{mod,_,[]}|_]},
-                            {app,sasl,[{incl_cond,include},{vsn,SaslVsn},
+                            {app,sasl,[{incl_cond,include},{vsn,^SaslVsn},
                                        {mod,_,[]}|_]},
-                            {app,stdlib,[{incl_cond,include},{lib_dir,StdLibDir},
+                            {app,stdlib,[{incl_cond,include},{lib_dir,^StdLibDir},
                                          {mod,_,[]}|_]}]}},
                   reltool:get_config(Pid,false,true));
         _ ->
-            ?msym({ok,{sys,[{lib_dirs,Libs},
+            ?msym({ok,{sys,[{lib_dirs,^Libs},
                             {incl_cond, exclude},
                             {erts,[]},
                             {app,kernel,[{incl_cond,include},{mod,_,[]}|_]},
-                            {app,sasl,[{incl_cond,include},{vsn,SaslVsn},
+                            {app,sasl,[{incl_cond,include},{vsn,^SaslVsn},
                                        {mod,_,[]}|_]},
-                            {app,stdlib,[{incl_cond,include},{lib_dir,StdLibDir},
+                            {app,stdlib,[{incl_cond,include},{lib_dir,^StdLibDir},
                                          {mod,_,[]}|_]}]}},
                   reltool:get_config(Pid,false,true))
     end,
@@ -266,10 +266,10 @@ get_config(_Config) ->
 		    {incl_cond,exclude},
 		    {app,kernel,[{incl_cond,include},{vsn,undefined},
 				 {lib_dir,undefined}]},
-		    {app,sasl,[{incl_cond,include},{vsn,SaslVsn},
+		    {app,sasl,[{incl_cond,include},{vsn,^SaslVsn},
 			       {lib_dir,undefined}]},
 		    {app,stdlib,[{incl_cond,include},{vsn,undefined},
-				 {lib_dir,StdLibDir}]},
+				 {lib_dir,^StdLibDir}]},
 		    {boot_rel,"start_clean"},
                     {rel,"no_dot_erlang","1.0",[],[{load_dot_erlang,false}]},
 		    {rel,"start_clean","1.0",[],[{load_dot_erlang,true}]},
@@ -295,12 +295,12 @@ get_config(_Config) ->
 		    {mod_cond,all},
 		    {incl_cond,exclude},
 		    {erts,[]},
-		    {app,kernel,[{incl_cond,include},{vsn,KVsn},
-				 {lib_dir,KLibDir},{mod,_,[]}|_]},
-		    {app,sasl,[{incl_cond,include},{vsn,SaslVsn},
-				 {lib_dir,SaslLibDir},{mod,_,[]}|_]},
-		    {app,stdlib,[{incl_cond,include},{vsn,StdVsn},
-				 {lib_dir,StdLibDir},{mod,_,[]}|_]},
+		    {app,kernel,[{incl_cond,include},{vsn,^KVsn},
+				 {lib_dir,^KLibDir},{mod,_,[]}|_]},
+		    {app,sasl,[{incl_cond,include},{vsn,^SaslVsn},
+				 {lib_dir,^SaslLibDir},{mod,_,[]}|_]},
+		    {app,stdlib,[{incl_cond,include},{vsn,^StdVsn},
+				 {lib_dir,^StdLibDir},{mod,_,[]}|_]},
 		    {boot_rel,"start_clean"},
                     {rel,"no_dot_erlang","1.0",[],[{load_dot_erlang,false}]},
 		    {rel,"start_clean","1.0",[],[{load_dot_erlang,true}]},
@@ -431,7 +431,7 @@ create_release_sort(Config) ->
 	  {app,tools,[{mod_cond,app},{incl_cond,include}]}
          ]},
     %% Generate release
-    ?msym({ok, {release, {RelName1, RelVsn},
+    ?msym({ok, {release, {^RelName1, ^RelVsn},
 		{erts, _},
 		[{kernel, _},
 		 {stdlib, _},
@@ -439,7 +439,7 @@ create_release_sort(Config) ->
 		 {sasl, _}]}},
 	  reltool:get_rel([{config, Sys}], RelName1)),
 
-    ?msym({ok, {release, {RelName2, RelVsn},
+    ?msym({ok, {release, {^RelName2, ^RelVsn},
 		{erts, _},
 		[{kernel, _},
 		 {stdlib, _},
@@ -447,7 +447,7 @@ create_release_sort(Config) ->
 		 {mnesia, _}]}},
 	  reltool:get_rel([{config, Sys}], RelName2)),
 
-    ?msym({ok, {release, {RelName3, RelVsn},
+    ?msym({ok, {release, {^RelName3, ^RelVsn},
 		{erts, _},
 		[{kernel, _},
 		 {stdlib, _},
@@ -458,7 +458,7 @@ create_release_sort(Config) ->
 		 {mnesia, _}]}},
 	  reltool:get_rel([{config, Sys}], RelName3)),
 
-    ?msym({ok, {release, {RelName4, RelVsn},
+    ?msym({ok, {release, {^RelName4, ^RelVsn},
 		{erts, _},
 		[{kernel, _},
 		 {stdlib, _},
@@ -474,7 +474,7 @@ create_release_sort(Config) ->
 	"in the app file: [tools]"},
        reltool:get_rel([{config, Sys}], RelName5)),
 
-    ?msym({ok, {release, {RelName6, RelVsn},
+    ?msym({ok, {release, {^RelName6, ^RelVsn},
 		{erts, _},
 		[{kernel, _},
 		 {stdlib, _},
@@ -488,7 +488,7 @@ create_release_sort(Config) ->
     ?m({error,"Circular dependencies: [x,y]"},
        reltool:get_rel([{config, Sys}], RelName7)),
 
-    ?msym({ok, {release, {RelName8, RelVsn},
+    ?msym({ok, {release, {^RelName8, ^RelVsn},
 		{erts, _},
 		[{kernel, _},
 		 {stdlib, _},
@@ -499,7 +499,7 @@ create_release_sort(Config) ->
 		 {z, _, [mnesia,tools]}]}},
        reltool:get_rel([{config, Sys}], RelName8)),
 
-    ?msym({ok,{release,{RelName9,RelVsn},
+    ?msym({ok,{release,{^RelName9,^RelVsn},
 	       {erts,_},
 	       [{kernel,_},
 		{stdlib,_},
@@ -508,7 +508,7 @@ create_release_sort(Config) ->
 		{z,_,[]}]}},
 	  reltool:get_rel([{config, Sys}], RelName9)),
 
-    ?msym({ok,{release,{RelName10,RelVsn},
+    ?msym({ok,{release,{^RelName10,^RelVsn},
 	       {erts,_},
 	       [{kernel,_},
 		{stdlib,_},
@@ -517,7 +517,7 @@ create_release_sort(Config) ->
 		{z,_,[]}]}},
 	  reltool:get_rel([{config, Sys}], RelName10)),
 
-    ?msym({ok,{release,{RelName11,RelVsn},
+    ?msym({ok,{release,{^RelName11,^RelVsn},
 	       {erts,_},
 	       [{kernel,_},
 		{stdlib,_},
@@ -573,7 +573,7 @@ create_script(_Config) ->
     ?m(equal, diff_script(OrigScript, Script)),
 
     %% A release defaults to load_dot_erlang == true
-    {script, {RelName, RelVsn}, ScriptInstructions} = Script,
+    {script, {^RelName, ^RelVsn}, ScriptInstructions} = Script,
     ?m(true, lists:member({apply,{c,erlangrc,[]}}, ScriptInstructions)),
 
     %% Stop server
@@ -595,7 +595,7 @@ create_script_without_dot_erlang(_Config) ->
 
     %% Confirm that load_dot_erlang == false was used
     {ok, Script} = ?msym({ok, _}, reltool:get_script(Pid, RelName)),
-    {script, {RelName, RelVsn}, ScriptInstructions} = Script,
+    {script, {^RelName, ^RelVsn}, ScriptInstructions} = Script,
     ?m(false, lists:member({apply,{c,erlangrc,[]}}, ScriptInstructions)),
 
     %% Stop server
@@ -1258,9 +1258,9 @@ create_slim(Config) ->
 	    "-boot", filename:join(TargetRelVsnDir,RelName),
 	    "-sasl", "releases_dir", "\""++TargetRelDir++"\""],
     {ok, Node} = ?msym({ok, _}, start_node(?NODE_NAME, Erl, Args)),
-    ?msym(RootDir, rpc:call(Node, code, root_dir, [])),
+    ?msym(^RootDir, rpc:call(Node, code, root_dir, [])),
     wait_for_app(Node,sasl,50),
-    ?msym([{RelName,RelVsn,_,permanent}],
+    ?msym([{^RelName,^RelVsn,_,permanent}],
 	  rpc:call(Node,release_handler,which_releases,[])),
     ?msym(ok, stop_node(Node)),
 
@@ -1505,9 +1505,10 @@ get_apps(_Config) ->
 
     {ok,Sasl} = ?msym({ok,#app{name=sasl}}, reltool_server:get_app(Pid,sasl)),
     {ok,[#app{name=kernel},
-	 #app{name=sasl}=Sasl,
+	 #app{name=sasl}=Sasl1,
 	 #app{name=stdlib}] = White} =
 	?msym({ok,_}, reltool_server:get_apps(Pid,whitelist)),
+    ^Sasl1 = Sasl,
     {ok,[#app{name=runtime_tools}] = Black} =
 	?msym({ok,_}, reltool_server:get_apps(Pid,blacklist)),
 
@@ -1560,7 +1561,7 @@ get_sys(_Config) ->
     {ok, Pid} = ?msym({ok, _}, reltool:start_server([{config, Sys}])),
 
     RootDir = code:root_dir(),
-    ?msym({ok,#sys{root_dir=RootDir,apps=undefined}},reltool_server:get_sys(Pid)),
+    ?msym({ok,#sys{root_dir=^RootDir,apps=undefined}},reltool_server:get_sys(Pid)),
 
     ?m(ok, reltool:stop(Pid)),
     ok.
@@ -2121,7 +2122,7 @@ gen_rel_files(_Config) ->
     Rel = RelName ++ ".rel",
     Boot = RelName ++ ".boot",
     {ok,Files} = ?msym({ok,_}, file:list_dir(Dir)),
-    [Boot,Rel,Script] = lists:sort(Files),
+    [^Boot,^Rel,^Script] = lists:sort(Files),
 
     %% Check that contents is reasonable
     {ok,[S]} = ?msym({ok,[{script,_,_}]},file:consult(filename:join(Dir,Script))),
@@ -2163,7 +2164,7 @@ save_config(Config) ->
                              {app,stdlib,[{incl_cond,include},{mod,_,[]}|_]}]}]},
                   file:consult(Derivates));
         _ ->
-            ?msym({ok,[{sys,[{lib_dirs,Libs},
+            ?msym({ok,[{sys,[{lib_dirs,^Libs},
                              {incl_cond, exclude},
                              {erts,[]},
                              {app,kernel,[{incl_cond,include},{mod,_,[]}|_]},
@@ -2219,12 +2220,12 @@ save_config(Config) ->
 		     {mod_cond,all},
 		     {incl_cond,exclude},
 		     {erts,[]},
-		     {app,kernel,[{incl_cond,include},{vsn,KVsn},
-				  {lib_dir,KLibDir},{mod,_,[]}|_]},
-		     {app,sasl,[{incl_cond,include},{vsn,SaslVsn},
-				{lib_dir,SaslLibDir},{mod,_,[]}|_]},
-		     {app,stdlib,[{incl_cond,include},{vsn,StdVsn},
-				  {lib_dir,StdLibDir},{mod,_,[]}|_]},
+		     {app,kernel,[{incl_cond,include},{vsn,^KVsn},
+				  {lib_dir,^KLibDir},{mod,_,[]}|_]},
+		     {app,sasl,[{incl_cond,include},{vsn,^SaslVsn},
+				{lib_dir,^SaslLibDir},{mod,_,[]}|_]},
+		     {app,stdlib,[{incl_cond,include},{vsn,^StdVsn},
+				  {lib_dir,^StdLibDir},{mod,_,[]}|_]},
 		     {boot_rel,"start_clean"},
                      {rel,"no_dot_erlang","1.0",[],[{load_dot_erlang,false}]},
 		     {rel,"start_clean","1.0",[],[{load_dot_erlang,true}]},
@@ -2477,11 +2478,11 @@ use_selected_vsn(Config) ->
 		 {app,stdlib,[{incl_cond,include}]},
 		 {app,b,[{incl_cond,include},{vsn,"1.0"}]}]},
     {ok, Pid1} = ?msym({ok, _}, reltool:start_server([{config, Sys1}])),
-    {ok,B11} = ?msym({ok,#app{vsn="1.0",active_dir=B1Dir}},
+    {ok,B11} = ?msym({ok,#app{vsn="1.0",active_dir=^B1Dir}},
 		     reltool_server:get_app(Pid1,b)),
 
     %% Change from a pre-selected vsn to use a specific dir
-    ?msym({ok, #app{vsn ="3.0", active_dir = B3Dir}, []},
+    ?msym({ok, #app{vsn ="3.0", active_dir = ^B3Dir}, []},
 	  reltool_server:set_app(Pid1,
 				 B11#app{active_dir = B3Dir,
 					 use_selected_vsn = dir,
@@ -2500,11 +2501,11 @@ use_selected_vsn(Config) ->
 		 {app,stdlib,[{incl_cond,include}]},
 		 {app,b,[{incl_cond,include},{vsn,"1.0"}]}]},
     {ok, Pid2} = ?msym({ok, _}, reltool:start_server([{config, Sys2}])),
-    {ok,B21} = ?msym({ok,#app{vsn="1.0",active_dir=B1Dir}},
+    {ok,B21} = ?msym({ok,#app{vsn="1.0",active_dir=^B1Dir}},
 		     reltool_server:get_app(Pid2,b)),
 
     %% Change from a pre-selected vsn to use latest
-    ?msym({ok, #app{vsn ="3.0", active_dir = B3Dir}, []},
+    ?msym({ok, #app{vsn ="3.0", active_dir = ^B3Dir}, []},
 	  reltool_server:set_app(Pid2,
 				 B21#app{use_selected_vsn=undefined,
 					 label = undefined,
@@ -2523,35 +2524,35 @@ use_selected_vsn(Config) ->
 		 {app,b,[{incl_cond,include},{lib_dir,B2Dir}]}]},
     {ok, Pid3} = ?msym({ok, _}, reltool:start_server([{config, Sys3}])),
 %    test_server:break("Pid3 = list_to_pid(\""++pid_to_list(Pid3)++"\")."),
-    {ok,B31} = ?msym({ok,#app{vsn="2.0",active_dir=B2Dir}},
+    {ok,B31} = ?msym({ok,#app{vsn="2.0",active_dir=^B2Dir}},
 		     reltool_server:get_app(Pid3,b)),
     %% Change from a pre-selected dir to use latest
-    {ok,B32,_} = ?msym({ok, #app{vsn ="3.0", active_dir = B3Dir}, []},
+    {ok,B32,_} = ?msym({ok, #app{vsn ="3.0", active_dir = ^B3Dir}, []},
 		       reltool_server:set_app(Pid3,
 					      B31#app{use_selected_vsn=undefined,
 						      label = undefined,
 						      vsn = undefined,
 						      info = undefined})),
     %% Change back to use selected dir
-    {ok,B33,_} = ?msym({ok, #app{vsn ="3.0", active_dir = B3Dir}, []},
+    {ok,B33,_} = ?msym({ok, #app{vsn ="3.0", active_dir = ^B3Dir}, []},
 		       reltool_server:set_app(Pid3,
 					      B32#app{use_selected_vsn = dir})),
     %% use dir 1
-    {ok,B34,_} = ?msym({ok, #app{vsn ="1.0", active_dir = B1Dir}, []},
+    {ok,B34,_} = ?msym({ok, #app{vsn ="1.0", active_dir = ^B1Dir}, []},
 		       reltool_server:set_app(Pid3,
 					      B33#app{active_dir = B1Dir,
 						      label = undefined,
 						      vsn = undefined,
 						      info = undefined})),
     %% use dir 2
-    {ok,B35,_} = ?msym({ok, #app{vsn ="2.0", active_dir = B2Dir}, []},
+    {ok,B35,_} = ?msym({ok, #app{vsn ="2.0", active_dir = ^B2Dir}, []},
 		       reltool_server:set_app(Pid3,
 					      B34#app{active_dir = B2Dir,
 						      label = undefined,
 						      vsn = undefined,
 						      info = undefined})),
     %% use dir 3
-    ?msym({ok, #app{vsn ="3.0", active_dir = B3Dir}, []},
+    ?msym({ok, #app{vsn ="3.0", active_dir = ^B3Dir}, []},
 	  reltool_server:set_app(Pid3,
 				 B35#app{active_dir = B3Dir,
 					 label = undefined,
@@ -2576,7 +2577,7 @@ use_selected_vsn_relative_path(Config) ->
 		{app,b,[{incl_cond,include},{lib_dir,".."}]}]},
     {ok, Pid} = ?msym({ok, _}, reltool:start_server([{config, Sys}])),
 
-    ?msym({ok,#app{vsn="1.0",active_dir=LibDir}},reltool_server:get_app(Pid,b)),
+    ?msym({ok,#app{vsn="1.0",active_dir=^LibDir}},reltool_server:get_app(Pid,b)),
 
     ?m(ok, reltool:stop(Pid)),
 
@@ -2601,7 +2602,7 @@ non_standard_vsn_id(Config) ->
 		 {app,stdlib,[{incl_cond,include}]},
 		 {app,b,[{incl_cond,include}]}]},
     {ok, Pid1} = ?msym({ok, _}, reltool:start_server([{config, Sys1}])),
-    ?msym({ok,#app{vsn="first",active_dir=B1Dir,sorted_dirs=[B1Dir,B2Dir]}},
+    ?msym({ok,#app{vsn="first",active_dir=^B1Dir,sorted_dirs=[^B1Dir,^B2Dir]}},
 	  reltool_server:get_app(Pid1,b)),
 
     %%-----------------------------------------------------------------
@@ -2613,7 +2614,7 @@ non_standard_vsn_id(Config) ->
 		 {app,stdlib,[{incl_cond,include}]},
 		 {app,b,[{incl_cond,include},{vsn,"second"}]}]},
     {ok, Pid2} = ?msym({ok, _}, reltool:start_server([{config, Sys2}])),
-    ?msym({ok,#app{vsn="second",active_dir=B2Dir,sorted_dirs=[B1Dir,B2Dir]}},
+    ?msym({ok,#app{vsn="second",active_dir=^B2Dir,sorted_dirs=[^B1Dir,^B2Dir]}},
 	  reltool_server:get_app(Pid2,b)),
    ok.
 
@@ -2671,7 +2672,7 @@ diff_script({script, Rel, Commands1}, {script, Rel, Commands2}) ->
 	equal ->
 	    Loaded = diff_get_prim_load(Commands1),
 	    case diff_get_prim_load(Commands2) of
-		Loaded ->
+		^Loaded ->
 		    equal;
 		Other ->
 		    io:format("Only loaded by systools: ~p",
@@ -2872,15 +2873,15 @@ do_run(Dir, Cmd) ->
     Port = open_port({spawn,Cmd}, [exit_status,eof,in,{env,Env}]),
     Res = get_data(Port, []),
     receive
-        {Port,{exit_status,ExitCode}} ->
+        {^Port,{exit_status,ExitCode}} ->
             s2b([Res,"ExitCode:"++integer_to_list(ExitCode)])
     end.
 
 get_data(Port, SoFar) ->
     receive
-        {Port,{data,Bytes}} ->
+        {^Port,{data,Bytes}} ->
             get_data(Port, [SoFar|Bytes]);
-        {Port,eof} ->
+        {^Port,eof} ->
             erlang:port_close(Port),
             SoFar
     end.

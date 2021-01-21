@@ -145,7 +145,7 @@ opt_net_load(ExampleMod) ->
 
 opt_net_load([Node | Nodes], ExampleMod, Res) ->
     case rpc:call(Node, ?MODULE, opt_load, [ExampleMod]) of
-	{module, ExampleMod} ->
+	{module, ^ExampleMod} ->
 	    opt_net_load(Nodes, ExampleMod, Res);
 	{error, Reason} ->
 	    Error = {opt_net_load, ExampleMod, Node, Reason},

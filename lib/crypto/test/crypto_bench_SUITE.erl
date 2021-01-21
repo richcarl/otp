@@ -377,8 +377,8 @@ get_base_values(["+DT:"++Sdt,
                  "+R:"++Sr
                  |T], Crypto, Acc) ->
     [Crypto0,_GoalSecs0,BlockSize0] = string:tokens(Sdt, ":"),
-    [Nblocks0,Crypto0,RealSecs0] = string:tokens(Sr, ":"),
-    Crypto = fix_possible_space_bug(Crypto0),
+    [Nblocks0,^Crypto0,RealSecs0] = string:tokens(Sr, ":"),
+    ^Crypto = fix_possible_space_bug(Crypto0),
     RealSecs = list_to_float(RealSecs0),
     BlockSize = list_to_integer(BlockSize0),
     Nblocks = list_to_integer(Nblocks0),

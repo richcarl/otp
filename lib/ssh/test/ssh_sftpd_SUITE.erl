@@ -234,23 +234,23 @@ open_close_file(Config) when is_list(Config) ->
     {Cm, Channel} = proplists:get_value(sftp, Config),
     ReqId = 0,
 
-    {ok, <<?SSH_FXP_HANDLE, ?UINT32(ReqId), Handle/binary>>, _} =
+    {ok, <<?SSH_FXP_HANDLE, ?UINT32(^ReqId), Handle/binary>>, _} =
 	open_file(FileName, Cm, Channel, ReqId,
 		  ?ACE4_READ_DATA  bor ?ACE4_READ_ATTRIBUTES,
 		  ?SSH_FXF_OPEN_EXISTING),
 
-    {ok, <<?SSH_FXP_STATUS, ?UINT32(ReqId),
+    {ok, <<?SSH_FXP_STATUS, ?UINT32(^ReqId),
 	  ?UINT32(?SSH_FX_OK), _/binary>>, _} = close(Handle, ReqId,
 						      Cm, Channel),
     NewReqId = ReqId + 1,
-    {ok, <<?SSH_FXP_STATUS, ?UINT32(ReqId),
+    {ok, <<?SSH_FXP_STATUS, ?UINT32(^ReqId),
 	  ?UINT32(?SSH_FX_INVALID_HANDLE), _/binary>>, _} =
 	close(Handle, ReqId, Cm, Channel),
 
     NewReqId1 = NewReqId + 1,
     %%  {ok, <<?SSH_FXP_STATUS, ?UINT32(NewReqId),  % Ver 6 we have 5
     %% 	   ?UINT32(?SSH_FX_FILE_IS_A_DIRECTORY), _/binary>>, _} =
-    {ok, <<?SSH_FXP_STATUS, ?UINT32(NewReqId1),
+    {ok, <<?SSH_FXP_STATUS, ?UINT32(^NewReqId1),
 	  ?UINT32(?SSH_FX_FAILURE), _/binary>>, _} =
 	open_file(PrivDir, Cm, Channel, NewReqId1,
 		  ?ACE4_READ_DATA  bor ?ACE4_READ_ATTRIBUTES,
@@ -262,28 +262,28 @@ ver3_open_flags(Config) when is_list(Config) ->
     {Cm, Channel} = proplists:get_value(sftp, Config),
     ReqId = 0,
     
-    {ok, <<?SSH_FXP_HANDLE, ?UINT32(ReqId), Handle/binary>>, _} =
+    {ok, <<?SSH_FXP_HANDLE, ?UINT32(^ReqId), Handle/binary>>, _} =
 	open_file_v3(FileName, Cm, Channel, ReqId,
 		     ?SSH_FXF_CREAT bor ?SSH_FXF_TRUNC),
-    {ok, <<?SSH_FXP_STATUS, ?UINT32(ReqId),
+    {ok, <<?SSH_FXP_STATUS, ?UINT32(^ReqId),
 	   ?UINT32(?SSH_FX_OK), _/binary>>, _} = close(Handle, ReqId,
 						       Cm, Channel),
    
     NewFileName = filename:join(PrivDir, "not_exist2.txt"),
     NewReqId = ReqId + 1, 
-    {ok, <<?SSH_FXP_HANDLE, ?UINT32(NewReqId), NewHandle/binary>>, _} =
+    {ok, <<?SSH_FXP_HANDLE, ?UINT32(^NewReqId), NewHandle/binary>>, _} =
      	open_file_v3(NewFileName, Cm, Channel, NewReqId,
     		     ?SSH_FXF_CREAT bor ?SSH_FXF_EXCL),
-    {ok, <<?SSH_FXP_STATUS, ?UINT32(NewReqId),
+    {ok, <<?SSH_FXP_STATUS, ?UINT32(^NewReqId),
     	   ?UINT32(?SSH_FX_OK), _/binary>>, _} = close(NewHandle, NewReqId,
     						       Cm, Channel),
     
     NewFileName1 = filename:join(PrivDir, "test.txt"),
     NewReqId1 = NewReqId + 1,
-    {ok, <<?SSH_FXP_HANDLE, ?UINT32(NewReqId1), NewHandle1/binary>>, _} =
+    {ok, <<?SSH_FXP_HANDLE, ?UINT32(^NewReqId1), NewHandle1/binary>>, _} =
 	open_file_v3(NewFileName1, Cm, Channel, NewReqId1,
 		     ?SSH_FXF_READ bor ?SSH_FXF_WRITE bor ?SSH_FXF_APPEND),
-     {ok, <<?SSH_FXP_STATUS, ?UINT32(NewReqId1),
+     {ok, <<?SSH_FXP_STATUS, ?UINT32(^NewReqId1),
 	   ?UINT32(?SSH_FX_OK), _/binary>>, _} = close(NewHandle1, NewReqId1,
 						       Cm, Channel).
     
@@ -294,20 +294,20 @@ open_close_dir(Config) when is_list(Config) ->
     FileName = filename:join(PrivDir, "test.txt"),
     ReqId = 0,
 
-    {ok, <<?SSH_FXP_HANDLE, ?UINT32(ReqId), Handle/binary>>, _} =
+    {ok, <<?SSH_FXP_HANDLE, ?UINT32(^ReqId), Handle/binary>>, _} =
 	open_dir(PrivDir, Cm, Channel, ReqId),
 
-    {ok, <<?SSH_FXP_STATUS, ?UINT32(ReqId),
+    {ok, <<?SSH_FXP_STATUS, ?UINT32(^ReqId),
 	  ?UINT32(?SSH_FX_OK), _/binary>>, _} = close(Handle, ReqId,
 						      Cm, Channel),
 
     NewReqId = 1,
     case open_dir(FileName, Cm, Channel, NewReqId) of
-	{ok, <<?SSH_FXP_STATUS, ?UINT32(NewReqId),
+	{ok, <<?SSH_FXP_STATUS, ?UINT32(^NewReqId),
 	      ?UINT32(?SSH_FX_NOT_A_DIRECTORY), _/binary>>, _} ->
 	    %% Only if server is using vsn > 5.
 	    ok;
-	{ok, <<?SSH_FXP_STATUS, ?UINT32(NewReqId),
+	{ok, <<?SSH_FXP_STATUS, ?UINT32(^NewReqId),
 	      ?UINT32(?SSH_FX_FAILURE), _/binary>>, _} ->
 	    ok
     end.
@@ -320,25 +320,25 @@ read_file(Config) when is_list(Config) ->
     ReqId = 0,
     {Cm, Channel} = proplists:get_value(sftp, Config),
 
-    {ok, <<?SSH_FXP_HANDLE, ?UINT32(ReqId), Handle/binary>>, _} =
+    {ok, <<?SSH_FXP_HANDLE, ?UINT32(^ReqId), Handle/binary>>, _} =
 	open_file(FileName, Cm, Channel, ReqId,
 		  ?ACE4_READ_DATA  bor ?ACE4_READ_ATTRIBUTES,
 		  ?SSH_FXF_OPEN_EXISTING),
 
     NewReqId = 1,
 
-    {ok, <<?SSH_FXP_DATA, ?UINT32(NewReqId), ?UINT32(_Length),
+    {ok, <<?SSH_FXP_DATA, ?UINT32(^NewReqId), ?UINT32(_Length),
 	  Data/binary>>, _} =
 	read_file(Handle, 100, 0, Cm, Channel, NewReqId),
 
-    {ok, Data} = file:read_file(FileName).
+    {ok, ^Data} = file:read_file(FileName).
 
 %%--------------------------------------------------------------------
 read_dir(Config) when is_list(Config) ->
     PrivDir = proplists:get_value(priv_dir, Config),
     {Cm, Channel} = proplists:get_value(sftp, Config),
     ReqId = 0,
-    {ok, <<?SSH_FXP_HANDLE, ?UINT32(ReqId), Handle/binary>>, _} =
+    {ok, <<?SSH_FXP_HANDLE, ?UINT32(^ReqId), Handle/binary>>, _} =
 	open_dir(PrivDir, Cm, Channel, ReqId),
     ok = read_dir(Handle, Cm, Channel, ReqId).
 
@@ -350,7 +350,7 @@ write_file(Config) when is_list(Config) ->
     ReqId = 0,
     {Cm, Channel} = proplists:get_value(sftp, Config),
 
-    {ok, <<?SSH_FXP_HANDLE, ?UINT32(ReqId), Handle/binary>>, _} =
+    {ok, <<?SSH_FXP_HANDLE, ?UINT32(^ReqId), Handle/binary>>, _} =
 	open_file(FileName, Cm, Channel, ReqId,
 		  ?ACE4_WRITE_DATA  bor ?ACE4_WRITE_ATTRIBUTES,
 		  ?SSH_FXF_OPEN_EXISTING),
@@ -358,11 +358,11 @@ write_file(Config) when is_list(Config) ->
     NewReqId = 1,
     Data =  list_to_binary("Write file test"),
 
-    {ok, <<?SSH_FXP_STATUS, ?UINT32(NewReqId), ?UINT32(?SSH_FX_OK),
+    {ok, <<?SSH_FXP_STATUS, ?UINT32(^NewReqId), ?UINT32(?SSH_FX_OK),
 	  _/binary>>, _}
 	= write_file(Handle, Data, 0, Cm, Channel, NewReqId),
 
-    {ok, Data} = file:read_file(FileName).
+    {ok, ^Data} = file:read_file(FileName).
 
 %%--------------------------------------------------------------------
 remove_file(Config) when is_list(Config) ->
@@ -371,7 +371,7 @@ remove_file(Config) when is_list(Config) ->
     ReqId = 0,
     {Cm, Channel} = proplists:get_value(sftp, Config),
 
-    {ok, <<?SSH_FXP_STATUS, ?UINT32(ReqId),
+    {ok, <<?SSH_FXP_STATUS, ?UINT32(^ReqId),
 	   ?UINT32(?SSH_FX_OK), _/binary>>, _} =
 	remove(FileName, Cm, Channel, ReqId),
 
@@ -379,7 +379,7 @@ remove_file(Config) when is_list(Config) ->
     %%  {ok, <<?SSH_FXP_STATUS, ?UINT32(NewReqId), % ver 6 we have 5
     %% 	  ?UINT32(?SSH_FX_FILE_IS_A_DIRECTORY ), _/binary>>, _} =
 
-    {ok, <<?SSH_FXP_STATUS, ?UINT32(NewReqId),
+    {ok, <<?SSH_FXP_STATUS, ?UINT32(^NewReqId),
 	  ?UINT32(?SSH_FX_FAILURE), _/binary>>, _} =
 	remove(PrivDir, Cm, Channel, NewReqId).
 
@@ -391,13 +391,13 @@ rename_file(Config) when is_list(Config) ->
     ReqId = 0,
     {Cm, Channel} = proplists:get_value(sftp, Config),
 
-    {ok, <<?SSH_FXP_STATUS, ?UINT32(ReqId),
+    {ok, <<?SSH_FXP_STATUS, ?UINT32(^ReqId),
 	  ?UINT32(?SSH_FX_OK), _/binary>>, _} =
 	rename(FileName, NewFileName, Cm, Channel, ReqId, 6, 0),
 
     NewReqId = ReqId + 1,
 
-    {ok, <<?SSH_FXP_STATUS, ?UINT32(NewReqId),
+    {ok, <<?SSH_FXP_STATUS, ?UINT32(^NewReqId),
 	  ?UINT32(?SSH_FX_OK), _/binary>>, _} =
 	rename(NewFileName, FileName, Cm, Channel, NewReqId, 6,
 	       ?SSH_FXP_RENAME_OVERWRITE),
@@ -406,14 +406,14 @@ rename_file(Config) when is_list(Config) ->
     file:copy(FileName, NewFileName),
 
     %% No owerwrite
-    {ok, <<?SSH_FXP_STATUS, ?UINT32(NewReqId1),
+    {ok, <<?SSH_FXP_STATUS, ?UINT32(^NewReqId1),
 	  ?UINT32(?SSH_FX_FILE_ALREADY_EXISTS), _/binary>>, _} =
 	rename(FileName, NewFileName, Cm, Channel, NewReqId1, 6,
 	       ?SSH_FXP_RENAME_NATIVE),
 
     NewReqId2 = NewReqId1 + 1,
 
-    {ok, <<?SSH_FXP_STATUS, ?UINT32(NewReqId2),
+    {ok, <<?SSH_FXP_STATUS, ?UINT32(^NewReqId2),
 	  ?UINT32(?SSH_FX_OP_UNSUPPORTED), _/binary>>, _} =
 	rename(FileName, NewFileName, Cm, Channel, NewReqId2, 6,
 	       ?SSH_FXP_RENAME_ATOMIC).
@@ -424,19 +424,19 @@ mk_rm_dir(Config) when is_list(Config) ->
     {Cm, Channel} = proplists:get_value(sftp, Config),
     DirName = filename:join(PrivDir, "test"),
     ReqId = 0,
-    {ok, <<?SSH_FXP_STATUS, ?UINT32(ReqId), ?UINT32(?SSH_FX_OK),
+    {ok, <<?SSH_FXP_STATUS, ?UINT32(^ReqId), ?UINT32(?SSH_FX_OK),
 	  _/binary>>, _} = mkdir(DirName, Cm, Channel, ReqId),
 
     NewReqId = 1,
-    {ok, <<?SSH_FXP_STATUS, ?UINT32(NewReqId), ?UINT32(?SSH_FX_FILE_ALREADY_EXISTS),
+    {ok, <<?SSH_FXP_STATUS, ?UINT32(^NewReqId), ?UINT32(?SSH_FX_FILE_ALREADY_EXISTS),
 	  _/binary>>, _} = mkdir(DirName, Cm, Channel, NewReqId),
 
     NewReqId1 = 2,
-    {ok, <<?SSH_FXP_STATUS, ?UINT32(NewReqId1), ?UINT32(?SSH_FX_OK),
+    {ok, <<?SSH_FXP_STATUS, ?UINT32(^NewReqId1), ?UINT32(?SSH_FX_OK),
 	    _/binary>>, _} = rmdir(DirName, Cm, Channel, NewReqId1),
 
     NewReqId2 = 3,
-    {ok, <<?SSH_FXP_STATUS, ?UINT32(NewReqId2), ?UINT32(?SSH_FX_NO_SUCH_FILE),
+    {ok, <<?SSH_FXP_STATUS, ?UINT32(^NewReqId2), ?UINT32(?SSH_FX_NO_SUCH_FILE),
 	    _/binary>>, _} = rmdir(DirName, Cm, Channel, NewReqId2).
 
 %%--------------------------------------------------------------------
@@ -453,7 +453,7 @@ real_path(Config) when is_list(Config) ->
 
 	    OrigPath = filename:join(TestDir, ".."),
 
-	    {ok, <<?SSH_FXP_NAME, ?UINT32(ReqId), ?UINT32(_), ?UINT32(Len),
+	    {ok, <<?SSH_FXP_NAME, ?UINT32(^ReqId), ?UINT32(_), ?UINT32(Len),
 	     Path:Len/binary, _/binary>>, _}
 		= real_path(OrigPath, Cm, Channel, ReqId),
 
@@ -477,12 +477,12 @@ links(Config) when is_list(Config) ->
 	    FileName = filename:join(PrivDir, "test.txt"),
 	    LinkFileName = filename:join(PrivDir, "link_test.txt"),
 
-	    {ok, <<?SSH_FXP_STATUS, ?UINT32(ReqId),
+	    {ok, <<?SSH_FXP_STATUS, ?UINT32(^ReqId),
 		  ?UINT32(?SSH_FX_OK), _/binary>>, _} =
 		create_link(LinkFileName, FileName, Cm, Channel, ReqId),
 
 	    NewReqId = 1,
-	    {ok, <<?SSH_FXP_NAME, ?UINT32(NewReqId), ?UINT32(_), ?UINT32(Len),
+	    {ok, <<?SSH_FXP_NAME, ?UINT32(^NewReqId), ?UINT32(_), ?UINT32(Len),
 		  Path:Len/binary, _/binary>>, _}
 		= read_link(LinkFileName, Cm, Channel, NewReqId),
 
@@ -542,17 +542,17 @@ retrieve_attributes(Config) when is_list(Config) ->
 			  false = ?is_set(?SSH_FILEXFER_ATTR_EXTENDED,
 					Flags),
 
-			  <<?UINT32(_Flags), ?BYTE(Type),
-			   ?UINT64(Size),
+			  <<?UINT32(_Flags), ?BYTE(^Type),
+			   ?UINT64(^Size),
 			   ?UINT32(OwnerLen), BinOwner:OwnerLen/binary,
 			   ?UINT32(GroupLen), BinGroup:GroupLen/binary,
-			   ?UINT32(Permissions),
-			   ?UINT64(Atime),
-			   ?UINT64(Ctime),
-			   ?UINT64(Mtime)>> = Value,
+			   ?UINT32(^Permissions),
+			   ?UINT64(^Atime),
+			   ?UINT64(^Ctime),
+			   ?UINT64(^Mtime)>> = Value,
 
-			  Owner = list_to_integer(binary_to_list(BinOwner)),
-			  Group =  list_to_integer(binary_to_list(BinGroup))
+			  ^Owner = list_to_integer(binary_to_list(BinOwner)),
+			  ^Group =  list_to_integer(binary_to_list(BinGroup))
 		  end, AttrValues).
 
 %%--------------------------------------------------------------------
@@ -576,7 +576,7 @@ set_attributes(Config) when is_list(Config) ->
 	    Atters = [?uint32(Flags), ?byte(?SSH_FILEXFER_TYPE_REGULAR),
 		      ?uint32(Permissions)],
 
-	    {ok, <<?SSH_FXP_STATUS, ?UINT32(ReqId),
+	    {ok, <<?SSH_FXP_STATUS, ?UINT32(^ReqId),
 		   ?UINT32(?SSH_FX_OK), _/binary>>, _} =
 		set_attributes_file(FileName, Atters, Cm, Channel, ReqId),
 
@@ -591,7 +591,7 @@ set_attributes(Config) when is_list(Config) ->
 
 	    ct:log("Try to open the file"),
 	    NewReqId = 2,
-	    {ok, <<?SSH_FXP_HANDLE, ?UINT32(NewReqId), Handle/binary>>, _} =
+	    {ok, <<?SSH_FXP_HANDLE, ?UINT32(^NewReqId), Handle/binary>>, _} =
 		open_file(FileName, Cm, Channel, NewReqId,
 			  ?ACE4_READ_DATA bor ?ACE4_WRITE_ATTRIBUTES,
 			  ?SSH_FXF_OPEN_EXISTING),
@@ -603,12 +603,12 @@ set_attributes(Config) when is_list(Config) ->
 
 	    ct:log("Set original permissions on the now open file"),
 
-	    {ok, <<?SSH_FXP_STATUS, ?UINT32(NewReqId1),
+	    {ok, <<?SSH_FXP_STATUS, ?UINT32(^NewReqId1),
 		   ?UINT32(?SSH_FX_OK), _/binary>>, _} =
 		set_attributes_open_file(Handle, NewAtters, Cm, Channel, NewReqId1),
 
 	    {ok, NewFileInfo1} = file:read_file_info(FileName),
-	    OrigPermissions = NewFileInfo1#file_info.mode
+	    ^OrigPermissions = NewFileInfo1#file_info.mode
     end.
 
 %%--------------------------------------------------------------------
@@ -619,7 +619,7 @@ ver3_rename(Config) when is_list(Config) ->
     ReqId = 0,
     {Cm, Channel} = proplists:get_value(sftp, Config),
 
-    {ok, <<?SSH_FXP_STATUS, ?UINT32(ReqId),
+    {ok, <<?SSH_FXP_STATUS, ?UINT32(^ReqId),
 	  ?UINT32(?SSH_FX_OK), _/binary>>, _} =
 	rename(FileName, NewFileName, Cm, Channel, ReqId, 3, 0).
 
@@ -632,16 +632,16 @@ relpath(Config) when is_list(Config) ->
 	{win32, _} ->
 	    {skip,  "Not a relevant test on windows"};
 	_ ->
-	    {ok, <<?SSH_FXP_NAME, ?UINT32(ReqId), ?UINT32(_), ?UINT32(Len),
+	    {ok, <<?SSH_FXP_NAME, ?UINT32(^ReqId), ?UINT32(_), ?UINT32(Len),
 		  Root:Len/binary, _/binary>>, _}
 		= real_path("/..", Cm, Channel, ReqId),
 
 	    <<"/">> = Root,
 
-	    {ok, <<?SSH_FXP_NAME, ?UINT32(ReqId), ?UINT32(_), ?UINT32(Len),
+	    {ok, <<?SSH_FXP_NAME, ?UINT32(^ReqId), ?UINT32(_), ?UINT32(^Len),
 		  Path:Len/binary, _/binary>>, _}
 		= real_path("/usr/bin/../..", Cm, Channel, ReqId),
-	    Root = Path
+	    ^Root = Path
     end.
 
 %%--------------------------------------------------------------------
@@ -652,25 +652,25 @@ sshd_read_file(Config) when is_list(Config) ->
     ReqId = 0,
     {Cm, Channel} = proplists:get_value(sftp, Config),
 
-    {ok, <<?SSH_FXP_HANDLE, ?UINT32(ReqId), Handle/binary>>, _} =
+    {ok, <<?SSH_FXP_HANDLE, ?UINT32(^ReqId), Handle/binary>>, _} =
 	open_file(FileName, Cm, Channel, ReqId,
 		  ?ACE4_READ_DATA  bor ?ACE4_READ_ATTRIBUTES,
 		  ?SSH_FXF_OPEN_EXISTING),
 
     NewReqId = 1,
 
-    {ok, <<?SSH_FXP_DATA, ?UINT32(NewReqId), ?UINT32(_Length),
+    {ok, <<?SSH_FXP_DATA, ?UINT32(^NewReqId), ?UINT32(_Length),
 	  Data/binary>>, _} =
 	read_file(Handle, 100, 0, Cm, Channel, NewReqId),
 
-    {ok, Data} = file:read_file(FileName).
+    {ok, ^Data} = file:read_file(FileName).
 %%--------------------------------------------------------------------
 ver6_basic(Config) when is_list(Config) ->
     PrivDir =  proplists:get_value(priv_dir, Config),
     %FileName = filename:join(PrivDir, "test.txt"),
     {Cm, Channel} = proplists:get_value(sftp, Config),
     ReqId = 0,
-    {ok, <<?SSH_FXP_STATUS, ?UINT32(ReqId),  % Ver 6 we have 5
+    {ok, <<?SSH_FXP_STATUS, ?UINT32(^ReqId),  % Ver 6 we have 5
 	   ?UINT32(?SSH_FX_FILE_IS_A_DIRECTORY), _/binary>>, _} =
 	open_file(PrivDir, Cm, Channel, ReqId,
 		  ?ACE4_READ_DATA  bor ?ACE4_READ_ATTRIBUTES,
@@ -698,9 +698,9 @@ try_access(Path, Cm, Channel, ReqId) ->
                   ?SSH_FXF_OPEN_EXISTING),
     ct:log("Try open ~p -> ~p",[Path,Return]),
     case Return of
-        {ok, <<?SSH_FXP_HANDLE, ?UINT32(ReqId), _Handle0/binary>>, _} ->
+        {ok, <<?SSH_FXP_HANDLE, ?UINT32(^ReqId), _Handle0/binary>>, _} ->
             ct:fail("Could open a file outside the root tree!");
-        {ok, <<?SSH_FXP_STATUS, ?UINT32(ReqId), ?UINT32(Code), Rest/binary>>, <<>>} ->
+        {ok, <<?SSH_FXP_STATUS, ?UINT32(^ReqId), ?UINT32(Code), Rest/binary>>, <<>>} ->
             case Code of
                 ?SSH_FX_FILE_IS_A_DIRECTORY ->
                     ct:log("Got the expected SSH_FX_FILE_IS_A_DIRECTORY status",[]),
@@ -733,17 +733,17 @@ root_with_cwd(Config) when is_list(Config) ->
     ok = file:write_file(FilePath ++ "2", <<>>),
     {Cm, Channel} = proplists:get_value(sftp, Config),
     ReqId0 = 0,
-    {ok, <<?SSH_FXP_HANDLE, ?UINT32(ReqId0), _Handle0/binary>>, _} =
+    {ok, <<?SSH_FXP_HANDLE, ?UINT32(^ReqId0), _Handle0/binary>>, _} =
 	open_file(FileName ++ "0", Cm, Channel, ReqId0,
 		  ?ACE4_READ_DATA  bor ?ACE4_READ_ATTRIBUTES,
 		  ?SSH_FXF_OPEN_EXISTING),
     ReqId1 = 1,
-    {ok, <<?SSH_FXP_HANDLE, ?UINT32(ReqId1), _Handle1/binary>>, _} =
+    {ok, <<?SSH_FXP_HANDLE, ?UINT32(^ReqId1), _Handle1/binary>>, _} =
 	open_file("./" ++ FileName ++ "1", Cm, Channel, ReqId1,
 		  ?ACE4_READ_DATA  bor ?ACE4_READ_ATTRIBUTES,
 		  ?SSH_FXF_OPEN_EXISTING),
     ReqId2 = 2,
-    {ok, <<?SSH_FXP_HANDLE, ?UINT32(ReqId2), _Handle2/binary>>, _} =
+    {ok, <<?SSH_FXP_HANDLE, ?UINT32(^ReqId2), _Handle2/binary>>, _} =
 	open_file("/home/" ++ FileName ++ "2", Cm, Channel, ReqId2,
 		  ?ACE4_READ_DATA  bor ?ACE4_READ_ATTRIBUTES,
 		  ?SSH_FXF_OPEN_EXISTING).
@@ -757,7 +757,7 @@ relative_path(Config) when is_list(Config) ->
     ok = file:write_file(FilePath, <<>>),
     {Cm, Channel} = proplists:get_value(sftp, Config),
     ReqId = 0,
-    {ok, <<?SSH_FXP_HANDLE, ?UINT32(ReqId), _Handle/binary>>, _} =
+    {ok, <<?SSH_FXP_HANDLE, ?UINT32(^ReqId), _Handle/binary>>, _} =
         open_file(FileName, Cm, Channel, ReqId,
                   ?ACE4_READ_DATA  bor ?ACE4_READ_ATTRIBUTES,
                   ?SSH_FXF_OPEN_EXISTING).
@@ -771,7 +771,7 @@ open_file_dir_v5(Config) when is_list(Config) ->
     ok = file:make_dir(FilePath),
     {Cm, Channel} = proplists:get_value(sftp, Config),
     ReqId = 0,
-    {ok, <<?SSH_FXP_STATUS, ?UINT32(ReqId),
+    {ok, <<?SSH_FXP_STATUS, ?UINT32(^ReqId),
 	   ?UINT32(?SSH_FX_FAILURE), _/binary>>, _} =
         open_file(FileName, Cm, Channel, ReqId,
                   ?ACE4_READ_DATA  bor ?ACE4_READ_ATTRIBUTES,
@@ -786,7 +786,7 @@ open_file_dir_v6(Config) when is_list(Config) ->
     ok = file:make_dir(FilePath),
     {Cm, Channel} = proplists:get_value(sftp, Config),
     ReqId = 0,
-    {ok, <<?SSH_FXP_STATUS, ?UINT32(ReqId),
+    {ok, <<?SSH_FXP_STATUS, ?UINT32(^ReqId),
 	   ?UINT32(?SSH_FX_FILE_IS_A_DIRECTORY), _/binary>>, _} =
         open_file(FileName, Cm, Channel, ReqId,
                   ?ACE4_READ_DATA  bor ?ACE4_READ_ATTRIBUTES,
@@ -817,18 +817,18 @@ reply(Cm, Channel) ->
 
 reply(Cm, Channel, RBuf) ->
     receive
-	{ssh_cm, Cm, {data, Channel, 0, Data}} ->
+	{ssh_cm, ^Cm, {data, ^Channel, 0, Data}} ->
 	    case <<RBuf/binary, Data/binary>> of
 		<<?UINT32(Len),Reply:Len/binary,Rest/binary>> ->
 		    {ok, Reply, Rest};
 		RBuf2 ->
 		    reply(Cm, Channel, RBuf2)
 	    end;
-	{ssh_cm, Cm, {eof, Channel}} ->
+	{ssh_cm, ^Cm, {eof, ^Channel}} ->
 	    eof;
-	{ssh_cm, Cm, {closed, Channel}} ->
+	{ssh_cm, ^Cm, {closed, ^Channel}} ->
 	    closed;
-	{ssh_cm, Cm, Msg} ->
+	{ssh_cm, ^Cm, Msg} ->
 	    ct:fail(Msg)
     after 
 	90000 -> ct:fail("timeout ~p:~p",[?MODULE,?LINE])
@@ -931,12 +931,12 @@ read_dir(Handle, Cm, Channel, ReqId) ->
     ssh_connection:send(Cm, Channel, <<?UINT32(Size),
 			      ?SSH_FXP_READDIR, Data/binary>>),
     case reply(Cm, Channel) of
-	{ok, <<?SSH_FXP_NAME, ?UINT32(ReqId), ?UINT32(Count),
+	{ok, <<?SSH_FXP_NAME, ?UINT32(^ReqId), ?UINT32(Count),
 	       ?UINT32(Len), Listing:Len/binary, _/binary>>, _} ->
 	    ct:log("Count: ~p Listing: ~p~n",
 			       [Count, binary_to_list(Listing)]),
 	    read_dir(Handle, Cm, Channel, ReqId);
-	{ok, <<?SSH_FXP_STATUS, ?UINT32(ReqId),
+	{ok, <<?SSH_FXP_STATUS, ?UINT32(^ReqId),
 	      ?UINT32(?SSH_FX_EOF), _/binary>>, _}  ->
 	    ok
     end.
@@ -1019,23 +1019,23 @@ retrive_attributes(FileName, Cm, Channel, ReqId) ->
 
     Attr =  ?SSH_FILEXFER_ATTR_SIZE,
 
-    {ok, <<?SSH_FXP_ATTRS, ?UINT32(ReqId), Value/binary>>, _}
+    {ok, <<?SSH_FXP_ATTRS, ?UINT32(^ReqId), Value/binary>>, _}
 	= retrive_attributes_file(FileName, Attr,
 				  Cm, Channel, ReqId),
 
     NewReqId = ReqId + 1,
-    {ok, <<?SSH_FXP_ATTRS, ?UINT32(NewReqId), Value1/binary>>, _}
+    {ok, <<?SSH_FXP_ATTRS, ?UINT32(^NewReqId), Value1/binary>>, _}
 	= retrive_attributes_file_or_link(FileName,
 					  Attr, Cm, Channel, NewReqId),
 
     NewReqId1 = NewReqId + 1,
-    {ok, <<?SSH_FXP_HANDLE, ?UINT32(NewReqId1), Handle/binary>>, _} =
+    {ok, <<?SSH_FXP_HANDLE, ?UINT32(^NewReqId1), Handle/binary>>, _} =
 	open_file(FileName, Cm, Channel, NewReqId1,
 		  ?ACE4_READ_DATA  bor ?ACE4_READ_ATTRIBUTES,
 		  ?SSH_FXF_OPEN_EXISTING),
 
     NewReqId2 = NewReqId1 + 1,
-    {ok, <<?SSH_FXP_ATTRS, ?UINT32(NewReqId2), Value2/binary>>, _}
+    {ok, <<?SSH_FXP_ATTRS, ?UINT32(^NewReqId2), Value2/binary>>, _}
 	= retrive_attributes_open_file(Handle, Attr, Cm, Channel, NewReqId2),
 
     [Value, Value1, Value2].

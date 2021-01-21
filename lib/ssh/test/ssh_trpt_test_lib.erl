@@ -210,7 +210,7 @@ op('$$', S) ->
 
 op_val(E, S0) ->
     case catch op(E, S0) of
-	{'EXIT',{function_clause,[{ssh_trpt_test_lib,op,[E,S0],_}|_]}} ->
+	{'EXIT',{function_clause,[{ssh_trpt_test_lib,op,[^E,^S0],_}|_]}} ->
 	    {instantiate(E,S0), S0};
 	S=#s{} ->
 	    {S#s.return_value, S};
@@ -238,7 +238,7 @@ match({'or',[P]}, V, S) -> match(P,V,S);
 match({'or',[Ph|Pt]}, V, S) -> 
     case match(Ph,V,S) of
         false -> match({'or',Pt}, V, S);
-	{true,S} -> {true,S}
+	{true,^S} -> {true,S}
     end;
 	      
 match(P, V, S) when is_atom(P) ->
@@ -589,11 +589,11 @@ set_prefix_if_trouble(Msg, _) ->
 receive_poll(S=#s{socket=Sock}) -> 
     inet:setopts(Sock, [{active,once}]),
     receive
-	{tcp,Sock,Data} ->
+	{tcp,^Sock,Data} ->
 	    receive_poll( S#s{encrypted_data_buffer = <<(S#s.encrypted_data_buffer)/binary,Data/binary>>} );
-	{tcp_closed,Sock} ->
+	{tcp_closed,^Sock} ->
 	    throw({tcp,tcp_closed});
-	{tcp_error, Sock, Reason} ->
+	{tcp_error, ^Sock, Reason} ->
 	    throw({tcp,{tcp_error,Reason}})
     after 0 ->
 	    S
@@ -603,11 +603,11 @@ receive_wait(S=#s{socket=Sock,
 		  timeout=Timeout}) -> 
     inet:setopts(Sock, [{active,once}]),
     receive
-	{tcp,Sock,Data} ->
+	{tcp,^Sock,Data} ->
 	    S#s{encrypted_data_buffer = <<(S#s.encrypted_data_buffer)/binary,Data/binary>>};
-	{tcp_closed,Sock} ->
+	{tcp_closed,^Sock} ->
 	    throw({tcp,tcp_closed});
-	{tcp_error, Sock, Reason} ->
+	{tcp_error, ^Sock, Reason} ->
 	    throw({tcp,{tcp_error,Reason}})
     after Timeout ->
 	    fail(receive_timeout,S)
@@ -618,11 +618,11 @@ receive_wait(N, S=#s{socket=Sock,
 		     encrypted_data_buffer=Enc0}) when N>0 ->
     inet:setopts(Sock, [{active,once}]),
     receive
-	{tcp,Sock,Data} ->
+	{tcp,^Sock,Data} ->
 	    receive_wait(N-size(Data), S#s{encrypted_data_buffer = <<Enc0/binary,Data/binary>>});
-	{tcp_closed,Sock} ->
+	{tcp_closed,^Sock} ->
 	    throw({tcp,tcp_closed});
-	{tcp_error, Sock, Reason} ->
+	{tcp_error, ^Sock, Reason} ->
 	    throw({tcp,{tcp_error,Reason}})
     after Timeout ->
 	    fail(receive_timeout, S)

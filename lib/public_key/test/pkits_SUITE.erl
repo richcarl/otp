@@ -836,8 +836,8 @@ run({Chap, Test, Result}, TA) ->
     CertChain = cas(Chap) ++ read_certs(Test),
     Options = path_validation_options(TA, Chap,Test),
     try public_key:pkix_path_validation(TA, CertChain, Options) of
-	{Result, _} -> ok;
-	{error,Result} when Result =/= ok ->
+	{^Result, _} -> ok;
+	{error,^Result} when Result =/= ok ->
 	    ok;
 	{error, Error}  ->
 	    ?error(" ~p ~p~n  Expected ~p got ~p ~n", [Chap, Test, Result, Error]),
@@ -958,7 +958,7 @@ crl_options(_TA, Chap, _Test) ->
 	   (OtpCert, Valid, UserState) when Valid == valid;
 					    Valid == valid_peer ->
 		DerCRLs = UserState#verify_state.crls,
-		Paths =  UserState#verify_state.crl_paths,
+		^Paths =  UserState#verify_state.crl_paths,
 		Crls = [{DerCRL, public_key:der_decode('CertificateList',
 						       DerCRL)} || DerCRL <- DerCRLs],
 
@@ -1076,9 +1076,9 @@ trusted_cert_and_path(_, #'CertificateList'{} = CRL, _, PathDb) ->
     TrustedCert =  public_key:pkix_decode_cert(TrustedDERCert, otp),
 
     case lists:keysearch(CRL, 1, PathDb) of
-	{_, {CRL, [ _| _] = Path}} ->
+	{_, {^CRL, [ _| _] = Path}} ->
 		      {ok, TrustedCert, [TrustedDERCert | Path]};
-	{_, {CRL, []}} ->
+	{_, {^CRL, []}} ->
 	    {ok, TrustedCert, [TrustedDERCert]}
     end.
 

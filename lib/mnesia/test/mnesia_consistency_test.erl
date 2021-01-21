@@ -292,7 +292,7 @@ list2rec(List, [F|Fields], [D|Defaults], Acc) ->
         case lists:keysearch(F, 1, List) of
             false ->
                 {D, List};
-            {value, {F, NewVal}} ->
+            {value, {^F, NewVal}} ->
                 {NewVal, lists:keydelete(F, 1, List)}
         end,
     list2rec(List2, Fields, Defaults, Acc ++ [Val]).
@@ -581,7 +581,7 @@ consistency_after_transform_table(Type, Config) ->
     mnesia:dump_log(),
     
     Ok = lists:duplicate(4, {atomic, ok}),
-    ?match(Ok, [mnesia:transform_table(Tab, fun({T, N, N}) ->  {T, N, N, ok} end,
+    ?match(^Ok, [mnesia:transform_table(Tab, fun({T, N, N}) ->  {T, N, N, ok} end,
 	[k,a,n]) || Tab <- Tabs]),
     [?match([k,a,n], mnesia:table_info(Tab, attributes)) || Tab <- Tabs],
 
@@ -595,7 +595,7 @@ consistency_after_transform_table(Type, Config) ->
     mnesia_test_lib:kill_mnesia(Nodes),
     mnesia_test_lib:start_mnesia(Nodes, Tabs),
     
-    ?match([Tabs, Tabs, Tabs], 
+    ?match([^Tabs, ^Tabs, ^Tabs], 
 	[lists:sort(rpc:call(Node, mnesia,system_info, [tables]) -- [schema]) || Node <- Nodes]),
     
     ?match([[],[],[],[]], [element(2,mnesia:transaction(Filter, [Tab])) || Tab <- Tabs]),
@@ -752,10 +752,10 @@ consistency_after_restore(ReplicaType, Op, Config) ->
 
     timer:sleep(timer:seconds(Delay)),  %% Let changers grab locks
     ?verbose("Doing restore~n", []),
-    ?match(Tabs, Restore(File, [{default_op, Op}])),
+    ?match(^Tabs, Restore(File, [{default_op, Op}])),
 
     Collect = fun(Msg, Acc) ->
-		      receive Msg -> Acc
+		      receive ^Msg -> Acc
 		      after 10000 -> [Msg|Acc]
 		      end
 	      end,
@@ -792,18 +792,18 @@ change_tab(Father, Tab, Test) ->
     Update = fun() ->
 		     Time = erlang:system_time(seconds) band 16#FF,
 		     case put(time, Time) of
-			 Time -> ok;
+			 ^Time -> ok;
 			 _ -> io:format("~p ~p ~p sec~n", [self(), Tab, Time])
 		     end,
 		     case mnesia:read({Tab, Key}) of
-			 [{Tab, Key, 1}] ->  quit;
-			 [{Tab, Key, _N}] -> mnesia:write({Tab, Key, 3})
+			 [{^Tab, ^Key, 1}] ->  quit;
+			 [{^Tab, ^Key, _N}] -> mnesia:write({Tab, Key, 3})
 		     end
 	     end,
     case mnesia:transaction(Update) of
 	{atomic, quit} ->
 	    exit(Tab);
-	{aborted, {no_exists, Tab}} when Test == recreate_tables -> %% I'll allow this
+	{aborted, {no_exists, ^Tab}} when Test == recreate_tables -> %% I'll allow this
 	    change_tab(Father, Tab, Test);
 	{atomic, ok} ->
 	    change_tab(Father, Tab, Test)
@@ -945,7 +945,7 @@ updates_during_checkpoint_iteration(ReplicaType,NodeConfig,Config) ->
 
     do_changes_during_backup(TpcbConfigRec),
 
-    ?match_receive({A,ok}),
+    ?match_receive({^A,ok}),
 
     timer:sleep(timer:seconds(Delay)), 
     ?match(ok, mnesia:install_fallback(File)),
@@ -1017,29 +1017,29 @@ load_table_with_activated_checkpoint(Type, Config) ->
     A ! fun () ->
 		mnesia:table_info(Tab,checkpoints)
 	end,
-    ?match_receive({A,[CPName]}),
+    ?match_receive({^A,[^CPName]}),
     
     B ! fun () ->
 		mnesia:table_info(Tab,checkpoints)
 	end,
-    ?match_receive({B,[CPName]}),    
+    ?match_receive({^B,[^CPName]}),    
     
     %%--- check, whether both retainers are consistent    
     ?match(ok, mnesia:dirty_write({Tab, 1, 815})),       
     A ! fun () ->
 		mnesia:backup_checkpoint(CPName, load_table_a)
 	end,
-    ?match_receive({A,ok}),
+    ?match_receive({^A,ok}),
     B ! fun () ->
 		mnesia:backup_checkpoint(CPName, load_table_b)
 	end,
-    ?match_receive({B,ok}),
+    ?match_receive({^B,ok}),
     
     Mod = mnesia_backup, %% Assume local files
     List_a =  view(load_table_a, Mod),
     List_b =  view(load_table_b, Mod),
     
-    ?match(List_a, List_b),
+    ?match(^List_a, List_b),
     
     ?match(ok,file:delete(load_table_a)),
     ?match(ok,file:delete(load_table_b)),
@@ -1102,12 +1102,12 @@ add_table_copy_to_table_with_activated_checkpoint(Type,Config) ->
     A ! fun () ->
 		mnesia:table_info(Tab,checkpoints)
 	end,
-    ?match_receive({A,[CPName]}),
+    ?match_receive({^A,[^CPName]}),
 
     B ! fun () ->
 		mnesia:table_info(Tab,checkpoints)
 	end,
-    ?match_receive({B,[CPName]}),
+    ?match_receive({^B,[^CPName]}),
 
     %%--- check, whether both retainers are consistent
 
@@ -1117,18 +1117,18 @@ add_table_copy_to_table_with_activated_checkpoint(Type,Config) ->
     A ! fun () ->
 		mnesia:backup_checkpoint(CPName, add_table_a)
 	end,
-    ?match_receive({A,ok}),
+    ?match_receive({^A,ok}),
     B ! fun () ->
 		mnesia:backup_checkpoint(CPName, add_table_b)
 	end,
-    ?match_receive({B,ok}),
+    ?match_receive({^B,ok}),
 
     Mod = mnesia_backup, %% Assume local files
 
     List_a = view(add_table_a, Mod),
     List_b = view(add_table_b, Mod),
 
-    ?match(List_a, List_b),
+    ?match(^List_a, List_b),
 
     ?match(ok,file:delete(add_table_a)),
     ?match(ok, file:delete(add_table_b)),
@@ -1154,7 +1154,7 @@ inst_fallback_process_dies(Config) when is_list(Config) ->
                      [self(),PrevContext]),
                 TestPid ! {self(),fallback_preswap},
 		case receive_messages([fallback_continue]) of
-		    [{TestPid,fallback_continue}] ->
+		    [{^TestPid,fallback_continue}] ->
 			?deactivate_debug_fun(DebugId),
 			PrevContext+1
 		end
@@ -1180,7 +1180,7 @@ inst_fallback_process_dies(Config) when is_list(Config) ->
     [{AnsPid,fallback_preswap}] = receive_messages([fallback_preswap]),
     exit(A, kill),
     AnsPid ! {self(), fallback_continue},
-    ?match_receive({'EXIT', A, killed}), 
+    ?match_receive({'EXIT', ^A, killed}), 
     timer:sleep(2000),  %% Wait till fallback is installed everywhere
 
     mnesia_test_lib:kill_mnesia(Nodes),    
@@ -1192,9 +1192,9 @@ inst_fallback_process_dies(Config) when is_list(Config) ->
     ?verify_mnesia(Nodes, []).
 
 check_data([N1 | R], Tab) ->
-    ?match([{Tab, 1, 4711}], rpc:call(N1, mnesia, dirty_read, [{Tab, 1}])),
-    ?match([{Tab, 2, 42}],   rpc:call(N1, mnesia, dirty_read, [{Tab, 2}])),
-    ?match([{Tab, 3, 256}],  rpc:call(N1, mnesia, dirty_read, [{Tab, 3}])),
+    ?match([{^Tab, 1, 4711}], rpc:call(N1, mnesia, dirty_read, [{Tab, 1}])),
+    ?match([{^Tab, 2, 42}],   rpc:call(N1, mnesia, dirty_read, [{Tab, 2}])),
+    ?match([{^Tab, 3, 256}],  rpc:call(N1, mnesia, dirty_read, [{Tab, 3}])),
     check_data(R, Tab);
 check_data([], _Tab) -> 
     ok.
@@ -1218,7 +1218,7 @@ fatal_when_inconsistency(Config) when is_list(Config) ->
                      [self(),PrevContext]),
                 TestPid ! {self(),fallback_preswap},
 		case receive_messages([fallback_continue])  of
-		    [{TestPid,fallback_continue}] ->
+		    [{^TestPid,fallback_continue}] ->
 			?deactivate_debug_fun(DebugId),
 			PrevContext+1
 		end
@@ -1250,16 +1250,16 @@ fatal_when_inconsistency(Config) when is_list(Config) ->
     AnsPid ! {self(), fallback_continue},
     ?deactivate_debug_fun(DebugId),
         
-    ?match_receive({A,{error,{"Cannot install fallback",
-			      {'EXIT',AnsPid,killed}}}}),
+    ?match_receive({^A,{error,{"Cannot install fallback",
+			      {'EXIT',^AnsPid,killed}}}}),
     mnesia_test_lib:kill_mnesia(Nodes),
     ?verbose("EXPECTING FATAL from 2 nodes WITH CORE DUMP~n", []),
     
     ?match([], mnesia_test_lib:start_mnesia([Node1],[])),
     is_running(Node1, yes),
-    ?match([{Node2, mnesia, _}], mnesia_test_lib:start_mnesia([Node2],[])),
+    ?match([{^Node2, mnesia, _}], mnesia_test_lib:start_mnesia([Node2],[])),
     is_running(Node2, no),
-    ?match([{Node3, mnesia, _}], mnesia_test_lib:start_mnesia([Node3],[])),
+    ?match([{^Node3, mnesia, _}], mnesia_test_lib:start_mnesia([Node3],[])),
     is_running(Node3, no),
     mnesia_test_lib:kill_mnesia(Nodes),
     
@@ -1275,7 +1275,7 @@ is_running(Node, Shouldbe) ->
     timer:sleep(1000),
     Running = rpc:call(Node, mnesia, system_info, [is_running]),
     case Running of
-	Shouldbe -> ok;
+	^Shouldbe -> ok;
 	_  -> is_running(Node, Shouldbe)
     end.
 
@@ -1304,10 +1304,10 @@ do_uninstall(Config,DebugPoint) ->
     NP2 = node(P2),
     
     {A,B,C} = case node() of
-		  NP1 ->
+		  ^NP1 ->
 		      %%?verbose("first case ~n"),
 		      {P3,P2,P1};
-		  NP2 ->
+		  ^NP2 ->
 		      %%?verbose("second case ~n"),
 		      {P3, P1, P2};
 		  _  ->
@@ -1331,7 +1331,7 @@ do_uninstall(Config,DebugPoint) ->
 				,[self(),PrevContext]),
 		       TestPid ! {self(),uninstall_predelete},
 		       case receive_messages([uninstall_continue]) of
-			   [{TestPid,uninstall_continue}] ->
+			   [{^TestPid,uninstall_continue}] ->
 			       ?deactivate_debug_fun(DebugId),
 			       %%?verbose("uninstall_fallback continues~n"),
 			       PrevContext+1
@@ -1359,7 +1359,7 @@ do_uninstall(Config,DebugPoint) ->
     A ! fun () ->
 		mnesia:install_fallback(install_backup)
 	end,
-    ?match_receive({A,ok}),
+    ?match_receive({^A,ok}),
     
     A ! fun () ->
 		mnesia:uninstall_fallback()
@@ -1378,7 +1378,7 @@ do_uninstall(Config,DebugPoint) ->
     
     AnsPid ! {self(),uninstall_continue},
     
-    ?match_receive({A,ok}),
+    ?match_receive({^A,ok}),
     
     mnesia_test_lib:kill_mnesia(Nodes) ,
     mnesia_test_lib:start_mnesia(Nodes,[Tab]),
@@ -1389,7 +1389,7 @@ do_uninstall(Config,DebugPoint) ->
 		R3 = mnesia:dirty_read({Tab,3}),
 		{R1,R2,R3}
 	end,    
-    ?match_receive({ A, {[],[],[]} }),
+    ?match_receive({ ^A, {[],[],[]} }),
     
     B ! fun () ->
 		R1 = mnesia:dirty_read({Tab,1}),
@@ -1397,7 +1397,7 @@ do_uninstall(Config,DebugPoint) ->
 		R3 = mnesia:dirty_read({Tab,3}),
 		{R1,R2,R3}
 	end,
-    ?match_receive({ B, {[],[],[]} }),
+    ?match_receive({ ^B, {[],[],[]} }),
     
     C ! fun () ->
 		R1 = mnesia:dirty_read({Tab,1}),
@@ -1405,7 +1405,7 @@ do_uninstall(Config,DebugPoint) ->
 		R3 = mnesia:dirty_read({Tab,3}),
 		{R1,R2,R3}
 	end,
-    ?match_receive({ C, {[],[],[]} }),
+    ?match_receive({ ^C, {[],[],[]} }),
     
     ?match(ok,file:delete(install_backup)),
     ?verify_mnesia(Nodes, []).
@@ -1523,7 +1523,7 @@ do_something_during_backup(Action,DebugPoint,Config) ->
 		mnesia:table_info(Tab,where_to_read)
 	end,
 
-    ReadNode_a = receive { A, ReadNode_a_tmp } -> ReadNode_a_tmp end,
+    ReadNode_a = receive { ^A, ReadNode_a_tmp } -> ReadNode_a_tmp end,
     ?verbose("ReadNode ~p ~n",[ReadNode_a]),
     
     global:set_lock({{lock_for_backup, Tab}, self()}, Nodes, infinity),
@@ -1563,25 +1563,25 @@ do_something_during_backup(Action,DebugPoint,Config) ->
         cause_abort -> 
 	    
             %% answer of A when finishing the backup
-            ?match_receive({A,{error, _}}), 
+            ?match_receive({^A,{error, _}}), 
 	    
             ?match({error,{"Cannot install fallback",_}},
                    mnesia:install_fallback(Bak)); 
         _ ->      %% cause_switch, change_schema
 	    
-            ?match_receive({A,ok}), %% answer of A when finishing the backup
+            ?match_receive({^A,ok}), %% answer of A when finishing the backup
 	    
             %% send a fun to that node where mnesia is still running
             WritePid = case ReadNode_a of
-			   Node2 -> C; %%   node(C) == Node3
-			   Node3 -> B
+			   ^Node2 -> C; %%   node(C) == Node3
+			   ^Node3 -> B
                        end,
             WritePid ! fun () ->
 			       ?match(ok, mnesia:dirty_write({Tab, 1, 815})),
 			       ?match(ok, mnesia:dirty_write({Tab, 2, 816})),
 			       ok
                        end,
-            ?match_receive({ WritePid, ok }),  
+            ?match_receive({ ^WritePid, ok }),  
             ?match(ok, mnesia:install_fallback(Bak))
     end,        
     
@@ -1620,5 +1620,5 @@ cross_check_tables([Pid|Rest],Tab,{Val1,Val2,Val3}) ->
               R3 = mnesia:dirty_read({Tab,3}),
               {R1,R2,R3}
             end,
-    ?match_receive({ Pid, {Val1, Val2, Val3 } }),
+    ?match_receive({ ^Pid, {^Val1, ^Val2, ^Val3 } }),
     cross_check_tables(Rest,Tab,{Val1,Val2,Val3} ).   

@@ -209,11 +209,11 @@ dirty_read(Config, Storage) ->
     ?match({'EXIT', _},   mnesia:dirty_read({Tab, 1, 2})), 
     ?match([],  mnesia:dirty_read({Tab, 1})), 
     ?match(ok,  mnesia:dirty_write({Tab, 1, 2})), 
-    ?match([{Tab, 1, 2}],  mnesia:dirty_read({Tab, 1})), 
+    ?match([{^Tab, 1, 2}],  mnesia:dirty_read({Tab, 1})), 
     ?match(ok,  mnesia:dirty_write({Tab, 1, 3})), 
-    ?match([{Tab, 1, 2}, {Tab, 1, 3}],  mnesia:dirty_read({Tab, 1})), 
+    ?match([{^Tab, 1, 2}, {^Tab, 1, 3}],  mnesia:dirty_read({Tab, 1})), 
 
-    ?match({atomic, [{Tab, 1, 2}, {Tab, 1, 3}]},  
+    ?match({atomic, [{^Tab, 1, 2}, {^Tab, 1, 3}]},  
 	   mnesia:transaction(fun() -> mnesia:dirty_read({Tab, 1}) end)), 
 
     ?match(false, mnesia:async_dirty(fun() -> mnesia:is_transaction() end)),
@@ -255,18 +255,18 @@ dirty_update_counter(Config, Storage) ->
     ?match({'EXIT', _},  mnesia:dirty_update_counter({Tab}, 3)), 
     ?match({'EXIT', _},  mnesia:dirty_update_counter({foo, 1}, 3)), 
     ?match(5,  mnesia:dirty_update_counter({Tab, 1}, 3)), 
-    ?match([{Tab, 1, 5}],  mnesia:dirty_read({Tab, 1})), 
+    ?match([{^Tab, 1, 5}],  mnesia:dirty_read({Tab, 1})), 
 
     ?match({atomic, 8},  mnesia:transaction(fun() ->
 	   mnesia:dirty_update_counter({Tab, 1}, 3) end)), 
  
     ?match(1,  mnesia:dirty_update_counter({Tab, foo}, 1)),
-    ?match([{Tab, foo,1}], mnesia:dirty_read({Tab,foo})),
+    ?match([{^Tab, foo,1}], mnesia:dirty_read({Tab,foo})),
 
     ?match({ok,_}, mnesia:subscribe({table, Tab, detailed})),
 
     ?match(2, mnesia:dirty_update_counter({Tab, foo}, 1)),
-    ?match([{Tab, foo,2}], mnesia:dirty_read({Tab,foo})),
+    ?match([{^Tab, foo,2}], mnesia:dirty_read({Tab,foo})),
 
     ?verify_mnesia(Nodes, []).
 
@@ -350,8 +350,8 @@ dirty_delete_object(Config, Storage) ->
     ?match({atomic, ok},  mnesia:transaction(fun() ->
 	   mnesia:dirty_delete_object(OneRec) end)), 
 
-    ?match({'EXIT', {aborted, {bad_type, Tab, _}}}, mnesia:dirty_delete_object(Tab, {Tab, {['_']}, 21})),
-    ?match({'EXIT', {aborted, {bad_type, Tab, _}}}, mnesia:dirty_delete_object(Tab, {Tab, {['$5']}, 21})),
+    ?match({'EXIT', {aborted, {bad_type, ^Tab, _}}}, mnesia:dirty_delete_object(Tab, {Tab, {['_']}, 21})),
+    ?match({'EXIT', {aborted, {bad_type, ^Tab, _}}}, mnesia:dirty_delete_object(Tab, {Tab, {['$5']}, 21})),
 
     ?verify_mnesia(Nodes, []).
 
@@ -385,8 +385,8 @@ dirty_match_object(Config, Storage) ->
     OnePat = {Tab, '$1', 2}, 
     ?match([], mnesia:dirty_match_object(OnePat)), 
     ?match(ok,  mnesia:dirty_write(OneRec)), 
-    ?match([OneRec],  mnesia:dirty_match_object(OnePat)), 
-    ?match({atomic, [OneRec]},  mnesia:transaction(fun() ->
+    ?match([^OneRec],  mnesia:dirty_match_object(OnePat)), 
+    ?match({atomic, [^OneRec]},  mnesia:transaction(fun() ->
 	 mnesia:dirty_match_object(OnePat) end)), 
     
     ?match({'EXIT', _},  mnesia:dirty_match_object({foo, '$1', 2})), 
@@ -426,11 +426,11 @@ dirty_index_match_object(Config, Storage) ->
     OneRec = {Tab, 1, 2}, 
     ?match(ok,  mnesia:dirty_write(OneRec)), 
     
-    ?match([OneRec],  mnesia:dirty_index_match_object({Tab, '$1', 2}, ValPos)), 
+    ?match([^OneRec],  mnesia:dirty_index_match_object({Tab, '$1', 2}, ValPos)), 
     ?match({'EXIT', _},  mnesia:dirty_index_match_object({Tab, '$1', 2}, BadValPos)), 
     ?match({'EXIT', _},  mnesia:dirty_index_match_object({foo, '$1', 2}, ValPos)), 
     ?match({'EXIT', _},  mnesia:dirty_index_match_object({[], '$1', 2}, ValPos)), 
-    ?match({atomic, [OneRec]},  mnesia:transaction(fun() ->
+    ?match({atomic, [^OneRec]},  mnesia:transaction(fun() ->
            mnesia:dirty_index_match_object({Tab, '$1', 2}, ValPos) end)),     
     
     ?verify_mnesia(Nodes, []).
@@ -468,13 +468,13 @@ dirty_index_read(Config, Storage) ->
     OneRec = {Tab, 1, 2}, 
     ?match([],  mnesia:dirty_index_read(Tab, 2, ValPos)), 
     ?match(ok,  mnesia:dirty_write(OneRec)), 
-    ?match([OneRec],  mnesia:dirty_index_read(Tab, 2, ValPos)), 
-    ?match({atomic, [OneRec]},  
+    ?match([^OneRec],  mnesia:dirty_index_read(Tab, 2, ValPos)), 
+    ?match({atomic, [^OneRec]},  
 	   mnesia:transaction(fun() -> mnesia:dirty_index_read(Tab, 2, ValPos) end)),
     ?match(42, mnesia:dirty_update_counter({Tab, 1}, 40)),
-    ?match([{Tab,1,42}], mnesia:dirty_read({Tab, 1})), 
+    ?match([{^Tab,1,42}], mnesia:dirty_read({Tab, 1})), 
     ?match([],  mnesia:dirty_index_read(Tab, 2, ValPos)), 
-    ?match([{Tab, 1, 42}],  mnesia:dirty_index_read(Tab, 42, ValPos)),
+    ?match([{^Tab, 1, 42}],  mnesia:dirty_index_read(Tab, 42, ValPos)),
 
     ?match({'EXIT', _},  mnesia:dirty_index_read(Tab, 2, BadValPos)), 
     ?match({'EXIT', _},  mnesia:dirty_index_read(foo, 2, ValPos)), 
@@ -491,7 +491,7 @@ index_read_loop(Tab, N) when N =< 1000 ->
 		       mnesia:transaction(fun() -> mnesia:write({Tab, 5, 1}) end)
 	       end),
     case mnesia:dirty_match_object({Tab, '_', 1}) of
-	[{Tab, 5, 1}] ->
+	[{^Tab, 5, 1}] ->
 	    index_read_loop(Tab, N+1);
 	Other -> {N, Other}
     end;
@@ -539,26 +539,26 @@ dirty_index_update_set(Config, Storage) ->
 
     ?match([], mnesia:dirty_index_read(Tab, 2, ValPos)),
     ?match(ok, mnesia:dirty_write(Rec1)),
-    ?match([Rec1], mnesia:dirty_index_read(Tab, 2, ValPos)),
+    ?match([^Rec1], mnesia:dirty_index_read(Tab, 2, ValPos)),
 
     ?match(ok, mnesia:dirty_write(Rec2)),
     R1 = mnesia:dirty_index_read(Tab, 2, ValPos),
-    ?match([Rec1, Rec2], lists:sort(R1)),
+    ?match([^Rec1, ^Rec2], lists:sort(R1)),
 
     ?match(ok, mnesia:dirty_write(Rec3)),
     R2 = mnesia:dirty_index_read(Tab, 2, ValPos),
-    ?match([Rec2], lists:sort(R2)),
-    ?match([Rec2], mnesia:dirty_index_match_object(Pat1, ValPos)),
+    ?match([^Rec2], lists:sort(R2)),
+    ?match([^Rec2], mnesia:dirty_index_match_object(Pat1, ValPos)),
 
     {atomic, R3} = mnesia:transaction(fun() -> mnesia:match_object(Pat2) end),
-    ?match([Rec3, Rec2], lists:sort(R3)),
+    ?match([^Rec3, ^Rec2], lists:sort(R3)),
 
     ?match(ok, mnesia:dirty_write(Rec4)),
     R4 = mnesia:dirty_index_read(Tab, 2, ValPos),
-    ?match([Rec2, Rec4], lists:sort(R4)),
+    ?match([^Rec2, ^Rec4], lists:sort(R4)),
 
     ?match(ok, mnesia:dirty_delete({Tab, 4})),
-    ?match([Rec2], mnesia:dirty_index_read(Tab, 2, ValPos)),
+    ?match([^Rec2], mnesia:dirty_index_read(Tab, 2, ValPos)),
 
     ?match({atomic, ok}, mnesia:del_table_index(Tab, ValPos)),
     ?match({atomic, ok}, mnesia:transaction(fun() -> mnesia:write(Rec4) end)),
@@ -566,34 +566,34 @@ dirty_index_update_set(Config, Storage) ->
     ?match({atomic, ok}, mnesia:add_table_index(Tab, ValPos2)),
 
     R5 = mnesia:dirty_match_object(Pat2),
-    ?match([Rec3, Rec2, Rec4], lists:sort(R5)),
+    ?match([^Rec3, ^Rec2, ^Rec4], lists:sort(R5)),
 
     R6 = mnesia:dirty_index_read(Tab, 2, ValPos),
-    ?match([Rec2, Rec4], lists:sort(R6)),
+    ?match([^Rec2, ^Rec4], lists:sort(R6)),
     ?match([], mnesia:dirty_index_read(Tab, {4,14}, ValPos2)),
     R7 = mnesia:dirty_index_read(Tab, 14, ValPos2),
-    ?match([Rec3, Rec2, Rec4], lists:sort(R7)),
+    ?match([^Rec3, ^Rec2, ^Rec4], lists:sort(R7)),
 
     ?match({atomic, ok}, mnesia:transaction(fun() -> mnesia:write(Rec1) end)),
     R8 = mnesia:dirty_index_read(Tab, 2, ValPos),
-    ?match([Rec1, Rec2, Rec4], lists:sort(R8)),
-    ?match([Rec1], mnesia:dirty_index_read(Tab, {4,14}, ValPos2)),
-    ?match([Rec1], mnesia:dirty_match_object(Pat3)),
-    ?match([Rec1], mnesia:dirty_index_match_object(Pat3, ValPos2)),
+    ?match([^Rec1, ^Rec2, ^Rec4], lists:sort(R8)),
+    ?match([^Rec1], mnesia:dirty_index_read(Tab, {4,14}, ValPos2)),
+    ?match([^Rec1], mnesia:dirty_match_object(Pat3)),
+    ?match([^Rec1], mnesia:dirty_index_match_object(Pat3, ValPos2)),
 
     R9 = mnesia:dirty_index_read(Tab, 14, ValPos2),
-    ?match([Rec2, Rec4], lists:sort(R9)),
+    ?match([^Rec2, ^Rec4], lists:sort(R9)),
 
     ?match({atomic, ok}, mnesia:transaction(fun() -> mnesia:delete_object(Rec2) end)),
     R10 = mnesia:dirty_index_read(Tab, 2, ValPos),
-    ?match([Rec1, Rec4], lists:sort(R10)),
-    ?match([Rec1], mnesia:dirty_index_read(Tab, {4,14}, ValPos2)),
-    ?match([Rec4], mnesia:dirty_index_read(Tab, 14, ValPos2)),
+    ?match([^Rec1, ^Rec4], lists:sort(R10)),
+    ?match([^Rec1], mnesia:dirty_index_read(Tab, {4,14}, ValPos2)),
+    ?match([^Rec4], mnesia:dirty_index_read(Tab, 14, ValPos2)),
 
     ?match(ok, mnesia:dirty_delete({Tab, 4})),
     R11 = mnesia:dirty_index_read(Tab, 2, ValPos),
-    ?match([Rec1], lists:sort(R11)),
-    ?match([Rec1], mnesia:dirty_index_read(Tab, {4,14}, ValPos2)),
+    ?match([^Rec1], lists:sort(R11)),
+    ?match([^Rec1], mnesia:dirty_index_read(Tab, {4,14}, ValPos2)),
     ?match([], mnesia:dirty_index_read(Tab, 14, ValPos2)),
     
     ?verify_mnesia(Nodes, []).
@@ -636,37 +636,37 @@ dirty_index_update_bag(Config, Storage) ->
     %% Simple Index
     ?match([], mnesia:dirty_index_read(Tab, 2, ValPos)),
     ?match(ok, mnesia:dirty_write(Rec1)),
-    ?match([Rec1], mnesia:dirty_index_read(Tab, 2, ValPos)),
+    ?match([^Rec1], mnesia:dirty_index_read(Tab, 2, ValPos)),
 
     ?match(ok, mnesia:dirty_delete_object(Rec5)),
-    ?match([Rec1], mnesia:dirty_index_read(Tab, 2, ValPos)),
+    ?match([^Rec1], mnesia:dirty_index_read(Tab, 2, ValPos)),
 
     ?match({atomic, ok}, mnesia:transaction(fun() -> mnesia:write(Rec2) end)), 
     R1 = mnesia:dirty_index_read(Tab, 2, ValPos),
-    ?match([Rec1, Rec2], lists:sort(R1)),
+    ?match([^Rec1, ^Rec2], lists:sort(R1)),
 
     ?match(ok, mnesia:dirty_write(Rec3)),
     R2 = mnesia:dirty_index_read(Tab, 2, ValPos),
-    ?match([Rec1, Rec2], lists:sort(R2)),
+    ?match([^Rec1, ^Rec2], lists:sort(R2)),
 
     R3 = mnesia:dirty_index_match_object(Pat1, ValPos),
-    ?match([Rec1, Rec2], lists:sort(R3)),
+    ?match([^Rec1, ^Rec2], lists:sort(R3)),
  
     R4 = mnesia:dirty_match_object(Pat2),
-    ?match([Rec1, Rec3, Rec2], lists:sort(R4)),
+    ?match([^Rec1, ^Rec3, ^Rec2], lists:sort(R4)),
  
     ?match({atomic, ok}, mnesia:transaction(fun() -> mnesia:write(Rec4) end)), 
     R5 = mnesia:dirty_index_read(Tab, 2, ValPos),
-    ?match([Rec1, Rec2, Rec4], lists:sort(R5)),
+    ?match([^Rec1, ^Rec2, ^Rec4], lists:sort(R5)),
 
     ?match({atomic, ok}, mnesia:transaction(fun() -> mnesia:delete({Tab, 4}) end)), 
     R6 = mnesia:dirty_index_read(Tab, 2, ValPos),
-    ?match([Rec1, Rec2], lists:sort(R6)),
+    ?match([^Rec1, ^Rec2], lists:sort(R6)),
 
     ?match(ok, mnesia:dirty_delete_object(Rec1)),
-    ?match([Rec2], mnesia:dirty_index_read(Tab, 2, ValPos)),
+    ?match([^Rec2], mnesia:dirty_index_read(Tab, 2, ValPos)),
     R7 = mnesia:dirty_match_object(Pat2),
-    ?match([Rec3, Rec2], lists:sort(R7)),
+    ?match([^Rec3, ^Rec2], lists:sort(R7)),
     
     %% Two indexies
     ?match({atomic, ok}, mnesia:del_table_index(Tab, ValPos)),
@@ -676,42 +676,42 @@ dirty_index_update_bag(Config, Storage) ->
     ?match({atomic, ok}, mnesia:add_table_index(Tab, ValPos2)),
     
     R8 = mnesia:dirty_index_read(Tab, 2, ValPos),
-    ?match([Rec1, Rec2, Rec4], lists:sort(R8)),
+    ?match([^Rec1, ^Rec2, ^Rec4], lists:sort(R8)),
 
     R9 = mnesia:dirty_index_read(Tab, 4, ValPos2),
-    ?match([Rec1, Rec4], lists:sort(R9)),
+    ?match([^Rec1, ^Rec4], lists:sort(R9)),
     R10 = mnesia:dirty_index_read(Tab, 14, ValPos2),
-    ?match([Rec3, Rec2], lists:sort(R10)),
+    ?match([^Rec3, ^Rec2], lists:sort(R10)),
 
     ?match({atomic, ok}, mnesia:transaction(fun() -> mnesia:write(Rec5) end)),
     R11 = mnesia:dirty_index_read(Tab, 2, ValPos),
-    ?match([Rec1, Rec5, Rec2, Rec4], lists:sort(R11)),
+    ?match([^Rec1, ^Rec5, ^Rec2, ^Rec4], lists:sort(R11)),
     R12 = mnesia:dirty_index_read(Tab, 4, ValPos2),
-    ?match([Rec1, Rec4], lists:sort(R12)),
+    ?match([^Rec1, ^Rec4], lists:sort(R12)),
     R13 = mnesia:dirty_index_read(Tab, 14, ValPos2),
-    ?match([Rec5, Rec3, Rec2], lists:sort(R13)),
+    ?match([^Rec5, ^Rec3, ^Rec2], lists:sort(R13)),
 
     ?match({atomic, ok}, mnesia:transaction(fun() -> mnesia:delete_object(Rec1) end)),
     R14 = mnesia:dirty_index_read(Tab, 2, ValPos),
-    ?match([Rec5, Rec2, Rec4], lists:sort(R14)),
-    ?match([Rec4], mnesia:dirty_index_read(Tab, 4, ValPos2)),
+    ?match([^Rec5, ^Rec2, ^Rec4], lists:sort(R14)),
+    ?match([^Rec4], mnesia:dirty_index_read(Tab, 4, ValPos2)),
     R15 = mnesia:dirty_index_read(Tab, 14, ValPos2),
-    ?match([Rec5, Rec3, Rec2], lists:sort(R15)),
+    ?match([^Rec5, ^Rec3, ^Rec2], lists:sort(R15)),
 
     ?match(ok, mnesia:dirty_delete_object(Rec5)),
     R16 = mnesia:dirty_index_read(Tab, 2, ValPos),
-    ?match([Rec2, Rec4], lists:sort(R16)),
-    ?match([Rec4], mnesia:dirty_index_read(Tab, 4, ValPos2)),
+    ?match([^Rec2, ^Rec4], lists:sort(R16)),
+    ?match([^Rec4], mnesia:dirty_index_read(Tab, 4, ValPos2)),
     R17 = mnesia:dirty_index_read(Tab, 14, ValPos2),
-    ?match([Rec3, Rec2], lists:sort(R17)),
+    ?match([^Rec3, ^Rec2], lists:sort(R17)),
 
     ?match(ok, mnesia:dirty_write(Rec1)),
     ?match(ok, mnesia:dirty_delete({Tab, 1})),
     R18 = mnesia:dirty_index_read(Tab, 2, ValPos),
-    ?match([Rec2, Rec4], lists:sort(R18)),
-    ?match([Rec4], mnesia:dirty_index_read(Tab, 4, ValPos2)),
+    ?match([^Rec2, ^Rec4], lists:sort(R18)),
+    ?match([^Rec4], mnesia:dirty_index_read(Tab, 4, ValPos2)),
     R19 = mnesia:dirty_index_read(Tab, 14, ValPos2),
-    ?match([Rec2], lists:sort(R19)),
+    ?match([^Rec2], lists:sort(R19)),
 
     ?verify_mnesia(Nodes, []).
 
@@ -748,14 +748,14 @@ dirty_iter(Config, Storage) ->
     lists:foreach(fun(Rec) -> ?match(ok, mnesia:dirty_write(Rec)) end, Records), 
 
     SortedRecords = lists:sort(Records), 
-    ?match(SortedRecords, lists:sort(all_slots(Tab))), 
-    ?match(Keys, lists:sort(all_nexts(Tab))), 
+    ?match(^SortedRecords, lists:sort(all_slots(Tab))), 
+    ?match(^Keys, lists:sort(all_nexts(Tab))), 
 
     ?match({'EXIT', _}, mnesia:dirty_first(foo)), 
     ?match({'EXIT', _}, mnesia:dirty_next(foo, foo)), 
     ?match({'EXIT', _}, mnesia:dirty_slot(foo, 0)), 
     ?match({'EXIT', _}, mnesia:dirty_slot(foo, [])), 
-    ?match({atomic, Keys},
+    ?match({atomic, ^Keys},
 	   mnesia:transaction(fun() -> lists:sort(all_nexts(Tab)) end)),     
     ?verify_mnesia(Nodes, []).
 
@@ -790,7 +790,7 @@ update_trans(Tab, Key, Acc) ->
 	fun() -> 
 		Res = (catch mnesia:read({Tab, Key})),
 		case Res of 
-		    [{Tab, Key, Extra, Acc}] ->
+		    [{^Tab, ^Key, Extra, ^Acc}] ->
 			mnesia:write({Tab,Key,Extra, Acc+1});
 		    Val ->
 			{read, Val, {acc, Acc}}
@@ -853,17 +853,17 @@ del_table(CallFrom, DelNode, [Node1, Node2, Node3]) ->
 	   rpc:call(CallFrom, mnesia, del_table_copy, [Tab, DelNode])),
 
     Pid1 ! {self(), quit}, R1 = 
-	receive {Pid1, Res1} -> Res1
+	receive {^Pid1, Res1} -> Res1
 	after 
 	    5000 -> io:format("~p~n",[process_info(Pid1)]),error 
 	end,
     Pid2 ! {self(), quit}, R2 = 
-	receive {Pid2, Res2} -> Res2 
+	receive {^Pid2, Res2} -> Res2 
 	after 
 	    5000 -> error 
 	end,
     Pid3 ! {self(), quit}, R3 = 
-	receive {Pid3, Res3} -> Res3 
+	receive {^Pid3, Res3} -> Res3 
 	after 
 	    5000 -> error 
 	end,
@@ -921,9 +921,9 @@ add_table(CallFrom, AddNode, [Node1, Node2, Node3], Def) ->
     
     ?match({atomic, ok}, rpc:call(CallFrom, mnesia, add_table_copy, 
 				  [Tab, AddNode, ram_copies])),
-    Pid1 ! {self(), quit}, R1 = receive {Pid1, Res1} -> Res1 after 5000 -> error end,
-    Pid2 ! {self(), quit}, R2 = receive {Pid2, Res2} -> Res2 after 5000 -> error end,
-    Pid3 ! {self(), quit}, R3 = receive {Pid3, Res3} -> Res3 after 5000 -> error end,
+    Pid1 ! {self(), quit}, R1 = receive {^Pid1, Res1} -> Res1 after 5000 -> error end,
+    Pid2 ! {self(), quit}, R2 = receive {^Pid2, Res2} -> Res2 after 5000 -> error end,
+    Pid3 ! {self(), quit}, R3 = receive {^Pid3, Res3} -> Res3 after 5000 -> error end,
     verify_oids(Tab, Node1, Node2, Node3, R1, R2, R3),
     ?verify_mnesia([Node1, Node2, Node3], []).
 
@@ -965,11 +965,11 @@ move_table(CallFrom, FromNode, ToNode, [Node1, Node2, Node3], Def) ->
     ?match({atomic, ok}, rpc:call(CallFrom, mnesia, move_table_copy, 
 				  [Tab, FromNode, ToNode])),
     Pid1 ! {self(), quit}, 
-    R1 = receive {Pid1, Res1} -> Res1 after 5000 -> ?error("timeout pid1~n", []) end,
+    R1 = receive {^Pid1, Res1} -> Res1 after 5000 -> ?error("timeout pid1~n", []) end,
     Pid2 ! {self(), quit}, 
-    R2 = receive {Pid2, Res2} -> Res2 after 5000 -> ?error("timeout pid2~n", []) end,
+    R2 = receive {^Pid2, Res2} -> Res2 after 5000 -> ?error("timeout pid2~n", []) end,
     Pid3 ! {self(), quit}, 
-    R3 = receive {Pid3, Res3} -> Res3 after 5000 -> ?error("timeout pid3~n", []) end,
+    R3 = receive {^Pid3, Res3} -> Res3 after 5000 -> ?error("timeout pid3~n", []) end,
     verify_oids(Tab, Node1, Node2, Node3, R1, R2, R3),
     ?verify_mnesia([Node1, Node2, Node3], []).
 
@@ -977,15 +977,15 @@ move_table(CallFrom, FromNode, ToNode, [Node1, Node2, Node3], Def) ->
 % Due to limitations in the current dirty_ops this can wrong from time to time!
 verify_oids(Tab, N1, N2, N3, R1, R2, R3) ->
     io:format("DEBUG 1=>~p 2=>~p 3=>~p~n", [R1,R2,R3]),
-    ?match([{_, _, _, R1}], rpc:call(N1, mnesia, dirty_read, [{Tab, 1}])),
-    ?match([{_, _, _, R1}], rpc:call(N2, mnesia, dirty_read, [{Tab, 1}])),
-    ?match([{_, _, _, R1}], rpc:call(N3, mnesia, dirty_read, [{Tab, 1}])),
-    ?match([{_, _, _, R2}], rpc:call(N1, mnesia, dirty_read, [{Tab, 2}])),
-    ?match([{_, _, _, R2}], rpc:call(N2, mnesia, dirty_read, [{Tab, 2}])),
-    ?match([{_, _, _, R2}], rpc:call(N3, mnesia, dirty_read, [{Tab, 2}])),
-    ?match([{_, _, _, R3}], rpc:call(N1, mnesia, dirty_read, [{Tab, 3}])),
-    ?match([{_, _, _, R3}], rpc:call(N2, mnesia, dirty_read, [{Tab, 3}])),
-    ?match([{_, _, _, R3}], rpc:call(N3, mnesia, dirty_read, [{Tab, 3}])).
+    ?match([{_, _, _, ^R1}], rpc:call(N1, mnesia, dirty_read, [{Tab, 1}])),
+    ?match([{_, _, _, ^R1}], rpc:call(N2, mnesia, dirty_read, [{Tab, 1}])),
+    ?match([{_, _, _, ^R1}], rpc:call(N3, mnesia, dirty_read, [{Tab, 1}])),
+    ?match([{_, _, _, ^R2}], rpc:call(N1, mnesia, dirty_read, [{Tab, 2}])),
+    ?match([{_, _, _, ^R2}], rpc:call(N2, mnesia, dirty_read, [{Tab, 2}])),
+    ?match([{_, _, _, ^R2}], rpc:call(N3, mnesia, dirty_read, [{Tab, 2}])),
+    ?match([{_, _, _, ^R3}], rpc:call(N1, mnesia, dirty_read, [{Tab, 3}])),
+    ?match([{_, _, _, ^R3}], rpc:call(N2, mnesia, dirty_read, [{Tab, 3}])),
+    ?match([{_, _, _, ^R3}], rpc:call(N3, mnesia, dirty_read, [{Tab, 3}])).
 
 insert(_Tab, 0) -> ok;
 insert(Tab, N) when N > 0 ->

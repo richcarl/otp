@@ -121,13 +121,13 @@ no_conflict(Config) when is_list(Config) ->
 		  ?start_transactions([B, A]), 
 		  
 		  A ! fun() -> Lock1(one_oid(Tab)),  ok end, 
-		  ?match_receive({A, ok}), 
+		  ?match_receive({^A, ok}), 
 		  B ! fun() -> Lock2(OtherOid),  ok end, 
-		  ?match_receive({B, ok}), 
+		  ?match_receive({^B, ok}), 
 		  A ! fun() -> mnesia:abort(ok) end, 
-		  ?match_receive({A, {aborted, ok}}), 
+		  ?match_receive({^A, {aborted, ok}}), 
 		  B ! fun() -> mnesia:abort(ok) end, 
-		  ?match_receive({B, {aborted, ok}})
+		  ?match_receive({^B, {aborted, ok}})
 	  end, 
     NoLocks = lock_funs(no_lock, any_granularity), 
     SharedLocks = lock_funs(shared_lock, any_granularity), 
@@ -158,13 +158,13 @@ simple_queue_conflict(Config) when is_list(Config) ->
 		  ?start_transactions([B, A]), 
 		  
 		  A ! fun() -> OneLock(one_oid(Tab)),  ok end, 
-		  ?match_receive({A, ok}), 
+		  ?match_receive({^A, ok}), 
 		  B ! fun() -> OtherLock(one_oid(Tab)),  ok end, 
 		  wait_for_lock(B, [Node1], 20), % Max 10 sec
 		  A ! end_trans, 
 		  ?match_multi_receive([{A, {atomic, end_trans}}, {B, ok}]), 
 		  B ! fun() -> mnesia:abort(ok) end, 
-		  ?match_receive({B, {aborted, ok}})
+		  ?match_receive({^B, {aborted, ok}})
 	  end, 
     OneSharedLocks = lock_funs(shared_lock, one), 
     AllSharedLocks = lock_funs(shared_lock, all), 
@@ -226,12 +226,12 @@ advanced_queue_conflict(Config) when is_list(Config) ->
 
     %% Acquire some locks
     A ! fun() -> mnesia:write(OneRec) end, 
-    ?match_receive({A, ok}), 
+    ?match_receive({^A, ok}), 
     A ! fun() -> mnesia:read(OneOid) end, 
-    ?match_receive({A, [OneRec]}), 
+    ?match_receive({^A, [^OneRec]}), 
     
     B ! fun() -> mnesia:write(OtherRec) end, 
-    ?match_receive({B, ok}), 
+    ?match_receive({^B, ok}), 
     B ! fun() -> mnesia:read(OneOid) end, 
     ?match_receive(timeout), 
     
@@ -248,7 +248,7 @@ advanced_queue_conflict(Config) when is_list(Config) ->
     C ! end_trans, 
     ?match_multi_receive([{C, {atomic, end_trans}}, {D, [OtherRec]}]), 
     D ! end_trans, 
-    ?match_receive({D, {atomic, end_trans}}), 
+    ?match_receive({^D, {atomic, end_trans}}), 
     
     sys:get_status(whereis(mnesia_locker)), % Explicit sync, release locks is async
     ?match([], mnesia:system_info(held_locks)), 
@@ -272,11 +272,11 @@ simple_deadlock_conflict(Config) when is_list(Config) ->
     ?match([], mnesia:system_info(lock_queue)), 
 
     B ! fun() -> mnesia:write(Rec) end, 
-    ?match_receive({B, ok}), 
+    ?match_receive({^B, ok}), 
     A ! fun() -> mnesia:read(Oid) end, 
-    ?match_receive({A, {aborted, nomore}}), 
+    ?match_receive({^A, {aborted, nomore}}), 
     B ! end_trans, 
-    ?match_receive({B, {atomic, end_trans}}), 
+    ?match_receive({^B, {atomic, end_trans}}), 
 
     sys:get_status(whereis(mnesia_locker)), % Explicit sync, release locks is async
     ?match([], mnesia:system_info(held_locks)), 
@@ -301,11 +301,11 @@ advanced_deadlock_conflict(Config) when is_list(Config) ->
     ?match([], mnesia:system_info(lock_queue)), 
 
     B ! fun() -> mnesia:write(Rec) end, 
-    ?match_receive({B, ok}), 
+    ?match_receive({^B, ok}), 
     A ! fun() -> mnesia:read(Oid) end, 
-    ?match_receive({A, {aborted, nomore}}), 
+    ?match_receive({^A, {aborted, nomore}}), 
     B ! end_trans, 
-    ?match_receive({B, {atomic, end_trans}}), 
+    ?match_receive({^B, {atomic, end_trans}}), 
 
     sys:get_status(whereis(mnesia_locker)), % Explicit sync, release locks is async
     ?match([], mnesia:system_info(held_locks)), 
@@ -340,8 +340,8 @@ schema_deadlock(Config) when is_list(Config) ->
     timer:sleep(500), %% Let schema trans start, and try to grab locks
     DoingTrans ! continue,
 
-    ?match(ok, receive {DoingTrans,  {atomic, end_trans}} -> ok after 5000 -> timeout end),
-    ?match(ok, receive {DoingSchema,  {atomic, ok}} -> ok after 5000 -> timeout end),
+    ?match(ok, receive {^DoingTrans,  {atomic, end_trans}} -> ok after 5000 -> timeout end),
+    ?match(ok, receive {^DoingSchema,  {atomic, ok}} -> ok after 5000 -> timeout end),
 
     sys:get_status(whereis(mnesia_locker)), % Explicit sync, release locks is async
     ?match([], mnesia:system_info(held_locks)),
@@ -374,7 +374,7 @@ fun_loop(Fun, Xs, Ys) ->
 do_fun(Fun, X, Y) ->
     Pid = spawn_link(?MODULE, do_fun, [self(), Fun, X, Y]), 
     receive
-	{done_fun, Pid} -> done_fun
+	{done_fun, ^Pid} -> done_fun
     end.
 
 do_fun(Monitor, Fun, X, Y) ->
@@ -509,7 +509,7 @@ burst_incr(Tab, Father) ->
     Fun = fun() ->
 		  Val = 
 		      case mnesia:read({Tab, 1}) of
-			  [{Tab, 1, V}] -> V;
+			  [{^Tab, 1, V}] -> V;
 			  [] -> 0
 		      end, 
 		  mnesia:write({Tab, 1, Val+1})
@@ -528,32 +528,32 @@ basic_sticky_functionality(Config) when is_list(Config) ->
     ?match({atomic, ok}, mnesia:create_table(sync, [{ram_copies, Nodes}])),
     Trans1 = fun() ->
 		     ?match(ok, mnesia:s_write({Tab, 1, 2})),
-		     ?match([{Tab, 1, 2}], mnesia:read({Tab, 1})),
+		     ?match([{^Tab, 1, 2}], mnesia:read({Tab, 1})),
 		     ?match(timeout, receive M -> M after 500 -> timeout end),
 		     ?match(ok, mnesia:s_write({Tab, 2, 2})),
 		     ?match(ok, mnesia:write({Tab, 42, 4711}))
 	     end,
     Trans2 = fun() ->
-		     ?match([{Tab, 1, 2}],  mnesia:read({Tab, 1})),
+		     ?match([{^Tab, 1, 2}],  mnesia:read({Tab, 1})),
 		     ?match(timeout, receive M -> M after 500 -> timeout end),
 		     ?match(ok, mnesia:write({Tab, 1, 4711})),
 		     ?match(ok, mnesia:s_write({Tab, 2, 4})),
 		     ?match(ok, mnesia:delete({Tab, 42}))
 	     end,
     rpc:call(N1, mnesia, transaction, [Trans1]),
-    ?match([{Tab,N1}], rpc:call(N1, ?MODULE, get_sticky, [])),
-    ?match([{Tab,N1}], rpc:call(N2, ?MODULE, get_sticky, [])),
+    ?match([{^Tab,^N1}], rpc:call(N1, ?MODULE, get_sticky, [])),
+    ?match([{^Tab,^N1}], rpc:call(N2, ?MODULE, get_sticky, [])),
 
     rpc:call(N2, mnesia, transaction, [Trans2]),
     ?match([], rpc:call(N1, ?MODULE, get_sticky, [])),
     ?match([], rpc:call(N2, ?MODULE, get_sticky, [])),
     
     Slock = fun() -> mnesia:read({sync,sync}),get_sticky() end,
-    ?match({atomic, [{Tab,1, 4711}]}, mnesia:transaction(fun() -> mnesia:read({Tab, 1}) end)),
-    ?match({atomic, [{Tab,2, 4}]},    mnesia:transaction(fun() -> mnesia:read({Tab, 2}) end)),
-    ?match({atomic, [{Tab,N1}]}, rpc:call(N1, mnesia, transaction, 
+    ?match({atomic, [{^Tab,1, 4711}]}, mnesia:transaction(fun() -> mnesia:read({Tab, 1}) end)),
+    ?match({atomic, [{^Tab,2, 4}]},    mnesia:transaction(fun() -> mnesia:read({Tab, 2}) end)),
+    ?match({atomic, [{^Tab,^N1}]}, rpc:call(N1, mnesia, transaction, 
 					  [fun() -> mnesia:s_write({Tab, 1, 3}),Slock() end])),
-    ?match([{Tab,N1}], rpc:call(N2, ?MODULE, get_sticky, [])),
+    ?match([{^Tab,^N1}], rpc:call(N2, ?MODULE, get_sticky, [])),
     
     ?match({atomic,[]}, rpc:call(N2, mnesia, transaction, 
 				 [fun() -> mnesia:s_write({Tab, 1, 4}),Slock()  end])),
@@ -561,30 +561,30 @@ basic_sticky_functionality(Config) when is_list(Config) ->
     ?match([], rpc:call(N1, ?MODULE, get_sticky, [])),
     ?match([], rpc:call(N2, ?MODULE, get_sticky, [])),
     
-    ?match({atomic,[{Tab,N2}]}, rpc:call(N2, mnesia, transaction, 
+    ?match({atomic,[{^Tab,^N2}]}, rpc:call(N2, mnesia, transaction, 
 					 [fun() -> mnesia:s_write({Tab, 1, 4}),Slock() end])),
     
     ?match({atomic,[]}, rpc:call(N1, mnesia, transaction, 
 				 [fun() -> mnesia:s_write({Tab, 1, 5}),Slock()  end])),
-    ?match({atomic,[{Tab,N1}]}, rpc:call(N1, mnesia, transaction, 
+    ?match({atomic,[{^Tab,^N1}]}, rpc:call(N1, mnesia, transaction, 
 					 [fun() -> mnesia:s_write({Tab, 1, 5}),Slock()  end])),
     ?match({atomic,[]}, rpc:call(N2, mnesia, transaction, 
 				 [fun() -> mnesia:s_write({Tab, 1, 6}),Slock()  end])),
-    ?match({atomic,[{Tab,N2}]}, rpc:call(N2, mnesia, transaction, 
+    ?match({atomic,[{^Tab,^N2}]}, rpc:call(N2, mnesia, transaction, 
 					 [fun() -> mnesia:s_write({Tab, 1, 7}),Slock()  end])),
     
-    ?match([{Tab,N2}], get_sticky()),
-    ?match({atomic, [{Tab,1, 7}]}, mnesia:transaction(fun() -> mnesia:read({Tab, 1}) end)),
-    ?match([{Tab,N2}], get_sticky()),
-    ?match({atomic, [{Tab,2, 4}]}, mnesia:transaction(fun() -> mnesia:read({Tab, 2}) end)),
-    ?match([{Tab,N2}], get_sticky()),
-    ?match({atomic,[{Tab,N2}]}, rpc:call(N2, mnesia, transaction, 
+    ?match([{^Tab,^N2}], get_sticky()),
+    ?match({atomic, [{^Tab,1, 7}]}, mnesia:transaction(fun() -> mnesia:read({Tab, 1}) end)),
+    ?match([{^Tab,^N2}], get_sticky()),
+    ?match({atomic, [{^Tab,2, 4}]}, mnesia:transaction(fun() -> mnesia:read({Tab, 2}) end)),
+    ?match([{^Tab,^N2}], get_sticky()),
+    ?match({atomic,[{^Tab,^N2}]}, rpc:call(N2, mnesia, transaction, 
 					 [fun() -> mnesia:s_write({Tab, 1, 6}),Slock()  end])),
-    ?match([{Tab,N2}], get_sticky()),
-    ?match({atomic, [{Tab,1, 6}]}, mnesia:transaction(fun() -> mnesia:read({Tab, 1}) end)),
-    ?match([{Tab,N2}], get_sticky()),
-    ?match({atomic, [{Tab,2, 4}]}, mnesia:transaction(fun() -> mnesia:read({Tab, 2}) end)),
-    ?match([{Tab,N2}], get_sticky()),
+    ?match([{^Tab,^N2}], get_sticky()),
+    ?match({atomic, [{^Tab,1, 6}]}, mnesia:transaction(fun() -> mnesia:read({Tab, 1}) end)),
+    ?match([{^Tab,^N2}], get_sticky()),
+    ?match({atomic, [{^Tab,2, 4}]}, mnesia:transaction(fun() -> mnesia:read({Tab, 2}) end)),
+    ?match([{^Tab,^N2}], get_sticky()),
     ?verify_mnesia(Nodes, []).
 
 get_sticky() ->
@@ -683,8 +683,8 @@ unbound1(Config) when is_list(Config) ->
 	    end,
     ?match({atomic, [{ul,{key,{17,42}},val}]}, mnesia:transaction(Match)),
 
-    ?match_receive({A, ok}),
-    ?match_receive({A, {atomic, end_trans}}),
+    ?match_receive({^A, ok}),
+    ?match_receive({^A, {atomic, end_trans}}),
     ok.
 
 unbound2(suite) -> [];
@@ -735,7 +735,7 @@ unbound2(Config) when is_list(Config) ->
     receive ok_lock -> ok end,
 
     B ! continueB,
-    ?match_receive({B, continuing}),
+    ?match_receive({^B, continuing}),
 
     %% B should now be in lock queue.
     A ! continue,
@@ -757,7 +757,7 @@ create_table(Config) when is_list(Config) ->
     mnesia_test_lib:start_sync_transactions([A], 0),
 
     A ! fun() -> mnesia:write({Tab, 1, 1, updated}) end,
-    ?match_receive({A, ok}),   %% A is executed
+    ?match_receive({^A, ok}),   %% A is executed
     
     DiskMaybe = mnesia_test_lib:storage_type(disc_copies, Config),
 
@@ -773,7 +773,7 @@ create_table(Config) when is_list(Config) ->
 			  {'EXIT', Pid2, normal}]), %% No Locks! op should be exec.
 
     A ! end_trans,        
-    ?match_receive({A,{atomic,end_trans}}),
+    ?match_receive({^A,{atomic,end_trans}}),
     
     sys:get_status(whereis(mnesia_locker)), % Explicit sync, release locks is async
     ?match([], mnesia:system_info(held_locks)), 
@@ -791,7 +791,7 @@ delete_table(Config) when is_list(Config) ->
     mnesia_test_lib:start_sync_transactions([A], 0),
 
     A ! fun() -> mnesia:read({Tab, 1}) end,
-    ?match_receive({A, [{Tab, 1, 1, 0}]}),   %% A is executed
+    ?match_receive({^A, [{^Tab, 1, 1, 0}]}),   %% A is executed
 
     Pid = spawn_link(?MODULE, op, [self(), mnesia, delete_table,
 				   [Tab]]),
@@ -799,10 +799,10 @@ delete_table(Config) when is_list(Config) ->
     ?match_receive(timeout),   %% op waits for locks occupied by A
 
     A ! end_trans,             %% Kill A, locks should be released
-    ?match_receive({A,{atomic,end_trans}}),     
+    ?match_receive({^A,{atomic,end_trans}}),     
 
     receive 
-	Msg -> ?match({Pid, {atomic, ok}}, Msg)
+	Msg -> ?match({^Pid, {atomic, ok}}, Msg)
     after
 	timer:seconds(20) -> ?error("Operation timed out", [])
     end,
@@ -823,7 +823,7 @@ move_table_copy(Config) when is_list(Config) ->
     mnesia_test_lib:start_sync_transactions([A], 0),
 
     A ! fun() -> mnesia:write({Tab, 1, 2, 3}) end,
-    ?match_receive({A, ok}),   %% A is executed
+    ?match_receive({^A, ok}),   %% A is executed
 
     Pid = spawn_link(?MODULE, op, [self(), mnesia, move_table_copy,
 				   [Tab, ThisNode, Node2]]),
@@ -831,10 +831,10 @@ move_table_copy(Config) when is_list(Config) ->
     ?match_receive(timeout),   %% op waits for locks occupied by A
 
     A ! end_trans,             %% Kill A, locks should be released
-    ?match_receive({A,{atomic,end_trans}}),     
+    ?match_receive({^A,{atomic,end_trans}}),     
 
     receive 
-	Msg -> ?match({Pid, {atomic, ok}}, Msg)
+	Msg -> ?match({^Pid, {atomic, ok}}, Msg)
     after
 	timer:seconds(20) -> ?error("Operation timed out", [])
     end,
@@ -858,7 +858,7 @@ add_table_index(Config) when is_list(Config) ->
     mnesia_test_lib:start_sync_transactions([A], 0),
 
     A ! fun() -> mnesia:write({Tab, 1, 1, updated}) end,
-    ?match_receive({A, ok}),   %% A is executed
+    ?match_receive({^A, ok}),   %% A is executed
 
     Pid = spawn_link(?MODULE, op, [self(), mnesia, 
 				   add_table_index, [Tab, attr1]]),
@@ -866,10 +866,10 @@ add_table_index(Config) when is_list(Config) ->
     ?match_receive(timeout),   %% op waits for locks occupied by A
 
     A ! end_trans,             %% Kill A, locks should be released
-    ?match_receive({A,{atomic,end_trans}}),     
+    ?match_receive({^A,{atomic,end_trans}}),     
     
     receive 
-	Msg -> ?match({Pid, {atomic, ok}}, Msg)
+	Msg -> ?match({^Pid, {atomic, ok}}, Msg)
     after
 	timer:seconds(20) -> ?error("Operation timed out", [])
     end,
@@ -892,7 +892,7 @@ del_table_index(Config) when is_list(Config) ->
     mnesia_test_lib:start_sync_transactions([A], 0),
 
     A ! fun() -> mnesia:write({Tab, 51, 51, attr2}) end,
-    ?match_receive({A, ok}),   %% A is executed
+    ?match_receive({^A, ok}),   %% A is executed
 
     Pid = spawn_link(?MODULE, op, [self(), mnesia, del_table_index,
 				   [Tab, attr1]]),
@@ -900,10 +900,10 @@ del_table_index(Config) when is_list(Config) ->
     ?match_receive(timeout),   %% op waits for locks occupied by A
 
     A ! end_trans,             %% Kill A, locks should be released
-    ?match_receive({A,{atomic,end_trans}}),     
+    ?match_receive({^A,{atomic,end_trans}}),     
     %% Locks released! op should be exec.
     receive 
-	Msg -> ?match({Pid, {atomic, ok}}, Msg)
+	Msg -> ?match({^Pid, {atomic, ok}}, Msg)
     after
 	timer:seconds(20) -> ?error("Operation timed out", [])
     end,
@@ -924,7 +924,7 @@ transform_table(Config) when is_list(Config) ->
     mnesia_test_lib:start_sync_transactions([A], 0),
 
     A ! fun() -> mnesia:read({Tab, 1}) end,
-    ?match_receive({A, [{Tab, 1, 1, 0}]}),   %% A is executed
+    ?match_receive({^A, [{^Tab, 1, 1, 0}]}),   %% A is executed
 
     Transform = fun({Table, Key, Attr1, Attr2}) -> % Need todo a transform
 			{Table, Key, {Attr1, Attr2}} end,    
@@ -933,10 +933,10 @@ transform_table(Config) when is_list(Config) ->
     ?match_receive(timeout),   %% op waits for locks occupied by A
 
     A ! end_trans,             %% Kill A, locks should be released
-    ?match_receive({A,{atomic,end_trans}}),     
+    ?match_receive({^A,{atomic,end_trans}}),     
     
     receive 
-	Msg -> ?match({Pid, {atomic, ok}}, Msg)
+	Msg -> ?match({^Pid, {atomic, ok}}, Msg)
     after
 	timer:seconds(20) -> ?error("Operation timed out", [])
     end,
@@ -957,7 +957,7 @@ snmp_open_table(Config) when is_list(Config) ->
     mnesia_test_lib:start_sync_transactions([A], 0),
 
     A ! fun() -> mnesia:write({Tab, 1, 1, 100}) end,
-    ?match_receive({A, ok}),   %% A is executed
+    ?match_receive({^A, ok}),   %% A is executed
 
     Pid = spawn_link(?MODULE, op, [self(), mnesia, snmp_open_table,
 				   [Tab, [{key, integer}]]]),
@@ -965,11 +965,11 @@ snmp_open_table(Config) when is_list(Config) ->
     ?match_receive(timeout),   %% op waits for locks occupied by A
 
     A ! end_trans,             %% Kill A, locks should be released
-    ?match_receive({A,{atomic,end_trans}}),     
+    ?match_receive({^A,{atomic,end_trans}}),     
     
     %% Locks released! op should be exec. Can take a while (thats the timeout)
     receive 
-	Msg -> ?match({Pid, {atomic, ok}}, Msg)
+	Msg -> ?match({^Pid, {atomic, ok}}, Msg)
     after
 	timer:seconds(20) -> ?error("Operation timed out", [])
     end,
@@ -991,17 +991,17 @@ snmp_close_table(Config) when is_list(Config) ->
     mnesia_test_lib:start_sync_transactions([A], 0),
 
     A ! fun() -> mnesia:write({Tab, 1, 1, 100}) end,
-    ?match_receive({A, ok}),   %% A is executed    
+    ?match_receive({^A, ok}),   %% A is executed    
 
     Pid = spawn_link(?MODULE, op, [self(), mnesia, snmp_close_table, [Tab]]),   
     ?match_receive(timeout),   %% op waits for locks occupied by A
 
     A ! end_trans,             %% Kill A, locks should be released
-    ?match_receive({A,{atomic,end_trans}}),     
+    ?match_receive({^A,{atomic,end_trans}}),     
     
     %% Locks released! op should be exec. Can take a while (thats the timeout)
     receive 
-	Msg -> ?match({Pid, {atomic, ok}}, Msg)
+	Msg -> ?match({^Pid, {atomic, ok}}, Msg)
     after
 	timer:seconds(20) -> ?error("Operation timed out", [])
     end,
@@ -1021,7 +1021,7 @@ change_table_copy_type(Config) when is_list(Config) ->
     {success, [A]} = ?start_activities([ThisNode]), 
     mnesia_test_lib:start_sync_transactions([A], 0),
     A ! fun() -> mnesia:write({Tab, 1, 1, updated}) end,
-    ?match_receive({A, ok}),   %% A is executed
+    ?match_receive({^A, ok}),   %% A is executed
 
     Pid = spawn_link(?MODULE, op, [self(), mnesia, change_table_copy_type, 
 				   [Tab, ThisNode, disc_copies]]),
@@ -1029,10 +1029,10 @@ change_table_copy_type(Config) when is_list(Config) ->
     ?match_receive(timeout),   %% op waits for locks occupied by A
 
     A ! end_trans,             %% Kill A, locks should be released
-    ?match_receive({A,{atomic,end_trans}}),     
+    ?match_receive({^A,{atomic,end_trans}}),     
     
     receive 
-	Msg -> ?match({Pid, {atomic, ok}}, Msg)
+	Msg -> ?match({^Pid, {atomic, ok}}, Msg)
     after
 	timer:seconds(20) -> ?error("Operation timed out", [])
     end,
@@ -1053,7 +1053,7 @@ change_table_access(Config) when is_list(Config) ->
     mnesia_test_lib:start_sync_transactions([A], 0),
 
     A ! fun() -> mnesia:write({Tab, 1, 1, updated}) end,
-    ?match_receive({A, ok}),   %% A is executed
+    ?match_receive({^A, ok}),   %% A is executed
 
     Pid = spawn_link(?MODULE, op, [self(), mnesia, change_table_access_mode,
 				   [Tab, read_only]]),
@@ -1062,10 +1062,10 @@ change_table_access(Config) when is_list(Config) ->
     ?match_receive(timeout),   %% op waits for locks occupied by A
 
     A ! end_trans,             %% Kill A, locks should be released
-    ?match_receive({A,{atomic,end_trans}}),     
+    ?match_receive({^A,{atomic,end_trans}}),     
     
     receive 
-	Msg -> ?match({Pid, {atomic, ok}}, Msg)
+	Msg -> ?match({^Pid, {atomic, ok}}, Msg)
     after
 	timer:seconds(20) -> ?error("Operation timed out", [])
     end,
@@ -1086,7 +1086,7 @@ add_table_copy(Config) when is_list(Config) ->
     mnesia_test_lib:start_sync_transactions([A], 0),
 
     A ! fun() -> mnesia:write({Tab, 1, 1, updated}) end,
-    ?match_receive({A, ok}),   %% A is executed
+    ?match_receive({^A, ok}),   %% A is executed
 
     Pid = spawn_link(?MODULE, op, [self(), mnesia, add_table_copy,
 				   [Tab, Node2, ram_copies]]),
@@ -1094,14 +1094,14 @@ add_table_copy(Config) when is_list(Config) ->
     ?match_receive(timeout),   %% op waits for locks occupied by A
 
     A ! end_trans,             %% Kill A, locks should be released
-    ?match_receive({A,{atomic,end_trans}}),
+    ?match_receive({^A,{atomic,end_trans}}),
 
     receive
-	Msg -> ?match({Pid, {atomic, ok}}, Msg)
+	Msg -> ?match({^Pid, {atomic, ok}}, Msg)
     after
 	timer:seconds(20) -> ?error("Operation timed out", [])
     end,
-    ?match_receive({'EXIT', Pid, normal}),
+    ?match_receive({'EXIT', ^Pid, normal}),
 
     sys:get_status(whereis(mnesia_locker)), % Explicit sync, release locks is async
     ?match([], mnesia:system_info(held_locks)),
@@ -1116,7 +1116,7 @@ add_table_copy(Config) when is_list(Config) ->
                              io:format(user, "restart mnesia~n", []),
                              Self ! {self(), catch application:start(mnesia)}
                      end),
-    receive {New,ok} -> ok end,
+    receive {^New,ok} -> ok end,
 
     Add = fun Add() ->
                   case mnesia:add_table_copy(Tab, Node2, disc_copies) of
@@ -1128,7 +1128,7 @@ add_table_copy(Config) when is_list(Config) ->
           end,
 
     ?match(ok, Add()),
-    ?match_receive({New,ok}),
+    ?match_receive({^New,ok}),
 
     sys:get_status(whereis(mnesia_locker)), % Explicit sync, release locks is async
     ?match([], mnesia:system_info(held_locks)),
@@ -1145,17 +1145,17 @@ del_table_copy(Config) when is_list(Config) ->
     {success, [A]} = ?start_activities([ThisNode]), 
     mnesia_test_lib:start_sync_transactions([A], 0),
     A ! fun() -> mnesia:write({Tab, 1, 2, 5}) end,
-    ?match_receive({A, ok}),   %% A is executed
+    ?match_receive({^A, ok}),   %% A is executed
 
     Pid = spawn_link(?MODULE, op, [self(), mnesia, del_table_copy,
 				   [Tab, ThisNode]]),
 
     ?match_receive(timeout),   %% op waits for locks occupied by A
     A ! end_trans,             %% Kill A, locks should be released
-    ?match_receive({A, {atomic,end_trans}}),     
+    ?match_receive({^A, {atomic,end_trans}}),     
 
-    ?match_receive({Pid, {atomic, ok}}),
-    ?match_receive({'EXIT', Pid, normal}),
+    ?match_receive({^Pid, {atomic, ok}}),
+    ?match_receive({'EXIT', ^Pid, normal}),
 
     timer:sleep(500), %% Don't know how to sync this !!!
     sys:get_status(whereis(mnesia_locker)), % Explicit sync, release locks is async
@@ -1175,7 +1175,7 @@ dump_tables(Config) when is_list(Config) ->
     {success, [A]} = ?start_activities([ThisNode]), 
     mnesia_test_lib:start_sync_transactions([A], 0),
     A ! fun() -> mnesia:write({Tab, 1, 1, updated}) end,
-    ?match_receive({A, ok}),   %% A is executed
+    ?match_receive({^A, ok}),   %% A is executed
 
     Pid = spawn_link(?MODULE, op, [self(), mnesia, dump_tables,
 				   [[Tab]]]),
@@ -1183,10 +1183,10 @@ dump_tables(Config) when is_list(Config) ->
     ?match_receive(timeout),   %% op waits for locks occupied by A
 
     A ! end_trans,             %% Kill A, locks should be released
-    ?match_receive({A,{atomic,end_trans}}),     
+    ?match_receive({^A,{atomic,end_trans}}),     
     
     receive 
-	Msg -> ?match({Pid, {atomic, ok}}, Msg)
+	Msg -> ?match({^Pid, {atomic, ok}}, Msg)
     after
 	timer:seconds(20) -> ?error("Operation timed out", [])
     end,
@@ -1211,7 +1211,7 @@ update_own(Tab, Key, Acc) ->
 	fun() -> 
 		Res = mnesia:read({Tab, Key}),
 		case Res of 
-		    [{Tab, Key, Extra, Acc}] ->
+		    [{^Tab, ^Key, Extra, ^Acc}] ->
 			mnesia:write({Tab,Key,Extra, Acc+1});
 		    Val ->
 			{read, Val, {acc, Acc}}
@@ -1242,7 +1242,7 @@ update_shared(Tab, Me, Acc) ->
 		W2R = mnesia:table_info(Tab, where_to_read),
 		Res = mnesia:read({Tab, 0}),
 		case Res of 
-		    [{Tab, Key, Extra, Val}] when element(Me, Extra) == Acc ->
+		    [{^Tab, Key, Extra, Val}] when element(Me, Extra) == Acc ->
 			Extra1 = setelement(Me, Extra, Acc+1),
 			Term = {Tab, Key, Extra1, Val+1},
 			ok = mnesia:write(Term),
@@ -1309,38 +1309,38 @@ verify_results({P1, P2, P3, P4, P5, P6}) ->
 
     try 
 	P1 ! {self(), quit}, 
-	R1 = receive {P1, Res1} -> Res1 after 9000 -> throw({timeout,P1}) end,
+	R1 = receive {^P1, Res1} -> Res1 after 9000 -> throw({timeout,P1}) end,
 	P2 ! {self(), quit}, 
-	R2 = receive {P2, Res2} -> Res2 after 9000 -> throw({timeout,P2}) end,
+	R2 = receive {^P2, Res2} -> Res2 after 9000 -> throw({timeout,P2}) end,
 	P3 ! {self(), quit}, 
-	R3 = receive {P3, Res3} -> Res3 after 9000 -> throw({timeout,P3}) end,
+	R3 = receive {^P3, Res3} -> Res3 after 9000 -> throw({timeout,P3}) end,
 
 	P4 ! {self(), quit}, 
-	R4 = receive {P4, Res4} -> Res4 after 9000 -> throw({timeout,P4}) end,
+	R4 = receive {^P4, Res4} -> Res4 after 9000 -> throw({timeout,P4}) end,
 	P5 ! {self(), quit}, 
-	R5 = receive {P5, Res5} -> Res5 after 9000 -> throw({timeout,P5}) end,
+	R5 = receive {^P5, Res5} -> Res5 after 9000 -> throw({timeout,P5}) end,
 	P6 ! {self(), quit}, 
-	R6 = receive {P6, Res6} -> Res6 after 9000 -> throw({timeout,P6}) end,
+	R6 = receive {^P6, Res6} -> Res6 after 9000 -> throw({timeout,P6}) end,
 
 	?match({atomic, ok}, mnesia:transaction(fun() -> mnesia:write_lock_table(Tab) end)),
 	?log("Should be ~p~n", [R1]),
-	?match([{_, _, _, R1}], rpc:call(N1, mnesia, dirty_read, [{Tab, 1}])),
-	?match([{_, _, _, R1}], rpc:call(N2, mnesia, dirty_read, [{Tab, 1}])),
-	?match([{_, _, _, R1}], rpc:call(N3, mnesia, dirty_read, [{Tab, 1}])),
+	?match([{_, _, _, ^R1}], rpc:call(N1, mnesia, dirty_read, [{Tab, 1}])),
+	?match([{_, _, _, ^R1}], rpc:call(N2, mnesia, dirty_read, [{Tab, 1}])),
+	?match([{_, _, _, ^R1}], rpc:call(N3, mnesia, dirty_read, [{Tab, 1}])),
 	?log("Should be ~p~n", [R2]),
-	?match([{_, _, _, R2}], rpc:call(N1, mnesia, dirty_read, [{Tab, 2}])),
-	?match([{_, _, _, R2}], rpc:call(N2, mnesia, dirty_read, [{Tab, 2}])),
-	?match([{_, _, _, R2}], rpc:call(N3, mnesia, dirty_read, [{Tab, 2}])),
+	?match([{_, _, _, ^R2}], rpc:call(N1, mnesia, dirty_read, [{Tab, 2}])),
+	?match([{_, _, _, ^R2}], rpc:call(N2, mnesia, dirty_read, [{Tab, 2}])),
+	?match([{_, _, _, ^R2}], rpc:call(N3, mnesia, dirty_read, [{Tab, 2}])),
 	?log("Should be ~p~n", [R3]),
-	?match([{_, _, _, R3}], rpc:call(N1, mnesia, dirty_read, [{Tab, 3}])),
-	?match([{_, _, _, R3}], rpc:call(N2, mnesia, dirty_read, [{Tab, 3}])),
-	?match([{_, _, _, R3}], rpc:call(N3, mnesia, dirty_read, [{Tab, 3}])),
+	?match([{_, _, _, ^R3}], rpc:call(N1, mnesia, dirty_read, [{Tab, 3}])),
+	?match([{_, _, _, ^R3}], rpc:call(N2, mnesia, dirty_read, [{Tab, 3}])),
+	?match([{_, _, _, ^R3}], rpc:call(N3, mnesia, dirty_read, [{Tab, 3}])),
 
 	Res = R4+R5+R6,
 	?log("Should be {~p+~p+~p}= ~p~n", [R4, R5, R6, Res]),
-	?match([{_, _, {R4,R5,R6}, Res}], rpc:call(N1, mnesia, dirty_read, [{Tab, 0}])),
-	?match([{_, _, {R4,R5,R6}, Res}], rpc:call(N2, mnesia, dirty_read, [{Tab, 0}])),
-	?match([{_, _, {R4,R5,R6}, Res}], rpc:call(N3, mnesia, dirty_read, [{Tab, 0}]))
+	?match([{_, _, {^R4,^R5,^R6}, ^Res}], rpc:call(N1, mnesia, dirty_read, [{Tab, 0}])),
+	?match([{_, _, {^R4,^R5,^R6}, ^Res}], rpc:call(N2, mnesia, dirty_read, [{Tab, 0}])),
+	?match([{_, _, {^R4,^R5,^R6}, ^Res}], rpc:call(N3, mnesia, dirty_read, [{Tab, 0}]))
     catch throw:{timeout, Pid}  ->
 	    mnesia_lib:dist_coredump(),
 	    ?error("Timeout ~p ~n", [Pid])
@@ -1491,7 +1491,7 @@ dirty_visibility(Mode, Config) ->
 			mnesia:write({Tab, e, 3}), 
 			lists:sort(mnesia:all_keys(Tab))
 		end, 
-	    ?match_receive({A, [a, b, c, d, e]});
+	    ?match_receive({^A, [a, b, c, d, e]});
 	outside_trans ->
 	    ignore
     end, 
@@ -1516,39 +1516,39 @@ dirty_visibility(Mode, Config) ->
 
     %% dirty_write
     A ! fun() -> mnesia:dirty_write(RecA) end, 
-    ?match_receive({A, ok}), 
-    ?match([RecA], mnesia:dirty_read({Tab, a})), 
-    ?match([RecA], mnesia:dirty_match_object(PatA)), 
+    ?match_receive({^A, ok}), 
+    ?match([^RecA], mnesia:dirty_read({Tab, a})), 
+    ?match([^RecA], mnesia:dirty_match_object(PatA)), 
     ?match(a, mnesia:dirty_first(Tab)), 
-    ?match([RecA], mnesia:dirty_index_read(Tab, 1, ValPos)), 
-    ?match([RecA], mnesia:dirty_index_match_object(PatA, ValPos)), 
+    ?match([^RecA], mnesia:dirty_index_read(Tab, 1, ValPos)), 
+    ?match([^RecA], mnesia:dirty_index_match_object(PatA, ValPos)), 
     ?match('$end_of_table', mnesia:dirty_next(Tab, a)), 
 
     %% dirty_create
     A ! fun() -> mnesia:dirty_write(RecB) end, 
-    ?match_receive({A, ok}), 
-    ?match([RecB], mnesia:dirty_read({Tab, b})), 
-    ?match([RecB], mnesia:dirty_match_object(PatB)), 
-    ?match([RecB], mnesia:dirty_index_read(Tab, 3, ValPos)), 
-    ?match([RecB], mnesia:dirty_index_match_object(PatB, ValPos)), 
+    ?match_receive({^A, ok}), 
+    ?match([^RecB], mnesia:dirty_read({Tab, b})), 
+    ?match([^RecB], mnesia:dirty_match_object(PatB)), 
+    ?match([^RecB], mnesia:dirty_index_read(Tab, 3, ValPos)), 
+    ?match([^RecB], mnesia:dirty_index_match_object(PatB, ValPos)), 
     ?match('$end_of_table', 
 	   mnesia:dirty_next(Tab, mnesia:dirty_next(Tab, mnesia:dirty_first(Tab)))), 
     
     %% dirty_update_counter
     A ! fun() -> mnesia:dirty_update_counter({Tab, b}, -1) end, 
-    ?match_receive({A, _}), 
-    ?match([RecB2], mnesia:dirty_read({Tab, b})), 
+    ?match_receive({^A, _}), 
+    ?match([^RecB2], mnesia:dirty_read({Tab, b})), 
     ?match([], mnesia:dirty_match_object(PatB)), 
-    ?match([RecB2], mnesia:dirty_match_object(PatB2)), 
-    ?match([RecB2], mnesia:dirty_index_read(Tab, 2, ValPos)), 
+    ?match([^RecB2], mnesia:dirty_match_object(PatB2)), 
+    ?match([^RecB2], mnesia:dirty_index_read(Tab, 2, ValPos)), 
     ?match([], mnesia:dirty_index_match_object(PatB, ValPos)), 
-    ?match([RecB2], mnesia:dirty_index_match_object(PatB2, ValPos)), 
+    ?match([^RecB2], mnesia:dirty_index_match_object(PatB2, ValPos)), 
     ?match('$end_of_table', 
 	   mnesia:dirty_next(Tab, mnesia:dirty_next(Tab, mnesia:dirty_first(Tab)))), 
 
     %% dirty_delete
     A ! fun() -> mnesia:dirty_delete({Tab, b}) end, 
-    ?match_receive({A, ok}), 
+    ?match_receive({^A, ok}), 
     ?match([], mnesia:dirty_read({Tab, b})), 
     ?match([], mnesia:dirty_match_object(PatB2)), 
     ?match([], mnesia:dirty_index_read(Tab, 3, ValPos)), 
@@ -1557,9 +1557,9 @@ dirty_visibility(Mode, Config) ->
     ?match('$end_of_table', mnesia:dirty_next(Tab, a)), 
 
     %% dirty_delete_object
-    ?match([RecA], mnesia:dirty_match_object(PatA)), 
+    ?match([^RecA], mnesia:dirty_match_object(PatA)), 
     A ! fun() -> mnesia:dirty_delete_object(RecA) end, 
-    ?match_receive({A, ok}), 
+    ?match_receive({^A, ok}), 
     ?match([], mnesia:dirty_read({Tab, a})), 
     ?match([], mnesia:dirty_match_object(PatA)), 
     ?match([], mnesia:dirty_index_read(Tab, 1, ValPos)), 
@@ -1569,7 +1569,7 @@ dirty_visibility(Mode, Config) ->
     case Mode of
 	inside_trans ->
 	    A ! end_trans, 
-	    ?match_receive({A, {atomic, end_trans}});
+	    ?match_receive({^A, {atomic, end_trans}});
 	outside_trans ->
 	    ignore
     end, 
@@ -1615,7 +1615,7 @@ trans_update_invisibible_outside_trans(Config) when is_list(Config) ->
 		  ?match(ok, mnesia:delete({Tab, b})), 
 		  Verify(), 
 		  
-		  ?match([RecA], mnesia:match_object(PatA)), 
+		  ?match([^RecA], mnesia:match_object(PatA)), 
 		  Verify(), 
 
 		  ?match(ok, mnesia:delete_object(RecA)), 
@@ -1647,20 +1647,20 @@ trans_update_visible_inside_trans(Config) when is_list(Config) ->
     Fun = fun() ->
 		  %% write
 		  ?match(ok, mnesia:write(RecA)), 
-		  ?match([RecA], mnesia:read({Tab, a})), 
-		  ?match([RecA], mnesia:wread({Tab, a})), 
-		  ?match([RecA], mnesia:match_object(PatA)), 
+		  ?match([^RecA], mnesia:read({Tab, a})), 
+		  ?match([^RecA], mnesia:wread({Tab, a})), 
+		  ?match([^RecA], mnesia:match_object(PatA)), 
 		  ?match([a], mnesia:all_keys(Tab)), 
-		  ?match([RecA], mnesia:index_match_object(PatA, ValPos)), 
-		  ?match([RecA], mnesia:index_read(Tab, 1, ValPos)), 
+		  ?match([^RecA], mnesia:index_match_object(PatA, ValPos)), 
+		  ?match([^RecA], mnesia:index_read(Tab, 1, ValPos)), 
 
 		  %% create
 		  ?match(ok, mnesia:write(RecB)), 
-		  ?match([RecB], mnesia:read({Tab, b})), 
-		  ?match([RecB], mnesia:wread({Tab, b})), 
-		  ?match([RecB], mnesia:match_object(PatB)), 
-		  ?match([RecB], mnesia:index_match_object(PatB, ValPos)), 
-		  ?match([RecB], mnesia:index_read(Tab, 3, ValPos)), 
+		  ?match([^RecB], mnesia:read({Tab, b})), 
+		  ?match([^RecB], mnesia:wread({Tab, b})), 
+		  ?match([^RecB], mnesia:match_object(PatB)), 
+		  ?match([^RecB], mnesia:index_match_object(PatB, ValPos)), 
+		  ?match([^RecB], mnesia:index_read(Tab, 3, ValPos)), 
 		  
 		  %% delete
 		  ?match(ok, mnesia:delete({Tab, b})), 
@@ -1674,12 +1674,12 @@ trans_update_visible_inside_trans(Config) when is_list(Config) ->
 
 		  %% delete_object
 		  ?match(ok, mnesia:delete_object(RecA2)),
-		  ?match([RecA], mnesia:read({Tab, a})),
-		  ?match([RecA], mnesia:wread({Tab, a})),
-		  ?match([RecA], mnesia:match_object(PatA)),
+		  ?match([^RecA], mnesia:read({Tab, a})),
+		  ?match([^RecA], mnesia:wread({Tab, a})),
+		  ?match([^RecA], mnesia:match_object(PatA)),
 		  ?match([a], mnesia:all_keys(Tab)),
-		  ?match([RecA], mnesia:index_match_object(PatA, ValPos)),
-		  ?match([RecA], mnesia:index_read(Tab, 1, ValPos)),
+		  ?match([^RecA], mnesia:index_match_object(PatA, ValPos)),
+		  ?match([^RecA], mnesia:index_read(Tab, 1, ValPos)),
 
 		  ?match(ok, mnesia:delete_object(RecA)), 
 		  ?match([], mnesia:read({Tab, a})), 
@@ -1725,25 +1725,25 @@ write_shadows(Config) when is_list(Config) ->
     Fun2 = fun() ->
 		  %% write shadow old write - is the confirmed value visable
 		  %%                          in the shadow ?
-		  ?match([RecA1], mnesia:read({Tab, a})), 
-		  ?match([RecA1], mnesia:wread({Tab, a})), 
-		  ?match([RecA1], mnesia:match_object(PatA1)), 
+		  ?match([^RecA1], mnesia:read({Tab, a})), 
+		  ?match([^RecA1], mnesia:wread({Tab, a})), 
+		  ?match([^RecA1], mnesia:match_object(PatA1)), 
 		  ?match([a], mnesia:all_keys(Tab)), 
-		  ?match([RecA1], mnesia:index_match_object(PatA1, ValPos)), 
-		  ?match([RecA1], mnesia:index_read(Tab, 1, ValPos)), 
+		  ?match([^RecA1], mnesia:index_match_object(PatA1, ValPos)), 
+		  ?match([^RecA1], mnesia:index_read(Tab, 1, ValPos)), 
 
 		  %% write shadow new write - is a new value visable instead
 		  %%                          of the old value ?
 		  ?match(ok, mnesia:write(RecA2)), 
 
-		  ?match([RecA2], mnesia:read({Tab, a})), 
-		  ?match([RecA2], mnesia:wread({Tab, a})), 
+		  ?match([^RecA2], mnesia:read({Tab, a})), 
+		  ?match([^RecA2], mnesia:wread({Tab, a})), 
 		   ?match([],      mnesia:match_object(PatA1)), %% delete shadow old but not new write
-		   ?match([RecA2], mnesia:match_object(PatA2)), %% is the new value visable
+		   ?match([^RecA2], mnesia:match_object(PatA2)), %% is the new value visable
 
 		  ?match([a], mnesia:all_keys(Tab)), 
-		  ?match([RecA2], mnesia:index_match_object(PatA2, ValPos)), 
-		  ?match([RecA2], mnesia:index_read(Tab, 2, ValPos)), 
+		  ?match([^RecA2], mnesia:index_match_object(PatA2, ValPos)), 
+		  ?match([^RecA2], mnesia:index_read(Tab, 2, ValPos)), 
 		  ok
 
 	  end, 
@@ -1796,13 +1796,13 @@ delete_shadows(Config) when is_list(Config) ->
 		  %%                           when the old one was deleted ?
 		  ?match(ok, mnesia:write(RecA2)), 
 
-		  ?match([RecA2], mnesia:read({Tab, a})), 
-		  ?match([RecA2], mnesia:wread({Tab, a})), 
+		  ?match([^RecA2], mnesia:read({Tab, a})), 
+		  ?match([^RecA2], mnesia:wread({Tab, a})), 
 		  ?match([],  mnesia:match_object(PatA1)),
-		  ?match([RecA2], mnesia:match_object(PatA2)), 
+		  ?match([^RecA2], mnesia:match_object(PatA2)), 
 		  ?match([a], mnesia:all_keys(Tab)), 
-		  ?match([RecA2], mnesia:index_match_object(PatA2, ValPos)), 
-		  ?match([RecA2], mnesia:index_read(Tab, 2, ValPos)), 
+		  ?match([^RecA2], mnesia:index_match_object(PatA2, ValPos)), 
+		  ?match([^RecA2], mnesia:index_read(Tab, 2, ValPos)), 
 	
 		   %% delete shadow old and new write - is the new value invisable
 		  %%                           when deleted ?
@@ -1861,12 +1861,12 @@ write_delete_shadows_bag(Config) when is_list(Config) ->
 		   %%                           when deleted in the transaction ?
 		   ?match(ok, mnesia:delete_object(RecA1)), 
 
-		   ?match([RecA2], mnesia:read({Tab, a})), 
-		   ?match([RecA2], mnesia:wread({Tab, a})), 
-		   ?match([RecA2], mnesia:match_object(PatA2)), 
+		   ?match([^RecA2], mnesia:read({Tab, a})), 
+		   ?match([^RecA2], mnesia:wread({Tab, a})), 
+		   ?match([^RecA2], mnesia:match_object(PatA2)), 
 		   ?match([a], mnesia:all_keys(Tab)), 
-		   ?match([RecA2], mnesia:index_match_object(PatA2, ValPos)), 
-		   ?match([RecA2], mnesia:index_read(Tab, 2, ValPos)), 
+		   ?match([^RecA2], mnesia:index_match_object(PatA2, ValPos)), 
+		   ?match([^RecA2], mnesia:index_read(Tab, 2, ValPos)), 
 
 		   ?match(ok, mnesia:delete(OidA)), 
 
@@ -1883,14 +1883,14 @@ write_delete_shadows_bag(Config) when is_list(Config) ->
 		   ?match(ok, mnesia:write(RecA3)), 
 
 
-		   ?match([RecA2, RecA3], lists:sort(mnesia:read({Tab, a}))), 
-		   ?match([RecA2, RecA3], lists:sort(mnesia:wread({Tab, a}))), 
-		   ?match([RecA2], mnesia:match_object(PatA2)), 
+		   ?match([^RecA2, ^RecA3], lists:sort(mnesia:read({Tab, a}))), 
+		   ?match([^RecA2, ^RecA3], lists:sort(mnesia:wread({Tab, a}))), 
+		   ?match([^RecA2], mnesia:match_object(PatA2)), 
 		   ?match([a], mnesia:all_keys(Tab)), 
-		   ?match([RecA2, RecA3], lists:sort(mnesia:match_object(PatA))),
-		   ?match([RecA2], mnesia:index_match_object(PatA2, ValPos)),
-		   ?match([RecA3], mnesia:index_match_object(PatA3, ValPos)),
-		   ?match([RecA2], mnesia:index_read(Tab, 2, ValPos)), 
+		   ?match([^RecA2, ^RecA3], lists:sort(mnesia:match_object(PatA))),
+		   ?match([^RecA2], mnesia:index_match_object(PatA2, ValPos)),
+		   ?match([^RecA3], mnesia:index_match_object(PatA3, ValPos)),
+		   ?match([^RecA2], mnesia:index_read(Tab, 2, ValPos)), 
 
 		   %% delete shadow old and new write - is the new value invisable
 		   %%                           when deleted ?
@@ -1939,12 +1939,12 @@ write_delete_shadows_bag2(Config) when is_list(Config) ->
 	     end,
     Both1 = [{Tab, 1, 1}, {Tab, 1, 2}],   
     Both2 = [{Tab, 2, 1}, {Tab, 2, 2}],   
-    ?match({atomic, {[], [], Both1}}, mnesia:transaction(Del)),
-    ?match({atomic, {Both1, [], Both1}}, mnesia:transaction(Del)),
-    ?match({atomic, Both1}, mnesia:transaction(fun() -> mnesia:read({Tab, 1}) end)),
-    ?match({atomic, {[], [], Both2}}, mnesia:transaction(DelObj)),
-    ?match({atomic, {Both2, [{Tab, 2, 1}], Both2}}, mnesia:transaction(DelObj)),
-    ?match({atomic, Both2}, mnesia:transaction(fun() -> mnesia:read({Tab, 2}) end)),
+    ?match({atomic, {[], [], ^Both1}}, mnesia:transaction(Del)),
+    ?match({atomic, {^Both1, [], ^Both1}}, mnesia:transaction(Del)),
+    ?match({atomic, ^Both1}, mnesia:transaction(fun() -> mnesia:read({Tab, 1}) end)),
+    ?match({atomic, {[], [], ^Both2}}, mnesia:transaction(DelObj)),
+    ?match({atomic, {^Both2, [{^Tab, 2, 1}], ^Both2}}, mnesia:transaction(DelObj)),
+    ?match({atomic, ^Both2}, mnesia:transaction(fun() -> mnesia:read({Tab, 2}) end)),
     ?verify_mnesia([Node1], []).
 
 shadow_search(doc) ->
@@ -1996,15 +1996,15 @@ shadow_search(Config) when is_list(Config) ->
 			    Search(Tab)
 	 end,
     S1 = lists:sort([R1,R2|Recs]),
-    ?match({atomic,S1}, mnesia:transaction(W1, [Tab1,Select])),
-    ?match({atomic,S1}, mnesia:transaction(W1, [Tab1,Match])),
-    ?match({atomic,S1}, mnesia:transaction(W1, [Tab1,SelLoop])),
-    ?match({atomic,S1}, sort_res(mnesia:transaction(W1, [Tab2,Select]))),
-    ?match({atomic,S1}, sort_res(mnesia:transaction(W1, [Tab2,SelLoop]))),
-    ?match({atomic,S1}, sort_res(mnesia:transaction(W1, [Tab2,Match]))),
-    ?match({atomic,S1}, sort_res(mnesia:transaction(W1, [Tab3,Select]))),
-    ?match({atomic,S1}, sort_res(mnesia:transaction(W1, [Tab3,SelLoop]))),
-    ?match({atomic,S1}, sort_res(mnesia:transaction(W1, [Tab3,Match]))),
+    ?match({atomic,^S1}, mnesia:transaction(W1, [Tab1,Select])),
+    ?match({atomic,^S1}, mnesia:transaction(W1, [Tab1,Match])),
+    ?match({atomic,^S1}, mnesia:transaction(W1, [Tab1,SelLoop])),
+    ?match({atomic,^S1}, sort_res(mnesia:transaction(W1, [Tab2,Select]))),
+    ?match({atomic,^S1}, sort_res(mnesia:transaction(W1, [Tab2,SelLoop]))),
+    ?match({atomic,^S1}, sort_res(mnesia:transaction(W1, [Tab2,Match]))),
+    ?match({atomic,^S1}, sort_res(mnesia:transaction(W1, [Tab3,Select]))),
+    ?match({atomic,^S1}, sort_res(mnesia:transaction(W1, [Tab3,SelLoop]))),
+    ?match({atomic,^S1}, sort_res(mnesia:transaction(W1, [Tab3,Match]))),
     [mnesia:dirty_delete_object(Tab,R) || R <- [R1,R2], Tab <- Tabs],
 
     W2 = fun(Tab,Search) -> 
@@ -2014,15 +2014,15 @@ shadow_search(Config) when is_list(Config) ->
 	 end,
     S2 = lists:sort([R1|Recs]),
     S2Bag = lists:sort([R1,R3|Recs]),
-    ?match({atomic,S2}, mnesia:transaction(W2, [Tab1,Select])),
-    ?match({atomic,S2}, mnesia:transaction(W2, [Tab1,SelLoop])),
-    ?match({atomic,S2}, mnesia:transaction(W2, [Tab1,Match])),
-    ?match({atomic,S2}, sort_res(mnesia:transaction(W2, [Tab2,Select]))),
-    ?match({atomic,S2}, sort_res(mnesia:transaction(W2, [Tab2,SelLoop]))),
-    ?match({atomic,S2}, sort_res(mnesia:transaction(W2, [Tab2,Match]))),
-    ?match({atomic,S2Bag}, sort_res(mnesia:transaction(W2, [Tab3,Select]))),
-    ?match({atomic,S2Bag}, sort_res(mnesia:transaction(W2, [Tab3,SelLoop]))),
-    ?match({atomic,S2Bag}, sort_res(mnesia:transaction(W2, [Tab3,Match]))),
+    ?match({atomic,^S2}, mnesia:transaction(W2, [Tab1,Select])),
+    ?match({atomic,^S2}, mnesia:transaction(W2, [Tab1,SelLoop])),
+    ?match({atomic,^S2}, mnesia:transaction(W2, [Tab1,Match])),
+    ?match({atomic,^S2}, sort_res(mnesia:transaction(W2, [Tab2,Select]))),
+    ?match({atomic,^S2}, sort_res(mnesia:transaction(W2, [Tab2,SelLoop]))),
+    ?match({atomic,^S2}, sort_res(mnesia:transaction(W2, [Tab2,Match]))),
+    ?match({atomic,^S2Bag}, sort_res(mnesia:transaction(W2, [Tab3,Select]))),
+    ?match({atomic,^S2Bag}, sort_res(mnesia:transaction(W2, [Tab3,SelLoop]))),
+    ?match({atomic,^S2Bag}, sort_res(mnesia:transaction(W2, [Tab3,Match]))),
 %%    [mnesia:dirty_delete_object(Tab,R) || R <- [R1,R3], Tab <- Tabs],
 
     W3 = fun(Tab,Search) -> 
@@ -2032,15 +2032,15 @@ shadow_search(Config) when is_list(Config) ->
 	 end,
     S3Bag = lists:sort([R4|lists:delete(R1,Recs)]),
     S3 = lists:delete({RecName,3,3},S3Bag),
-    ?match({atomic,S3}, mnesia:transaction(W3, [Tab1,Select])),
-    ?match({atomic,S3}, mnesia:transaction(W3, [Tab1,SelLoop])),
-    ?match({atomic,S3}, mnesia:transaction(W3, [Tab1,Match])),
-    ?match({atomic,S3}, sort_res(mnesia:transaction(W3, [Tab2,SelLoop]))),
-    ?match({atomic,S3}, sort_res(mnesia:transaction(W3, [Tab2,Select]))),
-    ?match({atomic,S3}, sort_res(mnesia:transaction(W3, [Tab2,Match]))),
-    ?match({atomic,S3Bag}, sort_res(mnesia:transaction(W3, [Tab3,Select]))),
-    ?match({atomic,S3Bag}, sort_res(mnesia:transaction(W3, [Tab3,SelLoop]))),
-    ?match({atomic,S3Bag}, sort_res(mnesia:transaction(W3, [Tab3,Match]))),
+    ?match({atomic,^S3}, mnesia:transaction(W3, [Tab1,Select])),
+    ?match({atomic,^S3}, mnesia:transaction(W3, [Tab1,SelLoop])),
+    ?match({atomic,^S3}, mnesia:transaction(W3, [Tab1,Match])),
+    ?match({atomic,^S3}, sort_res(mnesia:transaction(W3, [Tab2,SelLoop]))),
+    ?match({atomic,^S3}, sort_res(mnesia:transaction(W3, [Tab2,Select]))),
+    ?match({atomic,^S3}, sort_res(mnesia:transaction(W3, [Tab2,Match]))),
+    ?match({atomic,^S3Bag}, sort_res(mnesia:transaction(W3, [Tab3,Select]))),
+    ?match({atomic,^S3Bag}, sort_res(mnesia:transaction(W3, [Tab3,SelLoop]))),
+    ?match({atomic,^S3Bag}, sort_res(mnesia:transaction(W3, [Tab3,Match]))),
 
     W4 = fun(Tab,Search) -> 
 		 mnesia:delete(Tab,-1,write),
@@ -2055,15 +2055,15 @@ shadow_search(Config) when is_list(Config) ->
 	 end,
     S4Bag = lists:sort([R5|S3Bag]),
     S4    = lists:sort([R5|S3]),
-    ?match({atomic,S4}, mnesia:transaction(W4, [Tab1,Select])),
-    ?match({atomic,S4}, mnesia:transaction(W4, [Tab1,SelLoop])),
-    ?match({atomic,S4}, mnesia:transaction(W4, [Tab1,Match])),
-    ?match({atomic,S4}, sort_res(mnesia:transaction(W4, [Tab2,Select]))),
-    ?match({atomic,S4}, sort_res(mnesia:transaction(W4, [Tab2,SelLoop]))),
-    ?match({atomic,S4}, sort_res(mnesia:transaction(W4, [Tab2,Match]))),
-    ?match({atomic,S4Bag}, sort_res(mnesia:transaction(W4, [Tab3,Select]))),
-    ?match({atomic,S4Bag}, sort_res(mnesia:transaction(W4, [Tab3,SelLoop]))),
-    ?match({atomic,S4Bag}, sort_res(mnesia:transaction(W4, [Tab3,Match]))),
+    ?match({atomic,^S4}, mnesia:transaction(W4, [Tab1,Select])),
+    ?match({atomic,^S4}, mnesia:transaction(W4, [Tab1,SelLoop])),
+    ?match({atomic,^S4}, mnesia:transaction(W4, [Tab1,Match])),
+    ?match({atomic,^S4}, sort_res(mnesia:transaction(W4, [Tab2,Select]))),
+    ?match({atomic,^S4}, sort_res(mnesia:transaction(W4, [Tab2,SelLoop]))),
+    ?match({atomic,^S4}, sort_res(mnesia:transaction(W4, [Tab2,Match]))),
+    ?match({atomic,^S4Bag}, sort_res(mnesia:transaction(W4, [Tab3,Select]))),
+    ?match({atomic,^S4Bag}, sort_res(mnesia:transaction(W4, [Tab3,SelLoop]))),
+    ?match({atomic,^S4Bag}, sort_res(mnesia:transaction(W4, [Tab3,Match]))),
     [mnesia:dirty_delete_object(Tab,R) || R <- [{RecName,3,3},R5], Tab <- Tabs],
         
     %% hmmm anything more??
@@ -2093,13 +2093,13 @@ removed_resources([_N1,N2,N3], DeleteRes) ->
     
     Conflict = fun() -> 
 		       %% Read a value..
-		       [{Tab,1,Val}] = mnesia:read({Tab,1}),
+		       [{^Tab,1,Val}] = mnesia:read({Tab,1}),
 		       case get(restart) of
 			   undefined -> 
 			       Tester ! {pid_1, self()},
 			       %% Wait for sync, the read value have been 
 			       %% updated and this function should be restarted.
-			       receive {Tester,sync} -> ok  end,
+			       receive {^Tester,sync} -> ok  end,
 			       put(restart, restarted);
 			   restarted ->
 			       ok
@@ -2107,29 +2107,29 @@ removed_resources([_N1,N2,N3], DeleteRes) ->
 		       mnesia:write({Tab,1,Val+10})
 	       end,
     Lucky    = fun() -> 
-		       [{Tab,1,Val}] = mnesia:read({Tab,1}),
+		       [{^Tab,1,Val}] = mnesia:read({Tab,1}),
 		       mnesia:write({Tab,1,Val+100})
 	       end,
     
     CPid = spawn_link(fun() -> Tester ! {self(), mnesia:transaction(Conflict)} end),
     
     %% sync first transaction
-    receive {pid_1, CPid} -> synced end,
+    receive {pid_1, ^CPid} -> synced end,
 
     DeleteRes(Tab, Where2Read),
 
-    ?match(Keep, mnesia:table_info(Tab, where_to_read)),
+    ?match(^Keep, mnesia:table_info(Tab, where_to_read)),
     
     %% Run the other/Lucky transaction, this should work since 
     %% it won't grab a lock on the conflicting transactions Where2Read node.
     
     LPid = spawn_link(Keep, fun() -> Tester ! {self(),mnesia:transaction(Lucky)} end),
-    ?match_receive({LPid,{atomic,ok}}),
+    ?match_receive({^LPid,{atomic,ok}}),
     
     %% Continue Transaction no 1
     CPid ! {self(), sync},
     
-    ?match(ok, receive {CPid,{atomic,ok}} -> ok after 2000 -> process_info(self()) end),
+    ?match(ok, receive {^CPid,{atomic,ok}} -> ok after 2000 -> process_info(self()) end),
     
     ?match({atomic,[{del_res,1,111}]}, mnesia:transaction(fun() -> mnesia:read({Tab,1}) end)),
     Where2Read.
@@ -2187,13 +2187,13 @@ nasty(Config) ->
 	      end,
 
     Up = spawn_link(mnesia, transaction, [Update,  [0]]),
-    ?match_receive({update, 0, Up, _Tid}),
+    ?match_receive({update, 0, ^Up, _Tid}),
     TL = spawn_link(mnesia, transaction, [TabLock]), 
-    ?match_receive({tablock, Tab, _Tl, _Tid}),
+    ?match_receive({tablock, ^Tab, _Tl, _Tid}),
     W0 = spawn_link(mnesia, transaction, [Write, [0]]), 
-    ?match_receive({write, 0, W0, _Tid}),
+    ?match_receive({write, 0, ^W0, _Tid}),
     W1 = spawn_link(mnesia, transaction, [Write, [1]]), 
-    ?match_receive({write, 1, W1, _Tid}),
+    ?match_receive({write, 1, ^W1, _Tid}),
     
     %% Nothing should be in msg queue!
     ?match(timeout, receive A -> A after 1000 -> timeout end),
@@ -2206,8 +2206,8 @@ nasty(Config) ->
     LQ1 = mnesia_locker:get_lock_queue(),    
     ?match({2, _}, {length(LQ1), LQ1}),
     W0 ! continue,                          % Up should be in queue
-    ?match_receive({done, {write, 0}, W0}),
-    ?match_receive({'EXIT', W0, normal}),
+    ?match_receive({done, {write, 0}, ^W0}),
+    ?match_receive({'EXIT', ^W0, normal}),
 
     TL ! continue,   % Should stay in queue W1
     ?match(timeout, receive A -> A after 1000 -> timeout end),
@@ -2218,18 +2218,18 @@ nasty(Config) ->
     ?match({2, _}, {length(LQ2), LQ2}),    
     
     W1 ! continue,
-    ?match_receive({done, {write, 1}, W1}),
+    ?match_receive({done, {write, 1}, ^W1}),
     get_exit(W1),
     get_exit(TL),
-    ?match_receive({done, {tablock,Tab}, TL}),
+    ?match_receive({done, {tablock,^Tab}, ^TL}),
     get_exit(Up),
-    ?match_receive({done, {update, 0}, Up}),
+    ?match_receive({done, {update, 0}, ^Up}),
     
     ok.
 
 get_exit(Pid) ->
     receive 
-	{'EXIT', Pid, normal} ->
+	{'EXIT', ^Pid, normal} ->
 	    ok
     after 10000 ->
 	    ?error("Timeout EXIT ~p~n", [Pid])
@@ -2288,12 +2288,12 @@ foldl(Config) when is_list(Config) ->
     AddT21 = lists:sort([{Tab21, 0, 0}, {Tab21, 1, 0}] ++ Tab21Els ++ [{Tab21, 11, 0}]),
     AddT31 = [{Tab31, 0, 0}, {Tab31, 1, 0}] ++ tl(Tab31Els) ++ [{Tab31, 11, 0}],
     
-    ?match({atomic, AddT1}, sort_res(mnesia:transaction(AddB, [Tab1, foldl]))),
-    ?match({atomic, AddT2}, sort_res(mnesia:transaction(AddB, [Tab2, foldl]))),
-    ?match({atomic, AddT3}, rev_res(mnesia:transaction(AddB, [Tab3, foldl]))),
-    ?match({atomic, AddT11}, sort_res(mnesia:transaction(AddB, [Tab11, foldr]))),
-    ?match({atomic, AddT21}, sort_res(mnesia:transaction(AddB, [Tab21, foldr]))),
-    ?match({atomic, AddT31}, mnesia:transaction(AddB, [Tab31, foldr])),
+    ?match({atomic, ^AddT1}, sort_res(mnesia:transaction(AddB, [Tab1, foldl]))),
+    ?match({atomic, ^AddT2}, sort_res(mnesia:transaction(AddB, [Tab2, foldl]))),
+    ?match({atomic, ^AddT3}, rev_res(mnesia:transaction(AddB, [Tab3, foldl]))),
+    ?match({atomic, ^AddT11}, sort_res(mnesia:transaction(AddB, [Tab11, foldr]))),
+    ?match({atomic, ^AddT21}, sort_res(mnesia:transaction(AddB, [Tab21, foldr]))),
+    ?match({atomic, ^AddT31}, mnesia:transaction(AddB, [Tab31, foldr])),
     
     ?match({atomic, ok}, mnesia:create_table(copy, [{ram_copies, [N2]},
 						    {record_name, Tab1}])),
@@ -2304,10 +2304,10 @@ foldl(Config) when is_list(Config) ->
 		      Res
 	      end,
     Copy = fun() -> 
-		   AddT1 = mnesia:foldl(CopyRec, [], Tab1),
-		   AddT1 = sort_res(mnesia:foldl(Get, [], copy))
+		   ^AddT1 = mnesia:foldl(CopyRec, [], Tab1),
+		   ^AddT1 = sort_res(mnesia:foldl(Get, [], copy))
 	   end,
-    ?match({atomic, AddT1}, sort_res(mnesia:transaction(Copy))),
+    ?match({atomic, ^AddT1}, sort_res(mnesia:transaction(Copy))),
     
     Del  = fun(E, A) -> mnesia:delete_object(E), [E|A] end,
     DelD = fun(Tab) ->
@@ -2324,9 +2324,9 @@ foldl(Config) when is_list(Config) ->
 			mnesia:write({Tab, [12], 12}),	
 			mnesia:foldr(Get, [], Tab)
 		end,
-    ?match({atomic, [{Tab1, [12], 12}]}, sort_res(mnesia:transaction(ListWrite, [Tab1]))),
-    ?match({atomic, [{Tab2, [12], 12}]}, sort_res(mnesia:transaction(ListWrite, [Tab2]))),
-    ?match({atomic, [{Tab3, [12], 12}]}, rev_res(mnesia:transaction(ListWrite, [Tab3]))),
+    ?match({atomic, [{^Tab1, [12], 12}]}, sort_res(mnesia:transaction(ListWrite, [Tab1]))),
+    ?match({atomic, [{^Tab2, [12], 12}]}, sort_res(mnesia:transaction(ListWrite, [Tab2]))),
+    ?match({atomic, [{^Tab3, [12], 12}]}, rev_res(mnesia:transaction(ListWrite, [Tab3]))),
     
     ?verify_mnesia(Nodes, []).	   
 
@@ -2427,24 +2427,24 @@ first_next(Config) when is_list(Config) ->
     [mnesia:sync_dirty(fun() -> mnesia:write(E) end) || E <- Tab4Els],
     Keys = lists:sort(mnesia:dirty_all_keys(Tab1)),
     R1  =  Keys++ ['$end_of_table'],
-    [?match({atomic, R1}, Trans(fun() -> Loop(Tab,first) end)) 
+    [?match({atomic, ^R1}, Trans(fun() -> Loop(Tab,first) end)) 
      || Tab <- Tabs],
 
-    [?match({atomic, R1}, Trans(fun() -> Loop(Tab,last) end)) 
+    [?match({atomic, ^R1}, Trans(fun() -> Loop(Tab,last) end)) 
      || Tab <- Tabs],
     R2 = R1 -- [3],
 
-    [?match({atomic, R2}, Trans(fun() -> mnesia:delete({Tab,3}),Loop(Tab,first) end)) 
+    [?match({atomic, ^R2}, Trans(fun() -> mnesia:delete({Tab,3}),Loop(Tab,first) end)) 
      || Tab <- Tabs],
-    [?match({atomic, R1}, Trans(fun() -> mnesia:write({Tab,3,3}),Loop(Tab,first) end)) 
+    [?match({atomic, ^R1}, Trans(fun() -> mnesia:write({Tab,3,3}),Loop(Tab,first) end)) 
      || Tab <- Tabs],
-    [?match({atomic, R2}, Trans(fun() -> mnesia:delete({Tab,3}),Loop(Tab,last) end)) 
+    [?match({atomic, ^R2}, Trans(fun() -> mnesia:delete({Tab,3}),Loop(Tab,last) end)) 
      || Tab <- Tabs],
-    [?match({atomic, R1}, Trans(fun() -> mnesia:write({Tab,3,3}),Loop(Tab,last) end)) 
+    [?match({atomic, ^R1}, Trans(fun() -> mnesia:write({Tab,3,3}),Loop(Tab,last) end)) 
      || Tab <- Tabs],
-    [?match({atomic, R1}, Trans(fun() -> mnesia:write({Tab,4,19}),Loop(Tab,first) end)) 
+    [?match({atomic, ^R1}, Trans(fun() -> mnesia:write({Tab,4,19}),Loop(Tab,first) end)) 
      || Tab <- Tabs],
-    [?match({atomic, R1}, Trans(fun() -> mnesia:write({Tab,4,4}),Loop(Tab,last) end)) 
+    [?match({atomic, ^R1}, Trans(fun() -> mnesia:write({Tab,4,4}),Loop(Tab,last) end)) 
      || Tab <- Tabs],
 
     ?verify_mnesia(Nodes, []).
@@ -2468,13 +2468,13 @@ snmp_shadows_test(Tab) ->
     [mnesia:dirty_write({Tab, {"string", N}, {N, init}}) || N <- lists:seq(2,8,2)],
     
     CheckOrder = fun(A={_,_,{_,_,State}}, Prev) ->
-			 ?match({true, A, Prev}, {Prev < A, A, Prev}),
+			 ?match({true, ^A, ^Prev}, {Prev < A, A, Prev}),
 			 {State,A} 
 		 end,
     R1 = mnesia:sync_dirty(fun() -> loop_snmp(Tab, []) end),
     lists:mapfoldl(CheckOrder, {[],foo,foo}, R1),
     R2 = mnesia:transaction(fun() -> loop_snmp(Tab, []) end),
-    ?match({atomic, R1}, R2),
+    ?match({atomic, ^R1}, R2),
     
     Shadow = fun() ->
 		     ok = mnesia:write({Tab, {"string",1}, {1,update}}),
@@ -2494,7 +2494,7 @@ snmp_shadows_test(Tab) ->
     ?match({atomic, ok}, mnesia:clear_table(Tab)),
 
     [mnesia:dirty_write({Tab, {"string", N}, {N, init}}) || N <- lists:seq(2,8,2)],
-    {atomic, R3} = mnesia:transaction(Shadow),
+    {atomic, ^R3} = mnesia:transaction(Shadow),
     {L4,_} = lists:mapfoldl(CheckOrder, {[],foo,foo}, R3),
     ?match([{1,update},{2,init},{3,update},{4,update},{8,init},{9,update}], L4),
     ok.
@@ -2504,7 +2504,7 @@ loop_snmp(Tab,Prev) ->
 	{ok, SKey} ->
 	    {{ok,Row},_} = {mnesia:snmp_get_row(Tab, SKey),{?LINE,Prev,SKey}},
 	    {{ok,MKey},_} = {mnesia:snmp_get_mnesia_key(Tab,SKey),{?LINE,Prev,SKey}},
-	    ?match({[Row],Row,SKey,MKey}, {mnesia:read({Tab,MKey}),Row,SKey,MKey}),
+	    ?match({[^Row],^Row,^SKey,^MKey}, {mnesia:read({Tab,MKey}),Row,SKey,MKey}),
 	    [{SKey, MKey, Row} | loop_snmp(Tab, SKey)];
 	endOfTable ->
 	    []

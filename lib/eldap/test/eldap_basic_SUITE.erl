@@ -270,13 +270,13 @@ init_per_testcase(ssl_connection, Config) ->
 				 end
 			 end),
 	    receive
-		{ok,Listener} ->
+		{ok,^Listener} ->
 		    ct:log("SSL listening to port ~p (process ~p)",[SSL_Port, Listener]),
 		    [{ssl_listener,Listener},
 		     {ssl_listen_port,SSL_Port},
 		     {ssl_connect_opts,[]}
 		     | Config];
-		{no_ok,SSL_Other,Listener} ->
+		{no_ok,SSL_Other,^Listener} ->
 		    ct:log("ssl:listen on port ~p failed: ~p",[SSL_Port,SSL_Other]),
 		    {fail, "ssl:listen/2 failed"}
 	    after 5000 ->
@@ -462,9 +462,9 @@ tcp_connection_option(Config) ->
 		    case eldap:getopts(H, [{tcpopts,[linger]}]) of
 			{ok,[{tcpopts,[{linger,ActualLinger}]}]} ->
 			    case ActualLinger of
-				TestLinger ->
+				^TestLinger ->
 				    ok;
-				DefaultLinger ->
+				^DefaultLinger ->
 				    ct:fail("eldap:getopts: 'linger' didn't change,"
 					    " got ~p (=default) expected ~p",
 					    [ActualLinger,TestLinger]);
@@ -562,7 +562,7 @@ add_referral(Config) ->
 search_filter_equalityMatch(Config) ->
     BasePath = proplists:get_value(eldap_path, Config),
     ExpectedDN = "cn=Jonas Jonsson," ++ BasePath,
-    {ok, #eldap_search_result{entries=[#eldap_entry{object_name=ExpectedDN}]}} =
+    {ok, #eldap_search_result{entries=[#eldap_entry{object_name=^ExpectedDN}]}} =
 	eldap:search(proplists:get_value(handle, Config),
 		     #eldap_search{base = BasePath,
 				   filter = eldap:equalityMatch("sn", "Jonsson"),
@@ -572,7 +572,7 @@ search_filter_equalityMatch(Config) ->
 search_filter_substring_any(Config) ->
     BasePath = proplists:get_value(eldap_path, Config),
     ExpectedDN = "cn=Jonas Jonsson," ++ BasePath,
-    {ok, #eldap_search_result{entries=[#eldap_entry{object_name=ExpectedDN}]}} =
+    {ok, #eldap_search_result{entries=[#eldap_entry{object_name=^ExpectedDN}]}} =
 	eldap:search(proplists:get_value(handle, Config),
 		     #eldap_search{base = BasePath,
 				   filter = eldap:substrings("sn", [{any, "ss"}]),
@@ -583,7 +583,7 @@ search_filter_initial(Config) ->
     H = proplists:get_value(handle, Config),
     BasePath = proplists:get_value(eldap_path, Config),
     ExpectedDN = "cn=Foo Bar," ++ BasePath,
-    {ok, #eldap_search_result{entries=[#eldap_entry{object_name=ExpectedDN}]}} =
+    {ok, #eldap_search_result{entries=[#eldap_entry{object_name=^ExpectedDN}]}} =
 	eldap:search(H,
 		     #eldap_search{base = BasePath,
 				   filter = eldap:substrings("sn", [{initial, "B"}]),
@@ -594,7 +594,7 @@ search_filter_final(Config) ->
     H = proplists:get_value(handle, Config),
     BasePath = proplists:get_value(eldap_path, Config),
     ExpectedDN = "cn=Foo Bar," ++ BasePath,
-    {ok, #eldap_search_result{entries=[#eldap_entry{object_name=ExpectedDN}]}} =
+    {ok, #eldap_search_result{entries=[#eldap_entry{object_name=^ExpectedDN}]}} =
 	eldap:search(H,
 		     #eldap_search{base = BasePath,
 				   filter = eldap:substrings("sn", [{final, "r"}]),
@@ -605,7 +605,7 @@ search_filter_and(Config) ->
     H = proplists:get_value(handle, Config),
     BasePath = proplists:get_value(eldap_path, Config),
     ExpectedDN = "cn=Foo Bar," ++ BasePath,
-    {ok, #eldap_search_result{entries=[#eldap_entry{object_name=ExpectedDN}]}} =
+    {ok, #eldap_search_result{entries=[#eldap_entry{object_name=^ExpectedDN}]}} =
 	eldap:search(H,
 		     #eldap_search{base = BasePath,
 				   filter = eldap:'and'([eldap:substrings("sn", [{any, "a"}]),
@@ -624,7 +624,7 @@ search_filter_or(Config) ->
 				   filter = eldap:'or'([eldap:substrings("sn", [{any, "a"}]),
 							eldap:equalityMatch("ou","Team")]),
 				   scope=eldap:singleLevel()}),
-    ExpectedDNs = lists:sort([DN || #eldap_entry{object_name=DN} <- Es]).
+    ^ExpectedDNs = lists:sort([DN || #eldap_entry{object_name=DN} <- Es]).
 
 %%%----------------------------------------------------------------
 search_filter_and_not(Config) ->
@@ -666,7 +666,7 @@ search_two_hits(Config) ->
 
     %% And check that they are the expected ones:
     ExpectedDNs = lists:sort([DN1, DN2]),
-    ExpectedDNs = lists:sort([D || #eldap_entry{object_name=D} <- Es]),
+    ^ExpectedDNs = lists:sort([D || #eldap_entry{object_name=D} <- Es]),
 
     %% Restore the database:
     [ok=eldap:delete(H,DN) || DN <- ExpectedDNs].
@@ -697,7 +697,7 @@ modify(Config) ->
     ok = eldap:modify(H, DN, Mod),
 
     %% Check that the object was changed
-    {ok, #eldap_search_result{entries=[#eldap_entry{object_name=DN}]}} =
+    {ok, #eldap_search_result{entries=[#eldap_entry{object_name=^DN}]}} =
 	eldap:search(H,
 		     #eldap_search{base = BasePath,
 				   filter = eldap:equalityMatch("telephoneNumber", "555-12345"),
@@ -767,7 +767,7 @@ modify_dn_delete_old(Config) ->
     %% Check that the object to modify_dn of exists:
     {ok,OriginalAttrs} = attributes(H, DN),
     CN_orig = lists:sort(proplists:get_value("cn",OriginalAttrs)),
-    {ok, #eldap_search_result{entries=[#eldap_entry{object_name=DN}]}} =
+    {ok, #eldap_search_result{entries=[#eldap_entry{object_name=^DN}]}} =
 	eldap:search(H,
 		     #eldap_search{base = BasePath,
 				   filter = eldap:substrings("sn", [{any, "a"}]),
@@ -779,21 +779,21 @@ modify_dn_delete_old(Config) ->
     %% Check that DN was modified and the old one was deleted:
     {ok,NewAttrs} = attributes(H, NewDN),
     CN_new = lists:sort(proplists:get_value("cn",NewAttrs)),
-    {ok, #eldap_search_result{entries=[#eldap_entry{object_name=NewDN}]}} =
+    {ok, #eldap_search_result{entries=[#eldap_entry{object_name=^NewDN}]}} =
 	eldap:search(H,
 		     #eldap_search{base = BasePath,
 				   filter = eldap:substrings("sn", [{any, "a"}]),
 				   scope = eldap:singleLevel()}),
     %% What we expect:
-    CN_new = lists:sort([NewCN | CN_orig -- [OrigCN]]),
+    ^CN_new = lists:sort([NewCN | CN_orig -- [OrigCN]]),
 
     %% Change back:
     ok = eldap:modify_dn(H, NewDN, OriginalRDN, true, ""),
 
     %% Check that DN was modified and the new one was deleted:
     {ok,SameAsOriginalAttrs} = attributes(H, DN),
-    CN_orig = lists:sort(proplists:get_value("cn",SameAsOriginalAttrs)),
-    {ok, #eldap_search_result{entries=[#eldap_entry{object_name=DN}]}} =
+    ^CN_orig = lists:sort(proplists:get_value("cn",SameAsOriginalAttrs)),
+    {ok, #eldap_search_result{entries=[#eldap_entry{object_name=^DN}]}} =
 	eldap:search(H,
 		     #eldap_search{base = BasePath,
 				   filter = eldap:substrings("sn", [{any, "a"}]),
@@ -811,7 +811,7 @@ modify_dn_keep_old(Config) ->
 
     %% Check that the object to modify_dn of exists but the new one does not:
     {ok,OriginalAttrs} = attributes(H, DN),
-    {ok, #eldap_search_result{entries=[#eldap_entry{object_name=DN}]}} =
+    {ok, #eldap_search_result{entries=[#eldap_entry{object_name=^DN}]}} =
 	eldap:search(H,
 		     #eldap_search{base = BasePath,
 				   filter = eldap:substrings("sn", [{any, "a"}]),
@@ -825,7 +825,7 @@ modify_dn_keep_old(Config) ->
     CN_orig = proplists:get_value("cn",OriginalAttrs),
     CN_new = proplists:get_value("cn",NewAttrs),
     Expected = lists:sort([NewCN|CN_orig]),
-    Expected = lists:sort(CN_new),
+    ^Expected = lists:sort(CN_new),
 
     %% Restore db:
     ok = eldap:delete(H, NewDN),
@@ -850,7 +850,7 @@ encode(_Config) ->
     {ok,Bin} = 'ELDAPv3':encode('AddRequest', #'AddRequest'{entry="hejHopp"  ,attributes=[]} ),
     Expected = <<104,11,4,7,104,101,106,72,111,112,112,48,0>>,
     case Bin of
-	Expected -> ok;
+	^Expected -> ok;
 	_ -> ct:log("Encoded erroneously to:~n~p~nExpected:~n~p",[Bin,Expected]),
 	     {fail, "Bad encode"}
     end.
@@ -861,7 +861,7 @@ decode(_Config) ->
     ct:log("Res = ~p", [Res]),
     Expected = #'AddRequest'{entry = "hejHopp",attributes = []},
     case Res of
-	Expected -> ok;
+	^Expected -> ok;
 	#'AddRequest'{entry= <<"hejHopp">>, attributes=[]} ->
 	    {fail, "decoded to (correct) binary!!"};
 	_ ->
@@ -878,7 +878,7 @@ attributes(H, DN) ->
 		     #eldap_search{base  = DN,
 				   filter= eldap:present("objectclass"),
 				   scope = eldap:wholeSubtree()}) of
-	{ok, #eldap_search_result{entries=[#eldap_entry{object_name=DN,
+	{ok, #eldap_search_result{entries=[#eldap_entry{object_name=^DN,
 							attributes=OriginalAttrs}]}} ->
 	    {ok, OriginalAttrs};
 	Other ->

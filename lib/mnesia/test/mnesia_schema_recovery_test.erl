@@ -313,8 +313,8 @@ interrupted_delete(Config, Type, KillAt) ->
     kill_at_debug(),
     ?match([], mnesia_test_lib:start_mnesia([Node2], [])),
     Bad = {badrpc, {'EXIT', {aborted,{no_exists, Tab, all}}}},
-    ?match(Bad, rpc:call(Node1, mnesia, table_info, [Tab, all])),
-    ?match(Bad, rpc:call(Node2, mnesia, table_info, [Tab, all])),
+    ?match(^Bad, rpc:call(Node1, mnesia, table_info, [Tab, all])),
+    ?match(^Bad, rpc:call(Node2, mnesia, table_info, [Tab, all])),
     ?verify_mnesia(Nodes, []).
 
 interrupted_before_add_ram(suite) -> [];
@@ -524,7 +524,7 @@ interrupted_delcopy(Config, Type, _Where, {mnesia_dumper, post_dump}) ->
     ?match([], mnesia_test_lib:start_mnesia([Node1], [test])),
     %% Verify 
     ?match([{test, found_in_log, 1}], mnesia:dirty_read({test, found_in_log})),
-    ?match([Node2], mnesia:table_info(itrpt,Type)),
+    ?match([^Node2], mnesia:table_info(itrpt,Type)),
     ?verify_mnesia(Nodes, []);
 interrupted_delcopy(Config, Type, Who, KillAt) ->
     ?is_debug_compiled,
@@ -617,9 +617,9 @@ interrupted_addindex(Config, Type, KillAt) ->
     ?match([], mnesia_test_lib:start_mnesia([Node2], [])),
 
     verify_tab(Node1, Node2),
-    ?match([{Tab, b, a}, {Tab, a, a}], 
+    ?match([{^Tab, b, a}, {^Tab, a, a}], 
 	   rpc:call(Node1, mnesia, dirty_index_read, [itrpt, a, val])),
-    ?match([{Tab, b, a}, {Tab, a, a}], 
+    ?match([{^Tab, b, a}, {^Tab, a, a}], 
 	   rpc:call(Node2, mnesia, dirty_index_read, [itrpt, a, val])),
     ?verify_mnesia(Nodes, []).
 
@@ -761,8 +761,8 @@ interrupted_change_type(Config, FromType, ToType, Who, KillAt) ->
     kill_at_debug(),
     ?match([], mnesia_test_lib:start_mnesia(Nodes, [itrpt])),        
     verify_tab(Node1, Node2),
-    ?match(FromType, rpc:call(Node1, mnesia, table_info, [Tab, storage_type])),
-    ?match(ToType, rpc:call(Node2, mnesia, table_info, [Tab, storage_type])),
+    ?match(^FromType, rpc:call(Node1, mnesia, table_info, [Tab, storage_type])),
+    ?match(^ToType, rpc:call(Node2, mnesia, table_info, [Tab, storage_type])),
     ?verify_mnesia(Nodes, []).
 
 interrupted_before_change_schema_type(suite) ->     [];

@@ -421,9 +421,9 @@ no_common_alg_client_disconnects(Config) ->
     ct:log("Result of connect is ~p",[Result]),
 
     receive
-	{result,Pid,{ok,_}} -> 
+	{result,^Pid,{ok,_}} -> 
 	    ok;
-	{result,Pid,{error,{Op,ExecResult,S}}} ->
+	{result,^Pid,{error,{Op,ExecResult,S}}} ->
 	    ct:log("ERROR!~nOp = ~p~nExecResult = ~p~nState =~n~s",
 		   [Op,ExecResult,ssh_trpt_test_lib:format_msg(S)]),
 	    {fail, ExecResult};
@@ -810,8 +810,8 @@ ext_info_c(Config) ->
     
     %% Check that the daemon got expected result:
     receive
-        {result, Pid, {ok,_}} -> ok;
-        {result, Pid, Error} -> ct:fail("Error: ~p",[Error])
+        {result, ^Pid, {ok,_}} -> ok;
+        {result, ^Pid, Error} -> ct:fail("Error: ~p",[Error])
     end.
 
 

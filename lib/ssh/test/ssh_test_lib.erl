@@ -331,7 +331,7 @@ init_io_server(TestCase) ->
 
 loop_io_server(TestCase, Buff0) ->
      receive
-	 {input, TestCase, Line} = _INP ->
+	 {input, ^TestCase, Line} = _INP ->
              %%ct:log("io_server ~p:~p ~p got ~p",[?MODULE,?LINE,self(),_INP]),
 	     loop_io_server(TestCase, Buff0 ++ [Line]);
 	 {io_request, From, ReplyAs, Request} = _REQ->
@@ -393,7 +393,7 @@ reply(TestCase, Result) ->
 %%%----------------------------------------------------------------
 rcv_expected(Expect, SshPort, Timeout) ->
     receive
-	{SshPort, Recvd} when is_function(Expect) ->
+	{^SshPort, Recvd} when is_function(Expect) ->
 	    case Expect(Recvd) of
 		true ->
 		    ct:log("Got expected ~p from ~p",[Recvd,SshPort]),
@@ -403,7 +403,7 @@ rcv_expected(Expect, SshPort, Timeout) ->
 		    ct:log("Got UNEXPECTED ~p~n",[Recvd]),
 		    rcv_expected(Expect, SshPort, Timeout)
 	    end;
-	{SshPort, Expect} ->
+	{^SshPort, ^Expect} ->
 	    ct:log("Got expected ~p from ~p",[Expect,SshPort]),
 	    catch port_close(SshPort),
 	    rcv_lingering(50);
@@ -581,14 +581,14 @@ default_algorithms(sshc, DaemonOptions) ->
 	  end),
    
     receive
-	{hostport,Srvr,{_Host,Port}} ->
+	{hostport,^Srvr,{_Host,Port}} ->
 	    spawn(fun()-> os:cmd(lists:concat(["ssh -o \"StrictHostKeyChecking no\" -p ",Port," localhost"])) end)
     after ?TIMEOUT ->
 	    ct:fail("No server respons (timeout) 1")
     end,
 
     receive
-	{result,Srvr,L} ->
+	{result,^Srvr,L} ->
 	    L
     after ?TIMEOUT ->
 	    ct:fail("No server respons (timeout) 2")
@@ -691,10 +691,10 @@ ssh_type() ->
 		end),
     MonitorRef = monitor(process, Pid),
     receive
-	{ssh_type, Pid, Result} ->
+	{ssh_type, ^Pid, Result} ->
 	    demonitor(MonitorRef),
 	    Result;
-	{'DOWN', MonitorRef, process, Pid, _Info} ->
+	{'DOWN', ^MonitorRef, process, ^Pid, _Info} ->
 	    ct:log("~p:~p Process DOWN",[?MODULE,?LINE]),
 	    not_found
     after
@@ -757,7 +757,7 @@ algo_intersection(L1=[A1|_], L2=[A2|_]) when is_atom(A1), is_atom(A2) ->
 		end, [], L1);
 algo_intersection([{K,V1}|T1], L2) ->
     case lists:keysearch(K,1,L2) of
-	{value, {K,V2}} ->
+	{value, {^K,V2}} ->
 	    [{K,algo_intersection(V1,V2)} | algo_intersection(T1,L2)];
 	false ->
 	    algo_intersection(T1,L2)
@@ -866,7 +866,7 @@ get_kex_init(Conn, Ref, TRef) ->
 
 	false ->
 	    receive
-		{reneg_timeout,Ref} -> 
+		{reneg_timeout,^Ref} -> 
                     ct:log("~p:~p Not in 'connected' state: ~p but reneg_timeout received. Fail.",
                            [?MODULE,?LINE,State]),
 		    ct:log("S = ~p", [S]),

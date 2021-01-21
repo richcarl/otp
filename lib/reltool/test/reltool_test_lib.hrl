@@ -34,7 +34,7 @@
         fun() ->
                 AcTuAlReS = (catch (Expr)),
                 case AcTuAlReS of
-                    ExpectedRes ->
+                     ExpectedRes ->
                         ?verbose("ok: ~p\n",[AcTuAlReS]),
                         AcTuAlReS;
                     _ ->
@@ -49,7 +49,7 @@
         fun() ->
                 AcTuAlReS = (catch (Expr)),
                 case AcTuAlReS of
-                    ExpectedRes ->
+                    ExPeCtEdRes when (ExpectedRes) =:= ExPeCtEdRes->
                         ?verbose("ok: ~p\n",[AcTuAlReS]),
                         AcTuAlReS;
                     _ ->

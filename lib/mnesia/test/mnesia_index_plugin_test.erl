@@ -241,12 +241,12 @@ fill_and_test_index_match(Tab, Type) ->
               SetRes = [{Tab,1,aa,"1234"}, {Tab,7,gg,"123"}, {Tab,8,h,"123"}],
               case Type of
                   set ->
-                      SetRes = lists:sort(Res);
+                      ^SetRes = lists:sort(Res);
                   ordered_set ->
-                      SetRes = Res;
+                      ^SetRes = Res;
                   bag ->
-                      [{Tab,1,a,"123"}, {Tab,1,aa,"1234"},
-                       {Tab,7,gg,"123"}, {Tab,8,h,"123"}] = lists:sort(Res)
+                      [{^Tab,1,a,"123"}, {^Tab,1,aa,"1234"},
+                       {^Tab,7,gg,"123"}, {^Tab,8,h,"123"}] = lists:sort(Res)
               end
       end).
 

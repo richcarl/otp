@@ -340,7 +340,7 @@ erl_root(Vars) ->
 
 get_var(Key, Vars) ->
     case lists:keysearch(Key, 1, Vars) of
-	{value, {Key, Value}} ->
+	{value, {^Key, Value}} ->
 	    Value;
 	_ ->
 	    {error, notfound}

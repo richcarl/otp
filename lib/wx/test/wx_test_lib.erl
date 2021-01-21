@@ -215,20 +215,20 @@ test_case_evaluator(Mod, Fun, [Config]) ->
 
 wait_for_evaluator(Pid, Mod, Fun, Config) ->
     receive
-	{'EXIT', Pid, {test_case_ok, _PidRes}} ->
+	{'EXIT', ^Pid, {test_case_ok, _PidRes}} ->
 	    Errors = flush(),
 	    Res = 
 		case Errors of
 		    [] -> ok;
-		    Errors -> failed
+		    ^Errors -> failed
 		end,
 	    {Res, {Mod, Fun}, Errors};
-	{'EXIT', Pid, {skipped, Reason}} ->
+	{'EXIT', ^Pid, {skipped, Reason}} ->
 	    log("<WARNING> Test case ~w skipped, because ~p~n",
 		[{Mod, Fun}, Reason]),
 	    Mod:end_per_testcase(Fun, Config),
 	    {skip, {Mod, Fun}, Reason};
-	{'EXIT', Pid, Reason} ->
+	{'EXIT', ^Pid, Reason} ->
 	    log("<ERROR> Eval process ~w exited, because ~p~n",
 		[{Mod, Fun}, Reason]),
 	    Mod:end_per_testcase(Fun, Config),

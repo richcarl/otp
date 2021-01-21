@@ -138,8 +138,8 @@ load_latest_data(Config) when is_list(Config) ->
     ?match(ok, rpc:call(N2, mnesia, wait_for_tables, [[t1], 10000])),
     ?match(ok, rpc:call(N1, mnesia, wait_for_tables, [[t1], 10000])),
     %% We should find the record
-    ?match([Rec2], rpc:call(N1, mnesia, dirty_read, [t1, test])),
-    ?match([Rec2], rpc:call(N2, mnesia, dirty_read, [t1, test])),
+    ?match([^Rec2], rpc:call(N1, mnesia, dirty_read, [t1, test])),
+    ?match([^Rec2], rpc:call(N2, mnesia, dirty_read, [t1, test])),
     
     %% ok, lets switch order    
     ?match(ok, mnesia:dirty_delete_object(Rec1)),
@@ -160,8 +160,8 @@ load_latest_data(Config) when is_list(Config) ->
     ?match(ok, rpc:call(N2, mnesia, wait_for_tables, [[t1], 10000])),
     ?match(ok, rpc:call(N1, mnesia, wait_for_tables, [[t1], 10000])),
     %% We should find the record
-    ?match([Rec1], rpc:call(N1, mnesia, dirty_read, [t1, test])),
-    ?match([Rec1], rpc:call(N2, mnesia, dirty_read, [t1, test])),
+    ?match([^Rec1], rpc:call(N1, mnesia, dirty_read, [t1, test])),
+    ?match([^Rec1], rpc:call(N2, mnesia, dirty_read, [t1, test])),
     
     ?verify_mnesia(Nodes, []).
 
@@ -232,7 +232,7 @@ load_directly_when_all_are_ram_copiesA(Config) when is_list(Config) ->
                                [{ram_copies,Nodes},
                                 {attributes,record_info(fields,test_rec)}]
                               ) ),
-    ?match( Nodes, mnesia:table_info(test_rec,ram_copies) ),
+    ?match( ^Nodes, mnesia:table_info(test_rec,ram_copies) ),
     ?match( [], mnesia:table_info(test_rec,disc_copies) ),
     ?match( [], mnesia:table_info(test_rec,disc_only_copies) ),
     Write_one = fun(Value) -> mnesia:write(#test_rec{key=2,val=Value}) end,
@@ -282,7 +282,7 @@ load_directly_when_all_are_ram_copiesB(Config) when is_list(Config) ->
                                [{ram_copies,Nodes},
                                 {attributes,record_info(fields,test_rec)}]
                               ) ),
-    ?match( Nodes, mnesia:table_info(test_rec,ram_copies) ),
+    ?match( ^Nodes, mnesia:table_info(test_rec,ram_copies) ),
     ?match( [], mnesia:table_info(test_rec,disc_copies) ),
     ?match( [], mnesia:table_info(test_rec,disc_only_copies) ),
     Write_one = fun(Value) -> mnesia:write(#test_rec{key=3,val=Value}) end,
@@ -350,7 +350,7 @@ late_load_when_all_are_ram_copies_on_ram_nodes(DiscNode, RamNs, _Config)
     Nodes = [DiscNode | RamNs],
     Extra = [{extra_db_nodes, Nodes}],
     Ok = [ok || _ <- RamNs],
-    ?match({Ok, []}, rpc:multicall(RamNs, mnesia, start, [Extra])),
+    ?match({^Ok, []}, rpc:multicall(RamNs, mnesia, start, [Extra])),
     ?match([], wait_until_running(Nodes)),
 
     LastRam = lists:last(RamNs),
@@ -382,8 +382,8 @@ late_load_when_all_are_ram_copies_on_ram_nodes(DiscNode, RamNs, _Config)
 	true ->
 	    ignore
     end,
-    ?match([Rec1], rpc:call(LastRam, mnesia, dirty_read, [{test_rec, 3}])),
-    ?match([Rec2], rpc:call(LastRam, mnesia, dirty_read, [{test_rec, 4}])),
+    ?match([^Rec1], rpc:call(LastRam, mnesia, dirty_read, [{test_rec, 3}])),
+    ?match([^Rec2], rpc:call(LastRam, mnesia, dirty_read, [{test_rec, 4}])),
     ?verify_mnesia(Nodes, []).
 
 wait_until_running(Nodes) ->
@@ -421,7 +421,7 @@ load_when_last_replica_becomes_available(Config) when is_list(Config) ->
                                 {attributes,record_info(fields,test_rec)}]
                               ) ),
     ?match( [], mnesia:table_info(test_rec,ram_copies) ),
-    ?match( Nodes, mnesia:table_info(test_rec,disc_copies) ),
+    ?match( ^Nodes, mnesia:table_info(test_rec,disc_copies) ),
     ?match( [], mnesia:table_info(test_rec,disc_only_copies) ),
     Write_one = fun(Key,Val)->mnesia:write(#test_rec{key=Key,val=Val}) end,
     Read_one  = fun(Key)    ->mnesia:read( {test_rec, Key}) end,
@@ -482,7 +482,7 @@ load_when_down_from_all_other_replica_nodes(Config) when is_list(Config) ->
                                 {attributes,record_info(fields,test_rec)}]
                               ) ),
     ?match( [], mnesia:table_info(test_rec,ram_copies) ),
-    ?match( Nodes, mnesia:table_info(test_rec,disc_copies) ),
+    ?match( ^Nodes, mnesia:table_info(test_rec,disc_copies) ),
     ?match( [], mnesia:table_info(test_rec,disc_only_copies) ),
     Write_one = fun(Key,Val)->mnesia:write(#test_rec{key=Key,val=Val}) end,
     Read_one  = fun(Key)    ->mnesia:read( {test_rec, Key}) end,
@@ -545,8 +545,8 @@ late_load_transforms_into_disc_load(Config) when is_list(Config) ->
     
     {success, [A, B]} = ?start_activities(Nodes),
     
-    ?match(Node1, node(A)),
-    ?match(Node2, node(B)),
+    ?match(^Node1, node(A)),
+    ?match(^Node2, node(B)),
 
     Tab = late_load_table,
     Def = [{attributes, [key, value]},
@@ -636,14 +636,14 @@ late_load_leads_to_hanging(Config) when is_list(Config) ->
     %% start Mnesia on node1
     ?match(ok, mnesia:start()),
 
-    ?match({timeout, [Tab]}, mnesia:wait_for_tables([Tab], timer:seconds(2))),
+    ?match({timeout, [^Tab]}, mnesia:wait_for_tables([Tab], timer:seconds(2))),
 
     ?match({'EXIT', {aborted, _}}, mnesia:dirty_read({Tab, 222})),    
     %% mnesia on node1 is waiting for node2 coming up 
     
     ?match(ok, rpc:call(Node2, mnesia, start, [])),
     ?match(ok, mnesia:wait_for_tables([Tab], timer:seconds(30))),
-    ?match([{Tab, 333, 666}], mnesia:dirty_read({Tab, 333})),   
+    ?match([{^Tab, 333, 666}], mnesia:dirty_read({Tab, 333})),   
     ?verify_mnesia([Node2, Node1], []).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -667,38 +667,38 @@ force_load_when_nobody_intents_to_load(Config) when is_list(Config) ->
                                    {attributes,record_info(fields,test_rec)}
                                   ] ] ) ),
     ?match( [], mnesia:table_info(Table,ram_copies) ),
-    ?match( Nodes, mnesia:table_info(Table,disc_copies) ),
+    ?match( ^Nodes, mnesia:table_info(Table,disc_copies) ),
     ?match( [], mnesia:table_info(Table,disc_only_copies) ),
     Write_one = fun(Rec) -> mnesia:write(Rec) end,
     Read_one  = fun(Key) -> mnesia:read({Table, Key}) end,
     %%Write one value
     ?match({atomic,ok},rpc:call(N1,mnesia,transaction,[Write_one,[Trec1a]])),
     %%Check it
-    ?match({atomic,[Trec1a]},rpc:call(N2,mnesia,transaction,[Read_one,[1]]) ),
+    ?match({atomic,[^Trec1a]},rpc:call(N2,mnesia,transaction,[Read_one,[1]]) ),
     %%Shut down mnesia on N1
     ?match([], mnesia_test_lib:stop_mnesia([N1])),
     %%Write and check value while N1 is down
     ?match({atomic,ok},rpc:call(N2,mnesia,transaction,[Write_one,[Trec1b]])),
     ?match({atomic,ok},rpc:call(N2,mnesia,transaction,[Write_one,[Trec2a]])),
     ?match({atomic,ok},rpc:call(N2,mnesia,transaction,[Write_one,[Trec3a]])),
-    ?match({aborted,{node_not_running,N1}},
+    ?match({aborted,{node_not_running,^N1}},
            rpc:call(N1,mnesia,transaction,[Read_one,[2]]) ),
-    ?match({atomic,[Trec1b]},rpc:call(N2,mnesia,transaction,[Read_one,[1]]) ),
-    ?match({atomic,[Trec2a]},rpc:call(N2,mnesia,transaction,[Read_one,[2]]) ),
-    ?match({atomic,[Trec3a]},rpc:call(N2,mnesia,transaction,[Read_one,[3]]) ),
+    ?match({atomic,[^Trec1b]},rpc:call(N2,mnesia,transaction,[Read_one,[1]]) ),
+    ?match({atomic,[^Trec2a]},rpc:call(N2,mnesia,transaction,[Read_one,[2]]) ),
+    ?match({atomic,[^Trec3a]},rpc:call(N2,mnesia,transaction,[Read_one,[3]]) ),
     %%Shut down Mnesia on N2
     ?match([], mnesia_test_lib:stop_mnesia([N2])),
 
     %%Restart Mnesia on N1
     ?match(ok, rpc:call(N1, mnesia, start, [])),
     %%Check that table is not available (waiting for N2)
-    ?match({timeout,[Table]},
+    ?match({timeout,[^Table]},
            rpc:call(N1, mnesia, wait_for_tables, [[Table], 3000])),
 
     %%Force load on N1
     ?match(yes,rpc:call(N1,mnesia,force_load_table,[Table])),
     %%Check values
-    ?match({atomic,[Trec1a]},rpc:call(N1,mnesia,transaction,[Read_one,[1]]) ),
+    ?match({atomic,[^Trec1a]},rpc:call(N1,mnesia,transaction,[Read_one,[1]]) ),
     ?match({atomic,[]},     rpc:call(N1,mnesia,transaction,[Read_one,[2]]) ),
     ?match({atomic,[]},     rpc:call(N1,mnesia,transaction,[Read_one,[3]]) ),
     %%Write a value for key=3
@@ -708,14 +708,14 @@ force_load_when_nobody_intents_to_load(Config) when is_list(Config) ->
     ?match(ok, rpc:call(N2, mnesia, start, [])),
     ?match(ok, rpc:call(N2, mnesia, wait_for_tables, [[Table], 30000])),
 
-    ?match({atomic,[Trec1a]},rpc:call(N1,mnesia,transaction,[Read_one,[1]]) ),
-    ?match({atomic,[Trec1a]},rpc:call(N2,mnesia,transaction,[Read_one,[1]]) ),
+    ?match({atomic,[^Trec1a]},rpc:call(N1,mnesia,transaction,[Read_one,[1]]) ),
+    ?match({atomic,[^Trec1a]},rpc:call(N2,mnesia,transaction,[Read_one,[1]]) ),
 
     ?match({atomic,[]},rpc:call(N1,mnesia,transaction,[Read_one,[2]]) ),
     ?match({atomic,[]},rpc:call(N2,mnesia,transaction,[Read_one,[2]]) ),
 
-    ?match({atomic,[Trec3b]},rpc:call(N1,mnesia,transaction,[Read_one,[3]]) ),
-    ?match({atomic,[Trec3b]},rpc:call(N2,mnesia,transaction,[Read_one,[3]]) ),
+    ?match({atomic,[^Trec3b]},rpc:call(N1,mnesia,transaction,[Read_one,[3]]) ),
+    ?match({atomic,[^Trec3b]},rpc:call(N2,mnesia,transaction,[Read_one,[3]]) ),
     ?verify_mnesia(Nodes, []).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -732,8 +732,8 @@ force_load_when_someone_has_decided_to_load(Config) when is_list(Config) ->
     
     [Node1, Node2] = Nodes = ?acquire_nodes(2, Config),   
     {success, [A, B]} = ?start_activities(Nodes),        
-    ?match(Node1, node(A)), %% Just to check :)
-    ?match(Node2, node(B)),
+    ?match(^Node1, node(A)), %% Just to check :)
+    ?match(^Node2, node(B)),
 
     Tab = late_load_table,
     Def = [{attributes, [key, value]}, {disc_copies, Nodes}],  
@@ -782,14 +782,14 @@ force_load_when_someone_has_decided_to_load(Config) when is_list(Config) ->
     ?match_receive(timeout),
 
     Mnesia_Pid ! continue,
-    ?match_receive({B, ok}),
-    ?match_receive({A, ok}),
-    ?match_receive({A, yes}),
+    ?match_receive({^B, ok}),
+    ?match_receive({^A, ok}),
+    ?match_receive({^A, yes}),
 
     B ! fun() -> mnesia:wait_for_tables([Tab], 10000) end,
-    ?match_receive({B, ok}),
+    ?match_receive({^B, ok}),
     ?match(ok, mnesia:wait_for_tables([Tab], timer:seconds(30))),
-    ?match([{Tab, 222, 815}], mnesia:dirty_read({Tab, 222})),
+    ?match([{^Tab, 222, 815}], mnesia:dirty_read({Tab, 222})),
     ?verify_mnesia(Nodes, []).
 
 wait_for_signal() ->
@@ -821,14 +821,14 @@ force_load_when_someone_else_has_loaded(Config) when is_list(Config) ->
                                    {attributes,record_info(fields,test_rec)}
                                   ] ] ) ),
     ?match( [], mnesia:table_info(Table,ram_copies) ),
-    ?match( Nodes, mnesia:table_info(Table,disc_copies) ),
+    ?match( ^Nodes, mnesia:table_info(Table,disc_copies) ),
     ?match( [], mnesia:table_info(Table,disc_only_copies) ),
     Write_one = fun(Rec) -> mnesia:write(Rec) end,
     Read_one  = fun(Key) -> mnesia:read({Table, Key}) end,
     %%Write one value
     ?match({atomic,ok},rpc:call(N1,mnesia,transaction,[Write_one,[Trec1]])),
     %%Check it
-    ?match({atomic,[Trec1]},rpc:call(N2,mnesia,transaction,[Read_one,[1]]) ),
+    ?match({atomic,[^Trec1]},rpc:call(N2,mnesia,transaction,[Read_one,[1]]) ),
     %%Shut down mnesia
     ?match([], mnesia_test_lib:stop_mnesia([N1])),
     timer:sleep(500),
@@ -843,7 +843,7 @@ force_load_when_someone_else_has_loaded(Config) when is_list(Config) ->
     %%Force load from file
     ?match(yes, rpc:call(N1,mnesia,force_load_table,[Table])),
     %%Check the value
-    ?match({atomic,[Trec2]},rpc:call(N1,mnesia,transaction,[Read_one,[1]]) ),
+    ?match({atomic,[^Trec2]},rpc:call(N1,mnesia,transaction,[Read_one,[1]]) ),
        %%               === there must be a Trec2 here !!!!
     ?verify_mnesia(Nodes, []).
 
@@ -864,14 +864,14 @@ force_load_when_we_has_loaded(Config) when is_list(Config) ->
                                    {attributes,record_info(fields,test_rec)}
                                   ] ] ) ),
     ?match( [], mnesia:table_info(Table,ram_copies) ),
-    ?match( Nodes, mnesia:table_info(Table,disc_copies) ),
+    ?match( ^Nodes, mnesia:table_info(Table,disc_copies) ),
     ?match( [], mnesia:table_info(Table,disc_only_copies) ),
     Write_one = fun(Rec) -> mnesia:write(Rec) end,
     Read_one  = fun(Key) -> mnesia:read({Table, Key}) end,
     %%Write one value
     ?match({atomic,ok},rpc:call(N1,mnesia,transaction,[Write_one,[Trec1]])),
     %%Check it
-    ?match({atomic,[Trec1]},rpc:call(N1,mnesia,transaction,[Read_one,[1]]) ),
+    ?match({atomic,[^Trec1]},rpc:call(N1,mnesia,transaction,[Read_one,[1]]) ),
     %%Shut down mnesia
     ?match([], mnesia_test_lib:stop_mnesia(Nodes)),
     %%Restart Mnesia;wait for tables to load
@@ -881,7 +881,7 @@ force_load_when_we_has_loaded(Config) when is_list(Config) ->
     %%Force load from file
     ?match(yes, rpc:call(N1,mnesia,force_load_table,[Table])),
     %%Check the value
-    ?match({atomic,[Trec2]},rpc:call(N1,mnesia,transaction,[Read_one,[1]]) ),
+    ?match({atomic,[^Trec2]},rpc:call(N1,mnesia,transaction,[Read_one,[1]]) ),
     ?verify_mnesia(Nodes, []).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -902,18 +902,18 @@ force_load_on_a_non_local_table(Config) when is_list(Config) ->
                                    {attributes,record_info(fields,test_rec)}
                                   ] ] ) ),
     ?match( [], mnesia:table_info(Table,ram_copies) ),
-    ?match( TableNodes, mnesia:table_info(Table,disc_copies) ),
+    ?match( ^TableNodes, mnesia:table_info(Table,disc_copies) ),
     ?match( [], mnesia:table_info(Table,disc_only_copies) ),
     Write_one = fun(Rec) -> mnesia:write(Rec) end,
     Read_one  = fun(Key) -> mnesia:read({Table, Key}) end,
     %%Write one value
     ?match({atomic,ok},rpc:call(N1,mnesia,transaction,[Write_one,[Trec1]])),
     %%Check it from the other nodes
-    ?match({atomic,[Trec1]},rpc:call(N2,mnesia,transaction,[Read_one,[1]]) ),
-    ?match({atomic,[Trec1]},rpc:call(N3,mnesia,transaction,[Read_one,[1]]) ),
+    ?match({atomic,[^Trec1]},rpc:call(N2,mnesia,transaction,[Read_one,[1]]) ),
+    ?match({atomic,[^Trec1]},rpc:call(N3,mnesia,transaction,[Read_one,[1]]) ),
 
     %%Make sure that Table is non-local
-    ?match_inverse(N3, rpc:call(N3,mnesia,table_info,[Table,where_to_read])),
+    ?match_inverse(^N3, rpc:call(N3,mnesia,table_info,[Table,where_to_read])),
     %%Try to force load it
     ?match(yes, rpc:call(N3,mnesia,force_load_table,[Table])),
     ?verify_mnesia(Nodes, []).
@@ -934,12 +934,12 @@ force_load_when_the_table_does_not_exist(Config) when is_list(Config) ->
                                 {attributes,record_info(fields,test_rec)}]
                               ) ),
     ?match( [], mnesia:table_info(test_rec,ram_copies) ),
-    ?match( Nodes, mnesia:table_info(test_rec,disc_copies) ),
+    ?match( ^Nodes, mnesia:table_info(test_rec,disc_copies) ),
     ?match( [], mnesia:table_info(test_rec,disc_only_copies) ),
     Tab = dummy,
     %%Make sure that Tab is an unknown table
     ?match( false, lists:member(Tab,mnesia:system_info(tables)) ),
-    ?match( {error, {no_exists, Tab}}, mnesia:force_load_table(Tab) ),
+    ?match( {error, {no_exists, ^Tab}}, mnesia:force_load_table(Tab) ),
     ?verify_mnesia(Nodes, []).
 
 
@@ -965,9 +965,9 @@ master_nodes(Config) when is_list(Config) ->
     ?match(ok, rpc:call(A, mnesia, start, [])),
     ?match(ok, rpc:call(A, mnesia, wait_for_tables, [[Tab], 3000])),
     
-    ?match([{Tab, 1, init}], rpc:call(A, mnesia, dirty_read, [{Tab, 1}])),
-    ?match([{Tab, 1, updated}], rpc:call(B, mnesia, dirty_read, [{Tab, 1}])),
-    ?match([{Tab, 1, updated}], rpc:call(C, mnesia, dirty_read, [{Tab, 1}])),
+    ?match([{^Tab, 1, init}], rpc:call(A, mnesia, dirty_read, [{Tab, 1}])),
+    ?match([{^Tab, 1, updated}], rpc:call(B, mnesia, dirty_read, [{Tab, 1}])),
+    ?match([{^Tab, 1, updated}], rpc:call(C, mnesia, dirty_read, [{Tab, 1}])),
     
     %% Test 2: Master [A,B] and B is Up the table should be loaded from B
 
@@ -979,9 +979,9 @@ master_nodes(Config) when is_list(Config) ->
     ?match(ok, rpc:call(A, mnesia, start, [])),
     ?match(ok, rpc:call(A, mnesia, wait_for_tables, [[Tab], 3000])),
     
-    ?match([{Tab, 1, updated}], rpc:call(A, mnesia, dirty_read, [{Tab, 1}])),
-    ?match([{Tab, 1, updated}], rpc:call(B, mnesia, dirty_read, [{Tab, 1}])),
-    ?match([{Tab, 1, updated}], rpc:call(C, mnesia, dirty_read, [{Tab, 1}])),
+    ?match([{^Tab, 1, updated}], rpc:call(A, mnesia, dirty_read, [{Tab, 1}])),
+    ?match([{^Tab, 1, updated}], rpc:call(B, mnesia, dirty_read, [{Tab, 1}])),
+    ?match([{^Tab, 1, updated}], rpc:call(C, mnesia, dirty_read, [{Tab, 1}])),
 
     %% Test 3: Master [A,B] and B is down the table should be loaded from A
 
@@ -997,9 +997,9 @@ master_nodes(Config) when is_list(Config) ->
     ?match(ok, rpc:call(B, mnesia, start, [])),
     ?match(ok, rpc:call(B, mnesia, wait_for_tables, [[Tab], 3000])),
     
-    ?match([{Tab, 1, init}], rpc:call(A, mnesia, dirty_read, [{Tab, 1}])),
-    ?match([{Tab, 1, _Unknown}], rpc:call(B, mnesia, dirty_read, [{Tab, 1}])),
-    ?match([{Tab, 1, updated}], rpc:call(C, mnesia, dirty_read, [{Tab, 1}])),
+    ?match([{^Tab, 1, init}], rpc:call(A, mnesia, dirty_read, [{Tab, 1}])),
+    ?match([{^Tab, 1, _Unknown}], rpc:call(B, mnesia, dirty_read, [{Tab, 1}])),
+    ?match([{^Tab, 1, updated}], rpc:call(C, mnesia, dirty_read, [{Tab, 1}])),
     
     %% Test 4: Master [B] and B is Up the table should be loaded from B
 
@@ -1011,9 +1011,9 @@ master_nodes(Config) when is_list(Config) ->
     ?match(ok, rpc:call(A, mnesia, start, [])),
     ?match(ok, rpc:call(A, mnesia, wait_for_tables, [[Tab], 3000])),
     
-    ?match([{Tab, 1, updated}], rpc:call(A, mnesia, dirty_read, [{Tab, 1}])),
-    ?match([{Tab, 1, updated}], rpc:call(B, mnesia, dirty_read, [{Tab, 1}])),
-    ?match([{Tab, 1, updated}], rpc:call(C, mnesia, dirty_read, [{Tab, 1}])),
+    ?match([{^Tab, 1, updated}], rpc:call(A, mnesia, dirty_read, [{Tab, 1}])),
+    ?match([{^Tab, 1, updated}], rpc:call(B, mnesia, dirty_read, [{Tab, 1}])),
+    ?match([{^Tab, 1, updated}], rpc:call(C, mnesia, dirty_read, [{Tab, 1}])),
     
     %% Test 5: Master [B] and B is down the table should not be loaded
 
@@ -1025,7 +1025,7 @@ master_nodes(Config) when is_list(Config) ->
     mnesia_test_lib:stop_mnesia([B]),
     ?match({atomic, ok}, rpc:call(C, mnesia, sync_transaction, [?SDwrite({Tab, 1, update_2})])),
     ?match(ok, rpc:call(A, mnesia, start, [])),
-    ?match({timeout, [Tab]}, rpc:call(A, mnesia, wait_for_tables, [[Tab], 2000])),
+    ?match({timeout, [^Tab]}, rpc:call(A, mnesia, wait_for_tables, [[Tab], 2000])),
 
     %% Test 6: Force load on table that couldn't be loaded due to master 
     %%         table setttings, loads other active replicas i.e. from C
@@ -1036,9 +1036,9 @@ master_nodes(Config) when is_list(Config) ->
     ?match(ok, rpc:call(B, mnesia, start, [])),
     ?match(ok, rpc:call(B, mnesia, wait_for_tables, [[Tab], 3000])),
     
-    ?match([{Tab, 1, update_2}], rpc:call(A, mnesia, dirty_read, [{Tab, 1}])),
-    ?match([{Tab, 1, update_2}], rpc:call(B, mnesia, dirty_read, [{Tab, 1}])),
-    ?match([{Tab, 1, update_2}], rpc:call(C, mnesia, dirty_read, [{Tab, 1}])),
+    ?match([{^Tab, 1, update_2}], rpc:call(A, mnesia, dirty_read, [{Tab, 1}])),
+    ?match([{^Tab, 1, update_2}], rpc:call(B, mnesia, dirty_read, [{Tab, 1}])),
+    ?match([{^Tab, 1, update_2}], rpc:call(C, mnesia, dirty_read, [{Tab, 1}])),
 
     %% Test 7: Master [B] and B is down the table should not be loaded, 
     %%         force_load when there are no active replicas availible 
@@ -1051,10 +1051,10 @@ master_nodes(Config) when is_list(Config) ->
     ?match({atomic, ok}, rpc:call(B, mnesia, sync_transaction, [?SDwrite({Tab, 1, updated})])),
     mnesia_test_lib:stop_mnesia([B, C]),
     ?match(ok, rpc:call(A, mnesia, start, [])),
-    ?match({timeout, [Tab]}, rpc:call(A, mnesia, wait_for_tables, [[Tab], 2000])),
+    ?match({timeout, [^Tab]}, rpc:call(A, mnesia, wait_for_tables, [[Tab], 2000])),
 
     ?match(yes, rpc:call(A, mnesia, force_load_table, [Tab])),
-    ?match([{Tab, 1, init}], rpc:call(A, mnesia, dirty_read, [{Tab, 1}])),
+    ?match([{^Tab, 1, init}], rpc:call(A, mnesia, dirty_read, [{Tab, 1}])),
 
     ?verify_mnesia([A], [B,C]).
 
@@ -1076,7 +1076,7 @@ starting_master_nodes(Config) when is_list(Config) ->
     ?match({atomic, ok}, rpc:call(C, mnesia, sync_transaction, [?SDwrite({Tab, 1, update_2})])),
     
     ?match(ok, rpc:call(A, mnesia, start, [])),
-    ?match({timeout, [Tab]}, rpc:call(A, mnesia, wait_for_tables, [[Tab], 2000])),
+    ?match({timeout, [^Tab]}, rpc:call(A, mnesia, wait_for_tables, [[Tab], 2000])),
     %% Start the B node and the table should be loaded on A!
     ?match(ok, rpc:call(B, mnesia, start, [])),
     ?match(ok, rpc:call(B, mnesia, wait_for_tables, [[Tab], 3000])),
@@ -1100,17 +1100,17 @@ master_on_non_local_tables(Config) when is_list(Config) ->
     ?match({atomic, ok}, rpc:call(C, mnesia, sync_transaction, [?SDwrite({Tab, 1, updated})])),   
     ?match(ok, rpc:call(A, mnesia, start, [])),
     
-    ?match({timeout, [Tab]}, rpc:call(A, mnesia, wait_for_tables, [[Tab], 2000])),
+    ?match({timeout, [^Tab]}, rpc:call(A, mnesia, wait_for_tables, [[Tab], 2000])),
     ErrorRead = {badrpc,{'EXIT', {aborted,{no_exists,[test_table_non_local,1]}}}},
     ErrorWrite = {badrpc,{'EXIT', {aborted,{no_exists,test_table_non_local}}}},
-    ?match(ErrorRead, rpc:call(A, mnesia, dirty_read, [{Tab, 1}])),
-    ?match(ErrorWrite, rpc:call(A, mnesia, dirty_write, [{Tab, 1, updated_twice}])),
+    ?match(^ErrorRead, rpc:call(A, mnesia, dirty_read, [{Tab, 1}])),
+    ?match(^ErrorWrite, rpc:call(A, mnesia, dirty_write, [{Tab, 1, updated_twice}])),
     
     ?match(ok, rpc:call(B, mnesia, start, [])),
     ?match(ok, rpc:call(A, mnesia, wait_for_tables, [[Tab], 2000])),
     
-    ?match([{Tab, 1, updated}], rpc:call(A, mnesia, dirty_read, [{Tab, 1}])),
-    ?match(B, rpc:call(A, mnesia, table_info, [Tab, where_to_read])),
+    ?match([{^Tab, 1, updated}], rpc:call(A, mnesia, dirty_read, [{Tab, 1}])),
+    ?match(^B, rpc:call(A, mnesia, table_info, [Tab, where_to_read])),
     ?match({atomic, ok}, rpc:call(A, mnesia, sync_transaction, [?SDwrite({Tab, 1, init})])),
 
     %% Test 2: Test that table info are updated after force_load
@@ -1119,19 +1119,19 @@ master_on_non_local_tables(Config) when is_list(Config) ->
     ?match({atomic, ok}, rpc:call(C, mnesia, sync_transaction, [?SDwrite({Tab, 1, updated})])),   
     ?match(ok, rpc:call(A, mnesia, start, [])),
     
-    ?match({timeout, [Tab]}, rpc:call(A, mnesia, wait_for_tables, [[Tab], 2000])),
+    ?match({timeout, [^Tab]}, rpc:call(A, mnesia, wait_for_tables, [[Tab], 2000])),
     ?match(yes, rpc:call(A, mnesia, force_load_table, [Tab])),
-    ?match(C, rpc:call(A, mnesia, table_info, [Tab, where_to_read])),
+    ?match(^C, rpc:call(A, mnesia, table_info, [Tab, where_to_read])),
 
-    ?match([{Tab, 1, updated}], rpc:call(A, mnesia, dirty_read, [{Tab, 1}])),
+    ?match([{^Tab, 1, updated}], rpc:call(A, mnesia, dirty_read, [{Tab, 1}])),
     ?match({atomic, ok}, rpc:call(A, mnesia, sync_transaction, [?SDwrite({Tab, 1, updated_twice})])),
     
     ?match(ok, rpc:call(B, mnesia, start, [])),
     ?match(ok, rpc:call(B, mnesia, wait_for_tables, [[Tab], 10000])),
 
-    ?match([{Tab, 1, updated_twice}], rpc:call(A, mnesia, dirty_read, [{Tab, 1}])),
-    ?match([{Tab, 1, updated_twice}], rpc:call(B, mnesia, dirty_read, [{Tab, 1}])),
-    ?match([{Tab, 1, updated_twice}], rpc:call(C, mnesia, dirty_read, [{Tab, 1}])),
+    ?match([{^Tab, 1, updated_twice}], rpc:call(A, mnesia, dirty_read, [{Tab, 1}])),
+    ?match([{^Tab, 1, updated_twice}], rpc:call(B, mnesia, dirty_read, [{Tab, 1}])),
+    ?match([{^Tab, 1, updated_twice}], rpc:call(C, mnesia, dirty_read, [{Tab, 1}])),
     
     ?verify_mnesia(Nodes, []).
 
@@ -1159,11 +1159,11 @@ remote_force_load_with_local_master_node(Config) when is_list(Config) ->
 
     ?match(ok, rpc:call(A, mnesia, start, [])),
     ?match(ok, rpc:call(A, mnesia, wait_for_tables, [[Tab], 3000])),
-    ?match([{Tab, who, a}], rpc:call(A, mnesia, dirty_read, [{Tab, who}])),
+    ?match([{^Tab, who, a}], rpc:call(A, mnesia, dirty_read, [{Tab, who}])),
     
     ?match(ok, rpc:call(B, mnesia, start, [])),
     ?match(ok, rpc:call(B, mnesia, wait_for_tables, [[Tab], 3000])),
-    ?match([{Tab, who, b}], rpc:call(B, mnesia, dirty_read, [{Tab, who}])),
+    ?match([{^Tab, who, b}], rpc:call(B, mnesia, dirty_read, [{Tab, who}])),
 
     ?verify_mnesia(Nodes, []).
 
@@ -1177,26 +1177,26 @@ master_node_with_ram_copy_2(Config) when is_list(Config) ->
     ?match(stopped, rpc:call(A, mnesia, stop, [])),
     ?match(stopped, rpc:call(B, mnesia, stop, [])),
     ?match(ok, rpc:call(B, mnesia, start, [])),
-    ?match({timeout, [Tab]}, rpc:call(B, mnesia, wait_for_tables, [[Tab], 1000])),
+    ?match({timeout, [^Tab]}, rpc:call(B, mnesia, wait_for_tables, [[Tab], 1000])),
     ?match(ok, rpc:call(A, mnesia, start, [])),
     ?match(ok, rpc:call(B, mnesia, wait_for_tables, [[Tab], 3000])),
-    ?match([{Tab, 1, init}], rpc:call(A, mnesia, dirty_read, [{Tab, 1}])),
-    ?match([{Tab, 1, init}], rpc:call(B, mnesia, dirty_read, [{Tab, 1}])),
+    ?match([{^Tab, 1, init}], rpc:call(A, mnesia, dirty_read, [{Tab, 1}])),
+    ?match([{^Tab, 1, init}], rpc:call(B, mnesia, dirty_read, [{Tab, 1}])),
 
     %% Test that master_nodes set to ram_copy node require force_load
     ?match(ok, rpc:call(A, mnesia, set_master_nodes, [[B]])),
     ?match(stopped, rpc:call(A, mnesia, stop, [])),
     ?match(stopped, rpc:call(B, mnesia, stop, [])),
     ?match(ok, rpc:call(B, mnesia, start, [])),
-    ?match({timeout, [Tab]}, rpc:call(B, mnesia, wait_for_tables, [[Tab], 1000])),
+    ?match({timeout, [^Tab]}, rpc:call(B, mnesia, wait_for_tables, [[Tab], 1000])),
     ?match(ok, rpc:call(A, mnesia, start, [])),
-    ?match({timeout, [Tab]}, rpc:call(B, mnesia, wait_for_tables, [[Tab], 1000])),
+    ?match({timeout, [^Tab]}, rpc:call(B, mnesia, wait_for_tables, [[Tab], 1000])),
 
     ?match(yes, rpc:call(A, mnesia, force_load_table, [Tab])),
     ?match(ok, rpc:call(A, mnesia, wait_for_tables, [[Tab], 1000])),
     ?match(ok, rpc:call(B, mnesia, wait_for_tables, [[Tab], 1000])),
-    ?match([{Tab, 1, init}], rpc:call(A, mnesia, dirty_read, [{Tab, 1}])),
-    ?match([{Tab, 1, init}], rpc:call(B, mnesia, dirty_read, [{Tab, 1}])),
+    ?match([{^Tab, 1, init}], rpc:call(A, mnesia, dirty_read, [{Tab, 1}])),
+    ?match([{^Tab, 1, init}], rpc:call(B, mnesia, dirty_read, [{Tab, 1}])),
 
     ?verify_mnesia(Nodes, []).
 
@@ -1212,14 +1212,14 @@ master_node_with_ram_copy_3(Config) when is_list(Config) ->
     ?match(stopped, rpc:call(C, mnesia, stop, [])),
     ?match(stopped, rpc:call(B, mnesia, stop, [])),
     ?match(ok, rpc:call(B, mnesia, start, [])),
-    ?match({timeout, [Tab]}, rpc:call(B, mnesia, wait_for_tables, [[Tab], 1000])),
+    ?match({timeout, [^Tab]}, rpc:call(B, mnesia, wait_for_tables, [[Tab], 1000])),
     ?match(ok, rpc:call(A, mnesia, start, [])),
     ?match(ok, rpc:call(C, mnesia, start, [])),
     ?match(ok, rpc:call(B, mnesia, wait_for_tables, [[Tab], 3000])),
     ?match(ok, rpc:call(A, mnesia, wait_for_tables, [[Tab], 3000])),
-    ?match([{Tab, 1, init}], rpc:call(A, mnesia, dirty_read, [{Tab, 1}])),
-    ?match([{Tab, 1, init}], rpc:call(B, mnesia, dirty_read, [{Tab, 1}])),
-    ?match([{Tab, 1, init}], rpc:call(C, mnesia, dirty_read, [{Tab, 1}])),
+    ?match([{^Tab, 1, init}], rpc:call(A, mnesia, dirty_read, [{Tab, 1}])),
+    ?match([{^Tab, 1, init}], rpc:call(B, mnesia, dirty_read, [{Tab, 1}])),
+    ?match([{^Tab, 1, init}], rpc:call(C, mnesia, dirty_read, [{Tab, 1}])),
 
     %% Test that master_nodes set to ram_copy node will wait until loaded
     ?match(ok, rpc:call(A, mnesia, set_master_nodes, [[B]])),
@@ -1229,15 +1229,15 @@ master_node_with_ram_copy_3(Config) when is_list(Config) ->
     ?match({atomic,ok}, rpc:call(B, mnesia, sync_transaction, [?SDwrite({Tab, 1, ram_copies})])),
     ?match(stopped, rpc:call(B, mnesia, stop, [])),
     ?match(ok, rpc:call(B, mnesia, start, [])),
-    ?match({timeout, [Tab]}, rpc:call(B, mnesia, wait_for_tables, [[Tab], 500])),
+    ?match({timeout, [^Tab]}, rpc:call(B, mnesia, wait_for_tables, [[Tab], 500])),
     ?match(ok, rpc:call(A, mnesia, start, [])),
-    ?match({timeout, [Tab]}, rpc:call(A, mnesia, wait_for_tables, [[Tab], 500])),
+    ?match({timeout, [^Tab]}, rpc:call(A, mnesia, wait_for_tables, [[Tab], 500])),
     ?match(ok, rpc:call(C, mnesia, start, [])),
     ?match(ok, rpc:call(B, mnesia, wait_for_tables, [[Tab], 3000])),
     ?match(ok, rpc:call(A, mnesia, wait_for_tables, [[Tab], 3000])),
-    ?match([{Tab, 1, update}], rpc:call(A, mnesia, dirty_read, [{Tab, 1}])),
-    ?match([{Tab, 1, update}], rpc:call(B, mnesia, dirty_read, [{Tab, 1}])),
-    ?match([{Tab, 1, update}], rpc:call(C, mnesia, dirty_read, [{Tab, 1}])),
+    ?match([{^Tab, 1, update}], rpc:call(A, mnesia, dirty_read, [{Tab, 1}])),
+    ?match([{^Tab, 1, update}], rpc:call(B, mnesia, dirty_read, [{Tab, 1}])),
+    ?match([{^Tab, 1, update}], rpc:call(C, mnesia, dirty_read, [{Tab, 1}])),
 
     %% Test that master_nodes set to ram_copy node requires force load
     ?match({atomic,ok}, mnesia:sync_transaction(?SDwrite({Tab, 1, init}))),
@@ -1250,21 +1250,21 @@ master_node_with_ram_copy_3(Config) when is_list(Config) ->
     ?match({atomic,ok}, rpc:call(B, mnesia, sync_transaction, [?SDwrite({Tab, 1, ram_copies})])),
     ?match(stopped, rpc:call(B, mnesia, stop, [])),
     ?match(ok, rpc:call(B, mnesia, start, [])),
-    ?match({timeout, [Tab]}, rpc:call(B, mnesia, wait_for_tables, [[Tab], 500])),
+    ?match({timeout, [^Tab]}, rpc:call(B, mnesia, wait_for_tables, [[Tab], 500])),
     ?match(ok, rpc:call(A, mnesia, start, [])),
-    ?match({timeout, [Tab]}, rpc:call(A, mnesia, wait_for_tables, [[Tab], 500])),
+    ?match({timeout, [^Tab]}, rpc:call(A, mnesia, wait_for_tables, [[Tab], 500])),
     ?match(ok, rpc:call(C, mnesia, start, [])),
-    ?match({timeout, [Tab]}, rpc:call(A, mnesia, wait_for_tables, [[Tab], 500])),
-    ?match({timeout, [Tab]}, rpc:call(B, mnesia, wait_for_tables, [[Tab], 500])),
-    ?match({timeout, [Tab]}, rpc:call(B, mnesia, wait_for_tables, [[Tab], 500])),
+    ?match({timeout, [^Tab]}, rpc:call(A, mnesia, wait_for_tables, [[Tab], 500])),
+    ?match({timeout, [^Tab]}, rpc:call(B, mnesia, wait_for_tables, [[Tab], 500])),
+    ?match({timeout, [^Tab]}, rpc:call(B, mnesia, wait_for_tables, [[Tab], 500])),
     ?match(yes, rpc:call(C, mnesia, force_load_table, [Tab])),
 
     ?match(ok, rpc:call(A, mnesia, wait_for_tables, [[Tab], 3000])),
     ?match(ok, rpc:call(B, mnesia, wait_for_tables, [[Tab], 3000])),
     ?match(ok, rpc:call(C, mnesia, wait_for_tables, [[Tab], 3000])),
-    ?match([{Tab, 1, update}], rpc:call(A, mnesia, dirty_read, [{Tab, 1}])),
-    ?match([{Tab, 1, update}], rpc:call(B, mnesia, dirty_read, [{Tab, 1}])),
-    ?match([{Tab, 1, update}], rpc:call(C, mnesia, dirty_read, [{Tab, 1}])),
+    ?match([{^Tab, 1, update}], rpc:call(A, mnesia, dirty_read, [{Tab, 1}])),
+    ?match([{^Tab, 1, update}], rpc:call(B, mnesia, dirty_read, [{Tab, 1}])),
+    ?match([{^Tab, 1, update}], rpc:call(C, mnesia, dirty_read, [{Tab, 1}])),
 
     ?verify_mnesia(Nodes, []).
 
@@ -1286,10 +1286,10 @@ dump_ram_copies(Config) when is_list(Config)  ->
     NP2 = node(P2),
     
     {A,B,C} = case node() of
-		  NP1 ->
+		  ^NP1 ->
 						%?verbose("first case ~n"),
 		      {P3,P2,P1};
-		  NP2 ->
+		  ^NP2 ->
 						%?verbose("second case ~n"),
 		      {P3,P1,P2};
 		  _  ->
@@ -1371,7 +1371,7 @@ cross_check_tables([Pid|Rest],Tab,{Val1,Val2,Val3}) ->
               R3 = mnesia:dirty_read({Tab,3}),
               {R1,R2,R3}
             end,
-    ?match_receive({ Pid, {Val1, Val2, Val3 } }),
+    ?match_receive({ ^Pid, {^Val1, ^Val2, ^Val3 } }),
     cross_check_tables(Rest,Tab,{Val1,Val2,Val3} ).   
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1408,7 +1408,7 @@ do_dump_copies(Config,Copies) ->
     ?match(ok, mnesia:dirty_write({Tab, 3, 256})),
 
     %%  dump the table
-    ?match( {aborted, {"Only allowed on ram_copies",Tab,[Node1]}},
+    ?match( {aborted, {"Only allowed on ram_copies",^Tab,[^Node1]}},
               mnesia:dump_tables([Tab])),
 
     ?match(ok, mnesia:dirty_write({Tab, 1, 815})),
@@ -1422,9 +1422,9 @@ do_dump_copies(Config,Copies) ->
 
     mnesia_test_lib:start_mnesia([Node1],[Tab]),
     
-    ?match([{Tab, 1, 815}], mnesia:dirty_read({Tab,1}) ),
-    ?match([{Tab, 2, 915}], mnesia:dirty_read({Tab,2}) ),
-    ?match([{Tab, 3, 256}], mnesia:dirty_read({Tab,3}) ),
+    ?match([{^Tab, 1, 815}], mnesia:dirty_read({Tab,1}) ),
+    ?match([{^Tab, 2, 915}], mnesia:dirty_read({Tab,2}) ),
+    ?match([{^Tab, 3, 256}], mnesia:dirty_read({Tab,3}) ),
     ?verify_mnesia(Nodes, []).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1499,7 +1499,7 @@ do_disc_durability(Config,CopyType) ->
     Updated = {[[{Tab_set,counter,10}],
 		[{Tab_set,counter,10}],
 		[{Tab_set,counter,10}]],[]},
-    ?match(Updated, rpc:multicall(Nodes, mnesia, dirty_read, [Tab_set,counter])),
+    ?match(^Updated, rpc:multicall(Nodes, mnesia, dirty_read, [Tab_set,counter])),
     
     %%  kill mnesia on all nodes, start it again and check the data
     mnesia_test_lib:kill_mnesia(Nodes),
@@ -1532,7 +1532,7 @@ check_tables([Pid|Rest],ValList,ResultList) ->
     Pid ! fun () ->
               check_values(ValList)
             end,
-    ?match_receive({ Pid, ResultList }),
+    ?match_receive({ ^Pid, ^ResultList }),
     check_tables(Rest,ValList,ResultList).
 
 check_values([]) -> [];

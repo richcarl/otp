@@ -304,7 +304,7 @@ not_recommended_calls(Config, Apps0, MFA) ->
 is_present_application(Name, Server) ->
     Q = io_lib:format("~w : App", [Name]),
     case xref:q(Server, lists:flatten(Q)) of
-        {ok,[Name]} -> true;
+        {ok,[^Name]} -> true;
         {error,_,_} -> false
     end.
 
@@ -453,7 +453,7 @@ check_apps_deps([], _IgnoreApps) ->
 check_apps_deps([{App, Deps}|AppDeps], IgnoreApps) ->
     ResOtherApps = check_apps_deps(AppDeps, IgnoreApps),
     AppFile = code:where_is_file(atom_to_list(App) ++ ".app"),
-    {ok,[{application, App, Info}]} = file:consult(AppFile),
+    {ok,[{application, ^App, Info}]} = file:consult(AppFile),
     case lists:keyfind(runtime_dependencies, 1, Info) of
         {runtime_dependencies, RDeps} ->
             check_app_deps(App, AppFile, RDeps, Deps, IgnoreApps)

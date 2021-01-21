@@ -318,13 +318,13 @@ cmd(Cmd, Env) ->
 
 eval_cmd(Port, Cmd) ->
     receive 
-	{Port, {data, _}} ->
+	{^Port, {data, _}} ->
 	    eval_cmd(Port, Cmd);
-	{Port, eof} ->
+	{^Port, eof} ->
 	    ok
     end,
     receive
-	{Port, {exit_status, Status}} when Status /= 0 ->
+	{^Port, {exit_status, Status}} when Status /= 0 ->
 	    %% io:fwrite("exit status: ~w~n", [Status]),
 	    exit({eval_cmd, Cmd, Status})
     after 0 ->

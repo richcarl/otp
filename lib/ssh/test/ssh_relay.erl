@@ -302,7 +302,7 @@ do_release(HPos, S) ->
     lists:foreach(fun(M) -> gen_tcp:send(Port, M), erlang:yield() end, Q),
     catch erlang:cancel_timer(TRef),
     receive
-	{release, HPos} -> ok
+	{release, ^HPos} -> ok
     after 0 ->
 	    ok
     end,
@@ -337,10 +337,10 @@ do_listen(Parent, LSock) ->
 
 do_flush(Parent, Sock) ->
     receive 
-	{Tcp, Sock, _} = Msg when Tcp == tcp; Tcp == tcp_error ->
+	{Tcp, ^Sock, _} = Msg when Tcp == tcp; Tcp == tcp_error ->
 	    Parent ! Msg,
 	    do_flush(Parent, Sock);
-	{tcp_closed, Sock} = Msg ->
+	{tcp_closed, ^Sock} = Msg ->
 	    Parent ! Msg,
 	    do_flush(Parent, Sock)
     after 1 ->
@@ -366,7 +366,7 @@ do_local(Data, S) when is_binary(Data) ->
 	    catch erlang:cancel_timer(TxH#hold.tref),
 	    TxP = #state.tx_hold,
 	    receive
-		{release, TxP} ->
+		{release, ^TxP} ->
 		    ok
 	    after 0 ->
 		    ok
@@ -395,7 +395,7 @@ do_peer(Data, S) when is_binary(Data) ->
 	    catch erlang:cancel_timer(RxH#hold.tref),
 	    RxP = #state.rx_hold,
 	    receive
-		{release, RxP} ->
+		{release, ^RxP} ->
 		    ok
 	    after 0 ->
 		    ok

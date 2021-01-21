@@ -82,48 +82,48 @@ nice_single(Config) when is_list(Config) ->
     ?match({atomic, ok}, mnesia:create_table(Tab, [{frag_properties, Props}])),
     Records = [{Tab, N, -N} || N <- lists:seq(1, 12)],
     [frag_write(Tab, R)  || R <- Records],
-    ?match([{Node1, 2}], frag_dist(Tab)),
+    ?match([{^Node1, 2}], frag_dist(Tab)),
     ?match([8, 4], frag_rec_dist(Tab)),
 
     %% Adding a new node to pool should not affect distribution
     ?match({atomic, ok}, mnesia:change_table_frag(Tab, {add_node, Node2})),
     Dist =  frag_dist(Tab), 
-    ?match([{Node2, 0}, {Node1, 2}], Dist), 
+    ?match([{^Node2, 0}, {^Node1, 2}], Dist), 
     ?match([8, 4], frag_rec_dist(Tab)),
 
     %% Add new fragment hopefully on the new node
     ?match({atomic, ok}, mnesia:change_table_frag(Tab, {add_frag, Dist})),
     Dist2 =  frag_dist(Tab), 
-    ?match([{Node2, 1}, {Node1, 2}], Dist2), 
+    ?match([{^Node2, 1}, {^Node1, 2}], Dist2), 
     ?match([3, 4, 5], frag_rec_dist(Tab)),
     
     %% Add new fragment hopefully on the new node
     ?match({atomic, ok}, mnesia:change_table_frag(Tab, {add_frag, Dist2})),
     Dist3 =  frag_dist(Tab), 
-    ?match([{Node1, 2}, {Node2, 2}], Dist3), 
+    ?match([{^Node1, 2}, {^Node2, 2}], Dist3), 
     ?match([3, 2, 5, 2], frag_rec_dist(Tab)),
 
     %% Add new fragment hopefully on the new node
     ?match({atomic, ok}, mnesia:change_table_frag(Tab, {add_frag, Dist3})),
     Dist4 =  frag_dist(Tab), 
-    ?match([{Node2, 2}, {Node1, 3}], Dist4), 
+    ?match([{^Node2, 2}, {^Node1, 3}], Dist4), 
     ?match([_, _, _, _, _], frag_rec_dist(Tab)),
 
     %% Dropping a node in pool should not affect distribution
     ?match({atomic, ok}, mnesia:change_table_frag(Tab, {del_node, Node1})),
-    ?match([{Node2, 2}, {Node1, 3}], frag_dist(Tab)),
+    ?match([{^Node2, 2}, {^Node1, 3}], frag_dist(Tab)),
     ?match([_, _, _, _, _], frag_rec_dist(Tab)),
 
     %% Dropping a fragment
     ?match({atomic, ok}, mnesia:change_table_frag(Tab, del_frag)),
     Dist5 =  frag_dist(Tab), 
-    ?match([{Node2, 2}, {Node1, 2}], Dist5), 
+    ?match([{^Node2, 2}, {^Node1, 2}], Dist5), 
     ?match([3, 2, 5, 2], frag_rec_dist(Tab)),
     
     %% Add new fragment hopefully on the new node
     ?match({atomic, ok}, mnesia:change_table_frag(Tab, {add_frag, Dist5})),
     Dist6 =  frag_dist(Tab), 
-    ?match([{Node2, 3}, {Node1, 2}], Dist6), 
+    ?match([{^Node2, 3}, {^Node1, 2}], Dist6), 
     ?match([_, _, _, _, _], frag_rec_dist(Tab)),
 
     %% Dropping all fragments but one
@@ -134,7 +134,7 @@ nice_single(Config) when is_list(Config) ->
     ?match({atomic, ok}, mnesia:change_table_frag(Tab, del_frag)),
     ?match([8, 4], frag_rec_dist(Tab)),
     ?match({atomic, ok}, mnesia:change_table_frag(Tab, del_frag)),
-    ?match([{Node2, 0}, {Node1, 1}], frag_dist(Tab)), 
+    ?match([{^Node2, 0}, {^Node1, 1}], frag_dist(Tab)), 
     ?match([12], frag_rec_dist(Tab)),
 	     
     %% Defragmenting the table clears frag_properties
@@ -148,7 +148,7 @@ nice_single(Config) when is_list(Config) ->
     ?match({atomic, ok}, mnesia:change_table_frag(Tab, {activate, Props2})),
     ?match({atomic, ok}, mnesia:change_table_frag(Tab, {add_frag, frag_dist(Tab)})),
     Dist7 = frag_dist(Tab),
-    ?match([{Node1, 1}, {Node2, 1}], Dist7),
+    ?match([{^Node1, 1}, {^Node2, 1}], Dist7),
     ?match([8, 4], frag_rec_dist(Tab)),
 
     %% Deleting the fragmented table
@@ -182,7 +182,7 @@ nice_multi(Config) when is_list(Config) ->
     ?match({atomic, ok}, mnesia:create_table(Tab, Def)),
     [frag_write(Tab, {Name, Id, -Id})  || Id <- lists:seq(1, 8)],
     ?match([6, 2], frag_rec_dist(Tab)),
-    ?match([{Node2, 2}, {Node1, 2}], frag_dist(Tab)),
+    ?match([{^Node2, 2}, {^Node1, 2}], frag_dist(Tab)),
     
     %% And connect another table to it, via a foreign key
     TabF = frag_slave,
@@ -193,67 +193,67 @@ nice_multi(Config) when is_list(Config) ->
     ?match({atomic, ok}, mnesia:create_table(TabF, DefF)),
     [frag_write(TabF, {TabF, {Id}, Id})  || Id <- lists:seq(1, 16)],
     ?match([10, 6], frag_rec_dist(TabF)),
-    ?match([{Node2, 2}, {Node1, 2}], frag_dist(TabF)),
+    ?match([{^Node2, 2}, {^Node1, 2}], frag_dist(TabF)),
 
     %% Adding a new node to pool should not affect distribution
     ?match({atomic, ok}, mnesia:change_table_frag(Tab, {add_node, Node3})),
     Dist =  frag_dist(Tab), 
-    ?match([{Node3, 0}, {Node2, 2}, {Node1, 2}], Dist), 
+    ?match([{^Node3, 0}, {^Node2, 2}, {^Node1, 2}], Dist), 
     ?match([6, 2], frag_rec_dist(Tab)),
     DistF =  frag_dist(TabF), 
-    ?match([{Node3, 0}, {Node2, 2}, {Node1, 2}], DistF), 
+    ?match([{^Node3, 0}, {^Node2, 2}, {^Node1, 2}], DistF), 
     ?match([10, 6], frag_rec_dist(TabF)),
 
     %% Add new fragment hopefully on the new node
     ?match({atomic, ok}, mnesia:change_table_frag(Tab, {add_frag, Dist})),
     Dist2 =  frag_dist(Tab), 
-    ?match([{Node3, 1},{Node1, 2},{Node2,3}], Dist2), 
+    ?match([{^Node3, 1},{^Node1, 2},{^Node2,3}], Dist2), 
     ?match([_, _, _], frag_rec_dist(Tab)),
     DistF2 =  frag_dist(TabF), 
-    ?match([{Node3, 1},{Node1, 2},{Node2,3}], DistF2), 
+    ?match([{^Node3, 1},{^Node1, 2},{^Node2,3}], DistF2), 
     ?match([_, _, _], frag_rec_dist(TabF)),
     
     %% Add new fragment hopefully on the new node
     ?match({atomic, ok}, mnesia:change_table_frag(Tab, {add_frag, Dist2})),
     Dist3 =  frag_dist(Tab), 
-    ?match([{Node3, 2},{Node2,3},{Node1, 3}], Dist3), 
+    ?match([{^Node3, 2},{^Node2,3},{^Node1, 3}], Dist3), 
     ?match([3, 0, 3, 2], frag_rec_dist(Tab)),
     DistF3 =  frag_dist(TabF), 
-    ?match([{Node3, 2},{Node2,3},{Node1, 3}], DistF3), 
+    ?match([{^Node3, 2},{^Node2,3},{^Node1, 3}], DistF3), 
     ?match([3, 3, 7, 3], frag_rec_dist(TabF)),
 
     %% Add new fragment hopefully on the new node
     ?match({atomic, ok}, mnesia:change_table_frag(Tab, {add_frag, Dist3})),
     Dist4 =  frag_dist(Tab), 
-    ?match([{Node1, 3}, {Node3, 3},{Node2, 4}], Dist4), 
+    ?match([{^Node1, 3}, {^Node3, 3},{^Node2, 4}], Dist4), 
     ?match([_, _, _, _, _], frag_rec_dist(Tab)),
     DistF4 =  frag_dist(TabF), 
-    ?match([{Node1, 3}, {Node3, 3},{Node2, 4}], DistF4), 
+    ?match([{^Node1, 3}, {^Node3, 3},{^Node2, 4}], DistF4), 
     ?match([_, _, _, _, _], frag_rec_dist(TabF)),
 
     %% Dropping a node in pool should not affect distribution
     ?match({atomic, ok}, mnesia:change_table_frag(Tab, {del_node, Node1})),
-    ?match([{Node3, 3},{Node2, 4}, {Node1, 3}], frag_dist(Tab)),
+    ?match([{^Node3, 3},{^Node2, 4}, {^Node1, 3}], frag_dist(Tab)),
     ?match([_, _, _, _, _], frag_rec_dist(Tab)),
-    ?match([{Node3, 3},{Node2, 4}, {Node1, 3}], frag_dist(TabF)),
+    ?match([{^Node3, 3},{^Node2, 4}, {^Node1, 3}], frag_dist(TabF)),
     ?match([_, _, _, _, _], frag_rec_dist(TabF)),
 
     %% Dropping a fragment
     ?match({atomic, ok}, mnesia:change_table_frag(Tab, del_frag)),
     Dist5 =  frag_dist(Tab), 
-    ?match([{Node3, 2},{Node2,3},{Node1, 3}], Dist5), 
+    ?match([{^Node3, 2},{^Node2,3},{^Node1, 3}], Dist5), 
     ?match([3, 0, 3, 2], frag_rec_dist(Tab)),
     DistF5 =  frag_dist(Tab), 
-    ?match([{Node3, 2},{Node2,3},{Node1, 3}], DistF5), 
+    ?match([{^Node3, 2},{^Node2,3},{^Node1, 3}], DistF5), 
     ?match([3, 3, 7, 3], frag_rec_dist(TabF)),
     
     %% Add new fragment hopefully on the new node
     ?match({atomic, ok}, mnesia:change_table_frag(Tab, {add_frag, Dist5})),
     Dist6 =  frag_dist(Tab), 
-    ?match([{Node3, 3},{Node2, 4},{Node1, 3}], Dist6), 
+    ?match([{^Node3, 3},{^Node2, 4},{^Node1, 3}], Dist6), 
     ?match([_, _, _, _, _], frag_rec_dist(Tab)),
     DistF6 =  frag_dist(TabF), 
-    ?match([{Node3, 3},{Node2, 4},{Node1, 3}], DistF6), 
+    ?match([{^Node3, 3},{^Node2, 4},{^Node1, 3}], DistF6), 
     ?match([_, _, _, _, _], frag_rec_dist(TabF)),
 
     %% Dropping all fragments but one
@@ -267,9 +267,9 @@ nice_multi(Config) when is_list(Config) ->
     ?match([6, 2], frag_rec_dist(Tab)),
     ?match([10, 6], frag_rec_dist(TabF)),
     ?match({atomic, ok}, mnesia:change_table_frag(Tab, del_frag)),
-    ?match([{Node3, 0}, {Node2, 1}, {Node1, 1}], frag_dist(Tab)), 
+    ?match([{^Node3, 0}, {^Node2, 1}, {^Node1, 1}], frag_dist(Tab)), 
     ?match([8], frag_rec_dist(Tab)),
-    ?match([{Node3, 0}, {Node2, 1}, {Node1, 1}], frag_dist(TabF)), 
+    ?match([{^Node3, 0}, {^Node2, 1}, {^Node1, 1}], frag_dist(TabF)), 
     ?match([16], frag_rec_dist(TabF)),
 	     
     %% Defragmenting the tables clears frag_properties
@@ -289,9 +289,9 @@ nice_multi(Config) when is_list(Config) ->
     ?match({atomic, ok}, mnesia:create_table(TabF, DefF)),
     [frag_write(TabF, {TabF, {Id}, Id})  || Id <- lists:seq(1, 16)],
     ?match({atomic, ok}, mnesia:change_table_frag(Tab, {add_frag, frag_dist(Tab)})),
-    ?match([{Node1, 2}, {Node2, 2}], frag_dist(Tab)),
+    ?match([{^Node1, 2}, {^Node2, 2}], frag_dist(Tab)),
     ?match([6, 2], frag_rec_dist(Tab)),
-    ?match([{Node1, 2}, {Node2, 2}], frag_dist(TabF)),
+    ?match([{^Node1, 2}, {^Node2, 2}], frag_dist(TabF)),
     ?match([10, 6], frag_rec_dist(TabF)),
 
     %% Deleting the fragmented tables
@@ -336,7 +336,7 @@ nice_access(Config) when is_list(Config) ->
 
 do_access(Tab, Master, Pool) ->
     ?match(20, mnesia:table_info(Tab, n_fragments)),
-    ?match(Pool, mnesia:table_info(Tab, node_pool)),
+    ?match(^Pool, mnesia:table_info(Tab, node_pool)),
     ?match(2, mnesia:table_info(Tab, n_ram_copies)),
     ?match(0, mnesia:table_info(Tab, n_disc_copies)),
     ?match(0, mnesia:table_info(Tab, n_disc_only_copies)),
@@ -344,21 +344,21 @@ do_access(Tab, Master, Pool) ->
     ?match(20, length(mnesia:table_info(Tab, frag_size))),
     ?match(20, length(mnesia:table_info(Tab, frag_memory))),
     PoolSize = length(Pool),
-    ?match(PoolSize, length(mnesia:table_info(Tab, frag_dist))),
+    ?match(^PoolSize, length(mnesia:table_info(Tab, frag_dist))),
     ?match(400, mnesia:table_info(Tab, size)),
     ?match(I when is_integer(I), mnesia:table_info(Tab, memory)),
-    ?match(Tab, mnesia:table_info(Tab, base_table)),
+    ?match(^Tab, mnesia:table_info(Tab, base_table)),
 
     Foreign = 
 	if
 	    Master == Tab ->
 		?match(undefined, mnesia:table_info(Tab, foreign_key)),
 		?match([_], mnesia:table_info(Tab, foreigners)),
-                ?match({'EXIT', {aborted, {combine_error, Tab, frag_properties, {foreign_key, undefined}}}},
+                ?match({'EXIT', {aborted, {combine_error, ^Tab, frag_properties, {foreign_key, undefined}}}},
                     mnesia:read({Tab, 5}, 5, read)),
                 fun({T, _K}) -> T end;
 	    true ->
-		?match({Master, 3}, mnesia:table_info(Tab, foreign_key)),
+		?match({^Master, 3}, mnesia:table_info(Tab, foreign_key)),
 		?match([], mnesia:table_info(Tab, foreigners)),
                 fun({T, K}) -> {T, K} end
 	end,
@@ -384,34 +384,34 @@ do_access(Tab, Master, Pool) ->
     %% OTP 
     [_, Frag2|_] = frag_names(Tab),
     Frag2key = mnesia:dirty_first(Frag2),
-    ?match({[Frag2key],_},mnesia:select(Tab,[{{Tab,Frag2key,'$1'},[],['$1']}],100,read)),
+    ?match({[^Frag2key],_},mnesia:select(Tab,[{{Tab,Frag2key,'$1'},[],['$1']}],100,read)),
 
-    ?match([{Tab, [-1], 1}], mnesia:read(Foreign({Tab, 1}), [-1], read)),
+    ?match([{^Tab, [-1], 1}], mnesia:read(Foreign({Tab, 1}), [-1], read)),
     ?match(401, mnesia:foldl(Count, 0, Tab)),
     ?match(401, mnesia:foldr(Count, 0, Tab)),
     ?match(ok, mnesia:delete(Foreign({Tab, 2}), 2, write)),
     ?match([], mnesia:read(Foreign({Tab, 2}), 2, read)),
-    ?match([{Tab, 3, 3}], mnesia:read(Foreign({Tab, 3}), 3, read)),
+    ?match([{^Tab, 3, 3}], mnesia:read(Foreign({Tab, 3}), 3, read)),
     ?match(400, mnesia:foldl(Count, 0, Tab)),
     ?match(400, mnesia:foldr(Count, 0, Tab)),
     ?match(ok, mnesia:delete_object({Tab, 3, 3})),
     ?match([], mnesia:read(Foreign({Tab, 3}), 3, read)),
     One = lists:sort([{Tab, 1, 1}, {Tab, [-1], 1}]),
     Pat = {Tab, '$1', 1},
-    ?match(One, lists:sort(mnesia:match_object(Tab, Pat, read))),
+    ?match(^One, lists:sort(mnesia:match_object(Tab, Pat, read))),
     ?match([1,[-1]], lists:sort(mnesia:select(Tab, [{Pat, [], ['$1']}], read))),
     ?match([[[-1]]], lists:sort(mnesia:select(Tab, [{Pat, [{is_list, '$1'}], [['$1']]}], read))),
     ?match([[1, 100]], lists:sort(mnesia:select(Tab, [{Pat, [{is_integer, '$1'}], [['$1',100]]}], read))),
     ?match([1,[-1]], lists:sort(mnesia:select(Tab, [{Pat, [{is_list, '$1'}], ['$1']},{Pat, [{is_integer, '$1'}], ['$1']}], read))),
-    ?match(One, lists:sort(mnesia:index_match_object(Tab, Pat, Attr, read) )),
-    ?match(One, lists:sort(mnesia:index_read(Tab, 1, Attr))),
+    ?match(^One, lists:sort(mnesia:index_match_object(Tab, Pat, Attr, read) )),
+    ?match(^One, lists:sort(mnesia:index_read(Tab, 1, Attr))),
     Keys = mnesia:all_keys(Tab),
     ?match([-1], lists:max(Keys)),  %% OTP-3779
     ?match(399, length(Keys)),
     ?match(399, mnesia:foldl(Count, 0, Tab)),
     ?match(399, mnesia:foldr(Count, 0, Tab)),
 
-    ?match(Pool, lists:sort(mnesia:lock({table, Tab}, write))),
+    ?match(^Pool, lists:sort(mnesia:lock({table, Tab}, write))),
 
     done.
 
@@ -443,7 +443,7 @@ iter_access(Config) when is_list(Config) ->
     
     ?match(done, mnesia:activity(transaction, fun nice_iter_access/3, [Tab, FragNames, RawRead], mnesia_frag)),
 
-    FragNames = frag_names(Tab),
+    ^FragNames = frag_names(Tab),
     [First, Second | _] = FragNames,
     [Last, LastButOne | _] = lists:reverse(FragNames),
 
@@ -468,15 +468,15 @@ nice_iter_access(Tab, FragNames, RawRead) ->
     RawData = ?ignore(lists:map(RawRead, FragNames)),
     Keys = [K || {_, Recs} <- RawData, {_, K, _} <- Recs],
     ExpectedFirst = hd(Keys),
-    ?match(ExpectedFirst, mnesia:first(Tab)),
+    ?match(^ExpectedFirst, mnesia:first(Tab)),
     ExpectedLast = lists:last(Keys),
-    ?match(ExpectedLast, mnesia:last(Tab)),
+    ?match(^ExpectedLast, mnesia:last(Tab)),
     
     ExpectedAllPrev = ['$end_of_table' | lists:droplast(Keys)],
-    ?match(ExpectedAllPrev, lists:map(fun(K) -> mnesia:prev(Tab, K) end, Keys)),
+    ?match(^ExpectedAllPrev, lists:map(fun(K) -> mnesia:prev(Tab, K) end, Keys)),
     
     ExpectedAllNext = tl(Keys) ++ ['$end_of_table'],
-    ?match(ExpectedAllNext, lists:map(fun(K) -> mnesia:next(Tab, K) end, Keys)),
+    ?match(^ExpectedAllNext, lists:map(fun(K) -> mnesia:next(Tab, K) end, Keys)),
 
     done.
 
@@ -484,15 +484,15 @@ evil_iter_access(Tab, FragNames, RawRead) ->
     RawData = ?ignore(lists:map(RawRead, FragNames)),
     Keys = [K || {_, Recs} <- RawData, {_, K, _} <- Recs],
     ExpectedFirst = hd(Keys),
-    ?match(ExpectedFirst, mnesia:first(Tab)),
+    ?match(^ExpectedFirst, mnesia:first(Tab)),
     ExpectedLast = lists:last(Keys),
-    ?match(ExpectedLast, mnesia:last(Tab)),
+    ?match(^ExpectedLast, mnesia:last(Tab)),
     
     ExpectedAllPrev = ['$end_of_table' | lists:droplast(Keys)],
-    ?match(ExpectedAllPrev, lists:map(fun(K) -> mnesia:prev(Tab, K) end, Keys)),
+    ?match(^ExpectedAllPrev, lists:map(fun(K) -> mnesia:prev(Tab, K) end, Keys)),
     
     ExpectedAllNext = tl(Keys) ++ ['$end_of_table'],
-    ?match(ExpectedAllNext, lists:map(fun(K) -> mnesia:next(Tab, K) end, Keys)),
+    ?match(^ExpectedAllNext, lists:map(fun(K) -> mnesia:next(Tab, K) end, Keys)),
 
     done.
 
@@ -518,65 +518,65 @@ evil_create(Config) when is_list(Config) ->
     
     Tab = evil_create,
     %% Props in general
-    ?match({aborted, {badarg, Tab, {frag_properties, no_list}}},
+    ?match({aborted, {badarg, ^Tab, {frag_properties, no_list}}},
 	   Create(Tab, [], no_list)),
-    ?match({aborted, {badarg,Tab , [no_tuple]}},
+    ?match({aborted, {badarg,^Tab , [no_tuple]}},
 	   Create(Tab, [], [no_tuple])),
-    ?match({aborted,{badarg, Tab, bad_key}},
+    ?match({aborted,{badarg, ^Tab, bad_key}},
 	   Create(Tab, [], [{bad_key, 7}])),
 
     %% n_fragments
-    ?match({aborted,{badarg, Tab, [{n_fragments}]}},
+    ?match({aborted,{badarg, ^Tab, [{n_fragments}]}},
 	   Create(Tab, [], [{n_fragments}])),
-    ?match({aborted,{badarg, Tab, [{n_fragments, 1, 1}]}},
+    ?match({aborted,{badarg, ^Tab, [{n_fragments, 1, 1}]}},
 	   Create(Tab, [], [{n_fragments, 1, 1}])),
-    ?match({aborted, {bad_type,Tab, {n_fragments, a}}},
+    ?match({aborted, {bad_type,^Tab, {n_fragments, a}}},
 	   Create(Tab, [], [{n_fragments, a}])),
-    ?match({aborted, {bad_type, Tab, {n_fragments, 0}}},
+    ?match({aborted, {bad_type, ^Tab, {n_fragments, 0}}},
 	   Create(Tab, [], [{n_fragments, 0}])),
 
     %% *_copies
-    ?match({aborted, {bad_type, Tab, {n_ram_copies, -1}}},
+    ?match({aborted, {bad_type, ^Tab, {n_ram_copies, -1}}},
 	   Create(Tab, [], [{n_ram_copies, -1}, {n_fragments, 1}])),
-    ?match({aborted, {bad_type, Tab, {n_disc_copies, -1}}},
+    ?match({aborted, {bad_type, ^Tab, {n_disc_copies, -1}}},
 	   Create(Tab, [], [{n_disc_copies, -1}, {n_fragments, 1}])),
-    ?match({aborted, {bad_type, Tab, {n_disc_only_copies, -1}}},
+    ?match({aborted, {bad_type, ^Tab, {n_disc_only_copies, -1}}},
 	   Create(Tab, [], [{n_disc_only_copies, -1}, {n_fragments, 1}])),
 
     %% node_pool
-    ?match({aborted, {bad_type, Tab, {node_pool, 0}}},
+    ?match({aborted, {bad_type, ^Tab, {node_pool, 0}}},
 	   Create(Tab, [], [{node_pool, 0}])),
-    ?match({aborted, {combine_error, Tab, "Too few nodes in node_pool"}},
+    ?match({aborted, {combine_error, ^Tab, "Too few nodes in node_pool"}},
 	   Create(Tab, [], [{n_ram_copies, 2}, {node_pool, [Node1]}])),
 
     %% foreign_key
-    ?match({aborted, {bad_type, Tab, {foreign_key, bad_key}}},
+    ?match({aborted, {bad_type, ^Tab, {foreign_key, bad_key}}},
 	   Create(Tab, [], [{foreign_key, bad_key}])), 
-    ?match({aborted,{bad_type, Tab, {foreign_key, {bad_key}}}}, 
+    ?match({aborted,{bad_type, ^Tab, {foreign_key, {bad_key}}}}, 
 	   Create(Tab, [], [{foreign_key, {bad_key}}])), 
     ?match({aborted, {no_exists, {bad_tab, frag_properties}}},
 	   Create(Tab, [], [{foreign_key, {bad_tab, val}}])), 
-    ?match({aborted, {combine_error, Tab, {Tab, val}}},
+    ?match({aborted, {combine_error, ^Tab, {^Tab, val}}},
 	   Create(Tab, [], [{foreign_key, {Tab, val}}])),
     ?match({atomic, ok},
 	   Create(Tab, [], [{n_fragments, 1}])),
 	   
-    ?match({aborted, {already_exists, Tab}},
+    ?match({aborted, {already_exists, ^Tab}},
 	   Create(Tab, [], [{n_fragments, 1}])),
 
     Tab2 = evil_create2,
     ?match({aborted, {bad_type, no_attr}},
 	   Create(Tab2, [], [{foreign_key, {Tab, no_attr}}])),
-    ?match({aborted, {combine_error, Tab2, _, _, _}},
+    ?match({aborted, {combine_error, ^Tab2, _, _, _}},
 	   Create(Tab2, [], [{foreign_key, {Tab, val}},
 			     {node_pool, [Node1]}])),
-    ?match({aborted, {combine_error, Tab2, _, _, _}},
+    ?match({aborted, {combine_error, ^Tab2, _, _, _}},
 	   Create(Tab2, [], [{foreign_key, {Tab, val}},
 			     {n_fragments, 2}])),
     ?match({atomic, ok},
 	   Create(Tab2, [{attributes, [a, b, c]}], [{foreign_key, {Tab, c}}])),
     Tab3 = evil_create3,
-    ?match({aborted, {combine_error, Tab3, _, _, _}},
+    ?match({aborted, {combine_error, ^Tab3, _, _, _}},
 	   Create(Tab3, [{attributes, [a, b]}], [{foreign_key, {Tab2, b}}])),
     ?match({atomic, ok},
 	   Create(Tab3, [{attributes, [a, b]}], [{foreign_key, {Tab, b}}])),
@@ -603,10 +603,10 @@ evil_change(Config) when is_list(Config) ->
     
     ?match({atomic,ok}, mnesia:change_table_frag(Tab1, {add_frag, Nodes})),
     Dist10 =  frag_dist(Tab1), 
-    ?match([{N1,3}], Dist10), 
+    ?match([{^N1,3}], Dist10), 
     ?match({atomic, ok}, mnesia:change_table_frag(Tab1, {add_node, N2})),
     Dist11 =  frag_dist(Tab1),
-    ?match([{N2,0},{N1,3}], Dist11),
+    ?match([{^N2,0},{^N1,3}], Dist11),
     mnesia_test_lib:kill_mnesia([N2]),
     ?match({aborted,_}, mnesia:change_table_frag(Tab1, {add_frag, [N2,N1]})),
     ?verbose("~p~n",[frag_dist(Tab1)]),
@@ -722,15 +722,15 @@ evil_loop(Config) when is_list(Config) ->
 		 Search(Tab)
 	 end,
     S1 = lists:sort([R1, R2| Recs]),
-    ?match(S1, sort_res(Trans(W1, [Tab1, Select]))),
-    ?match(S1, sort_res(Trans(W1, [Tab1, Match]))),
-    ?match(S1, sort_res(Trans(W1, [Tab1, SelLoop]))),
-    ?match(S1, sort_res(Trans(W1, [Tab2, Select]))),
-    ?match(S1, sort_res(Trans(W1, [Tab2, SelLoop]))),
-    ?match(S1, sort_res(Trans(W1, [Tab2, Match]))),
-    ?match(S1, sort_res(Trans(W1, [Tab3, Select]))),
-    ?match(S1, sort_res(Trans(W1, [Tab3, SelLoop]))),
-    ?match(S1, sort_res(Trans(W1, [Tab3, Match]))),
+    ?match(^S1, sort_res(Trans(W1, [Tab1, Select]))),
+    ?match(^S1, sort_res(Trans(W1, [Tab1, Match]))),
+    ?match(^S1, sort_res(Trans(W1, [Tab1, SelLoop]))),
+    ?match(^S1, sort_res(Trans(W1, [Tab2, Select]))),
+    ?match(^S1, sort_res(Trans(W1, [Tab2, SelLoop]))),
+    ?match(^S1, sort_res(Trans(W1, [Tab2, Match]))),
+    ?match(^S1, sort_res(Trans(W1, [Tab3, Select]))),
+    ?match(^S1, sort_res(Trans(W1, [Tab3, SelLoop]))),
+    ?match(^S1, sort_res(Trans(W1, [Tab3, Match]))),
     [mnesia:dirty_delete_object(Frag, R) || R <- [R1, R2], 
 					   Tab <- Tabs,
 					   Frag <- frag_names(Tab)],
@@ -743,16 +743,16 @@ evil_loop(Config) when is_list(Config) ->
     S2 = lists:sort([R1 | Recs]),
     S2Bag = lists:sort([R1, R3 | Recs]),
     io:format("S2 = ~p\n", [S2]),
-    ?match(S2, sort_res(Trans(W2, [Tab1, Select]))),
-    ?match(S2, sort_res(Trans(W2, [Tab1, SelLoop]))),
-    ?match(S2, sort_res(Trans(W2, [Tab1, Match]))),
-    ?match(S2, sort_res(Trans(W2, [Tab2, Select]))),
-    ?match(S2, sort_res(Trans(W2, [Tab2, SelLoop]))),
-    ?match(S2, sort_res(Trans(W2, [Tab2, Match]))),
+    ?match(^S2, sort_res(Trans(W2, [Tab1, Select]))),
+    ?match(^S2, sort_res(Trans(W2, [Tab1, SelLoop]))),
+    ?match(^S2, sort_res(Trans(W2, [Tab1, Match]))),
+    ?match(^S2, sort_res(Trans(W2, [Tab2, Select]))),
+    ?match(^S2, sort_res(Trans(W2, [Tab2, SelLoop]))),
+    ?match(^S2, sort_res(Trans(W2, [Tab2, Match]))),
     io:format("S2Bag = ~p\n", [S2Bag]),
-    ?match(S2Bag, sort_res(Trans(W2, [Tab3, Select]))),
-    ?match(S2Bag, sort_res(Trans(W2, [Tab3, SelLoop]))),
-    ?match(S2Bag, sort_res(Trans(W2, [Tab3, Match]))),
+    ?match(^S2Bag, sort_res(Trans(W2, [Tab3, Select]))),
+    ?match(^S2Bag, sort_res(Trans(W2, [Tab3, SelLoop]))),
+    ?match(^S2Bag, sort_res(Trans(W2, [Tab3, Match]))),
 
     W3 = fun(Tab,Search) -> 
 		 mnesia:write(Tab, R4, write),
@@ -761,15 +761,15 @@ evil_loop(Config) when is_list(Config) ->
 	 end,
     S3Bag = lists:sort([R4 | lists:delete(R1, Recs)]),
     S3 = lists:delete({RecName, 3, 3}, S3Bag),
-    ?match(S3, sort_res(Trans(W3, [Tab1, Select]))),
-    ?match(S3, sort_res(Trans(W3, [Tab1, SelLoop]))),
-    ?match(S3, sort_res(Trans(W3, [Tab1, Match]))),
-    ?match(S3, sort_res(Trans(W3, [Tab2, SelLoop]))),
-    ?match(S3, sort_res(Trans(W3, [Tab2, Select]))),
-    ?match(S3, sort_res(Trans(W3, [Tab2, Match]))),
-    ?match(S3Bag, sort_res(Trans(W3, [Tab3, Select]))),
-    ?match(S3Bag, sort_res(Trans(W3, [Tab3, SelLoop]))),
-    ?match(S3Bag, sort_res(Trans(W3, [Tab3, Match]))),
+    ?match(^S3, sort_res(Trans(W3, [Tab1, Select]))),
+    ?match(^S3, sort_res(Trans(W3, [Tab1, SelLoop]))),
+    ?match(^S3, sort_res(Trans(W3, [Tab1, Match]))),
+    ?match(^S3, sort_res(Trans(W3, [Tab2, SelLoop]))),
+    ?match(^S3, sort_res(Trans(W3, [Tab2, Select]))),
+    ?match(^S3, sort_res(Trans(W3, [Tab2, Match]))),
+    ?match(^S3Bag, sort_res(Trans(W3, [Tab3, Select]))),
+    ?match(^S3Bag, sort_res(Trans(W3, [Tab3, SelLoop]))),
+    ?match(^S3Bag, sort_res(Trans(W3, [Tab3, Match]))),
 
     W4 = fun(Tab,Search) -> 
 		 mnesia:delete(Tab, -1, write),
@@ -784,15 +784,15 @@ evil_loop(Config) when is_list(Config) ->
 	 end,
     S4Bag = lists:sort([R5 | S3Bag]),
     S4    = lists:sort([R5 | S3]),
-    ?match(S4, sort_res(Trans(W4, [Tab1, Select]))),
-    ?match(S4, sort_res(Trans(W4, [Tab1, SelLoop]))),
-    ?match(S4, sort_res(Trans(W4, [Tab1, Match]))),
-    ?match(S4, sort_res(Trans(W4, [Tab2, Select]))),
-    ?match(S4, sort_res(Trans(W4, [Tab2, SelLoop]))),
-    ?match(S4, sort_res(Trans(W4, [Tab2, Match]))),
-    ?match(S4Bag, sort_res(Trans(W4, [Tab3, Select]))),
-    ?match(S4Bag, sort_res(Trans(W4, [Tab3, SelLoop]))),
-    ?match(S4Bag, sort_res(Trans(W4, [Tab3, Match]))),
+    ?match(^S4, sort_res(Trans(W4, [Tab1, Select]))),
+    ?match(^S4, sort_res(Trans(W4, [Tab1, SelLoop]))),
+    ?match(^S4, sort_res(Trans(W4, [Tab1, Match]))),
+    ?match(^S4, sort_res(Trans(W4, [Tab2, Select]))),
+    ?match(^S4, sort_res(Trans(W4, [Tab2, SelLoop]))),
+    ?match(^S4, sort_res(Trans(W4, [Tab2, Match]))),
+    ?match(^S4Bag, sort_res(Trans(W4, [Tab3, Select]))),
+    ?match(^S4Bag, sort_res(Trans(W4, [Tab3, SelLoop]))),
+    ?match(^S4Bag, sort_res(Trans(W4, [Tab3, Match]))),
     [mnesia:dirty_delete_object(Tab, R) || R <- [{RecName, 3, 3}, R5], Tab <- Tabs],
 
     %% hmmm anything more??
@@ -824,15 +824,15 @@ evil_delete_db_node(Config) when is_list(Config) ->
 			  false                   -> []
 		      end
 	      end,
-    ?match(Nodes, GetPool(Tab)),
-    ?match(Nodes, GetPool(ExtraTab)),
+    ?match(^Nodes, GetPool(Tab)),
+    ?match(^Nodes, GetPool(ExtraTab)),
 
 
     ?match(stopped, rpc:call(Remote, mnesia, stop, [])),
     ?match({atomic, ok}, mnesia:del_table_copy(schema, Remote)),
 	   
-    ?match([Local], GetPool(Tab)),
-    ?match([Local], GetPool(ExtraTab)),
+    ?match([^Local], GetPool(Tab)),
+    ?match([^Local], GetPool(ExtraTab)),
      
     ?verify_mnesia([Local], []).
 

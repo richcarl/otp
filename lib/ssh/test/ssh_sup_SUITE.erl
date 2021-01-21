@@ -156,11 +156,11 @@ sshd_subtree(Config) when is_list(Config) ->
                                                    [{?USER, ?PASSWD}]}]),
 
     ct:log("Expect HostIP=~p, Port=~p, Daemon=~p",[HostIP,Port,Daemon]),
-    ?wait_match([{{server,ssh_system_sup, ListenIP, Port, ?DEFAULT_PROFILE},
-		  Daemon, supervisor,
+    ?wait_match([{{server,ssh_system_sup, ListenIP, ^Port, ?DEFAULT_PROFILE},
+		  ^Daemon, supervisor,
 		  [ssh_system_sup]}],
 		supervisor:which_children(sshd_sup),
-		[ListenIP,Daemon]),
+		[ListenIP]),
     true = ssh_test_lib:match_ip(HostIP, ListenIP),
     check_sshd_system_tree(Daemon, HostIP, Port, Config),
     ssh:stop_daemon(HostIP, Port),
@@ -178,11 +178,11 @@ sshd_subtree_profile(Config) when is_list(Config) ->
                                                    [{?USER, ?PASSWD}]},
                                                   {profile, Profile}]),
     ct:log("Expect HostIP=~p, Port=~p, Profile=~p, Daemon=~p",[HostIP,Port,Profile,Daemon]),
-    ?wait_match([{{server,ssh_system_sup, ListenIP,Port,Profile},
-		  Daemon, supervisor,
+    ?wait_match([{{server,ssh_system_sup, ListenIP,^Port,^Profile},
+		  ^Daemon, supervisor,
 		  [ssh_system_sup]}],
 		supervisor:which_children(sshd_sup),
-		[ListenIP,Daemon]),
+		[ListenIP]),
     true = ssh_test_lib:match_ip(HostIP, ListenIP),
     check_sshd_system_tree(Daemon, HostIP, Port, Config),
     ssh:stop_daemon(HostIP, Port, Profile),
@@ -208,8 +208,8 @@ killed_acceptor_restarts(Config) ->
     Port2 = ssh_test_lib:daemon_port(DaemonPid2),
     true = (Port /= Port2),
 
-    {ok,[{AccPid,ListenAddr,Port}]} = acceptor_pid(DaemonPid),
-    {ok,[{AccPid2,ListenAddr,Port2}]} = acceptor_pid(DaemonPid2),
+    {ok,[{AccPid,ListenAddr,^Port}]} = acceptor_pid(DaemonPid),
+    {ok,[{AccPid2,^ListenAddr,^Port2}]} = acceptor_pid(DaemonPid2),
 
     true = (AccPid /= AccPid2),
 
@@ -229,7 +229,7 @@ killed_acceptor_restarts(Config) ->
     ?wait_match(undefined, process_info(AccPid)),
 
     %% Check it is a new acceptor and wait if it is not:
-    ?wait_match({ok,[{AccPid1,ListenAddr,Port}]}, AccPid1=/=AccPid,
+    ?wait_match({ok,[{AccPid1,^ListenAddr,^Port}]}, AccPid1=/=AccPid,
                 acceptor_pid(DaemonPid),
                 AccPid1,
                 500, 30),
@@ -308,21 +308,21 @@ shell_channel_tree(Config) ->
     ct:log("GroupPid = ~p, ShellPid = ~p",[GroupPid,ShellPid]),
 
     receive
-        {ssh_cm,ConnectionRef, {data, ChannelId0, 0, <<"TimeoutShell started!\r\n">>}} ->
+        {ssh_cm,^ConnectionRef, {data, ^ChannelId0, 0, <<"TimeoutShell started!\r\n">>}} ->
             receive
                 %%---- wait for the subsystem to terminate
-                {ssh_cm,ConnectionRef,{closed,ChannelId0}} ->
+                {ssh_cm,^ConnectionRef,{closed,^ChannelId0}} ->
                     ct:log("Subsystem terminated",[]),
                     case {chk_empty_con_daemon(Daemon),
                           process_info(GroupPid),
                           process_info(ShellPid)} of
-                        {Sups0, undefined, undefined} ->
+                        {^Sups0, undefined, undefined} ->
                             %% SUCCESS
                             ssh:stop_daemon(Daemon);
-                        {Sups0, _, undefined}  ->
+                        {^Sups0, _, undefined}  ->
                             ssh:stop_daemon(Daemon),
                             ct:fail("Group proc lives!");
-                        {Sups0, undefined, _}  ->
+                        {^Sups0, undefined, _}  ->
                             ssh:stop_daemon(Daemon),
                             ct:fail("Shell proc lives!");
                         _ ->
@@ -415,21 +415,21 @@ check_sshc_system_tree(SysSup, Connection, LocalIP, LocalPort, _Config) ->
                 [SubSysSup]),
     ?wait_match([{_,FwdAccSup, supervisor,
                   [ssh_tcpip_forward_acceptor_sup]},
-                 {{client,ssh_connection_sup, LocalIP, LocalPort},
+                 {{client,ssh_connection_sup, ^LocalIP, ^LocalPort},
 		  ConnectionSup, supervisor,
 		  [ssh_connection_sup]},
-		 {{client,ssh_channel_sup, LocalIP, LocalPort},
+		 {{client,ssh_channel_sup, ^LocalIP, ^LocalPort},
 		  ChannelSup,supervisor,
 		  [ssh_channel_sup]}],
 		supervisor:which_children(SubSysSup),
 		[ConnectionSup,ChannelSup,FwdAccSup]),
-    ?wait_match([{_, Connection, worker,[ssh_connection_handler]}],
+    ?wait_match([{_, ^Connection, worker,[ssh_connection_handler]}],
 		supervisor:which_children(ConnectionSup)),
     ?wait_match([], supervisor:which_children(ChannelSup)),
     ?wait_match([], supervisor:which_children(FwdAccSup)),
 
     {ok,ChPid1} = ssh_sftp:start_channel(Connection),
-    ?wait_match([{_,ChPid1,worker,[ssh_client_channel]}],
+    ?wait_match([{_,^ChPid1,worker,[ssh_client_channel]}],
                 supervisor:which_children(ChannelSup)),
 
     {ok,ChPid2} = ssh_sftp:start_channel(Connection),
@@ -441,7 +441,7 @@ check_sshc_system_tree(SysSup, Connection, LocalIP, LocalPort, _Config) ->
 
     ct:pal("Expect a SUPERVISOR REPORT with offender {pid,~p}....~n", [ChPid1]),
     exit(ChPid1, kill),
-    ?wait_match([{_,ChPid2,worker,[ssh_client_channel]}],
+    ?wait_match([{_,^ChPid2,worker,[ssh_client_channel]}],
                 supervisor:which_children(ChannelSup)),
 
     ct:pal("Expect a SUPERVISOR REPORT with offender {pid,~p}....~n", [ChPid2]),
@@ -476,7 +476,7 @@ acceptor_pid(DaemonPid) ->
                                       P2 == Port,
                                       NS2 == NS]}
                 end),
-    receive {Pid, supsearch, L} -> {ok,L}
+    receive {^Pid, supsearch, L} -> {ok,L}
     after 2000 -> timeout
     end.
 

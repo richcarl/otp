@@ -258,7 +258,7 @@ check_file_exists(Filename, Type) ->
     case file:read_file_info(Filename) of
 	{ok, FileInfo} ->
 	    case FileInfo#file_info.type of
-		Type -> ok;
+		^Type -> ok;
 		Else -> exit({error, {wrong_input_file_type, Else}})
 	    end;
 	{error, _} = E -> exit({E, Filename, Type})

@@ -317,11 +317,11 @@ cl_run([App,Cat|Options0]) when is_atom(App) ->
 	case {App,Cat} of
 	    {all,main} ->
 		run(tests(), Options2);
-	    {all,Cat} ->
+	    {all,^Cat} ->
 		run_category(Cat, Options2);
 	    {_,main} ->
 		run(App, Options2);
-	    {_,Cat} ->
+	    {_,^Cat} ->
 		run_category(App, Cat, Options2)
 	end,
     case check_for_cross_cover_analysis_flag(Options2) of
@@ -799,11 +799,11 @@ get_last_app_tests() ->
 get_last_app_tests([Dir|Dirs],RE,Acc) ->
     NewAcc =
 	case re:run(Dir,RE,[{capture,all,list}]) of
-	    {match,[Dir,AppStr]} ->
+	    {match,[^Dir,AppStr]} ->
 		Dir1 = filename:dirname(Dir), % cover logs in ct_run.<t> dir
 		App = list_to_atom(AppStr),
 		case lists:keytake(App,1,Acc) of
-		    {value,{App,LastDir},Rest} ->
+		    {value,{^App,LastDir},Rest} ->
 			if Dir1 > LastDir ->
 				[{App,Dir1}|Rest];
 			   true ->
@@ -834,7 +834,7 @@ check_and_run(Fun) ->
 check_and_run(Fun, Vars) ->
     Platform = ts_install:platform_id(Vars),
     case lists:keysearch(platform_id, 1, Vars) of
-	{value, {_, Platform}} ->
+	{value, {_, ^Platform}} ->
 	    case catch apply(Fun, [Vars]) of
 		{'EXIT', Reason} ->
 		    exit(Reason);

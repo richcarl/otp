@@ -99,7 +99,7 @@
 -define(match_multi_receive(ExpectedMsgs),
 	fun() ->
 		TmPeXpCtEdMsGs = lists:sort(ExpectedMsgs),
-		?match(TmPeXpCtEdMsGs,
+		?match(^TmPeXpCtEdMsGs,
 		       lists:sort(lists:map(fun(_) ->
 						    mnesia_test_lib:pick_msg()
 					    end,

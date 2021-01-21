@@ -92,7 +92,7 @@ handle_request(<<11>>, #state{pub_key=PubKey}) ->
 
 handle_request(<<13, Rest/binary>>, #state{priv_key=PrivKey, pub_key=PubKey, sig_alg=SigAlg}) ->
     Flags = ?SSH_AGENT_RSA_SHA2_256 bor ?SSH_AGENT_RSA_SHA2_512,
-    <<?DEC_BIN(PubKey, _KeyBlobLen), ?DEC_BIN(Data, _DataLen), ?Euint32(Flags)>> = Rest,
+    <<?DEC_BIN(^PubKey, _KeyBlobLen), ?DEC_BIN(Data, _DataLen), ?Euint32(^Flags)>> = Rest,
 
     Hash = ssh_transport:sha(SigAlg),
     Sig = ssh_transport:sign(Data, Hash, PrivKey),

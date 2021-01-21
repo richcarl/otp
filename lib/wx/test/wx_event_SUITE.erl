@@ -109,7 +109,7 @@ connect(Config) ->
 get_size_messages(_, []) -> ok;    
 get_size_messages(Frame, Msgs) ->
     receive 
-	#wx{obj=Frame,event=#wxSize{}} ->  %% ok
+	#wx{obj=^Frame,event=#wxSize{}} ->  %% ok
 	    get_size_messages(Frame, lists:delete(frame, Msgs));
 	#wx{userData=window, event=#wxSize{}} ->
 	    ?m(true, lists:member(window_cb, Msgs)),	   
@@ -205,7 +205,7 @@ connect_msg_20(Config) ->
 			 wx:set_env(Env),
 			 wxFrame:connect(Frame,size,[{skip,true}]),
 			 Tester ! initiated,
-			 receive #wx{obj=Frame,event=#wxSize{}} ->
+			 receive #wx{obj=^Frame,event=#wxSize{}} ->
 				 Tester ! got_it
 			 end
 		 end,
@@ -369,7 +369,7 @@ connect_in_callback(Config) ->
 					  end}]),
 		wxWindow:show(F1),
 		receive
-		    {continue, F1} ->
+		    {continue, ^F1} ->
 			true = wxFrame:disconnect(F1, size),
 			Tester ! {continue, F1}
 		end
@@ -584,7 +584,7 @@ callback_clean(Config) ->
     			     end
     		     end),
     timer:sleep(500), %% Give it time to remove it
-    ?m({[{Pid,_}],[_],[_]}, white_box_check_event_handlers()),
+    ?m({[{^Pid,_}],[_],[_]}, white_box_check_event_handlers()),
 
     Pid ! remove,
     timer:sleep(500), %% Give it time to remove it

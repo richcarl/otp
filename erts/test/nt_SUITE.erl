@@ -61,7 +61,7 @@ erlsrv() ->
 
 recv_prog_output(Port) -> 
     receive
-        {Port, {data, {eol,Data}}} ->
+        {^Port, {data, {eol,Data}}} ->
             %%io:format("Got data: ~s~n", [Data]),
             [ Data | recv_prog_output(Port)];
         _X ->
@@ -136,7 +136,7 @@ service_basic(Config) when is_list(Config) ->
     true = wait_for_node(Name),
     S2 = erlsrv:get_service(Name),
     {value,{comment,"Epic comment"}} = lists:keysearch(comment,1,S2),
-    {value,{internalservicename,IntName}} =
+    {value,{internalservicename,^IntName}} =
     lists:keysearch(internalservicename,1,S2),
     S3 = lists:keyreplace(comment,1,S2,{comment,"Basic comment"}),
     S4 = lists:keyreplace(internalservicename,1,S3,
@@ -144,7 +144,7 @@ service_basic(Config) when is_list(Config) ->
     ok = erlsrv:store_service(S4),
     S5 = erlsrv:get_service(Name),
     {value,{comment,"Basic comment"}} = lists:keysearch(comment,1,S5),
-    {value,{internalservicename,IntName}} =
+    {value,{internalservicename,^IntName}} =
     lists:keysearch(internalservicename,1,S5),
     NewName = "test_service_21",
     S6 = erlsrv:new_service(NewName,S5,[]), % should remove
@@ -167,7 +167,7 @@ service_env(Config) when is_list(Config) ->
     ok = erlsrv:store_service(Service),
     start_service(Name),
     true = wait_for_node(Name),
-    Name = rpc:call(make_full_name(Name),os,getenv,
+    ^Name = rpc:call(make_full_name(Name),os,getenv,
                     ["ERLSRV_SERVICE_NAME"]),
     "erlsrv.exe" = filename:basename(
                      hd(
@@ -407,7 +407,7 @@ start_look_for_single(Cat,Fac,Sev,MessRE) ->
 
 look_for_single(Ref) ->
     receive
-        {Ref,Time,Mes} ->
+        {^Ref,Time,Mes} ->
             {Time,Mes}
     after 60000 ->
               timeout
@@ -425,7 +425,7 @@ middleman(Waitfor) ->
             io:format("Middleman got ~s...", [Message]),
             case match_event({Time,Category,Facility,Severity,Message},
                              Waitfor) of
-                {ok, {Pid,Ref,Time,Mes}, Rest} ->
+                {ok, {Pid,Ref,^Time,Mes}, Rest} ->
                     io:format("matched~n"),
                     Pid ! {Ref,Time,Mes},
                     middleman(Rest);
@@ -484,13 +484,13 @@ get_current_procs(Config) ->
     P = open_port({spawn,nt_info(Config) ++ " -E"},
                   [{line,10000}]),
     L = receive
-            {P,{data,{eol,D}}} ->
+            {^P,{data,{eol,D}}} ->
                 D;
             _ -> "error. "
         end,
     P ! {self(), close},
     receive
-        {P, closed} -> ok
+        {^P, closed} -> ok
     end,
     {done,{ok,Tok,_},_} = erl_scan:tokens([],L,0),
     erl_parse:parse_term(Tok).
