@@ -30,6 +30,7 @@
       Mod :: module(),
       BootArgs :: [binary()].
 start(Mod, BootArgs) ->
+    erlang:display({?MODULE,?FUNCTION_NAME,?LINE,erlang:statistics(wall_clock)}),
     %% Load the static nifs
     zlib:on_load(),
     erl_tracer:on_load(),

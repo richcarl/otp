@@ -242,6 +242,7 @@ stop_1(Status) -> init ! {stop,{stop,Status}}, ok.
 -spec boot(BootArgs) -> no_return() when
       BootArgs :: [binary()].
 boot(BootArgs) ->
+    erlang:display({?MODULE,?FUNCTION_NAME,?LINE,erlang:statistics(wall_clock)}),
     register(init, self()),
     process_flag(trap_exit, true),
 
@@ -296,6 +297,7 @@ code_path_choice() ->
     end.
 
 boot(Start,Flags,Args) ->
+    erlang:display({?MODULE,?FUNCTION_NAME,?LINE,erlang:statistics(wall_clock)}),
     start_on_load_handler_process(),
     BootPid = do_boot(Flags,Start),
     State = #state{flags = Flags,
@@ -374,18 +376,22 @@ crash(String, List) ->
 %% Status is {InternalStatus,ProvidedStatus}
 -spec boot_loop(pid(), state()) -> no_return().
 boot_loop(BootPid, State) ->
+    erlang:display({?MODULE,?FUNCTION_NAME,?LINE,erlang:statistics(wall_clock)}),
     receive
 	{BootPid,loaded,NewlyLoaded} ->
 	    Loaded = NewlyLoaded ++ State#state.loaded,
 	    boot_loop(BootPid, State#state{loaded = Loaded});
 	{BootPid,started,KernelPid} ->
+    erlang:display({?MODULE,?FUNCTION_NAME,?LINE,started,kernelpid,erlang:statistics(wall_clock)}),
 	    boot_loop(BootPid, new_kernelpid(KernelPid, BootPid, State));
 	{BootPid,progress,started} ->
+    erlang:display({?MODULE,?FUNCTION_NAME,?LINE,progress,started,erlang:statistics(wall_clock)}),
             {InS,_} = State#state.status,
 	    notify(State#state.subscribed),
 	    boot_loop(BootPid,State#state{status = {InS,started},
 					  subscribed = []});
 	{BootPid,progress,NewStatus} ->
+    erlang:display({?MODULE,?FUNCTION_NAME,?LINE,progress,NewStatus,erlang:statistics(wall_clock)}),
             {InS,_} = State#state.status,
 	    boot_loop(BootPid,State#state{status = {InS,NewStatus}});
 	{BootPid,{script_id,Id}} ->
@@ -405,9 +411,11 @@ boot_loop(BootPid, State) ->
 	{stop,Reason} ->
 	    stop(Reason,State);
 	{From,fetch_loaded} ->   %% Fetch and reset initially loaded modules.
+    erlang:display({?MODULE,?FUNCTION_NAME,?LINE,fetch_loaded,erlang:statistics(wall_clock)}),
 	    From ! {init,State#state.loaded},
 	    garb_boot_loop(BootPid,State#state{loaded = []});
 	{From,{ensure_loaded,Module}} ->
+    erlang:display({?MODULE,?FUNCTION_NAME,?LINE,ensure_loaded,Module,erlang:statistics(wall_clock)}),
 	    {Res, Loaded} = ensure_loaded(Module, State#state.loaded),
 	    From ! {init,Res},
 	    boot_loop(BootPid,State#state{loaded = Loaded});
@@ -469,6 +477,7 @@ new_kernelpid({Name,What},BootPid,State) ->
 %% Here is the main loop after the system has booted.
 
 loop(State) ->
+    erlang:display({?MODULE,?FUNCTION_NAME,?LINE,erlang:statistics(wall_clock)}),
     receive
 	{'EXIT',Pid,Reason} ->
 	    Kernel = State#state.kernel,

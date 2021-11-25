@@ -50,7 +50,10 @@
 -spec start() -> pid().
 
 start() ->					%Default line editing shell
-    spawn(user_drv, server, ['tty_sl -c -e',{shell,start,[init]}]).
+    erlang:display({?MODULE,?FUNCTION_NAME,?LINE,erlang:statistics(wall_clock)}),
+    Pid = spawn(user_drv, server, ['tty_sl -c -e',{shell,start,[init]}]),
+    erlang:display({?MODULE,?FUNCTION_NAME,?LINE,erlang:statistics(wall_clock)}),
+    Pid.
 
 start([Pname]) ->
     spawn(user_drv, server, [Pname,{shell,start,[init]}]);

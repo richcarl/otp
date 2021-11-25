@@ -39,8 +39,10 @@ start() ->
 -spec init([]) -> 'ignore' | {'error', 'nouser'} | {'ok', pid(), pid()}.
 
 init([]) ->
+    erlang:display({?MODULE,?FUNCTION_NAME,?LINE,erlang:statistics(wall_clock)}),
     case get_user() of
 	nouser ->
+            erlang:display({?MODULE,?FUNCTION_NAME,?LINE,erlang:statistics(wall_clock)}),
 	    ignore;
 	{master, Master} ->
 	    case start_slave(Master) of
@@ -52,6 +54,7 @@ init([]) ->
 	{M, F, A} ->
 	    case start_user(M, F, A) of
 		{ok, Pid} ->
+                erlang:display({?MODULE,?FUNCTION_NAME,?LINE,erlang:statistics(wall_clock)}),
 		    {ok, Pid, Pid};
 		Error ->
 		    Error
@@ -120,8 +123,8 @@ get_user() ->
     Flags = init:get_arguments(),
     check_flags(Flags, {user_drv, start, []}).
 
-%% These flags depend upon what arguments the erl script passes on
-%% to erl91.
+%% These flags depend upon what arguments the frontend passes on
+%% to the emulator.
 check_flags([{nouser, []} |T], _) -> check_flags(T, nouser);
 check_flags([{user, [User]} | T], _) ->
     check_flags(T, {list_to_atom(User), start, []});

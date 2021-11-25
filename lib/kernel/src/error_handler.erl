@@ -128,8 +128,10 @@ ensure_loaded(Module) ->
 		atom_to_list(Module) ++ "'",
 	    halt(Error);
 	Pid when is_pid(Pid) ->
+    erlang:display({?MODULE,?FUNCTION_NAME,?LINE,erlang:statistics(wall_clock)}),
 	    code:ensure_loaded(Module);
 	_ ->
+    erlang:display({?MODULE,?FUNCTION_NAME,?LINE,erlang:statistics(wall_clock)}),
 	    init:ensure_loaded(Module)
     end.
 

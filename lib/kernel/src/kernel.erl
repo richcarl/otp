@@ -30,12 +30,15 @@
 %%% Callback functions for the kernel application.
 %%%-----------------------------------------------------------------
 start(_, []) ->
+    erlang:display({?MODULE,?FUNCTION_NAME,?LINE,erlang:statistics(wall_clock)}),
     %% Setup the logger and configure the kernel logger environment
     ok = logger:internal_init_logger(),
     case supervisor:start_link({local, kernel_sup}, kernel, []) of
 	{ok, Pid} ->
+    erlang:display({?MODULE,?FUNCTION_NAME,?LINE,erlang:statistics(wall_clock)}),
             ok = erl_signal_handler:start(),
             ok = logger:add_handlers(kernel),
+    erlang:display({?MODULE,?FUNCTION_NAME,?LINE,erlang:statistics(wall_clock)}),
             {ok, Pid, []};
 	Error -> Error
     end.

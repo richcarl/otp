@@ -64,6 +64,7 @@ start_link(Args) ->
 %% -----------------------------------------------------------
 
 init(Ref, Parent, [Root,Mode]) ->
+    erlang:display({?MODULE,?FUNCTION_NAME,?LINE,erlang:statistics(wall_clock)}),
     register(?MODULE, self()),
     process_flag(trap_exit, true),
 
@@ -96,6 +97,7 @@ init(Ref, Parent, [Root,Mode]) ->
 		   namedb = create_namedb(Path, Root),
 		   mode = Mode},
 
+    erlang:display({?MODULE,?FUNCTION_NAME,?LINE,erlang:statistics(wall_clock)}),
     Parent ! {Ref,{ok,self()}},
     loop(State).
 

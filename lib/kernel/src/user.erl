@@ -39,11 +39,13 @@ start() ->
     start_port([eof,binary]).
 
 start([Mod,Fun|Args]) ->
+    erlang:display({?MODULE,?FUNCTION_NAME,?LINE,erlang:statistics(wall_clock)}),
     %% Mod,Fun,Args should return a pid. That process is supposed to act
     %% as the io port.
     Pid = apply(Mod, Fun, Args),  % This better work!
     Id = spawn(fun() -> server(Pid) end),
     register(?NAME, Id),
+    erlang:display({?MODULE,?FUNCTION_NAME,?LINE,erlang:statistics(wall_clock)}),
     Id.
 
 start_out() ->
@@ -51,8 +53,10 @@ start_out() ->
     start_port([out,binary]).
 
 start_port(PortSettings) ->
+    erlang:display({?MODULE,?FUNCTION_NAME,?LINE,erlang:statistics(wall_clock)}),
     Id = spawn(fun() -> server({fd,0,1}, PortSettings) end),
     register(?NAME, Id),
+    erlang:display({?MODULE,?FUNCTION_NAME,?LINE,erlang:statistics(wall_clock)}),
     Id.
 
 %% Return the pid of the shell process.

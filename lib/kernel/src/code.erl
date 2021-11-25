@@ -721,6 +721,7 @@ start_link() ->
 %%-----------------------------------------------------------------
 
 do_start() ->
+    erlang:display({?MODULE,?FUNCTION_NAME,?LINE,erlang:statistics(wall_clock)}),
     maybe_warn_for_cache(),
     load_code_server_prerequisites(),
 
@@ -731,6 +732,7 @@ do_start() ->
 
     maybe_stick_dirs(Mode),
 
+    erlang:display({?MODULE,?FUNCTION_NAME,?LINE,erlang:statistics(wall_clock)}),
     Res.
 
 %% Make sure that all modules that the code_server process calls

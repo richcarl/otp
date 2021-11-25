@@ -83,7 +83,13 @@
 start(GenMod, LinkP, Name, Mod, Args, Options) ->
     case where(Name) of
 	undefined ->
-	    do_spawn(GenMod, LinkP, Name, Mod, Args, Options);
+            erlang:display({?MODULE, ?LINE, Mod, erlang:statistics(wall_clock)}),
+            try
+	    do_spawn(GenMod, LinkP, Name, Mod, Args, Options)
+              after
+            erlang:display({?MODULE, ?LINE, Mod, erlang:statistics(wall_clock)})
+              end
+      ;
 	Pid ->
 	    {error, {already_started, Pid}}
     end.
@@ -91,7 +97,12 @@ start(GenMod, LinkP, Name, Mod, Args, Options) ->
 -spec start(module(), linkage(), module(), term(), options()) -> start_ret().
 
 start(GenMod, LinkP, Mod, Args, Options) ->
-    do_spawn(GenMod, LinkP, Mod, Args, Options).
+    erlang:display({?MODULE, ?LINE, Mod, erlang:statistics(wall_clock)}),
+    try
+    do_spawn(GenMod, LinkP, Mod, Args, Options)
+        after
+    erlang:display({?MODULE, ?LINE, Mod, erlang:statistics(wall_clock)})
+end.
 
 %%-----------------------------------------------------------------
 %% Spawn the process (and link) maybe at another node.
