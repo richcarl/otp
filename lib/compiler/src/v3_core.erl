@@ -299,15 +299,29 @@ body(Cs0, Name, Arity, St0) ->
     Fc = function_clause(Ps, FunAnno),
     {#ifun{anno=#a{anno=FunAnno},id=[],vars=Args,clauses=Cs1,fc=Fc},St3}.
 
+%% TODO: lint must check for same new bindings in each (may have different use data)
+%% TODO: 'or' ought to have lower precedence than '=' for sake of aliases
+%% TODO: handle single clauses becoming multiple, as in LC or =
+%% TODO: avoid duplicating body
+%% TODO: handle multi-pattern clauses; maybe warn if too many combinations
+split_or({clause,Anno,[{op,_A,'or',P1,P2}],G,B}) ->
+    [split_or({clause,Anno,[P1],G,B}), split_or({clause,Anno,[P2],G,B})];
+split_or(C) ->
+    C.
+
 %% clause(Clause, State) -> {Cclause,State}.
 %% clauses([Clause], State) -> {[Cclause],State}.
 %%  Convert clauses. Trap bad pattern aliases.
 
-clauses([C0|Cs0], St0) ->
+clauses(Cs0, St0) ->
+    Cs = lists:flatten(lists:map(fun split_or/1, Cs0)),
+    clauses_1(Cs, St0).
+
+clauses_1([C0|Cs0], St0) ->
     {C,St1} = clause(C0, St0),
-    {Cs,St2} = clauses(Cs0, St1),
+    {Cs,St2} = clauses_1(Cs0, St1),
     {[C|Cs],St2};
-clauses([], St) -> {[],St}.
+clauses_1([], St) -> {[],St}.
 
 clause({clause,Lc,H0,G0,B0}, St0) ->
     try head(H0, St0) of
