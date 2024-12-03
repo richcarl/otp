@@ -2073,6 +2073,12 @@ pattern({op,_Anno,'++',{cons,Ai,{integer,_A2,_I},T},R}, Vt, Old, St) ->
     pattern({op,Ai,'++',T,R}, Vt, Old, St);    %Weird, but compatible!
 pattern({op,_Anno,'++',{string,_Ai,_S},R}, Vt, Old, St) ->
     pattern(R, Vt, Old, St);                   %String unimportant here
+pattern({op,_Anno,'or',Pat1,Pat2}, Vt0, Old, St0) ->
+    {Lvt, Lnew, St1} = pattern(Pat1, Vt0, Old, St0),
+    {Rvt, Rnew, St2} = pattern(Pat2, Vt0, Old, St1),
+    {Vt1, St3} = vtmerge_pat(Lvt, Rvt, St2),
+    {New, St4} = vtmerge_pat(Lnew, Rnew, St3),
+    {Vt1, New, St4};
 pattern({match,_Anno,Pat1,Pat2}, Vt0, Old, St0) ->
     {Lvt, Lnew, St1} = pattern(Pat1, Vt0, Old, St0),
     {Rvt, Rnew, St2} = pattern(Pat2, Vt0, Old, St1),
