@@ -304,9 +304,9 @@ body(Cs0, Name, Arity, St0) ->
 %% TODO: handle single clauses becoming multiple, as in LC or =
 %% TODO: avoid duplicating body
 %% TODO: handle multi-pattern clauses; maybe warn if too many combinations
-split_or({clause,Anno,[{op,_A,'or',P1,P2}],G,B}) ->
-    [split_or({clause,Anno,[P1],G,B}), split_or({clause,Anno,[P2],G,B})];
-split_or(C) ->
+split_pat_alts({clause,Anno,[{op,_A,'or',P1,P2}],G,B}) ->
+    [split_pat_alts({clause,Anno,[P1],G,B}), split_pat_alts({clause,Anno,[P2],G,B})];
+split_pat_alts(C) ->
     C.
 
 %% clause(Clause, State) -> {Cclause,State}.
@@ -314,7 +314,7 @@ split_or(C) ->
 %%  Convert clauses. Trap bad pattern aliases.
 
 clauses(Cs0, St0) ->
-    Cs = lists:flatten(lists:map(fun split_or/1, Cs0)),
+    Cs = lists:flatten(lists:map(fun split_pat_alts/1, Cs0)),
     clauses_1(Cs, St0).
 
 clauses_1([C0|Cs0], St0) ->
