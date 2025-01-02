@@ -336,7 +336,7 @@ parse_form(Dev, L0, Parser, Options) ->
 		    IoErr = io_error(L1, Term),
 		    {error, IoErr, L1};
                 {parse_error, _IoErr} when NoFail ->
-		    {ok, erl_syntax:set_pos(
+		    {ok, erl_syntax:set_anno(
 			   erl_syntax:text(tokens_to_string(Ts)),
 			   erl_anno:new(start_pos(Ts, L1))),
 		     L1};
@@ -683,9 +683,9 @@ scan_macros_1(Args, Rest, As, Opt) ->
 
 rewrite_form({function, Anno, ?pp_form, _,
               [{clause, _, [], [], [{call, _, A, As}]}]}) ->
-    erl_syntax:set_pos(erl_syntax:attribute(A, rewrite_list(As)), Anno);
+    erl_syntax:set_anno(erl_syntax:attribute(A, rewrite_list(As)), Anno);
 rewrite_form({function, Anno, ?pp_form, _, [{clause, _, [], [], [A]}]}) ->
-    erl_syntax:set_pos(erl_syntax:attribute(A), Anno);
+    erl_syntax:set_anno(erl_syntax:attribute(A), Anno);
 rewrite_form(T) ->
     rewrite(T).
 
@@ -768,9 +768,9 @@ fix_define([{atom, Anno, ?pp_form}, {'(', _}, {')', _}, {'->', _},
 	    {atom, AnnoA, define}, {'(', _}, N, {',', _} | Ts]) ->
     [{dot, _}, {')', _} | Ts1] = lists:reverse(Ts),
     S = tokens_to_string(lists:reverse(Ts1)),
-    A = erl_syntax:set_pos(erl_syntax:atom(define), AnnoA),
-    Txt = erl_syntax:set_pos(erl_syntax:text(S), AnnoA),
-    {form, erl_syntax:set_pos(erl_syntax:attribute(A, [N, Txt]), Anno)};
+    A = erl_syntax:set_anno(erl_syntax:atom(define), AnnoA),
+    Txt = erl_syntax:set_anno(erl_syntax:text(S), AnnoA),
+    {form, erl_syntax:set_anno(erl_syntax:attribute(A, [N, Txt]), Anno)};
 fix_define(_Ts) ->
     error.
 

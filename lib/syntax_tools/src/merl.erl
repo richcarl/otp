@@ -1356,7 +1356,7 @@ merge_comments(_StartLine, [], Ts, Acc) ->
     lists:reverse(Acc, Ts);
 merge_comments(StartLine, Cs, [], Acc) ->
     merge_comments(StartLine, [], [],
-                   [erl_syntax:set_pos(
+                   [erl_syntax:set_anno(
                       erl_syntax:comment(Indent, Text),
                       anno(StartLine + Line - 1))
                     || {Line, _, Indent, Text} <- Cs] ++ Acc);
@@ -1384,5 +1384,5 @@ anno(Location) ->
     erl_anno:new(Location).
 
 get_line(Tree) ->
-    Anno = erl_syntax:get_pos(Tree),
+    Anno = erl_syntax:get_anno(Tree),
     erl_anno:line(Anno).

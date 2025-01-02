@@ -165,7 +165,7 @@ revert_preserve_pos_changes(Config) when is_list(Config) ->
     Var1 = erl_syntax:add_ann({env, []}, Var0),
     %% Change the `pos' of the node
     Pos1 = erl_anno:set_generated(true, Pos0),
-    Var2 = erl_syntax:set_pos(Var1, Pos1),
+    Var2 = erl_syntax:set_anno(Var1, Pos1),
     %% The must be equal when reverted
     {var, Pos1, 'Var'} = erl_syntax:revert(Var2),
     test_server:timetrap_cancel(Dog).
@@ -194,7 +194,7 @@ wrapped_subtrees_file(File, Path) ->
 
 wrap_each(Tree) ->
     % only `wrap` top-level erl_parse node
-    Tree1 = erl_syntax:set_pos(Tree, erl_syntax:get_pos(Tree)),
+    Tree1 = erl_syntax:set_anno(Tree, erl_syntax:get_anno(Tree)),
     % assert ability to access subtrees of wrapped node with erl_syntax:subtrees/1
     case erl_syntax:subtrees(Tree1) of
         [] -> ok;

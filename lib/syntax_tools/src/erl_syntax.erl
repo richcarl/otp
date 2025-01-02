@@ -60,6 +60,8 @@ list `[]`. This can be relied on when writing functions that operate on syntax
 trees.
 """.
 
+-deprecated([{get_pos,1,"use erl_syntax:get_anno/1 instead"}]).
+-deprecated([{set_pos,2,"use erl_syntax:set_anno/2 instead"}]).
 -export([type/1,
 	 is_leaf/1,
 	 is_form/1,
@@ -73,7 +75,9 @@ trees.
 	 update_tree/2,
 	 meta/1,
 
+	 get_anno/1,
 	 get_pos/1,
+	 set_anno/2,
 	 set_pos/2,
 	 copy_pos/2,
 	 get_precomments/1,
@@ -788,12 +792,21 @@ is_form(Node) ->
 %% exceptions of* `{error, ...}' (type `error_marker') and `{warning,
 %% ...}' (type `warning_marker'), which only contain the associated location
 %% *of the error descriptor*; this is all handled transparently
-%% by `get_pos/1' and `set_pos/2'.
+%% by `get_anno/1' and `set_anno/2'.
 
 -type annotation_or_location() :: erl_anno:anno() | erl_anno:location().
 
+
+-doc "Obsolete alias for [`get_anno/1`](`erl_syntax:get_anno/1`).".
+-doc(#{equiv => get_anno(Node)}).
+-spec get_pos(syntaxTree()) -> annotation_or_location().
+
+get_pos(Node) ->
+    get_anno(Node).
+
+
 -doc """
-get_pos(Node)
+get_anno(Node)
 
 Returns the annotation (see [`//stdlib/erl_anno`](`m:erl_anno`)) associated with
 `Node`.
@@ -803,32 +816,40 @@ information set to the integer zero. Use
 [`//stdlib/erl_anno:location/1`](`erl_anno:location/1`) or
 [`//stdlib/erl_anno:line/1`](`erl_anno:line/1`) to get the position information.
 
-_See also: _`get_attrs/1`, `set_pos/2`.
+_See also: _`get_attrs/1`, `set_anno/2`.
 """.
--spec get_pos(syntaxTree()) -> annotation_or_location().
+-spec get_anno(syntaxTree()) -> annotation_or_location().
 
-get_pos(#tree{attr = Attr}) ->
+get_anno(#tree{attr = Attr}) ->
     Attr#attr.pos;
-get_pos(#wrapper{attr = Attr}) ->
+get_anno(#wrapper{attr = Attr}) ->
     Attr#attr.pos;
-get_pos({error, {Pos, _, _}}) ->
+get_anno({error, {Pos, _, _}}) ->
     Pos;
-get_pos({warning, {Pos, _, _}}) ->
+get_anno({warning, {Pos, _, _}}) ->
     Pos;
-get_pos(Node) ->
+get_anno(Node) ->
     %% Here, we assume that we have an `erl_parse' node with an
     %% annotation in element 2.
     element(2, Node).
 
 
--doc """
-Sets the position information of `Node` to `Pos`.
-
-_See also: _`copy_pos/2`, `get_pos/1`.
-""".
+-doc "Obsolete alias for [`set_anno/2`](`erl_syntax:set_anno/2`).".
+-doc(#{equiv => set_anno(Node, Pos)}).
 -spec set_pos(syntaxTree(), annotation_or_location()) -> syntaxTree().
 
 set_pos(Node, Pos) ->
+    set_anno(Node, Pos).
+
+
+-doc """
+Sets the position information of `Node` to `Pos`.
+
+_See also: _`copy_pos/2`, `get_anno/1`.
+""".
+-spec set_anno(syntaxTree(), annotation_or_location()) -> syntaxTree().
+
+set_anno(Node, Pos) ->
     case Node of
         #tree{attr = Attr} ->
             Node#tree{attr = Attr#attr{pos = Pos}};
@@ -841,17 +862,17 @@ set_pos(Node, Pos) ->
         _ ->
             %% We then assume we have an `erl_parse' node, and create a
             %% wrapper around it to make things more uniform.
-            set_pos(wrap(Node), Pos)
+            set_anno(wrap(Node), Pos)
     end.
 
 
 -doc """
 Copies the annotation from `Source` to `Target`.
 
-This is equivalent to [`set_pos(Target, get_pos(Source))`](`set_pos/2`), but
+This is equivalent to [`set_anno(Target, get_anno(Source))`](`set_anno/2`), but
 potentially more efficient.
 
-_See also: _`get_pos/1`, `set_pos/2`.
+_See also: _`get_anno/1`, `set_anno/2`.
 """.
 -spec copy_pos(syntaxTree(), syntaxTree()) -> syntaxTree().
 
@@ -1247,10 +1268,10 @@ Currently, this includes position information, source code comments, and user
 annotations. The result of this function cannot be inspected directly; only
 attached to another node (see `set_attrs/2`).
 
-For accessing individual attributes, see `get_pos/1`, `get_ann/1`,
+For accessing individual attributes, see `get_anno/1`, `get_ann/1`,
 `get_precomments/1` and `get_postcomments/1`.
 
-_See also: _`get_ann/1`, `get_pos/1`, `get_postcomments/1`, `get_precomments/1`,
+_See also: _`get_ann/1`, `get_anno/1`, `get_postcomments/1`, `get_precomments/1`,
 `set_attrs/2`.
 """.
 -spec get_attrs(syntaxTree()) -> syntaxTreeAttributes().

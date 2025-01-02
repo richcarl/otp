@@ -180,7 +180,7 @@ recomment_forms_2(C, [], _Top) ->
 
 standalone_comment({L, Col, _Ind, Text}) ->
     leaf_node(L, L + comment_delta(Text),
-	      erl_syntax:set_pos(erl_syntax:comment(Col - 1, Text), anno(L))).
+	      erl_syntax:set_anno(erl_syntax:comment(Col - 1, Text), anno(L))).
 
 %% Compute delta between first and last line of a comment, given
 %% the lines of text.
@@ -543,7 +543,7 @@ expand_comments([]) ->
 
 expand_comment(C) ->
     {L, _Col, Ind, Text} = C,
-    erl_syntax:set_pos(erl_syntax:comment(Ind, Text), anno(L)).
+    erl_syntax:set_anno(erl_syntax:comment(Ind, Text), anno(L)).
 
 anno(Location) ->
     erl_anno:new(Location).
@@ -718,7 +718,7 @@ minpos2(X) ->
 
 -dialyzer({no_opaque, get_line/1}).
 get_line(Node) ->
-    case erl_syntax:get_pos(Node) of
+    case erl_syntax:get_anno(Node) of
 	L when is_integer(L) ->
 	    L;
 	{L, _} when is_integer(L) ->

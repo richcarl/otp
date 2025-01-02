@@ -283,7 +283,7 @@ is_erlang_var(_) ->
 
 -dialyzer({no_opaque_union, [get_location/1]}).
 get_location(T) ->
-    Pos = erl_syntax:get_pos(T),
+    Pos = erl_syntax:get_anno(T),
     case erl_anno:is_anno(Pos) of
         true ->
             erl_anno:location(Pos);

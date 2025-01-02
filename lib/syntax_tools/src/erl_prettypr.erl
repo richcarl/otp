@@ -1561,7 +1561,7 @@ is_last_and_before_empty_line(H, [H2 | _], #ctxt{empty_lines = EmptyLines}) ->
     end.
 
 get_line(Tree) ->
-    Anno = erl_syntax:get_pos(Tree),
+    Anno = erl_syntax:get_anno(Tree),
     erl_anno:line(Anno).
 
 %% =====================================================================
