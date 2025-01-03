@@ -62,6 +62,7 @@ trees.
 
 -deprecated([{get_pos,1,"use erl_syntax:get_anno/1 instead"}]).
 -deprecated([{set_pos,2,"use erl_syntax:set_anno/2 instead"}]).
+-deprecated([{copy_pos,2,"use erl_syntax:copy_anno/2 instead"}]).
 -export([type/1,
 	 is_leaf/1,
 	 is_form/1,
@@ -79,6 +80,7 @@ trees.
 	 get_pos/1,
 	 set_anno/2,
 	 set_pos/2,
+	 copy_anno/2,
 	 copy_pos/2,
 	 get_precomments/1,
 	 set_precomments/2,
@@ -845,7 +847,7 @@ set_pos(Node, Pos) ->
 -doc """
 Sets the position information of `Node` to `Pos`.
 
-_See also: _`copy_pos/2`, `get_anno/1`.
+_See also: _`copy_anno/2`, `get_anno/1`.
 """.
 -spec set_anno(syntaxTree(), annotation_or_location()) -> syntaxTree().
 
@@ -866,6 +868,14 @@ set_anno(Node, Pos) ->
     end.
 
 
+-doc "Obsolete alias for [`copy_anno/2`](`erl_syntax:copy_anno/2`).".
+-doc(#{equiv => copy_anno(Source, Target)}).
+-spec copy_pos(syntaxTree(), syntaxTree()) -> syntaxTree().
+
+copy_pos(Source, Target) ->
+    copy_anno(Source, Target).
+
+
 -doc """
 Copies the annotation from `Source` to `Target`.
 
@@ -874,9 +884,9 @@ potentially more efficient.
 
 _See also: _`get_anno/1`, `set_anno/2`.
 """.
--spec copy_pos(syntaxTree(), syntaxTree()) -> syntaxTree().
+-spec copy_anno(syntaxTree(), syntaxTree()) -> syntaxTree().
 
-copy_pos(Source, Target) ->
+copy_anno(Source, Target) ->
     set_anno(Target, get_anno(Source)).
 
 

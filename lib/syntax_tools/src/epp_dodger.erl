@@ -705,12 +705,12 @@ rewrite(Node) ->
 	    case atom_to_list(erl_syntax:atom_value(Node)) of
 		?atom_prefix ++ As ->
 		    A1 = list_to_atom(As),
-		    N = erl_syntax:copy_pos(Node, erl_syntax:atom(A1)),
-		    erl_syntax:copy_pos(Node, erl_syntax:macro(N));
+		    N = erl_syntax:copy_anno(Node, erl_syntax:atom(A1)),
+		    erl_syntax:copy_anno(Node, erl_syntax:macro(N));
 		?var_prefix ++ As ->
 		    A1 = list_to_atom(As),
-		    N = erl_syntax:copy_pos(Node, erl_syntax:variable(A1)),
-		    erl_syntax:copy_pos(Node, erl_syntax:macro(N));
+		    N = erl_syntax:copy_anno(Node, erl_syntax:variable(A1)),
+		    erl_syntax:copy_anno(Node, erl_syntax:macro(N));
 		_ ->
 		    Node
 	    end;
@@ -722,7 +722,7 @@ rewrite(Node) ->
                             case erl_syntax:atom_value(MagicWord) of
                                 ?macro_call ->
                                     M = erl_syntax:macro(A, rewrite_list(As)),
-                                    erl_syntax:copy_pos(Node, M);
+                                    erl_syntax:copy_anno(Node, M);
                                 _ ->
                                     rewrite_1(Node)
                             end;
@@ -744,7 +744,7 @@ rewrite_1(Node) ->
 	    Node1 = erl_syntax:make_tree(erl_syntax:type(Node),
 					 [[rewrite(T) || T <- Ts]
 					  || Ts <- Gs]),
-	    erl_syntax:copy_pos(Node, Node1)
+	    erl_syntax:copy_anno(Node, Node1)
     end.
 
 %% attempting a rescue operation on a token sequence for a single form
