@@ -162,7 +162,7 @@ revert_preserve_pos_changes(Config) when is_list(Config) ->
     Var0 = {var, Pos0, 'Var'},
     %% Adding any user annotation makes erl_syntax change to it's internal
     %% representation
-    Var1 = erl_syntax:add_ann({env, []}, Var0),
+    Var1 = erl_syntax:add_extra({env, []}, Var0),
     %% Change the `pos' of the node
     Pos1 = erl_anno:set_generated(true, Pos0),
     Var2 = erl_syntax:set_anno(Var1, Pos1),
@@ -398,20 +398,20 @@ test_named_fun_bind_ann(Config) when is_list(Config) ->
                 [],
                 [{var,{7,13},'Test'}]}]},
     AnnT = erl_syntax_lib:annotate_bindings(Fn, []),
-    [Env, Bound, Free] = erl_syntax:get_ann(AnnT),
+    [Env, Bound, Free] = erl_syntax:get_extra(AnnT),
     {'env',[]} = Env,
     {'bound',[]} = Bound,
     {'free',[]} = Free,
 
     NameVar = erl_syntax:named_fun_expr_name(AnnT),
     Name = erl_syntax:variable_name(NameVar),
-    [NEnv, NBound, NFree] = erl_syntax:get_ann(NameVar),
+    [NEnv, NBound, NFree] = erl_syntax:get_extra(NameVar),
     {'env',[]} = NEnv,
     {'bound',[Name]} = NBound,
     {'free',[]} = NFree,
 
     [Clause] = erl_syntax:named_fun_expr_clauses(AnnT),
-    [CEnv, CBound, CFree] = erl_syntax:get_ann(Clause),
+    [CEnv, CBound, CFree] = erl_syntax:get_extra(Clause),
     {'env',[Name]} = CEnv,
     {'bound',['Test']} = CBound,
     {'free', []} = CFree.
@@ -443,27 +443,27 @@ test_maybe_expr_ann(Config) when is_list(Config) ->
     Maybe = erl_syntax:maybe_expr([MaybeMatch1, MaybeMatch2, Match1], Else),
 
     MaybeAnn = erl_syntax_lib:annotate_bindings(Maybe, []),
-    [Env, Bound, Free] = erl_syntax:get_ann(MaybeAnn),
+    [Env, Bound, Free] = erl_syntax:get_extra(MaybeAnn),
     {'env',[]} = Env,
     {'bound',[]} = Bound,
     {'free',['Test']} = Free,
 
     [MaybeMatchAnn1, MaybeMatchAnn2, MatchAnn1] = erl_syntax:maybe_expr_body(MaybeAnn),
-    [Env1, Bound1, Free1] = erl_syntax:get_ann(MaybeMatchAnn1),
+    [Env1, Bound1, Free1] = erl_syntax:get_extra(MaybeMatchAnn1),
     {'env',[]} = Env1,
     {'bound',[]} = Bound1,
     {'free',['Test']} = Free1,
-    [Env2, Bound2, Free2] = erl_syntax:get_ann(MaybeMatchAnn2),
+    [Env2, Bound2, Free2] = erl_syntax:get_extra(MaybeMatchAnn2),
     {'env',[]} = Env2,
     {'bound',['What']} = Bound2,
     {'free',[]} = Free2,
-    [Env3, Bound3, Free3] = erl_syntax:get_ann(MatchAnn1),
+    [Env3, Bound3, Free3] = erl_syntax:get_extra(MatchAnn1),
     {'env',['What']} = Env3,
     {'bound',['Var']} = Bound3,
     {'free',['What']} = Free3,
 
     ElseAnn = erl_syntax:maybe_expr_else(MaybeAnn),
-    [Env4, Bound4, Free4] = erl_syntax:get_ann(ElseAnn),
+    [Env4, Bound4, Free4] = erl_syntax:get_extra(ElseAnn),
     {'env',[]} = Env4,
     {'bound',[]} = Bound4,
     {'free',[]} = Free4.

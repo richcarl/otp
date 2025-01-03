@@ -63,6 +63,11 @@ trees.
 -deprecated([{get_pos,1,"use erl_syntax:get_anno/1 instead"}]).
 -deprecated([{set_pos,2,"use erl_syntax:set_anno/2 instead"}]).
 -deprecated([{copy_pos,2,"use erl_syntax:copy_anno/2 instead"}]).
+-deprecated([{get_ann,1,"use erl_syntax:get_extra/1 instead"}]).
+-deprecated([{set_ann,2,"use erl_syntax:set_extra/2 instead"}]).
+-deprecated([{add_ann,2,"use erl_syntax:add_extra/2 instead"}]).
+-deprecated([{copy_ann,2,"use erl_syntax:copy_extra/2 instead"}]).
+
 -export([type/1,
 	 is_leaf/1,
 	 is_form/1,
@@ -92,9 +97,13 @@ trees.
 	 remove_comments/1,
 	 copy_comments/2,
 	 join_comments/2,
+	 get_extra/1,
 	 get_ann/1,
+	 set_extra/2,
 	 set_ann/2,
+	 add_extra/2,
 	 add_ann/2,
+	 copy_extra/2,
 	 copy_ann/2,
 	 get_attrs/1,
 	 set_attrs/2,
@@ -419,17 +428,17 @@ trees.
 
 %% `attr' records store node attributes as an aggregate.
 %%
-%% #attr{pos :: Pos, ann :: Ann, com :: Comments}
+%% #attr{pos :: Pos, extra :: Extra, com :: Comments}
 %%
 %%	Pos = term()
-%%	Ann = [term()]
+%%	Extra = [term()]
 %%	Comments = none | #com{}
 %%
-%% where `Pos' `Ann' and `Comments' are the corresponding values of a
+%% where `Pos' `Extra' and `Comments' are the corresponding values of a
 %% `tree' or `wrapper' record.
 
 -record(attr, {pos = erl_anno:new(0) :: term(),
-	       ann = []   :: [term()],
+	       extra = []   :: [term()],
 	       com = none :: 'none' | #com{}}).
 -type syntaxTreeAttributes() :: #attr{}.
 
@@ -1189,83 +1198,115 @@ join_comments(Source, Target) ->
       add_precomments(get_precomments(Source), Target)).
 
 
+-doc "Obsolete alias for [`get_extra/1`](`erl_syntax:get_extra/1`).".
+-doc(#{equiv => get_extra(Node)}).
+-spec get_ann(syntaxTree()) -> [term()].
+
+get_ann(Node) ->
+    get_extra(Node).
+
+
 -doc """
-get_ann(Node)
+get_extra(Node)
 
 Returns the list of user annotations associated with a syntax tree.
 
 For a newly created node, this is the empty list. The annotations may
 be any terms.
 
-_See also: _`get_attrs/1`, `set_ann/2`.
+_See also: _`get_attrs/1`, `set_extra/2`.
 """.
--spec get_ann(syntaxTree()) -> [term()].
+-spec get_extra(syntaxTree()) -> [term()].
 
-get_ann(#tree{attr = Attr}) -> Attr#attr.ann;
-get_ann(#wrapper{attr = Attr}) -> Attr#attr.ann;
-get_ann(_) -> [].
+get_extra(#tree{attr = Attr}) -> Attr#attr.extra;
+get_extra(#wrapper{attr = Attr}) -> Attr#attr.extra;
+get_extra(_) -> [].
+
+
+-doc "Obsolete alias for [`set_extra/2`](`erl_syntax:set_extra/2`).".
+-doc(#{equiv => set_extra(Node, Annotations)}).
+-spec set_ann(syntaxTree(), [term()]) -> syntaxTree().
+
+set_ann(Node, Annotations) ->
+    set_extra(Node, Annotations).
 
 
 -doc """
-set_ann(Node, Annotations)
+set_extra(Node, Annotations)
 
 Sets the list of user annotations of `Node` to `Annotations`.
 
-_See also: _`add_ann/2`, `copy_ann/2`, `get_ann/1`.
+_See also: _`add_extra/2`, `copy_extra/2`, `get_extra/1`.
 """.
--spec set_ann(syntaxTree(), [term()]) -> syntaxTree().
+-spec set_extra(syntaxTree(), [term()]) -> syntaxTree().
 
-set_ann(Node, As) ->
+set_extra(Node, As) ->
     case Node of
 	#tree{attr = Attr} ->
-	    Node#tree{attr = Attr#attr{ann = As}};
+	    Node#tree{attr = Attr#attr{extra = As}};
 	#wrapper{attr = Attr} ->
-	    Node#wrapper{attr = Attr#attr{ann = As}};
+	    Node#wrapper{attr = Attr#attr{extra = As}};
 	_ ->
 	    %% Assume we have an `erl_parse' node and create a wrapper
 	    %% structure to carry the annotation.
-	    set_ann(wrap(Node), As)
+	    set_extra(wrap(Node), As)
     end.
 
 
+-doc "Obsolete alias for [`add_extra/2`](`erl_syntax:add_extra/2`).".
+-doc(#{equiv => add_extra(Annotation, Node)}).
+-spec add_ann(term(), syntaxTree()) -> syntaxTree().
+
+add_ann(Annotation, Node) ->
+    add_extra(Annotation, Node).
+
+
 -doc """
-add_ann(Annotation, Node)
+add_extra(Annotation, Node)
 
 Appends the term `Annotation` to the list of user annotations of `Node`.
 
 Note: this is equivalent to
-[`set_ann(Node, [Annotation | get_ann(Node)])`](`set_ann/2`), but potentially
+[`set_extra(Node, [Annotation | get_extra(Node)])`](`set_extra/2`), but potentially
 more efficient.
 
-_See also: _`get_ann/1`, `set_ann/2`.
+_See also: _`get_extra/1`, `set_extra/2`.
 """.
--spec add_ann(term(), syntaxTree()) -> syntaxTree().
+-spec add_extra(term(), syntaxTree()) -> syntaxTree().
 
-add_ann(A, Node) ->
+add_extra(A, Node) ->
     case Node of
 	#tree{attr = Attr} ->
-	    Node#tree{attr = Attr#attr{ann = [A | Attr#attr.ann]}};
+	    Node#tree{attr = Attr#attr{extra = [A | Attr#attr.extra]}};
 	#wrapper{attr = Attr} ->
-	    Node#wrapper{attr = Attr#attr{ann = [A | Attr#attr.ann]}};
+	    Node#wrapper{attr = Attr#attr{extra = [A | Attr#attr.extra]}};
 	_ ->
 	    %% Assume we have an `erl_parse' node and create a wrapper
 	    %% structure to carry the annotation.
-	    add_ann(A, wrap(Node))
+	    add_extra(A, wrap(Node))
     end.
+
+
+-doc "Obsolete alias for [`copy_extra/2`](`erl_syntax:copy_extra/2`).".
+-doc(#{equiv => copy_extra(Source, Target)}).
+-spec copy_ann(syntaxTree(), syntaxTree()) -> syntaxTree().
+
+copy_ann(Source, Target) ->
+    copy_extra(Source, Target).
 
 
 -doc """
 Copies the list of user annotations from `Source` to `Target`.
 
-Note: this is equivalent to [`set_ann(Target, get_ann(Source))`](`set_ann/2`),
+Note: this is equivalent to [`set_extra(Target, get_extra(Source))`](`set_extra/2`),
 but potentially more efficient.
 
-_See also: _`get_ann/1`, `set_ann/2`.
+_See also: _`get_extra/1`, `set_extra/2`.
 """.
--spec copy_ann(syntaxTree(), syntaxTree()) -> syntaxTree().
+-spec copy_extra(syntaxTree(), syntaxTree()) -> syntaxTree().
 
-copy_ann(Source, Target) ->
-    set_ann(Target, get_ann(Source)).
+copy_extra(Source, Target) ->
+    set_extra(Target, get_extra(Source)).
 
 
 -doc """
@@ -1278,10 +1319,10 @@ Currently, this includes position information, source code comments, and user
 annotations. The result of this function cannot be inspected directly; only
 attached to another node (see `set_attrs/2`).
 
-For accessing individual attributes, see `get_anno/1`, `get_ann/1`,
+For accessing individual attributes, see `get_anno/1`, `get_extra/1`,
 `get_precomments/1` and `get_postcomments/1`.
 
-_See also: _`get_ann/1`, `get_anno/1`, `get_postcomments/1`, `get_precomments/1`,
+_See also: _`get_extra/1`, `get_anno/1`, `get_postcomments/1`, `get_precomments/1`,
 `set_attrs/2`.
 """.
 -spec get_attrs(syntaxTree()) -> syntaxTreeAttributes().
@@ -1289,7 +1330,7 @@ _See also: _`get_ann/1`, `get_anno/1`, `get_postcomments/1`, `get_precomments/1`
 get_attrs(#tree{attr = Attr}) -> Attr;
 get_attrs(#wrapper{attr = Attr}) -> Attr;
 get_attrs(Node) -> #attr{pos = get_anno(Node),
-			 ann = get_ann(Node),
+			 extra = get_extra(Node),
 			 com = get_com(Node)}.
 
 
@@ -8153,7 +8194,7 @@ by the abstract syntax tree implementation. Comments attached to nodes
 of `Tree` will be preserved, but other attributes are lost.
 
 Any node in `Tree` whose node type is `variable` (see `type/1`), and whose list
-of annotations (see `get_ann/1`) contains the atom `meta_var`, will remain
+of annotations (see `get_extra/1`) contains the atom `meta_var`, will remain
 unchanged in the resulting tree, except that exactly one occurrence of
 `meta_var` is removed from its annotation list.
 
@@ -8173,7 +8214,7 @@ unacceptable. Using `print(meta(Tree))` instead would output a
 _representation independent_ syntax tree generating expression; in the
 above case, something like "`erl_syntax:variable("V")`".
 
-_See also: _`abstract/1`, `get_ann/1`, `type/1`.
+_See also: _`abstract/1`, `get_extra/1`, `type/1`.
 """.
 -spec meta(syntaxTree()) -> syntaxTree().
 
@@ -8181,14 +8222,14 @@ meta(T) ->
     %% First of all we check for metavariables:
     case type(T) of
 	variable ->
-	    case lists:member(meta_var, get_ann(T)) of
+	    case lists:member(meta_var, get_extra(T)) of
 		false ->
 		    meta_precomment(T);
 		true ->
 		    %% A meta-variable: remove the first found
 		    %% `meta_var' annotation, but otherwise leave
 		    %% the node unchanged.
-		    set_ann(T, lists:delete(meta_var, get_ann(T)))
+		    set_extra(T, lists:delete(meta_var, get_extra(T)))
 	    end;
 	_ ->
 	    case has_comments(T) of

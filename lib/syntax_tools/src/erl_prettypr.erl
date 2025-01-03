@@ -337,7 +337,7 @@ layout(Node, Options) ->
               empty_lines = proplists:get_value(empty_lines, Options, sets:new())}).
 
 lay(Node, Ctxt) ->
-    case erl_syntax:get_ann(Node) of
+    case erl_syntax:get_extra(Node) of
 	[] ->
 	    %% Hooks are not called if there are no annotations.
 	    lay_1(Node, Ctxt);

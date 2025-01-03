@@ -453,7 +453,7 @@ _See also: _`annotate_bindings/2`.
 -spec annotate_bindings(syntaxTree()) -> syntaxTree().
 
 annotate_bindings(Tree) ->
-    As = erl_syntax:get_ann(Tree),
+    As = erl_syntax:get_extra(Tree),
     case lists:keyfind(env, 1, As) of
         {env, InVars} ->
             annotate_bindings(Tree, InVars);
@@ -961,12 +961,12 @@ vann_clauses([], _Env) ->
     {[], {[], []}}.
 
 ann_bindings(Tree, Env, Bound, Free) ->
-    As0 = erl_syntax:get_ann(Tree),
+    As0 = erl_syntax:get_extra(Tree),
     As1 = [{env, Env},
            {bound, Bound},
            {free, Free}
            | delete_binding_anns(As0)],
-    erl_syntax:set_ann(Tree, As1).
+    erl_syntax:set_extra(Tree, As1).
 
 delete_binding_anns([{env, _} | As]) ->
     delete_binding_anns(As);
