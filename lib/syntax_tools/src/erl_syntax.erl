@@ -392,17 +392,16 @@ trees.
 %% first element is an atom which uniquely identifies the type of the
 %% node. (In the backwards-compatible representation, the
 %% interpretation is also often dependent on the context; the second
-%% element generally holds the annotation (see module {@link
-%% //stdlib/erl_anno} for details) which includes the position
-%% information - with a couple of exceptions; see `get_pos' and
-%% `set_pos' for details.) In the documentation of this module, `Pos'
-%% is the annotation associated with a node. No assumptions are made
-%% in this module regarding the format or interpretation of the
-%% annotations. Use module erl_anno to inspect and modify annotations.
-%% In particular, use {@link //stdlib/erl_anno:location/1} to get the
-%% position information, and use {@link
-%% //stdlib/erl_anno:set_location/2} or {@link
-%% //stdlib/erl_anno:set_line/2} to change the position information.
+%% element generally holds the annotation, which includes the position
+%% information - see `get_anno/1' and `set_anno/2' and the stdlib module
+%% `erl_anno` for details.)
+%% In the documentation of this module, `Anno' is the annotation associated
+%% with a node. No assumptions are made in this module regarding the format
+%% or interpretation of the annotations. Use module erl_anno to inspect and
+%% modify annotations. In particular, use erl_anno:location/1 to extract
+%% the position information, and use erl_anno:set_location/2 or
+%% erl_anno:set_line/2 to change the position information.
+
 %% When a syntax tree node is constructed, its associated position is
 %% by default set to the integer zero.
 %% =====================================================================
@@ -428,16 +427,16 @@ trees.
 
 %% `attr' records store node attributes as an aggregate.
 %%
-%% #attr{pos :: Pos, extra :: Extra, com :: Comments}
+%% #attr{anno :: Anno, extra :: Extra, com :: Comments}
 %%
-%%	Pos = term()
+%%	Anno = term()
 %%	Extra = [term()]
 %%	Comments = none | #com{}
 %%
-%% where `Pos' `Extra' and `Comments' are the corresponding values of a
+%% where `Anno' `Extra' and `Comments' are the corresponding values of a
 %% `tree' or `wrapper' record.
 
--record(attr, {pos = erl_anno:new(0) :: term(),
+-record(attr, {anno = erl_anno:new(0) :: term(),
 	       extra = []   :: [term()],
 	       com = none :: 'none' | #com{}}).
 -type syntaxTreeAttributes() :: #attr{}.
@@ -832,9 +831,9 @@ _See also: _`get_attrs/1`, `set_anno/2`.
 -spec get_anno(syntaxTree()) -> annotation_or_location().
 
 get_anno(#tree{attr = Attr}) ->
-    Attr#attr.pos;
+    Attr#attr.anno;
 get_anno(#wrapper{attr = Attr}) ->
-    Attr#attr.pos;
+    Attr#attr.anno;
 get_anno({error, {Pos, _, _}}) ->
     Pos;
 get_anno({warning, {Pos, _, _}}) ->
@@ -854,26 +853,26 @@ set_pos(Node, Pos) ->
 
 
 -doc """
-Sets the position information of `Node` to `Pos`.
+Sets the position information of `Node` to `Anno`.
 
 _See also: _`copy_anno/2`, `get_anno/1`.
 """.
 -spec set_anno(syntaxTree(), annotation_or_location()) -> syntaxTree().
 
-set_anno(Node, Pos) ->
+set_anno(Node, Anno) ->
     case Node of
         #tree{attr = Attr} ->
-            Node#tree{attr = Attr#attr{pos = Pos}};
+            Node#tree{attr = Attr#attr{anno = Anno}};
         #wrapper{attr = Attr, tree = {error, {_, Module, Reason}}} ->
-            Node#wrapper{attr = Attr#attr{pos = Pos}, tree = {error, {Pos, Module, Reason}}};
+            Node#wrapper{attr = Attr#attr{anno = Anno}, tree = {error, {Anno, Module, Reason}}};
         #wrapper{attr = Attr, tree = {warning, {_, Module, Reason}}} ->
-            Node#wrapper{attr = Attr#attr{pos = Pos}, tree = {warning, {Pos, Module, Reason}}};
+            Node#wrapper{attr = Attr#attr{anno = Anno}, tree = {warning, {Anno, Module, Reason}}};
         #wrapper{attr = Attr, tree = Tree} ->
-            Node#wrapper{attr = Attr#attr{pos = Pos}, tree = setelement(2, Tree, Pos)};
+            Node#wrapper{attr = Attr#attr{anno = Anno}, tree = setelement(2, Tree, Anno)};
         _ ->
             %% We then assume we have an `erl_parse' node, and create a
             %% wrapper around it to make things more uniform.
-            set_anno(wrap(Node), Pos)
+            set_anno(wrap(Node), Anno)
     end.
 
 
@@ -1329,7 +1328,7 @@ _See also: _`get_extra/1`, `get_anno/1`, `get_postcomments/1`, `get_precomments/
 
 get_attrs(#tree{attr = Attr}) -> Attr;
 get_attrs(#wrapper{attr = Attr}) -> Attr;
-get_attrs(Node) -> #attr{pos = get_anno(Node),
+get_attrs(Node) -> #attr{anno = get_anno(Node),
 			 extra = get_extra(Node),
 			 com = get_com(Node)}.
 
@@ -1553,9 +1552,9 @@ variable(Name) ->
     tree(variable, list_to_atom(Name)).
 
 revert_variable(Node) ->
-    Pos = get_anno(Node),
+    Anno = get_anno(Node),
     Name = variable_name(Node),
-    {var, Pos, Name}.
+    {var, Anno, Name}.
 
 
 -doc """
@@ -1602,14 +1601,14 @@ _See also: _`variable/1`.
 
 %% `erl_parse' representation:
 %%
-%% {var, Pos, '_'}
+%% {var, Anno, '_'}
 
 underscore() ->
     tree(underscore, []).
 
 revert_underscore(Node) ->
-    Pos = get_anno(Node),
-    {var, Pos, '_'}.
+    Anno = get_anno(Node),
+    {var, Anno, '_'}.
 
 
 -doc """
@@ -1623,7 +1622,7 @@ _See also: _`integer_literal/1`, `integer_value/1`, `is_integer/2`.
 
 %% `erl_parse' representation:
 %%
-%% {integer, Pos, Value}
+%% {integer, Anno, Value}
 %%
 %%	Value = integer()
 
@@ -1631,8 +1630,8 @@ integer(Value) ->
     tree(integer, Value).
 
 revert_integer(Node) ->
-    Pos = get_anno(Node),
-    {integer, Pos, integer_value(Node)}.
+    Anno = get_anno(Node),
+    {integer, Anno, integer_value(Node)}.
 
 
 -doc """
@@ -1698,7 +1697,7 @@ _See also: _`float_literal/1`, `float_value/1`.
 
 %% `erl_parse' representation:
 %%
-%% {float, Pos, Value}
+%% {float, Anno, Value}
 %%
 %%	Value = float()
 
@@ -1709,8 +1708,8 @@ make_float(Value) ->
     tree(float, Value).
 
 revert_float(Node) ->
-    Pos = get_anno(Node),
-    {float, Pos, float_value(Node)}.
+    Anno = get_anno(Node),
+    {float, Anno, float_value(Node)}.
 
 
 -doc """
@@ -1763,7 +1762,7 @@ _See also: _`char_literal/1`, `char_literal/2`, `char_value/1`, `is_char/2`.
 
 %% `erl_parse' representation:
 %%
-%% {char, Pos, Code}
+%% {char, Anno, Code}
 %%
 %%	Code = integer()
 
@@ -1771,8 +1770,8 @@ char(Char) ->
     tree(char, Char).
 
 revert_char(Node) ->
-    Pos = get_anno(Node),
-    {char, Pos, char_value(Node)}.
+    Anno = get_anno(Node),
+    {char, Anno, char_value(Node)}.
 
 
 -doc """
@@ -1864,7 +1863,7 @@ _See also: _`char/1`, `is_string/2`, `string_literal/1`, `string_literal/2`,
 
 %% `erl_parse' representation:
 %%
-%% {string, Pos, Chars}
+%% {string, Anno, Chars}
 %%
 %%	Chars = string()
 
@@ -1872,8 +1871,8 @@ string(String) ->
     tree(string, String).
 
 revert_string(Node) ->
-    Pos = get_anno(Node),
-    {string, Pos, string_value(Node)}.
+    Anno = get_anno(Node),
+    {string, Anno, string_value(Node)}.
 
 
 -doc """
@@ -1961,7 +1960,7 @@ _See also: _`atom_literal/1`, `atom_literal/2`, `atom_name/1`, `atom_value/1`,
 
 %% `erl_parse' representation:
 %%
-%% {atom, Pos, Value}
+%% {atom, Anno, Value}
 %%
 %%	Value = atom()
 
@@ -1971,8 +1970,8 @@ atom(Name) ->
     tree(atom, list_to_atom(Name)).
 
 revert_atom(Node) ->
-    Pos = get_anno(Node),
-    {atom, Pos, atom_value(Node)}.
+    Anno = get_anno(Node),
+    {atom, Anno, atom_value(Node)}.
 
 
 -doc """
@@ -2084,21 +2083,21 @@ _See also: _`map_expr/1`, `map_expr_argument/1`, `map_expr_fields/1`,
 
 %% `erl_parse' representation:
 %%
-%% {map, Pos, Fields}
-%% {map, Pos, Argument, Fields}
+%% {map, Anno, Fields}
+%% {map, Anno, Argument, Fields}
 
 map_expr(Argument, Fields) ->
     tree(map_expr, #map_expr{argument = Argument, fields = Fields}).
 
 revert_map_expr(Node) ->
-    Pos = get_anno(Node),
+    Anno = get_anno(Node),
     Argument = map_expr_argument(Node),
     Fields = map_expr_fields(Node),
     case Argument of
         none ->
-            {map, Pos, Fields};
+            {map, Anno, Fields};
         _ ->
-            {map, Pos, Argument, Fields}
+            {map, Anno, Argument, Fields}
     end.
 
 
@@ -2154,16 +2153,16 @@ _See also: _`map_expr/2`, `map_field_assoc_name/1`, `map_field_assoc_value/1`.
 
 %% `erl_parse' representation:
 %%
-%% {map_field_assoc, Pos, Name, Value}
+%% {map_field_assoc, Anno, Name, Value}
 
 map_field_assoc(Name, Value) ->
     tree(map_field_assoc, #map_field_assoc{name = Name, value = Value}).
 
 revert_map_field_assoc(Node) ->
-    Pos = get_anno(Node),
+    Anno = get_anno(Node),
     Name = map_field_assoc_name(Node),
     Value = map_field_assoc_value(Node),
-    {map_field_assoc, Pos, Name, Value}.
+    {map_field_assoc, Anno, Name, Value}.
 
 
 -doc """
@@ -2211,16 +2210,16 @@ _See also: _`map_expr/2`, `map_field_exact_name/1`, `map_field_exact_value/1`.
 
 %% `erl_parse' representation:
 %%
-%% {map_field_exact, Pos, Name, Value}
+%% {map_field_exact, Anno, Name, Value}
 
 map_field_exact(Name, Value) ->
     tree(map_field_exact, #map_field_exact{name = Name, value = Value}).
 
 revert_map_field_exact(Node) ->
-    Pos = get_anno(Node),
+    Anno = get_anno(Node),
     Name = map_field_exact_name(Node),
     Value = map_field_exact_value(Node),
-    {map_field_exact, Pos, Name, Value}.
+    {map_field_exact, Anno, Name, Value}.
 
 
 -doc """
@@ -2272,7 +2271,7 @@ _See also: _`tuple_elements/1`, `tuple_size/1`.
 
 %% `erl_parse' representation:
 %%
-%% {tuple, Pos, Elements}
+%% {tuple, Anno, Elements}
 %%
 %%	Elements = [erl_parse()]
 
@@ -2280,8 +2279,8 @@ tuple(List) ->
     tree(tuple, List).
 
 revert_tuple(Node) ->
-    Pos = get_anno(Node),
-    {tuple, Pos, tuple_elements(Node)}.
+    Anno = get_anno(Node),
+    {tuple, Anno, tuple_elements(Node)}.
 
 
 -doc """
@@ -2363,7 +2362,7 @@ _See also: _`compact_list/1`, `cons/2`, `get_attrs/1`, `is_list_skeleton/1`,
 
 %% `erl_parse' representation:
 %%
-%% {cons, Pos, Head, Tail}
+%% {cons, Anno, Head, Tail}
 %%
 %%	Head = Tail = [erl_parse()]
 %%
@@ -2409,14 +2408,14 @@ _See also: _`is_list_skeleton/1`, `list/2`.
 
 %% `erl_parse' representation:
 %%
-%% {nil, Pos}
+%% {nil, Anno}
 
 nil() ->
     tree(nil).
 
 revert_nil(Node) ->
-    Pos = get_anno(Node),
-    {nil, Pos}.
+    Anno = get_anno(Node),
+    {nil, Anno}.
 
 
 -doc """
@@ -2759,7 +2758,7 @@ _See also: _`binary_field/2`, `binary_fields/1`.
 
 %% `erl_parse' representation:
 %%
-%% {bin, Pos, Fields}
+%% {bin, Anno, Fields}
 %%
 %%	Fields = [Field]
 %%	Field = {bin_element, ...}
@@ -2771,8 +2770,8 @@ binary(List) ->
     tree(binary, List).
 
 revert_binary(Node) ->
-    Pos = get_anno(Node),
-    {bin, Pos, binary_fields(Node)}.
+    Anno = get_anno(Node),
+    {bin, Anno, binary_fields(Node)}.
 
 
 -doc """
@@ -2839,7 +2838,7 @@ _See also: _`binary/1`, `binary_field/1`, `binary_field/3`,
 
 %% `erl_parse' representation:
 %%
-%% {bin_element, Pos, Expr, Size, TypeList}
+%% {bin_element, Anno, Expr, Size, TypeList}
 %%
 %%	Expr = erl_parse()
 %%	Size = default | erl_parse()
@@ -2850,7 +2849,7 @@ binary_field(Body, Types) ->
     tree(binary_field, #binary_field{body = Body, types = Types}).
 
 revert_binary_field(Node) ->
-    Pos = get_anno(Node),
+    Anno = get_anno(Node),
     Body = binary_field_body(Node),
     {Expr, Size} = case type(Body) of
 		       size_qualifier ->
@@ -2867,7 +2866,7 @@ revert_binary_field(Node) ->
 		Ts ->
 		    fold_binary_field_types(Ts)
 	    end,
-    {bin_element, Pos, Expr, Size, Types}.
+    {bin_element, Anno, Expr, Size, Types}.
 
 
 -doc """
@@ -2902,11 +2901,11 @@ _See also: _`binary_field/2`.
 
 binary_field_types(Node) ->
     case unwrap(Node) of
-	{bin_element, Pos, _, _, Types} ->
+	{bin_element, Anno, _, _, Types} ->
 	    if Types =:= default ->
 		    [];
 	       true ->
-		    unfold_binary_field_types(Types, Pos)
+		    unfold_binary_field_types(Types, Anno)
 	    end;
 	Node1 ->
 	    (data(Node1))#binary_field.types
@@ -3108,14 +3107,14 @@ _See also: _`error_marker/1`, `is_form/1`, `warning_marker/1`.
 
 %% `erl_parse' representation:
 %%
-%% {eof, Pos}
+%% {eof, Anno}
 
 eof_marker() ->
     tree(eof_marker).
 
 revert_eof_marker(Node) ->
-    Pos = get_anno(Node),
-    {eof, Pos}.
+    Anno = get_anno(Node),
+    {eof, Anno}.
 
 
 %% =====================================================================
@@ -3153,8 +3152,8 @@ _See also: _`attribute/1`, `attribute_arguments/1`, `attribute_name/1`,
 
 %% `erl_parse' representation:
 %%
-%% {attribute, Pos, module, {Name,Vars}}
-%% {attribute, Pos, module, Name}
+%% {attribute, Anno, module, {Name,Vars}}
+%% {attribute, Anno, module, Name}
 %%
 %%	Name = atom() | [atom()]
 %%	Vars = [atom()]
@@ -3163,14 +3162,14 @@ _See also: _`attribute/1`, `attribute_arguments/1`, `attribute_name/1`,
 %%	`A1.A2.....An' if Name is `[A1, A2, ..., An]', and Vs is `[V1,
 %%	..., Vm]' if Vars is `[V1, ..., Vm]'.
 %%
-%% {attribute, Pos, export, Exports}
+%% {attribute, Anno, export, Exports}
 %%
 %%	Exports = [{atom(), integer()}]
 %%
 %%	Representing `-export([A1/N1, ..., Ak/Nk]).', if `Exports' is
 %%	`[{A1, N1}, ..., {Ak, Nk}]'.
 %%
-%% {attribute, Pos, import, Imports}
+%% {attribute, Anno, import, Imports}
 %%
 %%	Imports = {atom(), Pairs} | [atom()]
 %%	Pairs = [{atom(), integer()]
@@ -3179,21 +3178,21 @@ _See also: _`attribute/1`, `attribute_arguments/1`, `attribute_name/1`,
 %%	`Imports' is `{Module, [{A1, N1}, ..., {Ak, Nk}]}', or
 %%	`-import(A1.....An).', if `Imports' is `[A1, ..., An]'.
 %%
-%% {attribute, Pos, export_type, ExportedTypes}
+%% {attribute, Anno, export_type, ExportedTypes}
 %%
 %%	ExportedTypes = [{atom(), integer()}]
 %%
 %%	Representing `-export_type([N1/A1, ..., Nk/Ak]).',
 %%      if `ExportedTypes' is `[{N1, A1}, ..., {Nk, Ak}]'.
 %%
-%% {attribute, Pos, optional_callbacks, OptionalCallbacks}
+%% {attribute, Anno, optional_callbacks, OptionalCallbacks}
 %%
 %%	OptionalCallbacks = [{atom(), integer()}]
 %%
 %%	Representing `-optional_callbacks([A1/N1, ..., Ak/Nk]).',
 %%      if `OptionalCallbacks' is `[{A1, N1}, ..., {Ak, Nk}]'.
 %%
-%% {attribute, Pos, SpecTag, {FuncSpec, FuncType}}
+%% {attribute, Anno, SpecTag, {FuncSpec, FuncType}}
 %%
 %%      SpecTag = spec | callback
 %%	FuncSpec = {module(), atom(), arity()} | {atom(), arity()}
@@ -3203,7 +3202,7 @@ _See also: _`attribute/1`, `attribute_arguments/1`, `attribute_name/1`,
 %%      `-SpecTag F/A Ft1; ...; Ftk.', if `FuncTypes' is
 %%      `[Ft1, ..., Ftk]'.
 %%
-%% {attribute, Pos, TypeTag, {Name, Type, Parameters}}
+%% {attribute, Anno, TypeTag, {Name, Type, Parameters}}
 %%
 %%      TypeTag = type | opaque
 %%      Type = a type
@@ -3212,30 +3211,30 @@ _See also: _`attribute/1`, `attribute_arguments/1`, `attribute_name/1`,
 %%	Representing `-TypeTag Name(V1, ..., Vk) :: Type .'
 %%      if `Parameters' is `[V1, ..., Vk]'.
 %%
-%% {attribute, Pos, file, Position}
+%% {attribute, Anno, file, Position}
 %%
 %%	Position = {filename(), integer()}
 %%
 %%	Representing `-file(Name, Line).', if `Position' is `{Name,
 %%	Line}'.
 %%
-%% {attribute, Pos, record, Info}
+%% {attribute, Anno, record, Info}
 %%
 %%	Info = {Name, [Entries]}
 %%	Name = atom()
 %%
 %%	Entries = UntypedEntries
 %%              | {typed_record_field, UntypedEntries, Type}
-%%      UntypedEntries = {record_field, Pos, atom()}
-%%                     | {record_field, Pos, atom(), erl_parse()}
+%%      UntypedEntries = {record_field, Anno, atom()}
+%%                     | {record_field, Anno, atom(), erl_parse()}
 %%
 %%      Representing `-record(Name, {<F1>, ..., <Fn>}).', if `Info' is
 %%	`{Name, [D1, ..., D1]}', where each `Fi' is either `Ai = <Ei>',
-%%	if the corresponding `Di' is `{record_field, Pos, Ai, Ei}', or
-%%	otherwise simply `Ai', if `Di' is `{record_field, Pos, Ai}', or
+%%	if the corresponding `Di' is `{record_field, Anno, Ai, Ei}', or
+%%	otherwise simply `Ai', if `Di' is `{record_field, Anno, Ai}', or
 %%      `Ai = <Ei> :: <Ti>', if `Di' is `{typed_record_field,
-%%      {record_field, Pos, Ai, Ei}, Ti}', or `Ai :: <Ti>', if `Di' is
-%%      `{typed_record_field, {record_field, Pos, Ai}, Ti}'.
+%%      {record_field, Anno, Ai, Ei}, Ti}', or `Ai :: <Ti>', if `Di' is
+%%      `{typed_record_field, {record_field, Anno, Ai}, Ti}'.
 %%
 %% {attribute, L, Name, Term}
 %%
@@ -3251,23 +3250,23 @@ attribute(Name, Args) ->
 revert_attribute(Node) ->
     Name = attribute_name(Node),
     Args = attribute_arguments(Node),
-    Pos = get_anno(Node),
+    Anno = get_anno(Node),
     case type(Name) of
 	atom ->
-	    revert_attribute_1(atom_value(Name), Args, Pos, Node);
+	    revert_attribute_1(atom_value(Name), Args, Anno, Node);
 	_ ->
 	    Node
     end.
 
 %% All the checking makes this part a bit messy:
 
-revert_attribute_1(module, [M], Pos, Node) ->
+revert_attribute_1(module, [M], Anno, Node) ->
     case revert_module_name(M) of
 	{ok, A} ->
-	    {attribute, Pos, module, A};
+	    {attribute, Anno, module, A};
 	error -> Node
     end;
-revert_attribute_1(module, [M, List], Pos, Node) ->
+revert_attribute_1(module, [M, List], Anno, Node) ->
     Vs = case is_list_skeleton(List) of
 	     true ->
 		 case is_proper_list(List) of
@@ -3281,28 +3280,28 @@ revert_attribute_1(module, [M, List], Pos, Node) ->
 	 end,
     case revert_module_name(M) of
 	{ok, A} ->
-	    {attribute, Pos, module, {A, Vs}};
+	    {attribute, Anno, module, {A, Vs}};
 	error -> Node
     end;
-revert_attribute_1(export, [List], Pos, Node) ->
+revert_attribute_1(export, [List], Anno, Node) ->
     case is_list_skeleton(List) of
 	true ->
 	    case is_proper_list(List) of
 		true ->
 		    Fs = fold_function_names(list_elements(List)),
-		    {attribute, Pos, export, Fs};
+		    {attribute, Anno, export, Fs};
 		false ->
 		    Node
 	    end;
 	false ->
 	    Node
     end;
-revert_attribute_1(import, [M], Pos, Node) ->
+revert_attribute_1(import, [M], Anno, Node) ->
     case revert_module_name(M) of
-	{ok, A} -> {attribute, Pos, import, A};
+	{ok, A} -> {attribute, Anno, import, A};
 	error -> Node
     end;
-revert_attribute_1(import, [M, List], Pos, Node) ->
+revert_attribute_1(import, [M, List], Anno, Node) ->
     case revert_module_name(M) of
 	{ok, A} ->
 	    case is_list_skeleton(List) of
@@ -3311,7 +3310,7 @@ revert_attribute_1(import, [M, List], Pos, Node) ->
 			true ->
 			    Fs = fold_function_names(
 				   list_elements(List)),
-			    {attribute, Pos, import, {A, Fs}};
+			    {attribute, Anno, import, {A, Fs}};
 			false ->
 			    Node
 		    end;
@@ -3321,12 +3320,12 @@ revert_attribute_1(import, [M, List], Pos, Node) ->
 	error ->
 	    Node
     end;
-revert_attribute_1(file, [A, Line], Pos, Node) ->
+revert_attribute_1(file, [A, Line], Anno, Node) ->
     case type(A) of
 	string ->
 	    case type(Line) of
 		integer ->
-		    {attribute, Pos, file,
+		    {attribute, Anno, file,
 		     {concrete(A), concrete(Line)}};
 		_ ->
 		    Node
@@ -3334,22 +3333,22 @@ revert_attribute_1(file, [A, Line], Pos, Node) ->
 	_ ->
 	    Node
     end;
-revert_attribute_1(record, [A, Tuple], Pos, Node) ->
+revert_attribute_1(record, [A, Tuple], Anno, Node) ->
     case type(A) of
 	atom ->
 	    case type(Tuple) of
 		tuple ->
 		    Fs = fold_record_fields(
 			   tuple_elements(Tuple)),
-		    {attribute, Pos, record, {concrete(A), Fs}};
+		    {attribute, Anno, record, {concrete(A), Fs}};
 		_ ->
 		    Node
 	    end;
 	_ ->
 	    Node
     end;
-revert_attribute_1(N, [T], Pos, _) ->
-    {attribute, Pos, N, concrete(T)};
+revert_attribute_1(N, [T], Anno, _) ->
+    {attribute, Anno, N, concrete(T)};
 revert_attribute_1(_, _, _, Node) ->
     Node.
 
@@ -3371,8 +3370,8 @@ _See also: _`attribute/1`.
 
 attribute_name(Node) ->
     case unwrap(Node) of
-	{attribute, Pos, Name, _} ->
-	    set_anno(atom(Name), Pos);
+	{attribute, Anno, Name, _} ->
+	    set_anno(atom(Name), Anno);
 	Node1 ->
 	    (data(Node1))#attribute.name
     end.
@@ -3391,45 +3390,45 @@ _See also: _`attribute/1`.
 
 attribute_arguments(Node) ->
     case unwrap(Node) of
-	{attribute, Pos, Name, Data} ->
+	{attribute, Anno, Name, Data} ->
 	    case Name of
 		module ->
 		    {M1, Vs} =
 			case Data of
 			    {M0, Vs0} ->
-				{M0, unfold_variable_names(Vs0, Pos)};
+				{M0, unfold_variable_names(Vs0, Anno)};
 			    M0 ->
 				{M0, none}
 			end,
 		    M2 = atom(M1),
-		    M = set_anno(M2, Pos),
+		    M = set_anno(M2, Anno),
 		    if Vs == none -> [M];
-		       true -> [M, set_anno(list(Vs), Pos)]
+		       true -> [M, set_anno(list(Vs), Anno)]
 		    end;
 		export ->
 		    [set_anno(
-		       list(unfold_function_names(Data, Pos)),
-		       Pos)];
+		       list(unfold_function_names(Data, Anno)),
+		       Anno)];
 		import ->
 		    {Module, Imports} = Data,
-		    [set_anno(atom(Module), Pos),
+		    [set_anno(atom(Module), Anno),
 		     set_anno(
-		       list(unfold_function_names(Imports, Pos)),
-		       Pos)];
+		       list(unfold_function_names(Imports, Anno)),
+		       Anno)];
 		file ->
 		    {File, Line} = Data,
-		    [set_anno(string(File), Pos),
-		     set_anno(integer(Line), Pos)];
+		    [set_anno(string(File), Anno),
+		     set_anno(integer(Line), Anno)];
 		record ->
 		    %% Note that we create a tuple as container
 		    %% for the second argument!
 		    {Type, Entries} = Data,
-		    [set_anno(atom(Type), Pos),
+		    [set_anno(atom(Type), Anno),
 		     set_anno(tuple(unfold_record_fields(Entries)),
-			     Pos)];
+			     Anno)];
 		_ ->
 		    %% Standard single-term generic attribute.
-		    [set_anno(abstract(Data), Pos)]
+		    [set_anno(abstract(Data), Anno)]
 	    end;
 	Node1 ->
 	    (data(Node1))#attribute.args
@@ -3487,7 +3486,7 @@ _See also: _`module_qualifier_argument/1`, `module_qualifier_body/1`.
 
 %% `erl_parse' representation:
 %%
-%% {remote, Pos, Module, Arg}
+%% {remote, Anno, Module, Arg}
 %%
 %%	Module = Arg = erl_parse()
 
@@ -3496,10 +3495,10 @@ module_qualifier(Module, Body) ->
 	 #module_qualifier{module = Module, body = Body}).
 
 revert_module_qualifier(Node) ->
-    Pos = get_anno(Node),
+    Anno = get_anno(Node),
     Module = module_qualifier_argument(Node),
     Body = module_qualifier_body(Node),
-    {remote, Pos, Module, Body}.
+    {remote, Anno, Module, Body}.
 
 
 -doc """
@@ -3561,7 +3560,7 @@ _See also: _`function_arity/1`, `function_clauses/1`, `function_name/1`,
 
 %% `erl_parse' representation:
 %%
-%% {function, Pos, Name, Arity, Clauses}
+%% {function, Anno, Name, Arity, Clauses}
 %%
 %%	Name = atom()
 %%	Arity = integer()
@@ -3578,11 +3577,11 @@ function(Name, Clauses) ->
 revert_function(Node) ->
     Name = function_name(Node),
     Clauses = [revert_clause(C) || C <- function_clauses(Node)],
-    Pos = get_anno(Node),
+    Anno = get_anno(Node),
     case type(Name) of
 	atom ->
 	    A = function_arity(Node),
-	    {function, Pos, concrete(Name), A, Clauses};
+	    {function, Anno, concrete(Name), A, Clauses};
 	_ ->
 	    Node
     end.
@@ -3597,8 +3596,8 @@ _See also: _`function/2`.
 
 function_name(Node) ->
     case unwrap(Node) of
-	{function, Pos, Name, _, _} ->
-	    set_anno(atom(Name), Pos);
+	{function, Anno, Name, _, _} ->
+	    set_anno(atom(Name), Anno);
 	Node1 ->
 	    (data(Node1))#func.name
     end.
@@ -3680,7 +3679,7 @@ _See also: _`clause/2`, `clause_body/1`, `clause_guard/1`, `clause_patterns/1`.
 
 %% `erl_parse' representation:
 %%
-%% {clause, Pos, Patterns, Guard, Body}
+%% {clause, Anno, Patterns, Guard, Body}
 %%
 %%	Patterns = [erl_parse()]
 %%	Guard = [[erl_parse()]] | [erl_parse()]
@@ -3717,7 +3716,7 @@ conjunction_list([]) ->
     [].
 
 revert_clause(Node) ->
-    Pos = get_anno(Node),
+    Anno = get_anno(Node),
     Guard = case clause_guard(Node) of
 		none ->
 		    [];
@@ -3733,7 +3732,7 @@ revert_clause(Node) ->
 			    [[E]]	% a single expression
 		    end
 	    end,
-    {clause, Pos, clause_patterns(Node), Guard,
+    {clause, Anno, clause_patterns(Node), Guard,
      clause_body(Node)}.
 
 revert_clause_disjunction(D) ->
@@ -3750,28 +3749,28 @@ revert_clause_disjunction(D) ->
 revert_try_clause(Node) ->
     fold_try_clause(revert_clause(Node)).
 
-fold_try_clause({clause, Pos, [P], Guard, Body}) ->
+fold_try_clause({clause, Anno, [P], Guard, Body}) ->
     P1 = case type(P) of
 	     class_qualifier ->
-		 {tuple, Pos, [class_qualifier_argument(P),
+		 {tuple, Anno, [class_qualifier_argument(P),
 			       class_qualifier_body(P),
 			       class_qualifier_stacktrace(P)]};
 	     _ ->
-		 {tuple, Pos, [{atom, Pos, throw}, P, {var, Pos, '_'}]}
+		 {tuple, Anno, [{atom, Anno, throw}, P, {var, Anno, '_'}]}
 	 end,
-    {clause, Pos, [P1], Guard, Body}.
+    {clause, Anno, [P1], Guard, Body}.
 
 unfold_try_clauses(Cs) ->
     [unfold_try_clause(C) || C <- Cs].
 
-unfold_try_clause({clause, Pos, [{tuple, _, [{atom, _, throw},
+unfold_try_clause({clause, Anno, [{tuple, _, [{atom, _, throw},
                                              V,
                                              {var, _, '_'}]}],
 		   Guard, Body}) ->
-    {clause, Pos, [V], Guard, Body};
-unfold_try_clause({clause, Pos, [{tuple, _, [C, V, Stacktrace]}],
+    {clause, Anno, [V], Guard, Body};
+unfold_try_clause({clause, Anno, [{tuple, _, [C, V, Stacktrace]}],
 		   Guard, Body}) ->
-    {clause, Pos, [class_qualifier(C, V, Stacktrace)], Guard, Body}.
+    {clause, Anno, [class_qualifier(C, V, Stacktrace)], Guard, Body}.
 
 
 -doc """
@@ -3890,7 +3889,7 @@ _See also: _`catch_expr_body/1`.
 
 %% `erl_parse' representation:
 %%
-%% {'catch', Pos, Expr}
+%% {'catch', Anno, Expr}
 %%
 %%	Expr = erl_parse()
 
@@ -3898,9 +3897,9 @@ catch_expr(Expr) ->
     tree(catch_expr, Expr).
 
 revert_catch_expr(Node) ->
-    Pos = get_anno(Node),
+    Anno = get_anno(Node),
     Expr = catch_expr_body(Node),
-    {'catch', Pos, Expr}.
+    {'catch', Anno, Expr}.
 
 
 -doc """
@@ -3932,7 +3931,7 @@ _See also: _`match_expr_body/1`, `match_expr_pattern/1`.
 
 %% `erl_parse' representation:
 %%
-%% {match, Pos, Pattern, Body}
+%% {match, Anno, Pattern, Body}
 %%
 %%	Pattern = Body = erl_parse()
 
@@ -3940,10 +3939,10 @@ match_expr(Pattern, Body) ->
     tree(match_expr, #match_expr{pattern = Pattern, body = Body}).
 
 revert_match_expr(Node) ->
-    Pos = get_anno(Node),
+    Anno = get_anno(Node),
     Pattern = match_expr_pattern(Node),
     Body = match_expr_body(Node),
-    {match, Pos, Pattern, Body}.
+    {match, Anno, Pattern, Body}.
 
 
 -doc """
@@ -3992,7 +3991,7 @@ _See also: _`maybe_expr/2`, `maybe_match_expr_body/1`,
 
 %% `erl_parse' representation:
 %%
-%% {maybe_match, Pos, Pattern, Body}
+%% {maybe_match, Anno, Pattern, Body}
 %%
 %%	Pattern = Body = erl_parse()
 %%
@@ -4001,10 +4000,10 @@ maybe_match_expr(Pattern, Body) ->
     tree(maybe_match_expr, #maybe_match_expr{pattern = Pattern, body = Body}).
 
 revert_maybe_match_expr(Node) ->
-    Pos = get_anno(Node),
+    Anno = get_anno(Node),
     Pattern = maybe_match_expr_pattern(Node),
     Body = maybe_match_expr_body(Node),
-    {maybe_match, Pos, Pattern, Body}.
+    {maybe_match, Anno, Pattern, Body}.
 
 -doc """
 Returns the pattern subtree of a `maybe_expr` node.
@@ -4100,7 +4099,7 @@ _See also: _`infix_expr_left/1`, `infix_expr_operator/1`, `infix_expr_right/1`,
 
 %% `erl_parse' representation:
 %%
-%% {op, Pos, Operator, Left, Right}
+%% {op, Anno, Operator, Left, Right}
 %%
 %%	Operator = atom()
 %%	Left = Right = erl_parse()
@@ -4110,7 +4109,7 @@ infix_expr(Left, Operator, Right) ->
 				 right = Right}).
 
 revert_infix_expr(Node) ->
-    Pos = get_anno(Node),
+    Anno = get_anno(Node),
     Operator = infix_expr_operator(Node),
     Left = infix_expr_left(Node),
     Right = infix_expr_right(Node),
@@ -4118,7 +4117,7 @@ revert_infix_expr(Node) ->
 	operator ->
 	    %% Note that the operator itself is not revertible out
 	    %% of context.
-	    {op, Pos, operator_name(Operator), Left, Right};
+	    {op, Anno, operator_name(Operator), Left, Right};
 	_ ->
 	    Node
     end.
@@ -4149,8 +4148,8 @@ _See also: _`infix_expr/3`.
 
 infix_expr_operator(Node) ->
     case unwrap(Node) of
-	{op, Pos, Operator, _, _} ->
-	    set_anno(operator(Operator), Pos);
+	{op, Anno, Operator, _, _} ->
+	    set_anno(operator(Operator), Anno);
 	Node1 ->
 	    (data(Node1))#infix_expr.operator
     end.
@@ -4185,7 +4184,7 @@ _See also: _`infix_expr/3`, `prefix_expr_argument/1`, `prefix_expr_operator/1`.
 
 %% `erl_parse' representation:
 %%
-%% {op, Pos, Operator, Arg}
+%% {op, Anno, Operator, Arg}
 %%
 %%	Operator = atom()
 %%	Argument = erl_parse()
@@ -4195,14 +4194,14 @@ prefix_expr(Operator, Argument) ->
 				   argument = Argument}).
 
 revert_prefix_expr(Node) ->
-    Pos = get_anno(Node),
+    Anno = get_anno(Node),
     Operator = prefix_expr_operator(Node),
     Argument = prefix_expr_argument(Node),
     case type(Operator) of
 	operator ->
 	    %% Note that the operator itself is not revertible out
 	    %% of context.
-	    {op, Pos, operator_name(Operator), Argument};
+	    {op, Anno, operator_name(Operator), Argument};
 	_ ->
 	    Node
     end.
@@ -4217,8 +4216,8 @@ _See also: _`prefix_expr/2`.
 
 prefix_expr_operator(Node) ->
     case unwrap(Node) of
-	{op, Pos, Operator, _} ->
-	    set_anno(operator(Operator), Pos);
+	{op, Anno, Operator, _} ->
+	    set_anno(operator(Operator), Anno);
 	Node1 ->
 	    (data(Node1))#prefix_expr.operator
     end.
@@ -4308,7 +4307,7 @@ _See also: _`record_expr/3`, `record_index_expr_field/1`,
 
 %% `erl_parse' representation:
 %%
-%% {record_index, Pos, Type, Field}
+%% {record_index, Anno, Type, Field}
 %%
 %%	Type = atom()
 %%	Field = erl_parse()
@@ -4318,12 +4317,12 @@ record_index_expr(Type, Field) ->
 					       field = Field}).
 
 revert_record_index_expr(Node) ->
-    Pos = get_anno(Node),
+    Anno = get_anno(Node),
     Type = record_index_expr_type(Node),
     Field = record_index_expr_field(Node),
     case type(Type) of
 	atom ->
-	    {record_index, Pos, concrete(Type), Field};
+	    {record_index, Anno, concrete(Type), Field};
 	_ ->
 	    Node
     end.
@@ -4338,8 +4337,8 @@ _See also: _`record_index_expr/2`.
 
 record_index_expr_type(Node) ->
     case unwrap(Node) of
-	{record_index, Pos, Type, _} ->
-	    set_anno(atom(Type), Pos);
+	{record_index, Anno, Type, _} ->
+	    set_anno(atom(Type), Anno);
 	Node1 ->
 	    (data(Node1))#record_index_expr.type
     end.
@@ -4378,7 +4377,7 @@ _See also: _`record_access_argument/1`, `record_access_field/1`,
 
 %% `erl_parse' representation:
 %%
-%% {record_field, Pos, Argument, Type, Field}
+%% {record_field, Anno, Argument, Type, Field}
 %%
 %%	Argument = Field = erl_parse()
 %%	Type = atom()
@@ -4389,13 +4388,13 @@ record_access(Argument, Type, Field) ->
 				      field = Field}).
 
 revert_record_access(Node) ->
-    Pos = get_anno(Node),
+    Anno = get_anno(Node),
     Argument = record_access_argument(Node),
     Type = record_access_type(Node),
     Field = record_access_field(Node),
     case type(Type) of
         atom ->
-            {record_field, Pos, Argument, concrete(Type), Field};
+            {record_field, Anno, Argument, concrete(Type), Field};
         _ ->
             Node
     end.
@@ -4426,8 +4425,8 @@ _See also: _`record_access/3`.
 
 record_access_type(Node) ->
     case unwrap(Node) of
-	{record_field, Pos, _, Type, _} ->
-	    set_anno(atom(Type), Pos);
+	{record_field, Anno, _, Type, _} ->
+	    set_anno(atom(Type), Anno);
 	Node1 ->
 	    (data(Node1))#record_access.type
     end.
@@ -4478,14 +4477,14 @@ _See also: _`record_access/3`, `record_expr/2`, `record_expr_argument/1`,
 
 %% `erl_parse' representation:
 %%
-%% {record, Pos, Type, Fields}
-%% {record, Pos, Argument, Type, Fields}
+%% {record, Anno, Type, Fields}
+%% {record, Anno, Argument, Type, Fields}
 %%
 %%	Argument = erl_parse()
 %%	Type = atom()
 %%	Fields = [Entry]
-%%	Entry = {record_field, Pos, Field, Value}
-%%	      | {record_field, Pos, Field}
+%%	Entry = {record_field, Anno, Field, Value}
+%%	      | {record_field, Anno, Field}
 %%	Field = Value = erl_parse()
 
 record_expr(Argument, Type, Fields) ->
@@ -4493,7 +4492,7 @@ record_expr(Argument, Type, Fields) ->
 				   type = Type, fields = Fields}).
 
 revert_record_expr(Node) ->
-    Pos = get_anno(Node),
+    Anno = get_anno(Node),
     Argument = record_expr_argument(Node),
     Type = record_expr_type(Node),
     Fields = record_expr_fields(Node),
@@ -4503,9 +4502,9 @@ revert_record_expr(Node) ->
 	    Fs = fold_record_fields(Fields),
 	    case Argument of
 		none ->
-		    {record, Pos, T, Fs};
+		    {record, Anno, T, Fs};
 		_ ->
-		    {record, Pos, Argument, T, Fs}
+		    {record, Anno, Argument, T, Fs}
 	    end;
 	_ ->
 	    Node
@@ -4543,10 +4542,10 @@ _See also: _`record_expr/3`.
 
 record_expr_type(Node) ->
     case unwrap(Node) of
-	{record, Pos, Type, _} ->
-	    set_anno(atom(Type), Pos);
-	{record, Pos, _, Type, _} ->
-	    set_anno(atom(Type), Pos);
+	{record, Anno, Type, _} ->
+	    set_anno(atom(Type), Anno);
+	{record, Anno, _, Type, _} ->
+	    set_anno(atom(Type), Anno);
 	Node1 ->
 	    (data(Node1))#record_expr.type
     end.
@@ -4608,7 +4607,7 @@ _See also: _`application/3`, `application_arguments/1`,
 
 %% `erl_parse' representation:
 %%
-%% {call, Pos, Operator, Args}
+%% {call, Anno, Operator, Args}
 %%
 %%	Operator = erl_parse()
 %%	Arguments = [erl_parse()]
@@ -4618,10 +4617,10 @@ application(Operator, Arguments) ->
 				   arguments = Arguments}).
 
 revert_application(Node) ->
-    Pos = get_anno(Node),
+    Anno = get_anno(Node),
     Operator = application_operator(Node),
     Arguments = application_arguments(Node),
-    {call, Pos, Operator, Arguments}.
+    {call, Anno, Operator, Arguments}.
 
 
 -doc """
@@ -4671,7 +4670,7 @@ _See also: _`annotated_type_body/1`, `annotated_type_name/1`.
 
 %% `erl_parse' representation:
 %%
-%% {ann_type, Pos, [Name, Type]}
+%% {ann_type, Anno, [Name, Type]}
 %%
 %%      Name = erl_parse()
 %%      Type = erl_parse()
@@ -4680,10 +4679,10 @@ annotated_type(Name, Type) ->
     tree(annotated_type, #annotated_type{name = Name, body = Type}).
 
 revert_annotated_type(Node) ->
-    Pos = get_anno(Node),
+    Anno = get_anno(Node),
     Name = annotated_type_name(Node),
     Type = annotated_type_body(Node),
-    {ann_type, Pos, [Name, Type]}.
+    {ann_type, Anno, [Name, Type]}.
 
 
 -doc """
@@ -4727,14 +4726,14 @@ The result represents "`fun()`".
 
 %% `erl_parse' representation:
 %%
-%% {type, Pos, 'fun', []}
+%% {type, Anno, 'fun', []}
 
 fun_type() ->
     tree(fun_type).
 
 revert_fun_type(Node) ->
-    Pos = get_anno(Node),
-    {type, Pos, 'fun', []}.
+    Anno = get_anno(Node),
+    {type, Anno, 'fun', []}.
 
 
 -doc """
@@ -4777,8 +4776,8 @@ _See also: _`type_application/3`, `type_application_arguments/1`,
 
 %% `erl_parse' representation:
 %%
-%% {remote, Pos, [Module, Name, Arguments]} |
-%% {type, Pos, Name, Arguments}
+%% {remote, Anno, [Module, Name, Arguments]} |
+%% {type, Anno, Name, Arguments}
 %%
 %%      Module = erl_parse()
 %%      Name = atom()
@@ -4789,16 +4788,16 @@ type_application(TypeName, Arguments) ->
          #type_application{type_name = TypeName, arguments = Arguments}).
 
 revert_type_application(Node) ->
-    Pos = get_anno(Node),
+    Anno = get_anno(Node),
     TypeName = type_application_name(Node),
     Arguments = type_application_arguments(Node),
     case type(TypeName) of
         module_qualifier ->
             Module = module_qualifier_argument(TypeName),
             Name = module_qualifier_body(TypeName),
-            {remote_type, Pos, [Module, Name, Arguments]};
+            {remote_type, Anno, [Module, Name, Arguments]};
         atom ->
-            {type, Pos, atom_value(TypeName), Arguments}
+            {type, Anno, atom_value(TypeName), Arguments}
     end.
 
 
@@ -4813,8 +4812,8 @@ type_application_name(Node) ->
     case unwrap(Node) of
         {remote_type, _, [Module, Name, _]} ->
             module_qualifier(Module, Name);
-        {type, Pos, Name, _} ->
-            set_anno(atom(Name), Pos);
+        {type, Anno, Name, _} ->
+            set_anno(atom(Name), Anno);
         Node1 ->
             (data(Node1))#type_application.type_name
     end.
@@ -4853,10 +4852,10 @@ bitstring_type(M, N) ->
     tree(bitstring_type, #bitstring_type{m = M, n =N}).
 
 revert_bitstring_type(Node) ->
-    Pos = get_anno(Node),
+    Anno = get_anno(Node),
     M = bitstring_type_m(Node),
     N = bitstring_type_n(Node),
-    {type, Pos, binary, [M, N]}.
+    {type, Anno, binary, [M, N]}.
 
 -doc """
 Returns the number of start bits, `M`, of a `bitstring_type` node.
@@ -4905,7 +4904,7 @@ _See also: _`constrained_function_type_argument/1`,
 
 %% `erl_parse' representation:
 %%
-%% {type, Pos, bounded_fun, [FunctionType, FunctionConstraint]}
+%% {type, Anno, bounded_fun, [FunctionType, FunctionConstraint]}
 %%
 %%      FunctionType = erl_parse()
 %%      FunctionConstraint = [erl_parse()]
@@ -4917,11 +4916,11 @@ constrained_function_type(FunctionType, FunctionConstraint) ->
                                     argument = Conj}).
 
 revert_constrained_function_type(Node) ->
-    Pos = get_anno(Node),
+    Anno = get_anno(Node),
     FunctionType = constrained_function_type_body(Node),
     FunctionConstraint =
         conjunction_body(constrained_function_type_argument(Node)),
-    {type, Pos, bounded_fun, [FunctionType, FunctionConstraint]}.
+    {type, Anno, bounded_fun, [FunctionType, FunctionConstraint]}.
 
 
 -doc """
@@ -4983,8 +4982,8 @@ _See also: _`function_type_arguments/1`, `function_type_return/1`.
 
 %% `erl_parse' representation:
 %%
-%% {type, Pos, 'fun', [{type, Pos, product, Arguments}, Type]}
-%% {type, Pos, 'fun', [{type, Pos, any}, Type]}
+%% {type, Anno, 'fun', [{type, Anno, product, Arguments}, Type]}
+%% {type, Anno, 'fun', [{type, Anno, any}, Type]}
 %%
 %%      Arguments = [erl_parse()]
 %%      Type = erl_parse()
@@ -4994,13 +4993,13 @@ function_type(Arguments, Return) ->
          #function_type{arguments = Arguments, return = Return}).
 
 revert_function_type(Node) ->
-    Pos = get_anno(Node),
+    Anno = get_anno(Node),
     Type = function_type_return(Node),
     case function_type_arguments(Node) of
         any_arity ->
-            {type, Pos, 'fun', [{type, Pos, any}, Type]};
+            {type, Anno, 'fun', [{type, Anno, any}, Type]};
         Arguments ->
-            {type, Pos, 'fun', [{type, Pos, product, Arguments}, Type]}
+            {type, Anno, 'fun', [{type, Anno, product, Arguments}, Type]}
     end.
 
 
@@ -5058,9 +5057,9 @@ _See also: _`constraint_argument/1`, `constraint_body/1`.
 
 %% `erl_parse' representation:
 %%
-%% {type, Pos, constraint, [Name, [Var, Type]]}
+%% {type, Anno, constraint, [Name, [Var, Type]]}
 %%
-%%      Name = {atom, Pos, is_subtype}
+%%      Name = {atom, Anno, is_subtype}
 %%      Var = erl_parse()
 %%      Type = erl_parse()
 
@@ -5069,10 +5068,10 @@ constraint(Name, Types) ->
          #constraint{name = Name, types = Types}).
 
 revert_constraint(Node) ->
-    Pos = get_anno(Node),
+    Anno = get_anno(Node),
     Name = constraint_argument(Node),
     Types = constraint_body(Node),
-    {type, Pos, constraint, [Name, Types]}.
+    {type, Anno, constraint, [Name, Types]}.
 
 
 -doc """
@@ -5121,16 +5120,16 @@ _See also: _`map_type/1`, `map_type_assoc_name/1`, `map_type_assoc_value/1`.
 
 %% `erl_parse' representation:
 %%
-%% {type, Pos, map_field_assoc, [Name, Value]}
+%% {type, Anno, map_field_assoc, [Name, Value]}
 
 map_type_assoc(Name, Value) ->
     tree(map_type_assoc, #map_type_assoc{name = Name, value = Value}).
 
 revert_map_type_assoc(Node) ->
-    Pos = get_anno(Node),
+    Anno = get_anno(Node),
     Name = map_type_assoc_name(Node),
     Value = map_type_assoc_value(Node),
-    {type, Pos, map_field_assoc, [Name, Value]}.
+    {type, Anno, map_field_assoc, [Name, Value]}.
 
 
 -doc """
@@ -5180,16 +5179,16 @@ _See also: _`map_type/1`, `map_type_exact_name/1`, `map_type_exact_value/1`.
 
 %% `erl_parse' representation:
 %%
-%% {type, Pos, map_field_exact, [Name, Value]}
+%% {type, Anno, map_field_exact, [Name, Value]}
 
 map_type_exact(Name, Value) ->
     tree(map_type_exact, #map_type_exact{name = Name, value = Value}).
 
 revert_map_type_exact(Node) ->
-    Pos = get_anno(Node),
+    Anno = get_anno(Node),
     Name = map_type_exact_name(Node),
     Value = map_type_exact_value(Node),
-    {type, Pos, map_field_exact, [Name, Value]}.
+    {type, Anno, map_field_exact, [Name, Value]}.
 
 
 -doc """
@@ -5245,8 +5244,8 @@ _See also: _`map_type_fields/1`.
 
 %% `erl_parse' representation:
 %%
-%% {type, Pos, map, [Field]}
-%% {type, Pos, map, any}
+%% {type, Anno, map, [Field]}
+%% {type, Anno, map, any}
 %%
 %%      Field = erl_parse()
 
@@ -5254,12 +5253,12 @@ map_type(Fields) ->
     tree(map_type, Fields).
 
 revert_map_type(Node) ->
-    Pos = get_anno(Node),
+    Anno = get_anno(Node),
     case map_type_fields(Node) of
         any_size ->
-            {type, Pos, map, any};
+            {type, Anno, map, any};
         Fields ->
-            {type, Pos, map, Fields}
+            {type, Anno, map, Fields}
     end.
 
 -doc """
@@ -5300,7 +5299,7 @@ _See also: _`integer_range_type_high/1`, `integer_range_type_low/1`.
 
 %% `erl_parse' representation:
 %%
-%% {type, Pos, range, [Low, High]}
+%% {type, Anno, range, [Low, High]}
 %%
 %%      Low = erl_parse()
 %%      High = erl_parse()
@@ -5309,10 +5308,10 @@ integer_range_type(Low, High) ->
     tree(integer_range_type, #integer_range_type{low = Low, high = High}).
 
 revert_integer_range_type(Node) ->
-    Pos = get_anno(Node),
+    Anno = get_anno(Node),
     Low = integer_range_type_low(Node),
     High = integer_range_type_high(Node),
-    {type, Pos, range, [Low, High]}.
+    {type, Anno, range, [Low, High]}.
 
 
 -doc """
@@ -5363,7 +5362,7 @@ _See also: _`record_type_fields/1`, `record_type_name/1`.
 
 %% `erl_parse' representation:
 %%
-%% {type, Pos, record, [Name|Fields]}
+%% {type, Anno, record, [Name|Fields]}
 %%
 %%      Name = erl_parse()
 %%      Fields = [erl_parse()]
@@ -5372,10 +5371,10 @@ record_type(Name, Fields) ->
     tree(record_type, #record_type{name = Name, fields = Fields}).
 
 revert_record_type(Node) ->
-    Pos = get_anno(Node),
+    Anno = get_anno(Node),
     Name = record_type_name(Node),
     Fields = record_type_fields(Node),
-    {type, Pos, record, [Name | Fields]}.
+    {type, Anno, record, [Name | Fields]}.
 
 
 -doc """
@@ -5423,7 +5422,7 @@ _See also: _`record_type_field_name/1`, `record_type_field_type/1`.
 
 %% `erl_parse' representation:
 %%
-%% {type, Pos, field_type, [Name, Type]}
+%% {type, Anno, field_type, [Name, Type]}
 %%
 %%      Name = erl_parse()
 %%      Type = erl_parse()
@@ -5432,10 +5431,10 @@ record_type_field(Name, Type) ->
     tree(record_type_field, #record_type_field{name = Name, type = Type}).
 
 revert_record_type_field(Node) ->
-    Pos = get_anno(Node),
+    Anno = get_anno(Node),
     Name = record_type_field_name(Node),
     Type = record_type_field_type(Node),
-    {type, Pos, field_type, [Name, Type]}.
+    {type, Anno, field_type, [Name, Type]}.
 
 
 -doc """
@@ -5490,8 +5489,8 @@ _See also: _`tuple_type_elements/1`.
 
 %% `erl_parse' representation:
 %%
-%% {type, Pos, tuple, [Element]}
-%% {type, Pos, tuple, any}
+%% {type, Anno, tuple, [Element]}
+%% {type, Anno, tuple, any}
 %%
 %%      Element = erl_parse()
 
@@ -5499,12 +5498,12 @@ tuple_type(Elements) ->
     tree(tuple_type, Elements).
 
 revert_tuple_type(Node) ->
-    Pos = get_anno(Node),
+    Anno = get_anno(Node),
     case tuple_type_elements(Node) of
         any_size ->
-            {type, Pos, tuple, any};
+            {type, Anno, tuple, any};
         TypeElements ->
-            {type, Pos, tuple, TypeElements}
+            {type, Anno, tuple, TypeElements}
     end.
 
 
@@ -5543,7 +5542,7 @@ _See also: _`type_union_types/1`.
 
 %% `erl_parse' representation:
 %%
-%% {type, Pos, union, Elements}
+%% {type, Anno, union, Elements}
 %%
 %%      Elements = [erl_parse()]
 
@@ -5551,8 +5550,8 @@ type_union(Types) ->
     tree(type_union, Types).
 
 revert_type_union(Node) ->
-    Pos = get_anno(Node),
-    {type, Pos, union, type_union_types(Node)}.
+    Anno = get_anno(Node),
+    {type, Anno, union, type_union_types(Node)}.
 
 
 -doc """
@@ -5589,7 +5588,7 @@ _See also: _`type_application/2`, `user_type_application_arguments/1`,
 
 %% `erl_parse' representation:
 %%
-%% {user_type, Pos, Name, Arguments}
+%% {user_type, Anno, Name, Arguments}
 %%
 %%      Name = erl_parse()
 %%      Arguments = [Type]
@@ -5600,10 +5599,10 @@ user_type_application(TypeName, Arguments) ->
          #user_type_application{type_name = TypeName, arguments = Arguments}).
 
 revert_user_type_application(Node) ->
-    Pos = get_anno(Node),
+    Anno = get_anno(Node),
     TypeName = user_type_application_name(Node),
     Arguments = user_type_application_arguments(Node),
-    {user_type, Pos, atom_value(TypeName), Arguments}.
+    {user_type, Anno, atom_value(TypeName), Arguments}.
 
 
 -doc """
@@ -5615,8 +5614,8 @@ _See also: _`user_type_application/2`.
 
 user_type_application_name(Node) ->
     case unwrap(Node) of
-        {user_type, Pos, Name, _} ->
-            set_anno(atom(Name), Pos);
+        {user_type, Anno, Name, _} ->
+            set_anno(atom(Name), Anno);
         Node1 ->
             (data(Node1))#user_type_application.type_name
     end.
@@ -5695,7 +5694,7 @@ _See also: _`generator/2`, `list_comp_body/1`, `list_comp_template/1`.
 
 %% `erl_parse' representation:
 %%
-%% {lc, Pos, Template, Body}
+%% {lc, Anno, Template, Body}
 %%
 %%	Template = erl_parse()
 %%	Body = [erl_parse()] \ []
@@ -5704,10 +5703,10 @@ list_comp(Template, Body) ->
     tree(list_comp, #list_comp{template = Template, body = Body}).
 
 revert_list_comp(Node) ->
-    Pos = get_anno(Node),
+    Anno = get_anno(Node),
     Template = list_comp_template(Node),
     Body = list_comp_body(Node),
-    {lc, Pos, Template, Body}.
+    {lc, Anno, Template, Body}.
 
 
 -doc """
@@ -5757,7 +5756,7 @@ _See also: _`binary_comp_body/1`, `binary_comp_template/1`, `generator/2`.
 
 %% `erl_parse' representation:
 %%
-%% {bc, Pos, Template, Body}
+%% {bc, Anno, Template, Body}
 %%
 %%	Template = erl_parse()
 %%	Body = [erl_parse()] \ []
@@ -5766,10 +5765,10 @@ binary_comp(Template, Body) ->
     tree(binary_comp, #binary_comp{template = Template, body = Body}).
 
 revert_binary_comp(Node) ->
-    Pos = get_anno(Node),
+    Anno = get_anno(Node),
     Template = binary_comp_template(Node),
     Body = binary_comp_body(Node),
-    {bc, Pos, Template, Body}.
+    {bc, Anno, Template, Body}.
 
 
 -doc """
@@ -5819,7 +5818,7 @@ _See also: _`generator/2`, `map_comp_body/1`, `map_comp_template/1`.
 
 %% `erl_parse' representation:
 %%
-%% {mc, Pos, Template, Body}
+%% {mc, Anno, Template, Body}
 %%
 %%	Template = erl_parse()
 %%	Body = [erl_parse()] \ []
@@ -5828,10 +5827,10 @@ map_comp(Template, Body) ->
     tree(map_comp, #map_comp{template = Template, body = Body}).
 
 revert_map_comp(Node) ->
-    Pos = get_anno(Node),
+    Anno = get_anno(Node),
     Template = map_comp_template(Node),
     Body = map_comp_body(Node),
-    {mc, Pos, Template, Body}.
+    {mc, Anno, Template, Body}.
 
 
 -doc """
@@ -5881,7 +5880,7 @@ _See also: _`binary_comp/2`, `generator_body/1`, `generator_pattern/1`,
 
 %% `erl_parse' representation:
 %%
-%% {generate, Pos, Pattern, Body}
+%% {generate, Anno, Pattern, Body}
 %%
 %%	Pattern = Body = erl_parse()
 
@@ -5889,10 +5888,10 @@ generator(Pattern, Body) ->
     tree(generator, #generator{pattern = Pattern, body = Body}).
 
 revert_generator(Node) ->
-    Pos = get_anno(Node),
+    Anno = get_anno(Node),
     Pattern = generator_pattern(Node),
     Body = generator_body(Node),
-    {generate, Pos, Pattern, Body}.
+    {generate, Anno, Pattern, Body}.
 
 
 -doc """
@@ -5943,7 +5942,7 @@ _See also: _`binary_comp/2`, `strict_generator_body/1`,
 
 %% `erl_parse' representation:
 %%
-%% {generate_strict, Pos, Pattern, Body}
+%% {generate_strict, Anno, Pattern, Body}
 %%
 %%	Pattern = Body = erl_parse()
 
@@ -5951,10 +5950,10 @@ strict_generator(Pattern, Body) ->
     tree(strict_generator, #strict_generator{pattern = Pattern, body = Body}).
 
 revert_strict_generator(Node) ->
-    Pos = get_anno(Node),
+    Anno = get_anno(Node),
     Pattern = strict_generator_pattern(Node),
     Body = strict_generator_body(Node),
-    {generate_strict, Pos, Pattern, Body}.
+    {generate_strict, Anno, Pattern, Body}.
 
 
 -doc """
@@ -6005,7 +6004,7 @@ _See also: _`binary_comp/2`, `binary_generator_body/1`,
 
 %% `erl_parse' representation:
 %%
-%% {b_generate, Pos, Pattern, Body}
+%% {b_generate, Anno, Pattern, Body}
 %%
 %%	Pattern = Body = erl_parse()
 
@@ -6013,10 +6012,10 @@ binary_generator(Pattern, Body) ->
     tree(binary_generator, #binary_generator{pattern = Pattern, body = Body}).
 
 revert_binary_generator(Node) ->
-    Pos = get_anno(Node),
+    Anno = get_anno(Node),
     Pattern = binary_generator_pattern(Node),
     Body = binary_generator_body(Node),
-    {b_generate, Pos, Pattern, Body}.
+    {b_generate, Anno, Pattern, Body}.
 
 
 -doc """
@@ -6067,7 +6066,7 @@ _See also: _`binary_comp/2`, `strict_binary_generator_body/1`,
 
 %% `erl_parse' representation:
 %%
-%% {b_generate_strict, Pos, Pattern, Body}
+%% {b_generate_strict, Anno, Pattern, Body}
 %%
 %%	Pattern = Body = erl_parse()
 
@@ -6075,10 +6074,10 @@ strict_binary_generator(Pattern, Body) ->
     tree(strict_binary_generator, #strict_binary_generator{pattern = Pattern, body = Body}).
 
 revert_strict_binary_generator(Node) ->
-    Pos = get_anno(Node),
+    Anno = get_anno(Node),
     Pattern = strict_binary_generator_pattern(Node),
     Body = strict_binary_generator_body(Node),
-    {b_generate_strict, Pos, Pattern, Body}.
+    {b_generate_strict, Anno, Pattern, Body}.
 
 
 -doc """
@@ -6129,7 +6128,7 @@ _See also: _`binary_comp/2`, `list_comp/2`, `map_comp/2`, `map_generator_body/1`
 
 %% `erl_parse' representation:
 %%
-%% {m_generate, Pos, Pattern, Body}
+%% {m_generate, Anno, Pattern, Body}
 %%
 %%	Pattern = Body = erl_parse()
 
@@ -6137,10 +6136,10 @@ map_generator(Pattern, Body) ->
     tree(map_generator, #map_generator{pattern = Pattern, body = Body}).
 
 revert_map_generator(Node) ->
-    Pos = get_anno(Node),
+    Anno = get_anno(Node),
     Pattern = map_generator_pattern(Node),
     Body = map_generator_body(Node),
-    {m_generate, Pos, Pattern, Body}.
+    {m_generate, Anno, Pattern, Body}.
 
 
 -doc """
@@ -6191,7 +6190,7 @@ _See also: _`list_comp/2`, `map_comp/2`,
 
 %% `erl_parse' representation:
 %%
-%% {m_generate_strict, Pos, Pattern, Body}
+%% {m_generate_strict, Anno, Pattern, Body}
 %%
 %%	Pattern = Body = erl_parse()
 
@@ -6199,10 +6198,10 @@ strict_map_generator(Pattern, Body) ->
     tree(strict_map_generator, #strict_map_generator{pattern = Pattern, body = Body}).
 
 revert_strict_map_generator(Node) ->
-    Pos = get_anno(Node),
+    Anno = get_anno(Node),
     Pattern = strict_map_generator_pattern(Node),
     Body = strict_map_generator_body(Node),
-    {m_generate_strict, Pos, Pattern, Body}.
+    {m_generate_strict, Anno, Pattern, Body}.
 
 
 -doc """
@@ -6251,7 +6250,7 @@ _See also: _`binary_comp/2`, `list_comp/2`, `map_comp/2`, `map_generator_body/1`
 
 %% `erl_parse' representation:
 %%
-%% {zip, Pos, Body}
+%% {zip, Anno, Body}
 %%
 %%	Body = erl_parse()
 
@@ -6259,9 +6258,9 @@ zip_generator(Body) ->
     tree(zip_generator, #zip_generator{body = Body}).
 
 revert_zip_generator(Node) ->
-    Pos = get_anno(Node),
+    Anno = get_anno(Node),
     Body = zip_generator_body(Node),
-    {zip, Pos, Body}.
+    {zip, Anno, Body}.
 
 
 -doc """
@@ -6293,7 +6292,7 @@ _See also: _`block_expr_body/1`.
 
 %% `erl_parse' representation:
 %%
-%% {block, Pos, Body}
+%% {block, Anno, Body}
 %%
 %%	    Body = [erl_parse()] \ []
 
@@ -6301,9 +6300,9 @@ block_expr(Body) ->
     tree(block_expr, Body).
 
 revert_block_expr(Node) ->
-    Pos = get_anno(Node),
+    Anno = get_anno(Node),
     Body = block_expr_body(Node),
-    {block, Pos, Body}.
+    {block, Anno, Body}.
 
 
 -doc """
@@ -6337,7 +6336,7 @@ _See also: _`case_expr/2`, `clause/3`, `if_expr_clauses/1`.
 
 %% `erl_parse' representation:
 %%
-%% {'if', Pos, Clauses}
+%% {'if', Anno, Clauses}
 %%
 %%	Clauses = [Clause] \ []
 %%	Clause = {clause, ...}
@@ -6348,9 +6347,9 @@ if_expr(Clauses) ->
     tree(if_expr, Clauses).
 
 revert_if_expr(Node) ->
-    Pos = get_anno(Node),
+    Anno = get_anno(Node),
     Clauses = [revert_clause(C) || C <- if_expr_clauses(Node)],
-    {'if', Pos, Clauses}.
+    {'if', Anno, Clauses}.
 
 
 -doc """
@@ -6388,7 +6387,7 @@ _See also: _`case_expr_argument/1`, `case_expr_clauses/1`, `clause/3`,
 
 %% `erl_parse' representation:
 %%
-%% {'case', Pos, Argument, Clauses}
+%% {'case', Anno, Argument, Clauses}
 %%
 %%	Argument = erl_parse()
 %%	Clauses = [Clause] \ []
@@ -6401,10 +6400,10 @@ case_expr(Argument, Clauses) ->
 			       clauses = Clauses}).
 
 revert_case_expr(Node) ->
-    Pos = get_anno(Node),
+    Anno = get_anno(Node),
     Argument = case_expr_argument(Node),
     Clauses = [revert_clause(C) || C <- case_expr_clauses(Node)],
-    {'case', Pos, Argument, Clauses}.
+    {'case', Anno, Argument, Clauses}.
 
 
 -doc """
@@ -6454,7 +6453,7 @@ _See also: _`clause/3`, `else_expr_clauses/1`, `maybe_expr/2`.
 
 %% `erl_parse' representation:
 %%
-%% {'pos', Pos, Clauses}
+%% {'else', Anno, Clauses}
 %%
 %%	Clauses = [Clause] \ []
 %%	Clause = {clause, ...}
@@ -6465,9 +6464,9 @@ else_expr(Clauses) ->
     tree(else_expr, Clauses).
 
 revert_else_expr(Node) ->
-    Pos = get_anno(Node),
+    Anno = get_anno(Node),
     Clauses = else_expr_clauses(Node),
-    {'else', Pos, Clauses}.
+    {'else', Anno, Clauses}.
 
 -doc """
 Returns the list of clause subtrees of an `else_expr` node.
@@ -6497,11 +6496,11 @@ maybe_expr(Body) ->
 
 %% `erl_parse' representation:
 %%
-%% {block, Pos, Body}
-%% {block, Pos, Body, Else}
+%% {block, Anno, Body}
+%% {block, Anno, Body, Else}
 %%
 %%    Body = [erl_parse()] \ []
-%%    Else = {'else', Pos, Clauses}
+%%    Else = {'else', Anno, Clauses}
 %%    Clauses = [Clause] \ []
 %%    Clause = {clause, ...}
 
@@ -6522,24 +6521,24 @@ _See also: _`maybe_expr_body/1`, `maybe_expr_else/1`.
 
 %% `erl_parse' representation:
 %%
-%% {'maybe', Pos, Body}
-%% {'maybe', Pos, Body, Else}
+%% {'maybe', Anno, Body}
+%% {'maybe', Anno, Body, Else}
 %%
 %%    Body = [erl_parse()] \ []
-%%    Else = {'else', Pos, Clauses}
+%%    Else = {'else', Anno, Clauses}
 %%    Body = erl_parse()
 
 maybe_expr(Body, OptionalElse) ->
     tree(maybe_expr, #maybe_expr{body = Body,
                                  'else' = OptionalElse}).
 revert_maybe_expr(Node) ->
-    Pos = get_anno(Node),
+    Anno = get_anno(Node),
     Body = maybe_expr_body(Node),
     case maybe_expr_else(Node) of
         none ->
-            {'maybe', Pos, Body};
+            {'maybe', Anno, Body};
         Else ->
-            {'maybe', Pos, Body, Else}
+            {'maybe', Anno, Body, Else}
     end.
 
 -doc """
@@ -6611,8 +6610,8 @@ _See also: _`case_expr/2`, `clause/3`, `receive_expr/1`,
 
 %% `erl_parse' representation:
 %%
-%% {'receive', Pos, Clauses}
-%% {'receive', Pos, Clauses, Timeout, Action}
+%% {'receive', Anno, Clauses}
+%% {'receive', Anno, Clauses, Timeout, Action}
 %%
 %%	Clauses = [Clause] \ []
 %%	Clause = {clause, ...}
@@ -6635,15 +6634,15 @@ receive_expr(Clauses, Timeout, Action) ->
 				     action = Action1}).
 
 revert_receive_expr(Node) ->
-    Pos = get_anno(Node),
+    Anno = get_anno(Node),
     Clauses = [revert_clause(C) || C <- receive_expr_clauses(Node)],
     Timeout = receive_expr_timeout(Node),
     Action = receive_expr_action(Node),
     case Timeout of
 	none ->
-	    {'receive', Pos, Clauses};
+	    {'receive', Anno, Clauses};
 	_ ->
-	    {'receive', Pos, Clauses, Timeout, Action}
+	    {'receive', Anno, Clauses, Timeout, Action}
     end.
 
 
@@ -6762,7 +6761,7 @@ _See also: _`case_expr/2`, `class_qualifier/2`, `clause/3`, `try_after_expr/2`,
 -spec try_expr([syntaxTree()], [syntaxTree()],
 	       [syntaxTree()], [syntaxTree()]) -> syntaxTree().
 
-%% {'try', Pos, Body, Clauses, Handlers, After}
+%% {'try', Anno, Body, Clauses, Handlers, After}
 %%
 %%	Body = [erl_parse()]
 %%	Clauses = [Clause]
@@ -6779,12 +6778,12 @@ try_expr(Body, Clauses, Handlers, After) ->
 			     'after' = After}).
 
 revert_try_expr(Node) ->
-    Pos = get_anno(Node),
+    Anno = get_anno(Node),
     Body = try_expr_body(Node),
     Clauses = [revert_clause(C) || C <- try_expr_clauses(Node)],
     Handlers = [revert_try_clause(C) || C <- try_expr_handlers(Node)],
     After = try_expr_after(Node),
-    {'try', Pos, Body, Clauses, Handlers, After}.
+    {'try', Anno, Body, Clauses, Handlers, After}.
 
 
 -doc """
@@ -6981,8 +6980,8 @@ _See also: _`arity_qualifier/2`, `implicit_fun/2`, `implicit_fun/3`,
 
 %% `erl_parse' representation:
 %%
-%% {'fun', Pos, {function, Name, Arity}}
-%% {'fun', Pos, {function, Module, Name, Arity}}
+%% {'fun', Anno, {function, Name, Arity}}
+%% {'fun', Anno, {function, Module, Name, Arity}}
 %%
 %%	Module = atom()
 %%	Name = atom()
@@ -6992,7 +6991,7 @@ implicit_fun(Name) ->
     tree(implicit_fun, Name).
 
 revert_implicit_fun(Node) ->
-    Pos = get_anno(Node),
+    Anno = get_anno(Node),
     Name = implicit_fun_name(Node),
     case type(Name) of
 	arity_qualifier ->
@@ -7000,7 +6999,7 @@ revert_implicit_fun(Node) ->
 	    A = arity_qualifier_argument(Name),
 	    case {type(F), type(A)} of
 		{atom, integer} ->
-		    {'fun', Pos,
+		    {'fun', Anno,
 		     {function, concrete(F), concrete(A)}};
 		_ ->
 		    Node
@@ -7012,7 +7011,7 @@ revert_implicit_fun(Node) ->
 		arity_qualifier ->
 		    F = arity_qualifier_body(Name1),
 		    A = arity_qualifier_argument(Name1),
-		    {'fun', Pos, {function, M, F, A}};
+		    {'fun', Anno, {function, M, F, A}};
 		_ ->
 		    Node
 	    end;
@@ -7033,10 +7032,10 @@ _See also: _`arity_qualifier/2`, `implicit_fun/1`, `module_qualifier/2`.
 
 implicit_fun_name(Node) ->
     case unwrap(Node) of
-	{'fun', Pos, {function, Atom, Arity}} ->
-	    arity_qualifier(set_anno(atom(Atom), Pos),
-			    set_anno(integer(Arity), Pos));
-	{'fun', _Pos, {function, Module, Atom, Arity}} ->
+	{'fun', Anno, {function, Atom, Arity}} ->
+	    arity_qualifier(set_anno(atom(Atom), Anno),
+			    set_anno(integer(Arity), Anno));
+	{'fun', _Anno, {function, Module, Atom, Arity}} ->
 	    %% XXX: Perhaps set position for this as well?
 	    module_qualifier(Module, arity_qualifier(Atom, Arity));
 	Node1 ->
@@ -7060,7 +7059,7 @@ _See also: _`fun_expr_arity/1`, `fun_expr_clauses/1`.
 %%
 %% `erl_parse' representation:
 %%
-%% {'fun', Pos, {clauses, Clauses}}
+%% {'fun', Anno, {clauses, Clauses}}
 %%
 %%	Clauses = [Clause] \ []
 %%	Clause = {clause, ...}
@@ -7072,8 +7071,8 @@ fun_expr(Clauses) ->
 
 revert_fun_expr(Node) ->
     Clauses = [revert_clause(C) || C <- fun_expr_clauses(Node)],
-    Pos = get_anno(Node),
-    {'fun', Pos, {clauses, Clauses}}.
+    Anno = get_anno(Node),
+    {'fun', Anno, {clauses, Clauses}}.
 
 
 -doc """
@@ -7129,7 +7128,7 @@ _See also: _`named_fun_expr_arity/1`, `named_fun_expr_clauses/1`,
 
 %% `erl_parse' representation:
 %%
-%% {named_fun, Pos, Name, Clauses}
+%% {named_fun, Anno, Name, Clauses}
 %%
 %%	Clauses = [Clause] \ []
 %%	Clause = {clause, ...}
@@ -7140,12 +7139,12 @@ named_fun_expr(Name, Clauses) ->
     tree(named_fun_expr, #named_fun_expr{name = Name, clauses = Clauses}).
 
 revert_named_fun_expr(Node) ->
-    Pos = get_anno(Node),
+    Anno = get_anno(Node),
     Name = named_fun_expr_name(Node),
     Clauses = [revert_clause(C) || C <- named_fun_expr_clauses(Node)],
     case type(Name) of
 	variable ->
-	    {named_fun, Pos, variable_name(Name), Clauses};
+	    {named_fun, Anno, variable_name(Name), Clauses};
 	_ ->
 	    Node
     end.
@@ -7160,8 +7159,8 @@ _See also: _`named_fun_expr/2`.
 
 named_fun_expr_name(Node) ->
     case unwrap(Node) of
-	{named_fun, Pos, Name, _} ->
-	    set_anno(variable(Name), Pos);
+	{named_fun, Anno, Name, _} ->
+	    set_anno(variable(Name), Anno);
 	Node1 ->
 	    (data(Node1))#named_fun_expr.name
     end.
@@ -8434,7 +8433,7 @@ another wrapper structure is an error_.
 
 wrap(Node) ->
     %% We assume that Node is an old-school `erl_parse' tree.
-    #wrapper{type = type(Node), attr = #attr{pos = get_anno(Node)},
+    #wrapper{type = type(Node), attr = #attr{anno = get_anno(Node)},
 	     tree = Node}.
 
 
@@ -8480,10 +8479,10 @@ is_printable(S) ->
 %% Support functions for transforming lists of function names
 %% specified as `arity_qualifier' nodes.
 
-unfold_function_names(Ns, Pos) ->
+unfold_function_names(Ns, Anno) ->
     F = fun ({Atom, Arity}) ->
 		N = arity_qualifier(atom(Atom), integer(Arity)),
-		set_anno(N, Pos)
+		set_anno(N, Anno)
 	end,
     [F(N) || N <- Ns].
 
@@ -8499,8 +8498,8 @@ fold_function_name(N) ->
 fold_variable_names(Vs) ->
     [variable_name(V) || V <- Vs].
 
-unfold_variable_names(Vs, Pos) ->
-    [set_anno(variable(V), Pos) || V <- Vs].
+unfold_variable_names(Vs, Anno) ->
+    [set_anno(variable(V), Anno) || V <- Vs].
 
 
 %% Support functions for transforming lists of record field definitions.
@@ -8508,7 +8507,7 @@ unfold_variable_names(Vs, Pos) ->
 %% There is no unique representation for field definitions in the
 %% standard form. There, they may only occur in the "fields" part of a
 %% record expression or declaration, and are represented as
-%% `{record_field, Pos, Name, Value}', or as `{record_field, Pos, Name}'
+%% `{record_field, Anno, Name, Value}', or as `{record_field, Anno, Name}'
 %% if the value part is left out. However, these cannot be distinguished
 %% out of context from the representation of record field access
 %% expressions (see `record_access').
@@ -8527,13 +8526,13 @@ fold_record_field(F) ->
     end.
 
 fold_record_field_1(F) ->
-    Pos = get_anno(F),
+    Anno = get_anno(F),
     Name = record_field_name(F),
     case record_field_value(F) of
 	none ->
-	    {record_field, Pos, Name};
+	    {record_field, Anno, Name};
 	Value ->
-	    {record_field, Pos, Name, Value}
+	    {record_field, Anno, Name, Value}
     end.
 
 unfold_record_fields(Fs) ->
@@ -8545,10 +8544,10 @@ unfold_record_field({typed_record_field, Field, Type}) ->
 unfold_record_field(Field) ->
     unfold_record_field_1(Field).
 
-unfold_record_field_1({record_field, Pos, Name}) ->
-    set_anno(record_field(Name), Pos);
-unfold_record_field_1({record_field, Pos, Name, Value}) ->
-    set_anno(record_field(Name, Value), Pos).
+unfold_record_field_1({record_field, Anno, Name}) ->
+    set_anno(record_field(Name), Anno);
+unfold_record_field_1({record_field, Anno, Name, Value}) ->
+    set_anno(record_field(Name, Value), Anno).
 
 fold_binary_field_types(Ts) ->
     [fold_binary_field_type(T) || T <- Ts].
@@ -8562,12 +8561,12 @@ fold_binary_field_type(Node) ->
 	    concrete(Node)
     end.
 
-unfold_binary_field_types(Ts, Pos) ->
-    [unfold_binary_field_type(T, Pos) || T <- Ts].
+unfold_binary_field_types(Ts, Anno) ->
+    [unfold_binary_field_type(T, Anno) || T <- Ts].
 
-unfold_binary_field_type({Type, Size}, Pos) ->
-    set_anno(size_qualifier(atom(Type), integer(Size)), Pos);
-unfold_binary_field_type(Type, Pos) ->
-    set_anno(atom(Type), Pos).
+unfold_binary_field_type({Type, Size}, Anno) ->
+    set_anno(size_qualifier(atom(Type), integer(Size)), Anno);
+unfold_binary_field_type(Type, Anno) ->
+    set_anno(atom(Type), Anno).
 
 %% =====================================================================
