@@ -877,7 +877,7 @@ _See also: _`get_anno/1`, `set_anno/2`.
 -spec copy_pos(syntaxTree(), syntaxTree()) -> syntaxTree().
 
 copy_pos(Source, Target) ->
-    set_pos(Target, get_pos(Source)).
+    set_anno(Target, get_anno(Source)).
 
 
 %% =====================================================================
@@ -1278,7 +1278,7 @@ _See also: _`get_ann/1`, `get_anno/1`, `get_postcomments/1`, `get_precomments/1`
 
 get_attrs(#tree{attr = Attr}) -> Attr;
 get_attrs(#wrapper{attr = Attr}) -> Attr;
-get_attrs(Node) -> #attr{pos = get_pos(Node),
+get_attrs(Node) -> #attr{pos = get_anno(Node),
 			 ann = get_ann(Node),
 			 com = get_com(Node)}.
 
@@ -1502,7 +1502,7 @@ variable(Name) ->
     tree(variable, list_to_atom(Name)).
 
 revert_variable(Node) ->
-    Pos = get_pos(Node),
+    Pos = get_anno(Node),
     Name = variable_name(Node),
     {var, Pos, Name}.
 
@@ -1557,7 +1557,7 @@ underscore() ->
     tree(underscore, []).
 
 revert_underscore(Node) ->
-    Pos = get_pos(Node),
+    Pos = get_anno(Node),
     {var, Pos, '_'}.
 
 
@@ -1580,7 +1580,7 @@ integer(Value) ->
     tree(integer, Value).
 
 revert_integer(Node) ->
-    Pos = get_pos(Node),
+    Pos = get_anno(Node),
     {integer, Pos, integer_value(Node)}.
 
 
@@ -1658,7 +1658,7 @@ make_float(Value) ->
     tree(float, Value).
 
 revert_float(Node) ->
-    Pos = get_pos(Node),
+    Pos = get_anno(Node),
     {float, Pos, float_value(Node)}.
 
 
@@ -1720,7 +1720,7 @@ char(Char) ->
     tree(char, Char).
 
 revert_char(Node) ->
-    Pos = get_pos(Node),
+    Pos = get_anno(Node),
     {char, Pos, char_value(Node)}.
 
 
@@ -1821,7 +1821,7 @@ string(String) ->
     tree(string, String).
 
 revert_string(Node) ->
-    Pos = get_pos(Node),
+    Pos = get_anno(Node),
     {string, Pos, string_value(Node)}.
 
 
@@ -1920,7 +1920,7 @@ atom(Name) ->
     tree(atom, list_to_atom(Name)).
 
 revert_atom(Node) ->
-    Pos = get_pos(Node),
+    Pos = get_anno(Node),
     {atom, Pos, atom_value(Node)}.
 
 
@@ -2040,7 +2040,7 @@ map_expr(Argument, Fields) ->
     tree(map_expr, #map_expr{argument = Argument, fields = Fields}).
 
 revert_map_expr(Node) ->
-    Pos = get_pos(Node),
+    Pos = get_anno(Node),
     Argument = map_expr_argument(Node),
     Fields = map_expr_fields(Node),
     case Argument of
@@ -2109,7 +2109,7 @@ map_field_assoc(Name, Value) ->
     tree(map_field_assoc, #map_field_assoc{name = Name, value = Value}).
 
 revert_map_field_assoc(Node) ->
-    Pos = get_pos(Node),
+    Pos = get_anno(Node),
     Name = map_field_assoc_name(Node),
     Value = map_field_assoc_value(Node),
     {map_field_assoc, Pos, Name, Value}.
@@ -2166,7 +2166,7 @@ map_field_exact(Name, Value) ->
     tree(map_field_exact, #map_field_exact{name = Name, value = Value}).
 
 revert_map_field_exact(Node) ->
-    Pos = get_pos(Node),
+    Pos = get_anno(Node),
     Name = map_field_exact_name(Node),
     Value = map_field_exact_value(Node),
     {map_field_exact, Pos, Name, Value}.
@@ -2229,7 +2229,7 @@ tuple(List) ->
     tree(tuple, List).
 
 revert_tuple(Node) ->
-    Pos = get_pos(Node),
+    Pos = get_anno(Node),
     {tuple, Pos, tuple_elements(Node)}.
 
 
@@ -2326,23 +2326,23 @@ list(Elements, Tail) when Elements =/= [] ->
     tree(list, #list{prefix = Elements, suffix = Tail}).
 
 revert_list(Node) ->
-    Pos = get_pos(Node),
+    Anno = get_anno(Node),
     Prefix = list_prefix(Node),
     Suffix = case list_suffix(Node) of
 	    none ->
-            LastPos = get_pos(lists:last(Prefix)),
-            LastLocation = case erl_anno:end_location(LastPos) of
-                undefined -> erl_anno:location(LastPos);
+            LastAnno = get_anno(lists:last(Prefix)),
+            LastLocation = case erl_anno:end_location(LastAnno) of
+                undefined -> erl_anno:location(LastAnno);
                 Location -> Location
             end,
-            revert_nil(set_pos(nil(), erl_anno:set_location(LastLocation, Pos)));
+            revert_nil(set_anno(nil(), erl_anno:set_location(LastLocation, Anno)));
 	    Suffix1 ->
             Suffix1
 	end,
     lists:foldr(fun (Head, Tail) ->
-        HeadPos = get_pos(Head),
-        HeadLocation = erl_anno:location(HeadPos),
-        {cons, erl_anno:set_location(HeadLocation, Pos), Head, Tail}
+        HeadAnno = get_anno(Head),
+        HeadLocation = erl_anno:location(HeadAnno),
+        {cons, erl_anno:set_location(HeadLocation, Anno), Head, Tail}
     end, Suffix, Prefix).
 
 
@@ -2364,7 +2364,7 @@ nil() ->
     tree(nil).
 
 revert_nil(Node) ->
-    Pos = get_pos(Node),
+    Pos = get_anno(Node),
     {nil, Pos}.
 
 
@@ -2720,7 +2720,7 @@ binary(List) ->
     tree(binary, List).
 
 revert_binary(Node) ->
-    Pos = get_pos(Node),
+    Pos = get_anno(Node),
     {bin, Pos, binary_fields(Node)}.
 
 
@@ -2799,7 +2799,7 @@ binary_field(Body, Types) ->
     tree(binary_field, #binary_field{body = Body, types = Types}).
 
 revert_binary_field(Node) ->
-    Pos = get_pos(Node),
+    Pos = get_anno(Node),
     Body = binary_field_body(Node),
     {Expr, Size} = case type(Body) of
 		       size_qualifier ->
@@ -2955,8 +2955,9 @@ _See also: _`eof_marker/0`, `error_marker_info/1`, `is_form/1`,
 %%
 %%	Error = term()
 %%
-%%	Note that there is no position information for the node
-%%	itself: `get_pos' and `set_pos' handle this as a special case.
+%%	Note that there is no annotation field in the node itself, but the
+%%	error term may contain a location; `get_anno/1' handles this as a
+%%	special case.
 
 error_marker(Error) ->
     tree(error_marker, Error).
@@ -3008,8 +3009,9 @@ _See also: _`eof_marker/0`, `error_marker/1`, `is_form/1`,
 %%
 %%	Error = term()
 %%
-%%	Note that there is no position information for the node
-%%	itself: `get_pos' and `set_pos' handle this as a special case.
+%%	Note that there is no annotation field in the node itself, but the
+%%	error term may contain a location; `get_anno/1' handles this as a
+%%	special case.
 
 warning_marker(Warning) ->
     tree(warning_marker, Warning).
@@ -3061,7 +3063,7 @@ eof_marker() ->
     tree(eof_marker).
 
 revert_eof_marker(Node) ->
-    Pos = get_pos(Node),
+    Pos = get_anno(Node),
     {eof, Pos}.
 
 
@@ -3198,7 +3200,7 @@ attribute(Name, Args) ->
 revert_attribute(Node) ->
     Name = attribute_name(Node),
     Args = attribute_arguments(Node),
-    Pos = get_pos(Node),
+    Pos = get_anno(Node),
     case type(Name) of
 	atom ->
 	    revert_attribute_1(atom_value(Name), Args, Pos, Node);
@@ -3319,7 +3321,7 @@ _See also: _`attribute/1`.
 attribute_name(Node) ->
     case unwrap(Node) of
 	{attribute, Pos, Name, _} ->
-	    set_pos(atom(Name), Pos);
+	    set_anno(atom(Name), Pos);
 	Node1 ->
 	    (data(Node1))#attribute.name
     end.
@@ -3349,34 +3351,34 @@ attribute_arguments(Node) ->
 				{M0, none}
 			end,
 		    M2 = atom(M1),
-		    M = set_pos(M2, Pos),
+		    M = set_anno(M2, Pos),
 		    if Vs == none -> [M];
-		       true -> [M, set_pos(list(Vs), Pos)]
+		       true -> [M, set_anno(list(Vs), Pos)]
 		    end;
 		export ->
-		    [set_pos(
+		    [set_anno(
 		       list(unfold_function_names(Data, Pos)),
 		       Pos)];
 		import ->
 		    {Module, Imports} = Data,
-		    [set_pos(atom(Module), Pos),
-		     set_pos(
+		    [set_anno(atom(Module), Pos),
+		     set_anno(
 		       list(unfold_function_names(Imports, Pos)),
 		       Pos)];
 		file ->
 		    {File, Line} = Data,
-		    [set_pos(string(File), Pos),
-		     set_pos(integer(Line), Pos)];
+		    [set_anno(string(File), Pos),
+		     set_anno(integer(Line), Pos)];
 		record ->
 		    %% Note that we create a tuple as container
 		    %% for the second argument!
 		    {Type, Entries} = Data,
-		    [set_pos(atom(Type), Pos),
-		     set_pos(tuple(unfold_record_fields(Entries)),
+		    [set_anno(atom(Type), Pos),
+		     set_anno(tuple(unfold_record_fields(Entries)),
 			     Pos)];
 		_ ->
 		    %% Standard single-term generic attribute.
-		    [set_pos(abstract(Data), Pos)]
+		    [set_anno(abstract(Data), Pos)]
 	    end;
 	Node1 ->
 	    (data(Node1))#attribute.args
@@ -3443,7 +3445,7 @@ module_qualifier(Module, Body) ->
 	 #module_qualifier{module = Module, body = Body}).
 
 revert_module_qualifier(Node) ->
-    Pos = get_pos(Node),
+    Pos = get_anno(Node),
     Module = module_qualifier_argument(Node),
     Body = module_qualifier_body(Node),
     {remote, Pos, Module, Body}.
@@ -3525,7 +3527,7 @@ function(Name, Clauses) ->
 revert_function(Node) ->
     Name = function_name(Node),
     Clauses = [revert_clause(C) || C <- function_clauses(Node)],
-    Pos = get_pos(Node),
+    Pos = get_anno(Node),
     case type(Name) of
 	atom ->
 	    A = function_arity(Node),
@@ -3545,7 +3547,7 @@ _See also: _`function/2`.
 function_name(Node) ->
     case unwrap(Node) of
 	{function, Pos, Name, _, _} ->
-	    set_pos(atom(Name), Pos);
+	    set_anno(atom(Name), Pos);
 	Node1 ->
 	    (data(Node1))#func.name
     end.
@@ -3664,7 +3666,7 @@ conjunction_list([]) ->
     [].
 
 revert_clause(Node) ->
-    Pos = get_pos(Node),
+    Pos = get_anno(Node),
     Guard = case clause_guard(Node) of
 		none ->
 		    [];
@@ -3845,7 +3847,7 @@ catch_expr(Expr) ->
     tree(catch_expr, Expr).
 
 revert_catch_expr(Node) ->
-    Pos = get_pos(Node),
+    Pos = get_anno(Node),
     Expr = catch_expr_body(Node),
     {'catch', Pos, Expr}.
 
@@ -3887,7 +3889,7 @@ match_expr(Pattern, Body) ->
     tree(match_expr, #match_expr{pattern = Pattern, body = Body}).
 
 revert_match_expr(Node) ->
-    Pos = get_pos(Node),
+    Pos = get_anno(Node),
     Pattern = match_expr_pattern(Node),
     Body = match_expr_body(Node),
     {match, Pos, Pattern, Body}.
@@ -3948,7 +3950,7 @@ maybe_match_expr(Pattern, Body) ->
     tree(maybe_match_expr, #maybe_match_expr{pattern = Pattern, body = Body}).
 
 revert_maybe_match_expr(Node) ->
-    Pos = get_pos(Node),
+    Pos = get_anno(Node),
     Pattern = maybe_match_expr_pattern(Node),
     Body = maybe_match_expr_body(Node),
     {maybe_match, Pos, Pattern, Body}.
@@ -4057,7 +4059,7 @@ infix_expr(Left, Operator, Right) ->
 				 right = Right}).
 
 revert_infix_expr(Node) ->
-    Pos = get_pos(Node),
+    Pos = get_anno(Node),
     Operator = infix_expr_operator(Node),
     Left = infix_expr_left(Node),
     Right = infix_expr_right(Node),
@@ -4097,7 +4099,7 @@ _See also: _`infix_expr/3`.
 infix_expr_operator(Node) ->
     case unwrap(Node) of
 	{op, Pos, Operator, _, _} ->
-	    set_pos(operator(Operator), Pos);
+	    set_anno(operator(Operator), Pos);
 	Node1 ->
 	    (data(Node1))#infix_expr.operator
     end.
@@ -4142,7 +4144,7 @@ prefix_expr(Operator, Argument) ->
 				   argument = Argument}).
 
 revert_prefix_expr(Node) ->
-    Pos = get_pos(Node),
+    Pos = get_anno(Node),
     Operator = prefix_expr_operator(Node),
     Argument = prefix_expr_argument(Node),
     case type(Operator) of
@@ -4165,7 +4167,7 @@ _See also: _`prefix_expr/2`.
 prefix_expr_operator(Node) ->
     case unwrap(Node) of
 	{op, Pos, Operator, _} ->
-	    set_pos(operator(Operator), Pos);
+	    set_anno(operator(Operator), Pos);
 	Node1 ->
 	    (data(Node1))#prefix_expr.operator
     end.
@@ -4265,7 +4267,7 @@ record_index_expr(Type, Field) ->
 					       field = Field}).
 
 revert_record_index_expr(Node) ->
-    Pos = get_pos(Node),
+    Pos = get_anno(Node),
     Type = record_index_expr_type(Node),
     Field = record_index_expr_field(Node),
     case type(Type) of
@@ -4286,7 +4288,7 @@ _See also: _`record_index_expr/2`.
 record_index_expr_type(Node) ->
     case unwrap(Node) of
 	{record_index, Pos, Type, _} ->
-	    set_pos(atom(Type), Pos);
+	    set_anno(atom(Type), Pos);
 	Node1 ->
 	    (data(Node1))#record_index_expr.type
     end.
@@ -4336,7 +4338,7 @@ record_access(Argument, Type, Field) ->
 				      field = Field}).
 
 revert_record_access(Node) ->
-    Pos = get_pos(Node),
+    Pos = get_anno(Node),
     Argument = record_access_argument(Node),
     Type = record_access_type(Node),
     Field = record_access_field(Node),
@@ -4374,7 +4376,7 @@ _See also: _`record_access/3`.
 record_access_type(Node) ->
     case unwrap(Node) of
 	{record_field, Pos, _, Type, _} ->
-	    set_pos(atom(Type), Pos);
+	    set_anno(atom(Type), Pos);
 	Node1 ->
 	    (data(Node1))#record_access.type
     end.
@@ -4440,7 +4442,7 @@ record_expr(Argument, Type, Fields) ->
 				   type = Type, fields = Fields}).
 
 revert_record_expr(Node) ->
-    Pos = get_pos(Node),
+    Pos = get_anno(Node),
     Argument = record_expr_argument(Node),
     Type = record_expr_type(Node),
     Fields = record_expr_fields(Node),
@@ -4491,9 +4493,9 @@ _See also: _`record_expr/3`.
 record_expr_type(Node) ->
     case unwrap(Node) of
 	{record, Pos, Type, _} ->
-	    set_pos(atom(Type), Pos);
+	    set_anno(atom(Type), Pos);
 	{record, Pos, _, Type, _} ->
-	    set_pos(atom(Type), Pos);
+	    set_anno(atom(Type), Pos);
 	Node1 ->
 	    (data(Node1))#record_expr.type
     end.
@@ -4565,7 +4567,7 @@ application(Operator, Arguments) ->
 				   arguments = Arguments}).
 
 revert_application(Node) ->
-    Pos = get_pos(Node),
+    Pos = get_anno(Node),
     Operator = application_operator(Node),
     Arguments = application_arguments(Node),
     {call, Pos, Operator, Arguments}.
@@ -4627,7 +4629,7 @@ annotated_type(Name, Type) ->
     tree(annotated_type, #annotated_type{name = Name, body = Type}).
 
 revert_annotated_type(Node) ->
-    Pos = get_pos(Node),
+    Pos = get_anno(Node),
     Name = annotated_type_name(Node),
     Type = annotated_type_body(Node),
     {ann_type, Pos, [Name, Type]}.
@@ -4680,7 +4682,7 @@ fun_type() ->
     tree(fun_type).
 
 revert_fun_type(Node) ->
-    Pos = get_pos(Node),
+    Pos = get_anno(Node),
     {type, Pos, 'fun', []}.
 
 
@@ -4736,7 +4738,7 @@ type_application(TypeName, Arguments) ->
          #type_application{type_name = TypeName, arguments = Arguments}).
 
 revert_type_application(Node) ->
-    Pos = get_pos(Node),
+    Pos = get_anno(Node),
     TypeName = type_application_name(Node),
     Arguments = type_application_arguments(Node),
     case type(TypeName) of
@@ -4761,7 +4763,7 @@ type_application_name(Node) ->
         {remote_type, _, [Module, Name, _]} ->
             module_qualifier(Module, Name);
         {type, Pos, Name, _} ->
-            set_pos(atom(Name), Pos);
+            set_anno(atom(Name), Pos);
         Node1 ->
             (data(Node1))#type_application.type_name
     end.
@@ -4800,7 +4802,7 @@ bitstring_type(M, N) ->
     tree(bitstring_type, #bitstring_type{m = M, n =N}).
 
 revert_bitstring_type(Node) ->
-    Pos = get_pos(Node),
+    Pos = get_anno(Node),
     M = bitstring_type_m(Node),
     N = bitstring_type_n(Node),
     {type, Pos, binary, [M, N]}.
@@ -4864,7 +4866,7 @@ constrained_function_type(FunctionType, FunctionConstraint) ->
                                     argument = Conj}).
 
 revert_constrained_function_type(Node) ->
-    Pos = get_pos(Node),
+    Pos = get_anno(Node),
     FunctionType = constrained_function_type_body(Node),
     FunctionConstraint =
         conjunction_body(constrained_function_type_argument(Node)),
@@ -4941,7 +4943,7 @@ function_type(Arguments, Return) ->
          #function_type{arguments = Arguments, return = Return}).
 
 revert_function_type(Node) ->
-    Pos = get_pos(Node),
+    Pos = get_anno(Node),
     Type = function_type_return(Node),
     case function_type_arguments(Node) of
         any_arity ->
@@ -5016,7 +5018,7 @@ constraint(Name, Types) ->
          #constraint{name = Name, types = Types}).
 
 revert_constraint(Node) ->
-    Pos = get_pos(Node),
+    Pos = get_anno(Node),
     Name = constraint_argument(Node),
     Types = constraint_body(Node),
     {type, Pos, constraint, [Name, Types]}.
@@ -5074,7 +5076,7 @@ map_type_assoc(Name, Value) ->
     tree(map_type_assoc, #map_type_assoc{name = Name, value = Value}).
 
 revert_map_type_assoc(Node) ->
-    Pos = get_pos(Node),
+    Pos = get_anno(Node),
     Name = map_type_assoc_name(Node),
     Value = map_type_assoc_value(Node),
     {type, Pos, map_field_assoc, [Name, Value]}.
@@ -5133,7 +5135,7 @@ map_type_exact(Name, Value) ->
     tree(map_type_exact, #map_type_exact{name = Name, value = Value}).
 
 revert_map_type_exact(Node) ->
-    Pos = get_pos(Node),
+    Pos = get_anno(Node),
     Name = map_type_exact_name(Node),
     Value = map_type_exact_value(Node),
     {type, Pos, map_field_exact, [Name, Value]}.
@@ -5201,7 +5203,7 @@ map_type(Fields) ->
     tree(map_type, Fields).
 
 revert_map_type(Node) ->
-    Pos = get_pos(Node),
+    Pos = get_anno(Node),
     case map_type_fields(Node) of
         any_size ->
             {type, Pos, map, any};
@@ -5256,7 +5258,7 @@ integer_range_type(Low, High) ->
     tree(integer_range_type, #integer_range_type{low = Low, high = High}).
 
 revert_integer_range_type(Node) ->
-    Pos = get_pos(Node),
+    Pos = get_anno(Node),
     Low = integer_range_type_low(Node),
     High = integer_range_type_high(Node),
     {type, Pos, range, [Low, High]}.
@@ -5319,7 +5321,7 @@ record_type(Name, Fields) ->
     tree(record_type, #record_type{name = Name, fields = Fields}).
 
 revert_record_type(Node) ->
-    Pos = get_pos(Node),
+    Pos = get_anno(Node),
     Name = record_type_name(Node),
     Fields = record_type_fields(Node),
     {type, Pos, record, [Name | Fields]}.
@@ -5379,7 +5381,7 @@ record_type_field(Name, Type) ->
     tree(record_type_field, #record_type_field{name = Name, type = Type}).
 
 revert_record_type_field(Node) ->
-    Pos = get_pos(Node),
+    Pos = get_anno(Node),
     Name = record_type_field_name(Node),
     Type = record_type_field_type(Node),
     {type, Pos, field_type, [Name, Type]}.
@@ -5446,7 +5448,7 @@ tuple_type(Elements) ->
     tree(tuple_type, Elements).
 
 revert_tuple_type(Node) ->
-    Pos = get_pos(Node),
+    Pos = get_anno(Node),
     case tuple_type_elements(Node) of
         any_size ->
             {type, Pos, tuple, any};
@@ -5498,7 +5500,7 @@ type_union(Types) ->
     tree(type_union, Types).
 
 revert_type_union(Node) ->
-    Pos = get_pos(Node),
+    Pos = get_anno(Node),
     {type, Pos, union, type_union_types(Node)}.
 
 
@@ -5547,7 +5549,7 @@ user_type_application(TypeName, Arguments) ->
          #user_type_application{type_name = TypeName, arguments = Arguments}).
 
 revert_user_type_application(Node) ->
-    Pos = get_pos(Node),
+    Pos = get_anno(Node),
     TypeName = user_type_application_name(Node),
     Arguments = user_type_application_arguments(Node),
     {user_type, Pos, atom_value(TypeName), Arguments}.
@@ -5563,7 +5565,7 @@ _See also: _`user_type_application/2`.
 user_type_application_name(Node) ->
     case unwrap(Node) of
         {user_type, Pos, Name, _} ->
-            set_pos(atom(Name), Pos);
+            set_anno(atom(Name), Pos);
         Node1 ->
             (data(Node1))#user_type_application.type_name
     end.
@@ -5651,7 +5653,7 @@ list_comp(Template, Body) ->
     tree(list_comp, #list_comp{template = Template, body = Body}).
 
 revert_list_comp(Node) ->
-    Pos = get_pos(Node),
+    Pos = get_anno(Node),
     Template = list_comp_template(Node),
     Body = list_comp_body(Node),
     {lc, Pos, Template, Body}.
@@ -5713,7 +5715,7 @@ binary_comp(Template, Body) ->
     tree(binary_comp, #binary_comp{template = Template, body = Body}).
 
 revert_binary_comp(Node) ->
-    Pos = get_pos(Node),
+    Pos = get_anno(Node),
     Template = binary_comp_template(Node),
     Body = binary_comp_body(Node),
     {bc, Pos, Template, Body}.
@@ -5775,7 +5777,7 @@ map_comp(Template, Body) ->
     tree(map_comp, #map_comp{template = Template, body = Body}).
 
 revert_map_comp(Node) ->
-    Pos = get_pos(Node),
+    Pos = get_anno(Node),
     Template = map_comp_template(Node),
     Body = map_comp_body(Node),
     {mc, Pos, Template, Body}.
@@ -5836,7 +5838,7 @@ generator(Pattern, Body) ->
     tree(generator, #generator{pattern = Pattern, body = Body}).
 
 revert_generator(Node) ->
-    Pos = get_pos(Node),
+    Pos = get_anno(Node),
     Pattern = generator_pattern(Node),
     Body = generator_body(Node),
     {generate, Pos, Pattern, Body}.
@@ -5898,7 +5900,7 @@ strict_generator(Pattern, Body) ->
     tree(strict_generator, #strict_generator{pattern = Pattern, body = Body}).
 
 revert_strict_generator(Node) ->
-    Pos = get_pos(Node),
+    Pos = get_anno(Node),
     Pattern = strict_generator_pattern(Node),
     Body = strict_generator_body(Node),
     {generate_strict, Pos, Pattern, Body}.
@@ -5960,7 +5962,7 @@ binary_generator(Pattern, Body) ->
     tree(binary_generator, #binary_generator{pattern = Pattern, body = Body}).
 
 revert_binary_generator(Node) ->
-    Pos = get_pos(Node),
+    Pos = get_anno(Node),
     Pattern = binary_generator_pattern(Node),
     Body = binary_generator_body(Node),
     {b_generate, Pos, Pattern, Body}.
@@ -6022,7 +6024,7 @@ strict_binary_generator(Pattern, Body) ->
     tree(strict_binary_generator, #strict_binary_generator{pattern = Pattern, body = Body}).
 
 revert_strict_binary_generator(Node) ->
-    Pos = get_pos(Node),
+    Pos = get_anno(Node),
     Pattern = strict_binary_generator_pattern(Node),
     Body = strict_binary_generator_body(Node),
     {b_generate_strict, Pos, Pattern, Body}.
@@ -6084,7 +6086,7 @@ map_generator(Pattern, Body) ->
     tree(map_generator, #map_generator{pattern = Pattern, body = Body}).
 
 revert_map_generator(Node) ->
-    Pos = get_pos(Node),
+    Pos = get_anno(Node),
     Pattern = map_generator_pattern(Node),
     Body = map_generator_body(Node),
     {m_generate, Pos, Pattern, Body}.
@@ -6146,7 +6148,7 @@ strict_map_generator(Pattern, Body) ->
     tree(strict_map_generator, #strict_map_generator{pattern = Pattern, body = Body}).
 
 revert_strict_map_generator(Node) ->
-    Pos = get_pos(Node),
+    Pos = get_anno(Node),
     Pattern = strict_map_generator_pattern(Node),
     Body = strict_map_generator_body(Node),
     {m_generate_strict, Pos, Pattern, Body}.
@@ -6206,7 +6208,7 @@ zip_generator(Body) ->
     tree(zip_generator, #zip_generator{body = Body}).
 
 revert_zip_generator(Node) ->
-    Pos = get_pos(Node),
+    Pos = get_anno(Node),
     Body = zip_generator_body(Node),
     {zip, Pos, Body}.
 
@@ -6248,7 +6250,7 @@ block_expr(Body) ->
     tree(block_expr, Body).
 
 revert_block_expr(Node) ->
-    Pos = get_pos(Node),
+    Pos = get_anno(Node),
     Body = block_expr_body(Node),
     {block, Pos, Body}.
 
@@ -6295,7 +6297,7 @@ if_expr(Clauses) ->
     tree(if_expr, Clauses).
 
 revert_if_expr(Node) ->
-    Pos = get_pos(Node),
+    Pos = get_anno(Node),
     Clauses = [revert_clause(C) || C <- if_expr_clauses(Node)],
     {'if', Pos, Clauses}.
 
@@ -6348,7 +6350,7 @@ case_expr(Argument, Clauses) ->
 			       clauses = Clauses}).
 
 revert_case_expr(Node) ->
-    Pos = get_pos(Node),
+    Pos = get_anno(Node),
     Argument = case_expr_argument(Node),
     Clauses = [revert_clause(C) || C <- case_expr_clauses(Node)],
     {'case', Pos, Argument, Clauses}.
@@ -6412,7 +6414,7 @@ else_expr(Clauses) ->
     tree(else_expr, Clauses).
 
 revert_else_expr(Node) ->
-    Pos = get_pos(Node),
+    Pos = get_anno(Node),
     Clauses = else_expr_clauses(Node),
     {'else', Pos, Clauses}.
 
@@ -6480,7 +6482,7 @@ maybe_expr(Body, OptionalElse) ->
     tree(maybe_expr, #maybe_expr{body = Body,
                                  'else' = OptionalElse}).
 revert_maybe_expr(Node) ->
-    Pos = get_pos(Node),
+    Pos = get_anno(Node),
     Body = maybe_expr_body(Node),
     case maybe_expr_else(Node) of
         none ->
@@ -6582,7 +6584,7 @@ receive_expr(Clauses, Timeout, Action) ->
 				     action = Action1}).
 
 revert_receive_expr(Node) ->
-    Pos = get_pos(Node),
+    Pos = get_anno(Node),
     Clauses = [revert_clause(C) || C <- receive_expr_clauses(Node)],
     Timeout = receive_expr_timeout(Node),
     Action = receive_expr_action(Node),
@@ -6726,7 +6728,7 @@ try_expr(Body, Clauses, Handlers, After) ->
 			     'after' = After}).
 
 revert_try_expr(Node) ->
-    Pos = get_pos(Node),
+    Pos = get_anno(Node),
     Body = try_expr_body(Node),
     Clauses = [revert_clause(C) || C <- try_expr_clauses(Node)],
     Handlers = [revert_try_clause(C) || C <- try_expr_handlers(Node)],
@@ -6817,7 +6819,7 @@ _See also: _`class_qualifier_argument/1`, `class_qualifier_body/1`,
 -spec class_qualifier(syntaxTree(), syntaxTree()) -> syntaxTree().
 
 class_qualifier(Class, Body) ->
-    Underscore = {var, get_pos(Body), '_'},
+    Underscore = {var, get_anno(Body), '_'},
     tree(class_qualifier,
 	 #class_qualifier{class = Class, body = Body,
                           stacktrace = Underscore}).
@@ -6939,7 +6941,7 @@ implicit_fun(Name) ->
     tree(implicit_fun, Name).
 
 revert_implicit_fun(Node) ->
-    Pos = get_pos(Node),
+    Pos = get_anno(Node),
     Name = implicit_fun_name(Node),
     case type(Name) of
 	arity_qualifier ->
@@ -6981,8 +6983,8 @@ _See also: _`arity_qualifier/2`, `implicit_fun/1`, `module_qualifier/2`.
 implicit_fun_name(Node) ->
     case unwrap(Node) of
 	{'fun', Pos, {function, Atom, Arity}} ->
-	    arity_qualifier(set_pos(atom(Atom), Pos),
-			    set_pos(integer(Arity), Pos));
+	    arity_qualifier(set_anno(atom(Atom), Pos),
+			    set_anno(integer(Arity), Pos));
 	{'fun', _Pos, {function, Module, Atom, Arity}} ->
 	    %% XXX: Perhaps set position for this as well?
 	    module_qualifier(Module, arity_qualifier(Atom, Arity));
@@ -7019,7 +7021,7 @@ fun_expr(Clauses) ->
 
 revert_fun_expr(Node) ->
     Clauses = [revert_clause(C) || C <- fun_expr_clauses(Node)],
-    Pos = get_pos(Node),
+    Pos = get_anno(Node),
     {'fun', Pos, {clauses, Clauses}}.
 
 
@@ -7087,7 +7089,7 @@ named_fun_expr(Name, Clauses) ->
     tree(named_fun_expr, #named_fun_expr{name = Name, clauses = Clauses}).
 
 revert_named_fun_expr(Node) ->
-    Pos = get_pos(Node),
+    Pos = get_anno(Node),
     Name = named_fun_expr_name(Node),
     Clauses = [revert_clause(C) || C <- named_fun_expr_clauses(Node)],
     case type(Name) of
@@ -7108,7 +7110,7 @@ _See also: _`named_fun_expr/2`.
 named_fun_expr_name(Node) ->
     case unwrap(Node) of
 	{named_fun, Pos, Name, _} ->
-	    set_pos(variable(Name), Pos);
+	    set_anno(variable(Name), Pos);
 	Node1 ->
 	    (data(Node1))#named_fun_expr.name
     end.
@@ -8381,7 +8383,7 @@ another wrapper structure is an error_.
 
 wrap(Node) ->
     %% We assume that Node is an old-school `erl_parse' tree.
-    #wrapper{type = type(Node), attr = #attr{pos = get_pos(Node)},
+    #wrapper{type = type(Node), attr = #attr{pos = get_anno(Node)},
 	     tree = Node}.
 
 
@@ -8430,7 +8432,7 @@ is_printable(S) ->
 unfold_function_names(Ns, Pos) ->
     F = fun ({Atom, Arity}) ->
 		N = arity_qualifier(atom(Atom), integer(Arity)),
-		set_pos(N, Pos)
+		set_anno(N, Pos)
 	end,
     [F(N) || N <- Ns].
 
@@ -8447,7 +8449,7 @@ fold_variable_names(Vs) ->
     [variable_name(V) || V <- Vs].
 
 unfold_variable_names(Vs, Pos) ->
-    [set_pos(variable(V), Pos) || V <- Vs].
+    [set_anno(variable(V), Pos) || V <- Vs].
 
 
 %% Support functions for transforming lists of record field definitions.
@@ -8474,7 +8476,7 @@ fold_record_field(F) ->
     end.
 
 fold_record_field_1(F) ->
-    Pos = get_pos(F),
+    Pos = get_anno(F),
     Name = record_field_name(F),
     case record_field_value(F) of
 	none ->
@@ -8488,14 +8490,14 @@ unfold_record_fields(Fs) ->
 
 unfold_record_field({typed_record_field, Field, Type}) ->
     F = unfold_record_field_1(Field),
-    set_pos(typed_record_field(F, Type), get_pos(F));
+    set_anno(typed_record_field(F, Type), get_anno(F));
 unfold_record_field(Field) ->
     unfold_record_field_1(Field).
 
 unfold_record_field_1({record_field, Pos, Name}) ->
-    set_pos(record_field(Name), Pos);
+    set_anno(record_field(Name), Pos);
 unfold_record_field_1({record_field, Pos, Name, Value}) ->
-    set_pos(record_field(Name, Value), Pos).
+    set_anno(record_field(Name, Value), Pos).
 
 fold_binary_field_types(Ts) ->
     [fold_binary_field_type(T) || T <- Ts].
@@ -8513,8 +8515,8 @@ unfold_binary_field_types(Ts, Pos) ->
     [unfold_binary_field_type(T, Pos) || T <- Ts].
 
 unfold_binary_field_type({Type, Size}, Pos) ->
-    set_pos(size_qualifier(atom(Type), integer(Size)), Pos);
+    set_anno(size_qualifier(atom(Type), integer(Size)), Pos);
 unfold_binary_field_type(Type, Pos) ->
-    set_pos(atom(Type), Pos).
+    set_anno(atom(Type), Pos).
 
 %% =====================================================================
