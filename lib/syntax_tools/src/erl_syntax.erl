@@ -830,10 +830,10 @@ _See also: _`get_attrs/1`, `set_anno/2`.
 """.
 -spec get_anno(syntaxTree()) -> annotation_or_location().
 
-get_anno(#tree{attr = Attr}) ->
-    Attr#attr.anno;
-get_anno(#wrapper{attr = Attr}) ->
-    Attr#attr.anno;
+get_anno(#tree{attr = #attr{anno = Anno}}) ->
+    Anno;
+get_anno(#wrapper{attr = #attr{anno = Anno}}) ->
+    Anno;
 get_anno({error, {Pos, _, _}}) ->
     Pos;
 get_anno({warning, {Pos, _, _}}) ->
@@ -861,13 +861,13 @@ _See also: _`copy_anno/2`, `get_anno/1`.
 
 set_anno(Node, Anno) ->
     case Node of
-        #tree{attr = Attr} ->
+        #tree{attr = #attr{}=Attr} ->
             Node#tree{attr = Attr#attr{anno = Anno}};
-        #wrapper{attr = Attr, tree = {error, {_, Module, Reason}}} ->
+        #wrapper{attr = #attr{}=Attr, tree = {error, {_, Module, Reason}}} ->
             Node#wrapper{attr = Attr#attr{anno = Anno}, tree = {error, {Anno, Module, Reason}}};
-        #wrapper{attr = Attr, tree = {warning, {_, Module, Reason}}} ->
+        #wrapper{attr = #attr{}=Attr, tree = {warning, {_, Module, Reason}}} ->
             Node#wrapper{attr = Attr#attr{anno = Anno}, tree = {warning, {Anno, Module, Reason}}};
-        #wrapper{attr = Attr, tree = Tree} ->
+        #wrapper{attr = #attr{}=Attr, tree = Tree} ->
             Node#wrapper{attr = Attr#attr{anno = Anno}, tree = setelement(2, Tree, Anno)};
         _ ->
             %% We then assume we have an `erl_parse' node, and create a
@@ -901,15 +901,15 @@ copy_anno(Source, Target) ->
 %% =====================================================================
 %% `get_com' and `set_com' are for internal use only.
 
-get_com(#tree{attr = Attr}) -> Attr#attr.com;
-get_com(#wrapper{attr = Attr}) -> Attr#attr.com;
+get_com(#tree{attr = #attr{com = Com}}) -> Com;
+get_com(#wrapper{attr = #attr{com = Com}}) -> Com;
 get_com(_) -> none.
 
 set_com(Node, Com) ->
     case Node of
-	#tree{attr = Attr} ->
+	#tree{attr = #attr{}=Attr} ->
 	    Node#tree{attr = Attr#attr{com = Com}};
-	#wrapper{attr = Attr} ->
+	#wrapper{attr = #attr{}=Attr} ->
 	    Node#wrapper{attr = Attr#attr{com = Com}};
 	_ ->
 	    set_com(wrap(Node), Com)
@@ -947,8 +947,8 @@ _See also: _`comment/2`, `get_attrs/1`, `get_postcomments/1`,
 """.
 -spec get_precomments(syntaxTree()) -> [syntaxTree()].
 
-get_precomments(#tree{attr = Attr}) -> get_precomments_1(Attr);
-get_precomments(#wrapper{attr = Attr}) -> get_precomments_1(Attr);
+get_precomments(#tree{attr = #attr{}=Attr}) -> get_precomments_1(Attr);
+get_precomments(#wrapper{attr = #attr{}=Attr}) -> get_precomments_1(Attr);
 get_precomments(_) -> [].
 
 get_precomments_1(#attr{com = none}) -> [];
@@ -971,9 +971,9 @@ _See also: _`add_precomments/2`, `comment/2`, `copy_comments/2`,
 
 set_precomments(Node, Cs) ->
     case Node of
-	#tree{attr = Attr} ->
+	#tree{attr = #attr{}=Attr} ->
 	    Node#tree{attr = set_precomments_1(Attr, Cs)};
-	#wrapper{attr = Attr} ->
+	#wrapper{attr = #attr{}=Attr} ->
 	    Node#wrapper{attr = set_precomments_1(Attr, Cs)};
 	_ ->
 	    set_precomments(wrap(Node), Cs)
@@ -1001,9 +1001,9 @@ _See also: _`add_postcomments/2`, `comment/2`, `get_precomments/1`,
 
 add_precomments(Cs, Node) ->
     case Node of
-	#tree{attr = Attr} ->
+	#tree{attr = #attr{}=Attr} ->
 	    Node#tree{attr = add_precomments_1(Cs, Attr)};
-	#wrapper{attr = Attr} ->
+	#wrapper{attr = #attr{}=Attr} ->
 	    Node#wrapper{attr = add_precomments_1(Cs, Attr)};
 	_ ->
 	    add_precomments(Cs, wrap(Node))
@@ -1045,8 +1045,8 @@ _See also: _`comment/2`, `get_attrs/1`, `get_precomments/1`,
 """.
 -spec get_postcomments(syntaxTree()) -> [syntaxTree()].
 
-get_postcomments(#tree{attr = Attr}) -> get_postcomments_1(Attr);
-get_postcomments(#wrapper{attr = Attr}) -> get_postcomments_1(Attr);
+get_postcomments(#tree{attr = #attr{}=Attr}) -> get_postcomments_1(Attr);
+get_postcomments(#wrapper{attr = #attr{}=Attr}) -> get_postcomments_1(Attr);
 get_postcomments(_) -> [].
 
 get_postcomments_1(#attr{com = none}) -> [];
@@ -1069,9 +1069,9 @@ _See also: _`add_postcomments/2`, `comment/2`, `copy_comments/2`,
 
 set_postcomments(Node, Cs) ->
     case Node of
-	#tree{attr = Attr} ->
+	#tree{attr = #attr{}=Attr} ->
 	    Node#tree{attr = set_postcomments_1(Attr, Cs)};
-	#wrapper{attr = Attr} ->
+	#wrapper{attr = #attr{}=Attr} ->
 	    Node#wrapper{attr = set_postcomments_1(Attr, Cs)};
 	_ ->
 	    set_postcomments(wrap(Node), Cs)
@@ -1099,9 +1099,9 @@ _See also: _`add_precomments/2`, `comment/2`, `get_postcomments/1`,
 
 add_postcomments(Cs, Node) ->
     case Node of
-	#tree{attr = Attr} ->
+	#tree{attr = #attr{}=Attr} ->
 	    Node#tree{attr = add_postcomments_1(Cs, Attr)};
-	#wrapper{attr = Attr} ->
+	#wrapper{attr = #attr{}=Attr} ->
 	    Node#wrapper{attr = add_postcomments_1(Cs, Attr)};
 	_ ->
 	    add_postcomments(Cs, wrap(Node))
@@ -1126,14 +1126,14 @@ _See also: _`get_postcomments/1`, `get_precomments/1`, `remove_comments/1`.
 """.
 -spec has_comments(syntaxTree()) -> boolean().
 
-has_comments(#tree{attr = Attr}) ->
-    case Attr#attr.com of
+has_comments(#tree{attr = #attr{com = Com}}) ->
+    case Com of
 	none -> false;
 	#com{pre = [], post = []} -> false;
 	_ -> true
     end;
-has_comments(#wrapper{attr = Attr}) ->
-    case Attr#attr.com of
+has_comments(#wrapper{attr = #attr{com = Com}}) ->
+    case Com of
 	none -> false;
 	#com{pre = [], post = []} -> false;
 	_ -> true
@@ -1154,9 +1154,9 @@ _See also: _`set_postcomments/2`, `set_precomments/2`.
 
 remove_comments(Node) ->
     case Node of
-	#tree{attr = Attr} ->
+	#tree{attr = #attr{}=Attr} ->
 	    Node#tree{attr = Attr#attr{com = none}};
-	#wrapper{attr = Attr} ->
+	#wrapper{attr = #attr{}=Attr} ->
 	    Node#wrapper{attr = Attr#attr{com = none}};
 	_ ->
 	    Node
@@ -1217,8 +1217,8 @@ _See also: _`get_attrs/1`, `set_extra/2`.
 """.
 -spec get_extra(syntaxTree()) -> [term()].
 
-get_extra(#tree{attr = Attr}) -> Attr#attr.extra;
-get_extra(#wrapper{attr = Attr}) -> Attr#attr.extra;
+get_extra(#tree{attr = #attr{extra = Extra}}) -> Extra;
+get_extra(#wrapper{attr = #attr{extra = Extra}}) -> Extra;
 get_extra(_) -> [].
 
 
@@ -1241,9 +1241,9 @@ _See also: _`add_extra/2`, `copy_extra/2`, `get_extra/1`.
 
 set_extra(Node, As) ->
     case Node of
-	#tree{attr = Attr} ->
+	#tree{attr = #attr{}=Attr} ->
 	    Node#tree{attr = Attr#attr{extra = As}};
-	#wrapper{attr = Attr} ->
+	#wrapper{attr = #attr{}=Attr} ->
 	    Node#wrapper{attr = Attr#attr{extra = As}};
 	_ ->
 	    %% Assume we have an `erl_parse' node and create a wrapper
@@ -1275,9 +1275,9 @@ _See also: _`get_extra/1`, `set_extra/2`.
 
 add_extra(A, Node) ->
     case Node of
-	#tree{attr = Attr} ->
+	#tree{attr = #attr{}=Attr} ->
 	    Node#tree{attr = Attr#attr{extra = [A | Attr#attr.extra]}};
-	#wrapper{attr = Attr} ->
+	#wrapper{attr = #attr{}=Attr} ->
 	    Node#wrapper{attr = Attr#attr{extra = [A | Attr#attr.extra]}};
 	_ ->
 	    %% Assume we have an `erl_parse' node and create a wrapper
@@ -1326,8 +1326,8 @@ _See also: _`get_extra/1`, `get_anno/1`, `get_postcomments/1`, `get_precomments/
 """.
 -spec get_attrs(syntaxTree()) -> syntaxTreeAttributes().
 
-get_attrs(#tree{attr = Attr}) -> Attr;
-get_attrs(#wrapper{attr = Attr}) -> Attr;
+get_attrs(#tree{attr = #attr{}=Attr}) -> Attr;
+get_attrs(#wrapper{attr = #attr{}=Attr}) -> Attr;
 get_attrs(Node) -> #attr{anno = get_anno(Node),
 			 extra = get_extra(Node),
 			 com = get_com(Node)}.
@@ -8443,6 +8443,9 @@ Removes any wrapper structure, if present.
 
 If `Node` is a wrapper structure, this function returns the wrapped
 `m:erl_parse` tree; otherwise it returns `Node` itself.
+
+Note that this does *not* copy attributes from the wrapper onto the
+returned node. For that purpose, use `revert/1` instead.
 """.
 -spec unwrap(syntaxTree()) -> tree() | erl_parse().
 
