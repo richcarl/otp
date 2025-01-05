@@ -20,7 +20,7 @@
 %% either the Apache License or the LGPL.
 %%
 %% @author Richard Carlsson <carlsson.richard@gmail.com>
-%% @copyright 2010-2015 Richard Carlsson
+%% @copyright 2010-2025 Richard Carlsson
 %%
 
 -module(merl).

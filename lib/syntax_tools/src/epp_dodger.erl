@@ -19,7 +19,7 @@
 %% above, a recipient may use your version of this file under the terms of
 %% either the Apache License or the LGPL.
 %%
-%% @copyright 2001-2006 Richard Carlsson
+%% @copyright 2001-2025 Richard Carlsson
 %% @author Richard Carlsson <carlsson.richard@gmail.com>
 %% @end
 %% =====================================================================
