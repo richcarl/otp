@@ -65,7 +65,7 @@ This module tokenises and parses most Erlang source code without expanding
 preprocessor directives and macro applications, as long as these are
 syntactically "well-behaved". Because the normal parse trees of the `erl_parse`
 module cannot represent these things (normally, they are expanded by the Erlang
-preprocessor [`//stdlib/epp`](`m:epp`) before the parser sees them), an extended
+preprocessor [`epp`](`m:epp`) before the parser sees them), an extended
 syntax tree is created, using the `m:erl_syntax` module.
 """.
 

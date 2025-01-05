@@ -820,13 +820,13 @@ get_pos(Node) ->
 -doc """
 get_anno(Node)
 
-Returns the annotation (see [`//stdlib/erl_anno`](`m:erl_anno`)) associated with
+Returns the annotation (see [`erl_anno`](`m:erl_anno`)) associated with
 `Node`.
 
 By default, all new tree nodes have their associated position
 information set to the integer zero. Use
-[`//stdlib/erl_anno:location/1`](`erl_anno:location/1`) or
-[`//stdlib/erl_anno:line/1`](`erl_anno:line/1`) to get the position information.
+[`erl_anno:location/1`](`erl_anno:location/1`) or
+[`erl_anno:line/1`](`erl_anno:line/1`) to get the position information.
 
 _See also: _`get_attrs/1`, `set_anno/2`.
 """.
@@ -3027,7 +3027,7 @@ Creates an abstract error marker.
 
 The result represents an occurrence of an error in the source code,
 with an associated Erlang I/O ErrorInfo structure given by `Error`
-(see module [`//stdlib/io`](`m:io`) for details). Error markers are
+(see stdlib module [`io`](`m:io`) for details). Error markers are
 regarded as source code forms, but have no defined lexical form.
 
 > #### Note {: .info }
@@ -3080,7 +3080,7 @@ Creates an abstract warning marker.
 
 The result represents an occurrence of a possible problem in the
 source code, with an associated Erlang I/O ErrorInfo structure given
-by `Error` (see module [`//stdlib/io`](`m:io`) for details). Warning
+by `Error` (see stdlib module [`io`](`m:io`) for details). Warning
 markers are regarded as source code forms, but have no defined lexical
 form.
 
@@ -7579,7 +7579,7 @@ context where it is not expected, it will be left unchanged as a
 non-reverted subtree of the result.  This can only happen if `Tree`
 does not actually represent legal Erlang code.
 
-_See also: _[//stdlib/erl_parse](`m:erl_parse`), `revert_forms/1`.
+_See also: _[erl_parse](`m:erl_parse`), `revert_forms/1`.
 """.
 -spec revert(syntaxTree()) -> syntaxTree().
 

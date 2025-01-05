@@ -84,10 +84,10 @@ get_ctxt_precedence(Ctxt) ->
 -doc """
 Updates the operator precedence field of the prettyprinter context.
 
-See the [`//stdlib/erl_parse`](`m:erl_parse`) module for operator
+See the stdlib module [`erl_parse`](`m:erl_parse`) for operator
 precedences.
 
-_See also: _[//stdlib/erl_parse](`m:erl_parse`), `get_ctxt_precedence/1`.
+_See also: _[erl_parse](`m:erl_parse`), `get_ctxt_precedence/1`.
 """.
 -spec set_ctxt_precedence(context(), integer()) -> context().
 

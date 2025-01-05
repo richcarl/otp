@@ -149,7 +149,7 @@ fold_subtrees(F, S, Tree) ->
 -doc """
 Like `lists:foldl/3`, but over a list of lists.
 
-_See also: _[//stdlib/lists:foldl/3](`lists:foldl/3`), `fold/3`.
+_See also: _[lists:foldl/3](`lists:foldl/3`), `fold/3`.
 """.
 -spec foldl_listlist(fun((term(), term()) -> term()),
 		     term(), [[term()]]) -> term().
@@ -262,7 +262,7 @@ Returns the names of variables occurring in a syntax tree.
 The result is a set of variable names represented by atoms. Macro
 names are not included.
 
-_See also: _[//stdlib/sets](`m:sets`).
+_See also: _[sets](`m:sets`).
 """.
 -spec variables(syntaxTree()) -> set(atom()).
 
@@ -336,7 +336,7 @@ This function uses the module `m:rand` to generate new keys. The seed it uses ca
 be initialized by calling `rand:seed/1` or `rand:seed/2` before this function is
 first called.
 
-_See also: _[//stdlib/rand](`m:rand`), [//stdlib/sets](`m:sets`),
+_See also: _[rand](`m:rand`), [sets](`m:sets`),
 `new_variable_name/1`.
 """.
 -spec new_variable_name(fun((integer()) -> atom()), set(atom())) -> atom().
@@ -430,7 +430,7 @@ the top level node. The following annotations are affected:
 `Bindings` and `Vars` are ordered-set lists (see module `m:ordsets`) of atoms
 representing variable names.
 
-_See also: _[//stdlib/ordsets](`m:ordsets`), `annotate_bindings/1`.
+_See also: _[ordsets](`m:ordsets`), `annotate_bindings/1`.
 """.
 -spec annotate_bindings(syntaxTree(), ordset(atom())) ->
         syntaxTree().
@@ -988,10 +988,10 @@ Note that the reverse does not apply. Currently, the detected cases
 are calls to [`exit/1`](`exit/1`), [`throw/1`](`throw/1`),
 `erlang:error/1` and `erlang:error/2`.
 
-_See also: _[//erts/erlang:error/1](`erlang:error/1`),
-[//erts/erlang:error/2](`erlang:error/2`),
-[//erts/erlang:exit/1](`erlang:exit/1`),
-[//erts/erlang:throw/1](`erlang:throw/1`).
+_See also: _[erlang:error/1](`erlang:error/1`),
+[erlang:error/2](`erlang:error/2`),
+[erlang:exit/1](`erlang:exit/1`),
+[erlang:throw/1](`erlang:throw/1`).
 """.
 -spec is_fail_expr(syntaxTree()) -> boolean().
 

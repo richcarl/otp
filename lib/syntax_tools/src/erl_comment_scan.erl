@@ -61,8 +61,8 @@ column of the comment. `Line` and `Column` are always positive integers, and
 `Indentation` is a nonnegative integer.
 
 Evaluation exits with reason `{read, Reason}` if a read error occurred, where
-`Reason` is an atom corresponding to a Posix error code; see the module
-[`//kernel/file`](`m:file`) for details.
+`Reason` is an atom corresponding to a Posix error code; see the kernel module
+[`file`](`m:file`) for details.
 """.
 -spec file(file:filename()) -> [comment()].
 
