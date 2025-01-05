@@ -87,6 +87,7 @@ trees.
 	 set_pos/2,
 	 copy_anno/2,
 	 copy_pos/2,
+	 inherited_anno/1,
 	 get_precomments/1,
 	 set_precomments/2,
 	 add_precomments/2,
@@ -108,6 +109,7 @@ trees.
 	 get_attrs/1,
 	 set_attrs/2,
 	 copy_attrs/2,
+	 inherit_attrs/2,
 
 	 flatten_form_list/1,
 	 cons/2,
@@ -898,6 +900,28 @@ copy_anno(Source, Target) ->
     set_anno(Target, get_anno(Source)).
 
 
+-doc """
+inherited_anno(Anno)
+
+Keeps only the inheritable subset of annotations from `Anno`.
+Currently this includes the starting line number and the `generated` flag
+(if any), but not the starting column, nor the end location or the raw text
+(see `m:erl_anno`).
+
+_See also: _`get_anno/1`, `set_anno/2`, `copy_anno/2`.
+""".
+-spec inherited_anno(erl_anno:anno()) -> erl_anno:anno().
+
+inherited_anno(Anno) ->
+    %% avoid creating a list if we only need a line number
+    Line = erl_anno:line(Anno),
+    NewAnno = erl_anno:new(Line),
+    case erl_anno:generated(Anno) of
+        true -> erl_anno:set_generated(true, NewAnno);
+        false -> NewAnno
+    end.
+
+
 %% =====================================================================
 %% `get_com' and `set_com' are for internal use only.
 
@@ -1368,6 +1392,23 @@ _See also: _`get_attrs/1`, `set_attrs/2`.
 
 copy_attrs(S, T) ->
     set_attrs(T, get_attrs(S)).
+
+
+-doc """
+inherit_attrs(Source, Target)
+
+Copies the inheritable subset of attributes from `Source` to `Target`.
+Currently this includes the starting line number and the `generated` flag
+(if any), but not the starting column, nor the end location or the raw text
+(see `m:erl_anno`), nor any attached comments (see `set_precomments/2`) or
+user annotations (see `set_extra/2`).
+
+_See also: _`get_attrs/1`, `set_attrs/2`, `copy_attrs/2`.
+""".
+-spec inherit_attrs(syntaxTree(), syntaxTree()) -> syntaxTree().
+
+inherit_attrs(Source, Target) ->
+    set_anno(Target, inherited_anno(get_anno(Source))).
 
 
 %% =====================================================================
@@ -2901,11 +2942,11 @@ _See also: _`binary_field/2`.
 
 binary_field_types(Node) ->
     case unwrap(Node) of
-	{bin_element, Anno, _, _, Types} ->
+	{bin_element, _, _, _, Types} ->
 	    if Types =:= default ->
 		    [];
 	       true ->
-		    unfold_binary_field_types(Types, Anno)
+		    unfold_binary_field_types(Types, Node)
 	    end;
 	Node1 ->
 	    (data(Node1))#binary_field.types
@@ -3370,8 +3411,8 @@ _See also: _`attribute/1`.
 
 attribute_name(Node) ->
     case unwrap(Node) of
-	{attribute, Anno, Name, _} ->
-	    set_anno(atom(Name), Anno);
+	{attribute, _, Name, _} ->
+	    inherit_attrs(Node, atom(Name));
 	Node1 ->
 	    (data(Node1))#attribute.name
     end.
@@ -3390,45 +3431,43 @@ _See also: _`attribute/1`.
 
 attribute_arguments(Node) ->
     case unwrap(Node) of
-	{attribute, Anno, Name, Data} ->
+	{attribute, _, Name, Data} ->
 	    case Name of
 		module ->
 		    {M1, Vs} =
 			case Data of
 			    {M0, Vs0} ->
-				{M0, unfold_variable_names(Vs0, Anno)};
+				{M0, unfold_variable_names(Vs0, Node)};
 			    M0 ->
 				{M0, none}
 			end,
 		    M2 = atom(M1),
-		    M = set_anno(M2, Anno),
+		    M = inherit_attrs(Node, M2),
 		    if Vs == none -> [M];
-		       true -> [M, set_anno(list(Vs), Anno)]
+		       true -> [M, inherit_attrs(Node, list(Vs))]
 		    end;
 		export ->
-		    [set_anno(
-		       list(unfold_function_names(Data, Anno)),
-		       Anno)];
+		    [inherit_attrs(Node,
+		       list(unfold_function_names(Data, Node)))];
 		import ->
 		    {Module, Imports} = Data,
-		    [set_anno(atom(Module), Anno),
-		     set_anno(
-		       list(unfold_function_names(Imports, Anno)),
-		       Anno)];
+		    [inherit_attrs(Node, atom(Module)),
+		     inherit_attrs(Node,
+		       list(unfold_function_names(Imports, Node)))];
 		file ->
 		    {File, Line} = Data,
-		    [set_anno(string(File), Anno),
-		     set_anno(integer(Line), Anno)];
+		    [inherit_attrs(Node, string(File)),
+		     inherit_attrs(Node, integer(Line))];
 		record ->
 		    %% Note that we create a tuple as container
 		    %% for the second argument!
 		    {Type, Entries} = Data,
-		    [set_anno(atom(Type), Anno),
-		     set_anno(tuple(unfold_record_fields(Entries)),
-			     Anno)];
+		    [inherit_attrs(Node, atom(Type)),
+		     inherit_attrs(Node,
+                         tuple(unfold_record_fields(Entries)))];
 		_ ->
 		    %% Standard single-term generic attribute.
-		    [set_anno(abstract(Data), Anno)]
+		    [inherit_attrs(Node, abstract(Data))]
 	    end;
 	Node1 ->
 	    (data(Node1))#attribute.args
@@ -3596,8 +3635,8 @@ _See also: _`function/2`.
 
 function_name(Node) ->
     case unwrap(Node) of
-	{function, Anno, Name, _, _} ->
-	    set_anno(atom(Name), Anno);
+	{function, _, Name, _, _} ->
+	    inherit_attrs(Node, atom(Name));
 	Node1 ->
 	    (data(Node1))#func.name
     end.
@@ -3752,11 +3791,13 @@ revert_try_clause(Node) ->
 fold_try_clause({clause, Anno, [P], Guard, Body}) ->
     P1 = case type(P) of
 	     class_qualifier ->
-		 {tuple, Anno, [class_qualifier_argument(P),
+                 Anno1 = inherited_anno(Anno),
+		 {tuple, Anno1, [class_qualifier_argument(P),
 			       class_qualifier_body(P),
 			       class_qualifier_stacktrace(P)]};
 	     _ ->
-		 {tuple, Anno, [{atom, Anno, throw}, P, {var, Anno, '_'}]}
+                 Anno1 = inherited_anno(Anno),
+		 {tuple, Anno1, [{atom, Anno1, throw}, P, {var, Anno1, '_'}]}
 	 end,
     {clause, Anno, [P1], Guard, Body}.
 
@@ -4148,8 +4189,8 @@ _See also: _`infix_expr/3`.
 
 infix_expr_operator(Node) ->
     case unwrap(Node) of
-	{op, Anno, Operator, _, _} ->
-	    set_anno(operator(Operator), Anno);
+	{op, _, Operator, _, _} ->
+	    inherit_attrs(Node, operator(Operator));
 	Node1 ->
 	    (data(Node1))#infix_expr.operator
     end.
@@ -4216,8 +4257,8 @@ _See also: _`prefix_expr/2`.
 
 prefix_expr_operator(Node) ->
     case unwrap(Node) of
-	{op, Anno, Operator, _} ->
-	    set_anno(operator(Operator), Anno);
+	{op, _, Operator, _} ->
+	    inherit_attrs(Node, operator(Operator));
 	Node1 ->
 	    (data(Node1))#prefix_expr.operator
     end.
@@ -4337,8 +4378,8 @@ _See also: _`record_index_expr/2`.
 
 record_index_expr_type(Node) ->
     case unwrap(Node) of
-	{record_index, Anno, Type, _} ->
-	    set_anno(atom(Type), Anno);
+	{record_index, _, Type, _} ->
+	    inherit_attrs(Node, atom(Type));
 	Node1 ->
 	    (data(Node1))#record_index_expr.type
     end.
@@ -4425,8 +4466,8 @@ _See also: _`record_access/3`.
 
 record_access_type(Node) ->
     case unwrap(Node) of
-	{record_field, Anno, _, Type, _} ->
-	    set_anno(atom(Type), Anno);
+	{record_field, _, _, Type, _} ->
+	    inherit_attrs(Node, atom(Type));
 	Node1 ->
 	    (data(Node1))#record_access.type
     end.
@@ -4542,10 +4583,10 @@ _See also: _`record_expr/3`.
 
 record_expr_type(Node) ->
     case unwrap(Node) of
-	{record, Anno, Type, _} ->
-	    set_anno(atom(Type), Anno);
-	{record, Anno, _, Type, _} ->
-	    set_anno(atom(Type), Anno);
+	{record, _, Type, _} ->
+	    inherit_attrs(Node, atom(Type));
+	{record, _, _, Type, _} ->
+	    inherit_attrs(Node, atom(Type));
 	Node1 ->
 	    (data(Node1))#record_expr.type
     end.
@@ -4812,8 +4853,8 @@ type_application_name(Node) ->
     case unwrap(Node) of
         {remote_type, _, [Module, Name, _]} ->
             module_qualifier(Module, Name);
-        {type, Anno, Name, _} ->
-            set_anno(atom(Name), Anno);
+        {type, _, Name, _} ->
+            inherit_attrs(Node, atom(Name));
         Node1 ->
             (data(Node1))#type_application.type_name
     end.
@@ -4997,9 +5038,9 @@ revert_function_type(Node) ->
     Type = function_type_return(Node),
     case function_type_arguments(Node) of
         any_arity ->
-            {type, Anno, 'fun', [{type, Anno, any}, Type]};
+            {type, Anno, 'fun', [{type, inherited_anno(Anno), any}, Type]};
         Arguments ->
-            {type, Anno, 'fun', [{type, Anno, product, Arguments}, Type]}
+            {type, Anno, 'fun', [{type, inherited_anno(Anno), product, Arguments}, Type]}
     end.
 
 
@@ -5614,8 +5655,8 @@ _See also: _`user_type_application/2`.
 
 user_type_application_name(Node) ->
     case unwrap(Node) of
-        {user_type, Anno, Name, _} ->
-            set_anno(atom(Name), Anno);
+        {user_type, _, Name, _} ->
+            inherit_attrs(Node, atom(Name));
         Node1 ->
             (data(Node1))#user_type_application.type_name
     end.
@@ -7032,12 +7073,16 @@ _See also: _`arity_qualifier/2`, `implicit_fun/1`, `module_qualifier/2`.
 
 implicit_fun_name(Node) ->
     case unwrap(Node) of
-	{'fun', Anno, {function, Atom, Arity}} ->
-	    arity_qualifier(set_anno(atom(Atom), Anno),
-			    set_anno(integer(Arity), Anno));
-	{'fun', _Anno, {function, Module, Atom, Arity}} ->
-	    %% XXX: Perhaps set position for this as well?
-	    module_qualifier(Module, arity_qualifier(Atom, Arity));
+	{'fun', _, {function, Atom, Arity}} ->
+            inherit_attrs(Node,
+                          arity_qualifier(
+                            inherit_attrs(Node, atom(Atom)),
+                            inherit_attrs(Node, integer(Arity))));
+	{'fun', _, {function, Module, Atom, Arity}} ->
+            inherit_attrs(Node,
+                          module_qualifier(Module,
+                                           inherit_attrs(Node,
+                                                         arity_qualifier(Atom, Arity))));
 	Node1 ->
 	    data(Node1)
     end.
@@ -7159,8 +7204,8 @@ _See also: _`named_fun_expr/2`.
 
 named_fun_expr_name(Node) ->
     case unwrap(Node) of
-	{named_fun, Anno, Name, _} ->
-	    set_anno(variable(Name), Anno);
+	{named_fun, _, Name, _} ->
+	    inherit_attrs(Node, variable(Name));
 	Node1 ->
 	    (data(Node1))#named_fun_expr.name
     end.
@@ -8482,10 +8527,11 @@ is_printable(S) ->
 %% Support functions for transforming lists of function names
 %% specified as `arity_qualifier' nodes.
 
-unfold_function_names(Ns, Anno) ->
+unfold_function_names(Ns, Node) ->
     F = fun ({Atom, Arity}) ->
-		N = arity_qualifier(atom(Atom), integer(Arity)),
-		set_anno(N, Anno)
+		inherit_attrs(Node,
+                    arity_qualifier(inherit_attrs(Node, atom(Atom)),
+                                    inherit_attrs(Node, integer(Arity))))
 	end,
     [F(N) || N <- Ns].
 
@@ -8501,8 +8547,8 @@ fold_function_name(N) ->
 fold_variable_names(Vs) ->
     [variable_name(V) || V <- Vs].
 
-unfold_variable_names(Vs, Anno) ->
-    [set_anno(variable(V), Anno) || V <- Vs].
+unfold_variable_names(Vs, Node) ->
+    [inherit_attrs(Node, variable(V)) || V <- Vs].
 
 
 %% Support functions for transforming lists of record field definitions.
@@ -8543,7 +8589,7 @@ unfold_record_fields(Fs) ->
 
 unfold_record_field({typed_record_field, Field, Type}) ->
     F = unfold_record_field_1(Field),
-    set_anno(typed_record_field(F, Type), get_anno(F));
+    inherit_attrs(F, typed_record_field(F, Type));
 unfold_record_field(Field) ->
     unfold_record_field_1(Field).
 
@@ -8564,12 +8610,15 @@ fold_binary_field_type(Node) ->
 	    concrete(Node)
     end.
 
-unfold_binary_field_types(Ts, Anno) ->
-    [unfold_binary_field_type(T, Anno) || T <- Ts].
+unfold_binary_field_types(Ts, Node) ->
+    [unfold_binary_field_type(T, Node) || T <- Ts].
 
-unfold_binary_field_type({Type, Size}, Anno) ->
-    set_anno(size_qualifier(atom(Type), integer(Size)), Anno);
-unfold_binary_field_type(Type, Anno) ->
-    set_anno(atom(Type), Anno).
+unfold_binary_field_type({Type, Size}, Node) ->
+    inherit_attrs(Node,
+        size_qualifier(inherit_attrs(Node, atom(Type)),
+                       inherit_attrs(Node, integer(Size))));
+unfold_binary_field_type(Type, Node) ->
+    inherit_attrs(Node,
+                  inherit_attrs(Node, atom(Type))).
 
 %% =====================================================================
