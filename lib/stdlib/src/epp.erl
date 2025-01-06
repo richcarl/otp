@@ -804,6 +804,7 @@ init_server(Pid, FileName, Options, St0) ->
     Features = proplists:get_value(features, Options, []),
     Internal = proplists:get_value(compiler_internal, Options, []),
     ParseChecks = proplists:get_bool(ssa_checks, Internal),
+    ScanOpts = proplists:get_value(erl_scan_opts, Options, []),
     Ms0 = predef_macros(SourceName, Features),
     case user_predef(Pdm, Ms0) of
 	{ok,Ms1} ->
@@ -833,7 +834,8 @@ init_server(Pid, FileName, Options, St0) ->
                          ++ if ParseChecks ->
                                     [{compiler_internal,[ssa_checks]}];
                                true -> []
-                            end,
+                            end
+                         ++ ScanOpts,
                          features = Features,
                          else_reserved = ResWordFun('else'),
                          deterministic = Deterministic},
