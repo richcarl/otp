@@ -1882,11 +1882,11 @@ deterministic_filename(#compile{ifile=File,options=Opts}) ->
 
 do_parse_module(DefEncoding, #compile{ifile=File,options=Opts,dir=Dir}=St) ->
     SourceName = deterministic_filename(St),
-    StartLocation = case with_columns(Opts) of
+    {StartLocation, ScanOpts} = case with_columns(Opts) of
                         true ->
-                            {1,1};
+                            {{1,1}, [text]};
                         false ->
-                            1
+                            {1, []}
                     end,
     case erl_features:keyword_fun(Opts, fun erl_scan:f_reserved_word/1) of
         {ok, {Features, ResWordFun}} ->
@@ -1899,6 +1899,7 @@ do_parse_module(DefEncoding, #compile{ifile=File,options=Opts,dir=Dir}=St) ->
                                 {location,StartLocation},
                                 {reserved_word_fun, ResWordFun},
                                 {features, Features},
+                                {erl_scan_opts,ScanOpts},
                                 extra|
                                 case member(check_ssa, Opts) of
                                     true ->
