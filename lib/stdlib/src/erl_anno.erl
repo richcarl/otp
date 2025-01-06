@@ -217,6 +217,10 @@ is_anno2(location, Line) when ?LN(Line) ->
     true;
 is_anno2(location, {Line, Column}) when ?LN(Line), ?COL(Column) ->
     true;
+is_anno2(end_location, Line) when ?LN(Line) ->
+    true;
+is_anno2(end_location, {Line, Column}) when ?LN(Line), ?COL(Column) ->
+    true;
 is_anno2(generated, true) ->
     true;
 is_anno2(file, Filename) ->
@@ -267,10 +271,13 @@ end_location(Line) when ?ALINE(Line) ->
 end_location({Line, Column}) when ?ALINE(Line), ?ACOLUMN(Column) ->
     undefined;
 end_location(Anno) ->
-    case anno_info(Anno, end_location) of
+    %% return explicit end_location annotation if present
+    case get_end_location(Anno) of
         undefined ->
+            %% otherwise calculate from text, if it exists
             case text(Anno) of
                 undefined ->
+                    %% always return undefined if no exact end location known
                     undefined;
                 Text ->
                     case location(Anno) of
@@ -280,10 +287,17 @@ end_location(Anno) ->
                             end_location(Text, Line)
                     end
             end;
-
         Location ->
             Location
     end.
+
+% only used internally
+get_end_location(Line) when ?ALINE(Line) ->
+    undefined;
+get_end_location({Line, Column}) when ?ALINE(Line), ?ACOLUMN(Column) ->
+    undefined;
+get_end_location(Anno) ->
+    anno_info(Anno, end_location).
 
 -doc """
 Returns the filename of the annotations Anno. If there is no filename,
