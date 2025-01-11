@@ -132,6 +132,7 @@
                     tails=[],tail_pats=[],pres=[],args=[],
                     refill_pats=[],refill_as=[]}).
 -record(isimple,   {anno=#a{},term :: cerl:cerl()}).
+-record(ipatalt,   {anno=#a{},pats}).
 
 -type iapply()    :: #iapply{}.
 -type ibinary()   :: #ibinary{}.
@@ -299,29 +300,51 @@ body(Cs0, Name, Arity, St0) ->
     Fc = function_clause(Ps, FunAnno),
     {#ifun{anno=#a{anno=FunAnno},id=[],vars=Args,clauses=Cs1,fc=Fc},St3}.
 
-%% TODO: lint must check for same new bindings in each (may have different use data)
-%% TODO: 'or' ought to have lower precedence than '=' for sake of aliases
-%% TODO: handle single clauses becoming multiple, as in LC or =
-%% TODO: avoid duplicating body
-%% TODO: handle multi-pattern clauses; maybe warn if too many combinations
-split_pat_alts({clause,Anno,[{op,_A,'or',P1,P2}],G,B}) ->
-    [split_pat_alts({clause,Anno,[P1],G,B}), split_pat_alts({clause,Anno,[P2],G,B})];
-split_pat_alts(C) ->
-    C.
+%% rewriting pattern alternatives into multiple clauses
+
+%% clauses(Cs0, St0) ->
+%%     {Css, St} = split_pat_alts(Cs0, St0),
+%%     clauses_1(lists:flatten(Css), St).
+
+%% split_pat_alts(Cs0, St0) ->
+%%     lists:mapfoldl(split_pat_alts_1/2, Cs).
+
+%% %% just handles single-pattern clauses for now
+%% split_pat_alts_1({clause,Anno,[P],G,B}=C, St0) ->
+%%     case split_pat_alts_2(P) of
+%%         Ps1 when is_list(Ps1) ->
+%%             erlang:display({'Split',Ps1}),
+%%             {Name, St1} = new_fun_name("after", St0),
+            
+%%             {[{clause,Anno,[P1],G,B} || P1 <- lists:flatten(Ps1)], St1};
+%%         _ ->
+%%             {C, St0}
+%%     end;
+%% split_pat_alts_1(C, St) ->
+%%     {C, St}.
+
+%% %% split an or-pattern into multiple alternatives
+%% split_pat_alts_2({op,_A,'or',P1,P2}) ->
+%%     erlang:display({'OR',_A,P1,P2}),
+%%     [split_pat_alts_2(P1), split_pat_alts_2(P2)];
+%% split_pat_alts_2(P) ->
+%%     P.
+
+%% f({}T, A) ->
+%%     Pre = fun(T0, A) -> {T0, A} end,
+%%     Post = fun(T0, A) -> {T0, A} end,
+%%     cerl_trees:mapfold(Pre, Post, S0, T).
+
 
 %% clause(Clause, State) -> {Cclause,State}.
 %% clauses([Clause], State) -> {[Cclause],State}.
 %%  Convert clauses. Trap bad pattern aliases.
 
-clauses(Cs0, St0) ->
-    Cs = lists:flatten(lists:map(fun split_pat_alts/1, Cs0)),
-    clauses_1(Cs, St0).
-
-clauses_1([C0|Cs0], St0) ->
+clauses([C0|Cs0], St0) ->
     {C,St1} = clause(C0, St0),
-    {Cs,St2} = clauses_1(Cs0, St1),
+    {Cs,St2} = clauses(Cs0, St1),
     {[C|Cs],St2};
-clauses_1([], St) -> {[],St}.
+clauses([], St) -> {[],St}.
 
 clause({clause,Lc,H0,G0,B0}, St0) ->
     try head(H0, St0) of
@@ -2524,6 +2547,20 @@ pattern({match,_,P1,P2}, St) ->
     {Cp2,St2} = pattern(P2, St1),
     {pat_alias(Cp1, Cp2),St2};
 %% Evaluate compile-time expressions.
+pattern({op,A,'or',L,R}, St) ->
+    {L1,St1} = pattern(L, St),
+    {R1,St2} = pattern(R, St1),
+    {case {L1, R1} of
+         {#ipatalt{pats=Ls,anno=La}, #ipatalt{pats=Rs}} ->
+             #ipatalt{pats=Ls++Rs, anno=La};
+         {#ipatalt{pats=Ls,anno=La}, _} ->
+             #ipatalt{pats=Ls++[R1], anno=La};
+         {_, #ipatalt{pats=Rs}} ->
+             #ipatalt{pats=[L1]++Rs, anno=#a{anno=lineno_anno(A, St2)}};
+         _ ->
+             #ipatalt{pats=[L1,R1], anno=#a{anno=lineno_anno(A, St2)}}
+     end,
+     St2};
 pattern({op,_,'++',{nil,_},R}, St) ->
     pattern(R, St);
 pattern({op,_,'++',{cons,Li,H,T},R}, St) ->
@@ -3346,6 +3383,9 @@ upattern(#c_alias{var=V0,pat=P0}=Alias, Ks, St0) ->
     {V1,Vg,Vv,Vu,St1} = upattern(V0, Ks, St0),
     {P1,Pg,Pv,Pu,St2} = upattern(P0, known_union(Ks, Vv), St1),
     {Alias#c_alias{var=V1,pat=P1},Vg ++ Pg,union(Vv, Pv),union(Vu, Pu),St2};
+upattern(#ipatalt{pats=Ps0}=PAlt, Ks, St0) ->
+    {Ps1,Psg,Psv,Pus,St1} = ualtpats(Ps0, Ks, St0),
+    {PAlt#ipatalt{pats=Ps1},Psg,Psv,Pus,St1};
 upattern(Other, _, St) -> {Other,[],[],[],St}.	%Constants
 
 %% upattern_list([Pat], [KnownVar], State) ->
@@ -3356,6 +3396,12 @@ upattern_list([P0|Ps0], Ks, St0) ->
     {Ps1,Psg,Psv,Psu,St2} = upattern_list(Ps0, known_union(Ks, Pv), St1),
     {[P1|Ps1],Pg ++ Psg,union(Pv, Psv),union(Pu, Psu),St2};
 upattern_list([], _, St) -> {[],[],[],[],St}.
+
+ualtpats([P0|Ps0], Ks, St0) ->
+    {P1,Pg,Pv,Pu,St1} = upattern(P0, Ks, St0),
+    {Ps1,Psg,Psv,Psu,St2} = upattern_list(Ps0, Ks, St1),
+    {[P1|Ps1],Pg ++ Psg,union(Pv, Psv),union(Pu, Psu),St2};
+ualtpats([], _, St) -> {[],[],[],[],St}.
 
 %% upat_bin([Pat], [KnownVar], State) ->
 %%                        {[Pat],[GuardTest],[NewVar],[UsedVar],State}.
@@ -3608,6 +3654,10 @@ cpattern(#imap{anno=#a{anno=Anno},es=Es}) ->
 cpattern(#ibinary{anno=#a{anno=Anno},segments=Segs0}) ->
     Segs = [cpat_bin_seg(S) || S <- Segs0],
     #c_binary{anno=Anno,segments=Segs};
+cpattern(#ipatalt{anno=#a{anno=Anno}=A,pats=Ps0}=PAlt) ->
+    erlang:display({'CPATALT',Anno,Ps0}),
+    %% will be split in lowering stage; wrap to hide it from mapfold
+    #c_opaque{anno=A,val=PAlt#ipatalt{pats=cpattern_list(Ps0)}};
 cpattern(Other) -> Other.
 
 cpat_map_pairs([#imappair{anno=#a{anno=Anno},op=Op,key=Key0,val=Val0}|T]) ->
@@ -4171,6 +4221,14 @@ split_pat(#c_alias{pat=Pat}=Alias0, St0) ->
             {Var,St} = new_var(St1),
             Alias = Alias0#c_alias{pat=Var},
             {Alias,{split,[Var],Ps,Split},St}
+    end;
+split_pat(#c_opaque{val=#ipatalt{pats=Ps}}, St) ->
+    %% FIXME: do something here? Or split these separately?
+    erlang:display({'SPLIT_PATALT',Ps}),
+    P = hd(Ps),
+    case split_pat(P, St) of
+        none -> {P,nil,St};
+        Other -> Other
     end;
 split_pat(Data, St0) ->
     Type = cerl:data_type(Data),
