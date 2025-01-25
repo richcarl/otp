@@ -177,7 +177,7 @@ See `m:erl_id_trans` for an example and an explanation of the function
 -include("erl_compile.hrl").
 -include("core_parse.hrl").
 
--import(lists, [member/2,reverse/1,reverse/2,keyfind/3,last/1,
+-import(lists, [member/2,reverse/1,reverse/2,last/1,
 		map/2,flatmap/2,flatten/1,foreach/2,foldr/3,any/2]).
 
 -define(PASS_TIMES, compile__pass_times).
@@ -884,7 +884,7 @@ usually not a binary) is returned instead of a binary.
 -spec forms(Forms :: forms(), Options :: [option()] | option()) -> CompRet :: comp_ret().
 
 forms(Forms, Opts) when is_list(Opts) ->
-    do_compile({forms,Forms}, [binary|Opts++env_default_opts()]);
+    do_compile({forms,Forms}, [binary|env_default_opts()++Opts]);
 forms(Forms, Opt) when is_atom(Opt) ->
     forms(Forms, [Opt|?DEFAULT_OPTIONS]).
 
@@ -902,7 +902,7 @@ the source code.
 -spec output_generated(Options :: [option()]) -> boolean().
 
 output_generated(Opts) ->
-    noenv_output_generated(Opts++env_default_opts()).
+    noenv_output_generated(env_default_opts()++Opts).
 
 %%
 %% Variants of the same function that don't consult ERL_COMPILER_OPTIONS
@@ -939,7 +939,7 @@ Works like `output_generated/1`, except that the environment variable
 -spec noenv_output_generated(Options :: [option()]) -> boolean().
 
 noenv_output_generated(Opts) ->
-    {_,Passes} = passes(file, expand_opts(Opts)),
+    {_,Passes} = passes(file, parse_opts(Opts)),
     any(fun ({save_binary,_T,_F}) -> true;
 	    (_Other) -> false
 	end, Passes).
@@ -1011,8 +1011,7 @@ env_default_opts() ->
 	    end
     end.
 
-do_compile(Input, Opts0) ->
-    Opts = expand_opts(Opts0),
+do_compile(Input, Opts) ->
     IntFun = internal_fun(Input, Opts),
 
     %% Some tools, like Dialyzer, has already spawned workers
@@ -1037,8 +1036,8 @@ internal_fun(Input, Opts) ->
             try
                 internal(Input, Opts)
             catch
-                Class:Reason:Stk ->
-                    internal_error(Class, Reason, Stk)
+                classz:Reason:Stk ->
+                    internal_error(classz, Reason, Stk)
             end
     end.
 
@@ -1048,6 +1047,163 @@ internal_error(Class, Reason, Stk) ->
              "\n"],
     io:put_chars(Error),
     error.
+
+
+parse_opts(Opts0) ->
+    parse_opts(Opts0, default_options()).
+
+parse_opts(Opts0, #{includes := Is0, macros := Ms0,
+                    parse_transform := PTs0, core_transform := CTs0}=Map0) ->
+    Opts = rewrite_triples(expand_opts(Opts0)),
+    Is1 = proplists:append_values(i, Opts),
+    Ms1 = proplists:append_values(d, Opts),
+    PTs1 = proplists:append_values(parse_transform, Opts),
+    CTs1 = proplists:append_values(core_transform, Opts),
+    Map1 = proplists:to_map(lists:reverse(Opts)),
+    Map2 = maps:merge(Map0, maps:remove(d, maps:remove(i, Map1))),
+    X=Map2#{includes := Is0++Is1, macros := Ms0++Ms1,
+          parse_transform := PTs0++PTs1,
+          core_transform := CTs0++CTs1},
+    erlang:display({'OPTS',X}),
+    X.
+
+%% change {d, A, B} to {d, {A,B}} so they can be collected
+rewrite_triples({Tag,A,B}) when is_atom(Tag) ->
+    {d,{A,B}};
+rewrite_triples(X) ->
+    X.
+
+default_options() ->
+      #{
+%% value opts
+
+        time => undefined,
+        call_time => undefined,
+        call_memory => undefined,
+        eprof => undefined,
+        features => [],
+
+        includes => [],
+        macros => [],
+        parse_transform => [],
+        core_transform => [],
+        debug_info_key => undefined,
+
+%% source, Opts0, ""
+%% source, Opts, File
+%% extra_chunks, Opts0, []
+%% error_location, Opts, column
+%% error_location, St#compile.options, column
+%% makedep_target, Opts
+%% makedep_quote_target, Opts
+%% makedep_phony, Opts
+%% makedep_add_missing, Opts
+%% makedep_output, Opts
+
+%% crypto_mode, Opts2, des3_cbc
+%% debug_info, CompOpts, false
+%% compile_info, Opts, []
+
+%%booleans
+
+        absolute_source => false,
+%% member(binary, Opts
+        check_ssa => false,
+        deterministic => false,
+%% member(encrypt_debug_info, Opts2
+%% member(no_code_generation, Opts
+        report_errors => false,
+        report_warnings => false,
+        return_errors => false,
+%% member(return_warnings, Opts
+%% member(slim, CompilerOpts),
+        warnings_as_errors => false,
+        line_coverage => false,
+        dialyzer => false,
+        strict_record_tests => false,
+        export_all => false,
+
+      %% booleans during passes selection
+        'E' => false,
+        'P' => false,
+        'S' => false,
+        binary => false,
+        clint => false,
+        clint0 => false,
+        da => false,
+        dabstr => false,
+        dalias => false,
+        dblk => false,
+        dbool => false,
+        dcbsm => false,
+        dcg => false,
+        dclean => false,
+        dcopt => false,
+        dcore => false,
+        dcorefold => false,
+        dcover => false,
+        debug_info  => false,
+        dexp => false,
+        diffable => false,
+        dinline => false,
+        djmp => false,
+        doldcg => false,
+        doldinline => false,
+        dopt => false,
+        dpp => false,
+        dprecg => false,
+        drecv => false,
+        dssa => false,
+        dssabsm => false,
+        dssaopt => false,
+        dssashare => false,
+        dthrow => false,
+        dtrim => false,
+        dz => false,
+        encrypt_debug_info  => false,
+        makedep => false,
+        makedep_side_effect => false,
+        no_docs => false,
+        ssalint => false,
+        strip_types => false,
+        to_asm => false,
+        to_core => false,
+        to_core0 => false,
+        to_dis => false,
+        to_exp => false,
+        to_pp => false
+       }.
+
+opt_get_bool(Key, Opts) ->
+    erlang:display({'BOOL',Key}),
+    %%lists:member(Key, Opts).
+    case maps:find(Key, Opts) of
+        {ok, true} -> true;
+        {ok, false} -> false
+    end.
+
+opt_disable(Key, Opts) ->
+    %%lists:member(Key, Opts).
+    case maps:find(Key, Opts) of
+        {ok, true} -> Opts;
+        {ok, false} -> Opts#{Key => false}
+    end.
+
+opt_unset_value(Key, Opts) ->
+    %%proplists:get_value(Key, Opts).
+    Opts#{Key => undefined}.
+
+opt_get_value(Key, Opts) ->
+    erlang:display({'VAL',Key}),
+    %%proplists:get_value(Key, Opts).
+    maps:get(Key, Opts).
+
+opt_get_value(Key, Opts, Default) ->
+    erlang:display({'VAL_DEF',Key,Default}),
+    case maps:find(Key, Opts) of
+        error -> Default;
+        {ok, Val} -> Val
+    end.
 
 expand_opts(Opts0) ->
     %% {debug_info_key,Key} implies debug_info.
@@ -1144,16 +1300,16 @@ format_error_reason({Reason, Stack}) when is_list(Stack) ->
     format_error_reason(error, Reason, Stack).
 
 format_error_reason(Class, Reason, Stack) ->
-    StackFun = fun
+    _StackFun = fun
 	(escript, run,      2) -> true;
 	(escript, start,    1) -> true;
 	(init,    start_it, 1) -> true;
 	(init,    start_em, 1) -> true;
 	(_Mod, _Fun, _Arity)   -> false
     end,
-    FormatFun = fun (Term, _) -> io_lib:format("~tp", [Term]) end,
-    Opts = #{stack_trim_fun => StackFun,
-             format_fun => FormatFun},
+    _FormatFun = fun (Term, _) -> io_lib:format("~tp", [Term]) end,
+    Opts = #{ },%stack_trim_fun => StackFun,
+             %format_fun => FormatFun},
     erl_error:format_exception(Class, Reason, Stack, Opts).
 
 %% The compile state record.
@@ -1171,10 +1327,11 @@ format_error_reason(Class, Reason, Stack) ->
                   warnings=[]      :: warnings(),
                   extra_chunks=[]  :: [{binary(), binary()}]}).
 
-internal({forms,Forms}, Opts0) ->
+internal({forms,Forms}, Opts) ->
+    Opts0 = (parse_opts(Opts))#{raw_opts => Opts},
     {_,Ps} = passes(forms, Opts0),
-    Source = proplists:get_value(source, Opts0, ""),
-    Opts1 = proplists:delete(source, Opts0),
+    Source = opt_get_value(source, Opts0, ""),
+    Opts1 = opt_unset_value(source, Opts0),
     Compile = build_compile(Opts1),
     NewForms = case with_columns(Opts0) of
                    true ->
@@ -1183,14 +1340,16 @@ internal({forms,Forms}, Opts0) ->
                        strip_columns(Forms)
                end,
     internal_comp(Ps, NewForms, Source, "", Compile);
-internal({file,File}, Opts) ->
+internal({file,File}, Opts0) ->
+    Opts = (parse_opts(Opts0))#{raw_opts => Opts0},
     {Ext,Ps} = passes(file, Opts),
+    erlang:display({'HERE',?LINE,Ps}),
     Compile = build_compile(Opts),
     internal_comp(Ps, none, File, Ext, Compile).
 
 build_compile(Opts0) ->
-    ExtraChunks = proplists:get_value(extra_chunks, Opts0, []),
-    Opts1 = proplists:delete(extra_chunks, Opts0),
+    ExtraChunks = opt_get_value(extra_chunks, Opts0, []),
+    Opts1 = opt_unset_value(extra_chunks, Opts0),
     #compile{options=Opts1,mod_options=Opts1,extra_chunks=ExtraChunks}.
 
 internal_comp(Passes, Code0, File, Suffix, St0) ->
@@ -1200,11 +1359,11 @@ internal_comp(Passes, Code0, File, Suffix, St0) ->
 		      ifile=erlfile(Dir, Base, Suffix),
 		      ofile=objfile(Base, St0)},
     Run = runner(St1),
-    Folder = case keyfind(time, 1, St1#compile.options) of
-                 {time,_} ->
-                     fun fold_comp_times/4;
-                 false ->
-                     fun fold_comp/4
+    Folder = case opt_get_value(time, St1#compile.options) of
+                 undefined ->
+                     fun fold_comp/4;
+                 _ ->
+                     fun fold_comp_times/4
              end,
     case Folder(Passes, Run, Code0, St1) of
         {ok,Code,St2} -> comp_ret_ok(Code, St2);
@@ -1216,14 +1375,16 @@ fold_comp_times(Passes, Run, Code, St) ->
     R = fold_comp(Passes, Run, Code, St),
     Times = reverse(get(?PASS_TIMES)),
     erase(?PASS_TIMES),
-    {time,Handler} = keyfind(time, 1, St#compile.options),
+    Handler = opt_get_value(time, St#compile.options),
     Handler(St#compile.filename, Times),
     R.
 
 fold_comp([{delay,Ps0}|Passes], Run, Code, #compile{options=Opts}=St) ->
+    erlang:display({'HERE',?LINE,Ps0}),
     Ps = select_passes(Ps0, Opts) ++ Passes,
     fold_comp(Ps, Run, Code, St);
 fold_comp([{Name,Test,Pass}|Ps], Run, Code, St) ->
+    erlang:display({'HERE',?LINE,Name}),
     case Test(St) of
 	false ->				%Pass is not needed.
 	    fold_comp(Ps, Run, Code, St);
@@ -1231,13 +1392,14 @@ fold_comp([{Name,Test,Pass}|Ps], Run, Code, St) ->
 	    fold_comp([{Name,Pass}|Ps], Run, Code, St)
     end;
 fold_comp([{Name,Pass}|Ps], Run, Code0, St0) ->
+    erlang:display({'HERE',?LINE,Name}),
     try Run({Name,Pass}, Code0, St0) of
 	{ok,Code,St1} ->
             fold_comp(Ps, Run, Code, St1);
 	{error,_St1}=Error ->
             Error
     catch
-        error:Reason:Stk ->
+        errorz:Reason:Stk ->
 	    Es = [{St0#compile.ifile,[{none,?MODULE,{crash,Name,Reason,Stk}}]}],
 	    {error,St0#compile{errors=St0#compile.errors ++ Es}}
     end;
@@ -1259,32 +1421,32 @@ runner(#compile{options=Opts}) ->
     Run0 = fun({_Name,Fun}, Code, St) ->
                    Fun(Code, St)
            end,
-    Run1 = case keyfind(time, 1, Opts) of
-               {time,_}  ->
-                   fun run_tc/3;
-               false ->
-                   Run0
+    Run1 = case opt_get_value(time, Opts) of
+               undefined ->
+                   Run0;
+               _ ->
+                   fun run_tc/3
            end,
-    case keyfind(call_time, 1, Opts) of
-        {call_time,Pass} ->
-            fun(P, Code, St) ->
-                run_tprof(P, Code, Pass, call_time, St)
-            end;
-        false ->
-            case keyfind(call_memory, 1, Opts) of
-                {call_memory,Pass} ->
-                    fun(P, Code, St) ->
-                        run_tprof(P, Code, Pass, call_memory, St)
-                    end;
-                false ->
-                    case keyfind(eprof, 1, Opts) of
-                        {eprof,EprofPass} ->
+    case opt_get_value(call_time, Opts) of
+        undefined ->
+            case opt_get_value(call_memory, Opts) of
+                undefined ->
+                    case opt_get_value(eprof, Opts) of
+                        undefined ->
+                            Run1;
+                        EprofPass ->
                             fun(P, Code, St) ->
                                 run_eprof(P, Code, EprofPass, St)
-                            end;
-                        false ->
-                            Run1
+                            end
+                    end;
+                Pass ->
+                    fun(P, Code, St) ->
+                        run_tprof(P, Code, Pass, call_memory, St)
                     end
+            end;
+        Pass ->
+            fun(P, Code, St) ->
+                run_tprof(P, Code, Pass, call_time, St)
             end
     end.
 
@@ -1364,7 +1526,7 @@ comp_ret_ok(Code, #compile{warnings=Warn0,module=Mod,options=Opts}=St) ->
     Warn1 = filter_warnings(Warn0, Opts),
     case werror(St) of
         true ->
-            case member(report_warnings, Opts) of
+            case opt_get_bool(report_warnings, Opts) of
                 true ->
 		    io:format("~p: warnings being treated as errors\n",
 			      [?MODULE]);
@@ -1375,12 +1537,12 @@ comp_ret_ok(Code, #compile{warnings=Warn0,module=Mod,options=Opts}=St) ->
         false ->
             Warn = messages_per_file(Warn1),
             report_warnings(St#compile{warnings = Warn}),
-            Ret1 = case member(binary, Opts) andalso
-		       not member(no_code_generation, Opts) of
+            Ret1 = case opt_get_bool(binary, Opts) andalso
+		       not opt_get_bool(no_code_generation, Opts) of
                        true -> [Code];
                        false -> []
                    end,
-            Ret2 = case member(return_warnings, Opts) of
+            Ret2 = case opt_get_bool(return_warnings, Opts) of
                        true -> Ret1 ++ [Warn];
                        false -> Ret1
                    end,
@@ -1392,7 +1554,7 @@ comp_ret_err(#compile{warnings=Warn0,errors=Err0,options=Opts}=St) ->
     Err = messages_per_file(Err0),
     report_errors(St#compile{errors=Err}),
     report_warnings(St#compile{warnings=Warn}),
-    case member(return_errors, Opts) of
+    case opt_get_bool(return_errors, Opts) of
 	true -> {error,Err,Warn};
 	false -> error
     end.
@@ -1400,7 +1562,7 @@ comp_ret_err(#compile{warnings=Warn0,errors=Err0,options=Opts}=St) ->
 not_werror(St) -> not werror(St).
 
 werror(#compile{options=Opts,warnings=Ws}) ->
-    Ws =/= [] andalso member(warnings_as_errors, Opts).
+    Ws =/= [] andalso opt_get_bool(warnings_as_errors, Opts).
 
 %% messages_per_file([{File,[Message]}]) -> [{File,[Message]}]
 messages_per_file(Ms) ->
@@ -1424,16 +1586,21 @@ mpf(Ms) ->
 %%  Figure out the extension of the input file and which passes
 %%  that need to be run.
 
-passes(Type, Opts) ->
-    {Ext,Passes0} = passes_1(Opts),
+passes(Type, #{from_abstr := true}=Opts) ->
+    Passes = [?pass(consult_abstr) | abstr_passes(non_verified_abstr)],
+    passes_1(".abstr", Passes, Type, Opts);
+passes(Type, #{from_core := true}=Opts) ->
+    Passes = [?pass(parse_core)|core_passes(non_verified_core)],
+    passes_1(".core", Passes, Type, Opts);
+passes(Type, #{from_asm := true}=Opts) ->
+    Passes = [?pass(beam_consult_asm)|asm_passes()],
+    passes_1(".S", Passes, Type, Opts);
+passes(Type, #{}=Opts) ->
+    Passes = [?pass(parse_module)|standard_passes()],
+    passes_1(".erl", Passes, Type, Opts).
 
-    Passes1 = case Type of
-                  file ->
-                      Passes0;
-                  forms ->
-                      fix_first_pass(Passes0)
-              end,
-
+passes_1(Ext, Passes0, Type, Opts) ->
+    Passes1 = fix_first_pass(Type, Passes0),
     Passes2 = select_passes(Passes1, Opts),
 
     %% If the last pass saves the resulting binary to a file,
@@ -1447,35 +1614,20 @@ passes(Type, Opts) ->
 
     {Ext, Passes}.
 
-passes_1([Opt|Opts]) ->
-    case pass(Opt) of
-	{_,_}=Res -> Res;
-	none -> passes_1(Opts)
-    end;
-passes_1([]) ->
-    {".erl",[?pass(parse_module)|standard_passes()]}.
-
-pass(from_abstr) ->
-    {".abstr", [?pass(consult_abstr) | abstr_passes(non_verified_abstr)]};
-pass(from_core) ->
-    {".core",[?pass(parse_core)|core_passes(non_verified_core)]};
-pass(from_asm) ->
-    {".S",[?pass(beam_consult_asm)|asm_passes()]};
-pass(_) -> none.
-
 %% For compilation from forms, replace the first pass with a pass
 %% that retrieves the module name. The module name is needed for
 %% proper diagnostics.
 
-fix_first_pass([{consult_abstr, _} | Passes]) ->
+fix_first_pass(file, Passes) -> Passes;
+fix_first_pass(forms, [{consult_abstr, _} | Passes]) ->
     %% Simply remove this pass. The module name will be set after
     %% running the v3_core pass.
     Passes;
-fix_first_pass([{parse_core,_}|Passes]) ->
+fix_first_pass(forms, [{parse_core,_}|Passes]) ->
     [?pass(get_module_name_from_core)|Passes];
-fix_first_pass([{beam_consult_asm,_}|Passes]) ->
+fix_first_pass(forms, [{beam_consult_asm,_}|Passes]) ->
     [?pass(get_module_name_from_asm)|Passes];
-fix_first_pass([_|Passes]) ->
+fix_first_pass(forms, [_|Passes]) ->
     %% When compiling from abstract code, the module name
     %% will be set after running the v3_core pass.
     Passes.
@@ -1588,7 +1740,7 @@ select_passes([List|Ps], Opts) when is_list(List) ->
 
 select_cond(Flag, ShouldBe, Pass, Ps, Opts) ->
     ShouldNotBe = not ShouldBe,
-    case member(Flag, Opts) of
+    case opt_get_bool(Flag, Opts) of  %% FIXME
 	ShouldBe    -> select_passes([Pass|Ps], Opts);
 	ShouldNotBe -> select_passes(Ps, Opts)
     end.
@@ -1601,16 +1753,16 @@ select_list_passes(Ps, Opts) ->
     select_list_passes_1(Ps, Opts, []).
 
 select_list_passes_1([{iff,Flag,{listing,_}=Listing}|Ps], Opts, Acc) ->
-    case member(Flag, Opts) of
+    case opt_get_bool(Flag, Opts) of  % FIXME
 	true -> {done,reverse(Acc, [Listing])};
 	false -> select_list_passes_1(Ps, Opts, Acc)
     end;
 select_list_passes_1([{iff,Flag,{done,Ext}}|Ps], Opts, Acc) ->
-    case member(Flag, Opts) of
+    case opt_get_bool(Flag, Opts) of  % FIXME
 	false ->
 	    select_list_passes_1(Ps, Opts, Acc);
 	true ->
-	    {done,case member(binary, Opts) of
+	    {done,case opt_get_bool(binary, Opts) of
 		      false -> reverse(Acc, [{listing,Ext}]);
 		      true -> reverse(Acc)
 		  end}
@@ -1643,7 +1795,11 @@ make_ssa_check_pass(PassFlag) ->
 %% The standard passes (almost) always run.
 
 standard_passes() ->
-    [?pass(transform_module),
+    [
+     %% Add all -compile() directives to #compile.options
+     ?pass(compile_directives),
+
+     ?pass(transform_module),
 
      {iff,makedep_side_effect,?pass(makedep_and_output)},
      {iff,makedep,[
@@ -1665,16 +1821,13 @@ standard_passes() ->
 
 abstr_passes(AbstrStatus) ->
     case AbstrStatus of
-        non_verified_abstr -> [{unless, no_lint, ?pass(lint_module)},
+        non_verified_abstr -> [?pass(compile_directives),
+                               {unless, no_lint, ?pass(lint_module)},
                                {unless,no_docs,?pass(beam_docs)},
                                ?pass(remove_doc_attributes)];
         verified_abstr -> []
     end ++
-        [
-         %% Add all -compile() directives to #compile.options
-         ?pass(compile_directives),
-
-         {delay,[{iff,debug_info,?pass(save_abstract_code)}]},
+        [{delay,[{iff,debug_info,?pass(save_abstract_code)}]},
 
          {delay,[{iff,line_coverage,{pass,sys_coverage}}]},
          {iff,'dcover',{src_listing,"cover"}},
@@ -1875,12 +2028,12 @@ parse_module(_Code, St) ->
     end.
 
 deterministic_filename(#compile{ifile=File,options=Opts}) ->
-    SourceName0 = proplists:get_value(source, Opts, File),
-    case member(deterministic, Opts) of
+    SourceName0 = opt_get_value(source, Opts, File),
+    case opt_get_bool(deterministic, Opts) of
         true ->
             filename:basename(SourceName0);
         false ->
-            case member(absolute_source, Opts) of
+            case opt_get_bool(absolute_source, Opts) of
                 true -> paranoid_absname(SourceName0);
                 false -> SourceName0
             end
@@ -1894,19 +2047,21 @@ do_parse_module(DefEncoding, #compile{ifile=File,options=Opts,dir=Dir}=St) ->
                         false ->
                             1
                     end,
-    case erl_features:keyword_fun(Opts, fun erl_scan:f_reserved_word/1) of
+
+    Features0 = maps:get(features, Opts),
+    case erl_features:keyword_fun(Features0, fun erl_scan:f_reserved_word/1) of
         {ok, {Features, ResWordFun}} ->
             R = epp:parse_file(File,
-                               [{includes,[".",Dir|inc_paths(Opts)]},
+                               [{includes,[".",Dir|opt_get_value(includes,Opts)]},
                                 {source_name, SourceName},
-                                {deterministic, member(deterministic, Opts)},
-                                {macros,pre_defs(Opts)},
+                                {deterministic, opt_get_bool(deterministic, Opts)},
+                                {macros,opt_get_value(macros, Opts)},
                                 {default_encoding,DefEncoding},
                                 {location,StartLocation},
                                 {reserved_word_fun, ResWordFun},
                                 {features, Features},
                                 extra|
-                                case member(check_ssa, Opts) of
+                                case opt_get_bool(check_ssa, Opts) of
                                     true ->
                                         [{compiler_internal,[ssa_checks]}];
                                     false ->
@@ -1921,7 +2076,7 @@ do_parse_module(DefEncoding, #compile{ifile=File,options=Opts,dir=Dir}=St) ->
                     %% -compile({feature, .., enable}).
                     UsedFtrs = proplists:get_value(features, Extra),
                     St1 = metadata_add_features(UsedFtrs, St),
-                    Forms = case with_columns(Opts ++ compile_options(Forms0)) of
+                    Forms = case with_columns(Opts) of
                                 true ->
                                     Forms0;
                                 false ->
@@ -1964,7 +2119,7 @@ metadata_add_features(Ftrs, #compile{options = CompOpts,
     St#compile{extra_chunks = Extra1}.
 
 ensure_deterministic(CompOpts, Opts) ->
-    case member(deterministic, CompOpts) of
+    case opt_get_bool(deterministic, CompOpts) of
         true ->
             [deterministic | Opts];
         false ->
@@ -1972,7 +2127,7 @@ ensure_deterministic(CompOpts, Opts) ->
     end.
 
 with_columns(Opts) ->
-    case proplists:get_value(error_location, Opts, column) of
+    case opt_get_value(error_location, Opts, column) of
         column -> true;
         line -> false
     end.
@@ -2019,13 +2174,6 @@ get_module_name_from_core(Core, St) ->
             {ok,Core,St}
     end.
 
-compile_options([{attribute,_L,compile,C}|Fs]) when is_list(C) ->
-    C ++ compile_options(Fs);
-compile_options([{attribute,_L,compile,C}|Fs]) ->
-    [C|compile_options(Fs)];
-compile_options([_F|Fs]) -> compile_options(Fs);
-compile_options([]) -> [].
-
 clean_parse_transforms(Fs) ->
     clean_parse_transforms_1(Fs, []).
 
@@ -2040,15 +2188,14 @@ clean_parse_transforms_1([F|Fs], Acc) ->
     clean_parse_transforms_1(Fs, [F|Acc]);
 clean_parse_transforms_1([], Acc) -> reverse(Acc).
 
-transforms(Os) -> [ M || {parse_transform,M} <- Os ].
-
 transform_module(Code0, #compile{options=Opt}=St) ->
-    %% Extract compile options from code into options field.
-    case transforms(Opt ++ compile_options(Code0)) of
+    case maps:get(parse_transform, Opt) of
 	[] ->
+            erlang:display({'HERE',?LINE,[]}),
             %% No parse transforms.
             {ok,Code0,St};
 	Ts ->
+            erlang:display({'HERE',?LINE,Ts}),
 	    %% Remove parse_transform attributes from the abstract code to
 	    %% prevent parse transforms to be run more than once.
 	    Code = clean_parse_transforms(Code0),
@@ -2056,12 +2203,13 @@ transform_module(Code0, #compile{options=Opt}=St) ->
     end.
 
 foldl_transform([T|Ts], Code0, St) ->
+    erlang:display({'HERE',?LINE,T}),
     Name = "transform " ++ atom_to_list(T),
     case code:ensure_loaded(T) =:= {module,T} andalso
         erlang:function_exported(T, parse_transform, 2) of
         true ->
             Fun = fun(Code, S) ->
-                          T:parse_transform(Code, S#compile.options)
+                          T:parse_transform(Code, maps:get(raw_opts, S#compile.options))
                   end,
             Run = runner(St),
             StrippedCode = maybe_strip_columns(Code0, T, St),
@@ -2076,6 +2224,7 @@ foldl_transform([T|Ts], Code0, St) ->
                     foldl_transform(Ts, Forms, St)
             catch
                 Class:Reason:Stk ->
+                    erlang:display({'HERE',?LINE,Reason}),
                     Es = [{St#compile.ifile,[{none,compile,
                                               {parse_transform,T,{Class,Reason,Stk}}}]}],
                     {error,St#compile{errors=St#compile.errors ++ Es}}
@@ -2103,7 +2252,7 @@ maybe_strip_columns(Code, T, St) ->
             false ->
                 column
         end,
-    ConfigErrorLocation = proplists:get_value(error_location, St#compile.options, column),
+    ConfigErrorLocation = opt_get_value(error_location, St#compile.options, column),
     if 
         PTErrorLocation =:= line; ConfigErrorLocation =:= line ->
             strip_columns(Code);
@@ -2123,16 +2272,14 @@ strip_columns(Code) ->
              erl_parse:map_anno(F, Form)
      end || Form <- Code].
 
-get_core_transforms(Opts) -> [M || {core_transform,M} <- Opts].
-
 core_transforms(Code, St) ->
     %% The options field holds the complete list of options at this
-    Ts = get_core_transforms(St#compile.options),
+    Ts = maps:get(core_transform, St#compile.options),
     foldl_core_transforms(Ts, Code, St).
 
 foldl_core_transforms([T|Ts], Code0, St) ->
     Name = "core transform " ++ atom_to_list(T),
-    Fun = fun(Code, S) -> T:core_transform(Code, S#compile.options) end,
+    Fun = fun(Code, S) -> T:core_transform(Code, maps:get(raw_opts, S#compile.options)) end,
     Run = runner(St),
     try Run({Name, Fun}, Code0, St) of
 	Forms ->
@@ -2199,7 +2346,7 @@ makedep(Code0, #compile{ifile=Ifile,ofile=Ofile,options=Opts}=St) ->
 
     %% Get the target of the Makefile rule.
     Target0 =
-	case proplists:get_value(makedep_target, Opts) of
+	case opt_get_value(makedep_target, Opts) of
 	    undefined ->
 		%% The target is derived from the output filename: possibly
 		%% remove the current working directory to obtain a relative
@@ -2211,7 +2358,7 @@ makedep(Code0, #compile{ifile=Ifile,ofile=Ofile,options=Opts}=St) ->
 	end,
 
     %% Quote the target is the called asked for this.
-    Target1 = case proplists:get_value(makedep_quote_target, Opts) of
+    Target1 = case opt_get_value(makedep_quote_target, Opts) of
 		  true ->
 		      %% For now, only "$" is replaced by "$$".
 		      Fun = fun
@@ -2243,7 +2390,7 @@ makedep(Code0, #compile{ifile=Ifile,ofile=Ofile,options=Opts}=St) ->
     %%   hello.hrl:
     %%
     %%   common.hrl:
-    Makefile = case proplists:get_value(makedep_phony, Opts) of
+    Makefile = case opt_get_value(makedep_phony, Opts) of
 		   true -> MainRule ++ PhonyRules;
 		   _ -> MainRule
 	       end,
@@ -2260,7 +2407,7 @@ makedep_add_headers(Ifile, [{attribute,_,file,{File,_}}|Rest],
 makedep_add_headers(Ifile, [{error,{_,epp,{include,file,File}}}|Rest],
 		    Included, LineLen, MainTarget, Phony, Opts) ->
     %% The header "File" doesn't exist, do we add it to the dependencies?
-    case proplists:get_value(makedep_add_missing, Opts) of
+    case opt_get_value(makedep_add_missing, Opts) of
         true ->
             {Included1,LineLen1,MainTarget1,Phony1} =
 		makedep_add_header(Ifile, Included, LineLen, MainTarget,
@@ -2317,7 +2464,7 @@ makedep_output(Code, #compile{options=Opts,ofile=Ofile}=St) ->
     %% Write this Makefile (Code) to the selected output.
     %% If no output is specified, the default is to write to a file named after
     %% the output file.
-    Output = case proplists:get_value(makedep_output, Opts) of
+    Output = case opt_get_value(makedep_output, Opts) of
                  undefined ->
                      %% Prepare the default filename.
                      outfile(filename:basename(Ofile, ".beam"), "Pbeam", Opts);
@@ -2360,10 +2507,11 @@ legalize_vars(Code0, St) ->
     {ok,Code,St}.
 
 compile_directives(Forms, #compile{options=Opts0}=St0) ->
-    Opts1 = expand_opts(flatten([C || {attribute,_,compile,C} <- Forms])),
-    Opts = Opts1 ++ Opts0,
+    erlang:display({'HERE',?LINE,Opts0}),
+    Opts = parse_opts(flatten([C || {attribute,_,compile,C} <- Forms]), Opts0),
+    erlang:display({'HERE',?LINE,Opts}),
     St1 = St0#compile{options=Opts},
-    case any_obsolete_option(Opts) of
+    case any_obsolete_option(maps:to_list(Opts)) of
         {yes,Opt} ->
             Error = {St1#compile.ifile,[{none,?MODULE,{obsolete_option,Opt}}]},
             St = St1#compile{errors=[Error|St1#compile.errors]},
@@ -2372,7 +2520,7 @@ compile_directives(Forms, #compile{options=Opts0}=St0) ->
             {ok,Forms,St1}
     end.
 
-any_obsolete_option([Opt|Opts]) ->
+any_obsolete_option([{Opt,_}|Opts]) ->
     case is_obsolete(Opt) of
         true -> {yes,Opt};
         false -> any_obsolete_option(Opts)
@@ -2460,7 +2608,8 @@ save_abstract_code(Code, St) ->
 beam_docs(Code, #compile{dir = Dir, options = Options,
                          extra_chunks = ExtraChunks }=St) ->
     SourceName = deterministic_filename(St),
-    case beam_doc:main(Dir, SourceName, Code, Options) of
+    #{raw_opts := RawOpts} = Options,
+    case beam_doc:main(Dir, SourceName, Code, RawOpts) of
         {ok, Docs, Ws} ->
             Binary = term_to_binary(Docs, [deterministic, compressed]),
             MetaDocs = [{?META_DOC_CHUNK, Binary} | ExtraChunks],
@@ -2491,7 +2640,7 @@ debug_info(#compile{module=Module,ofile=OFile}=St) ->
 		{value,{_, Key},Opts3} ->
 		    encrypt_debug_info(DebugInfo, Key, [{debug_info_key,'********'} | Opts3]);
 		false ->
-		    Mode = proplists:get_value(crypto_mode, Opts2, des3_cbc),
+		    Mode = opt_get_value(crypto_mode, Opts2, des3_cbc),
 		    case beam_lib:get_crypto_key({debug_info, Mode, Module, OFile}) of
 			error ->
 			    {error, [{none,?MODULE,no_crypto_key}]};
@@ -2508,12 +2657,12 @@ debug_info_chunk(#compile{mod_options=ModOpts0,
                           abstract_code=Abst}) ->
     AbstOpts = cleanup_compile_options(ModOpts0),
     {Backend,Metadata,ModOpts} =
-        case proplists:get_value(debug_info, CompOpts, false) of
+        case opt_get_value(debug_info, CompOpts, false) of
             {OptBackend,OptMetadata} when is_atom(OptBackend) ->
-                ModOpts1 = proplists:delete(debug_info, ModOpts0),
+                ModOpts1 = opt_disable(debug_info, ModOpts0),
                 {OptBackend,OptMetadata,ModOpts1};
             true ->
-                ModOpts1 = proplists:delete(debug_info, ModOpts0),
+                ModOpts1 = opt_disable(debug_info, ModOpts0),
                 {erl_abstract_code,{Abst,AbstOpts},[debug_info | ModOpts1]};
             false ->
                 {erl_abstract_code,{none,AbstOpts},ModOpts0}
@@ -2535,7 +2684,7 @@ encrypt_debug_info(DebugInfo, Key, Opts) ->
     end.
 
 cleanup_compile_options(Opts) ->
-    IsDeterministic = lists:member(deterministic, Opts),
+    IsDeterministic = opt_get_bool(deterministic, Opts),
     lists:filter(fun(Opt) ->
                          keep_compile_option(Opt, IsDeterministic)
                  end, Opts).
@@ -2621,7 +2770,7 @@ beam_strip_types(Beam0, #compile{}=St) ->
 compile_info(File, CompilerOpts, Opts) ->
     IsSlim = member(slim, CompilerOpts),
     IsDeterministic = member(deterministic, CompilerOpts),
-    Info0 = proplists:get_value(compile_info, Opts, []),
+    Info0 = opt_get_value(compile_info, Opts, []),
     Info1 =
 	case paranoid_absname(File) of
 	    [_|_] = Source when not IsSlim, not IsDeterministic ->
@@ -2716,7 +2865,7 @@ write_binary(Name, Bin, St) ->
 %% report_warnings(State) -> ok
 
 report_errors(#compile{options=Opts,errors=Errors}) ->
-    case member(report_errors, Opts) of
+    case opt_get_bool(report_errors, Opts) of
 	true ->
 	    foreach(fun ({{F,_L},Eds}) -> sys_messages:list_errors(F, Eds, Opts);
 			({F,Eds}) -> sys_messages:list_errors(F, Eds, Opts) end,
@@ -2725,13 +2874,13 @@ report_errors(#compile{options=Opts,errors=Errors}) ->
     end.
 
 report_warnings(#compile{options=Opts,warnings=Ws0}) ->
-    Werror = member(warnings_as_errors, Opts),
+    Werror = opt_get_bool(warnings_as_errors, Opts),
     P = case Werror of
 	    true -> "";
 	    false -> "Warning: "
 	end,
     ReportWerror = Werror andalso member(report_errors, Opts),
-    case member(report_warnings, Opts) orelse ReportWerror of
+    case opt_get_bool(report_warnings, Opts) orelse ReportWerror of
 	true ->
 	    Ws1 = flatmap(fun({{F,_L},Eds}) -> sys_messages:format_messages(F, P, Eds, Opts);
 			     ({F,Eds}) -> sys_messages:format_messages(F, P, Eds, Opts) end,
@@ -2788,9 +2937,9 @@ erlfile(Dir, Base, Suffix) ->
     filename:join(Dir, Base ++ Suffix).
 
 outfile(Base, Ext, Opts) when is_list(Ext) ->
-    Obase = case keyfind(outdir, 1, Opts) of
-		{outdir, Odir} -> filename:join(Odir, Base);
-		_Other -> Base			% Not found or bad format
+    Obase = case opt_get_value(outdir, Opts) of
+		undefined -> Base;
+		Odir -> filename:join(Odir, Base)
 	    end,
     Obase ++ "." ++ Ext.
 
@@ -2799,21 +2948,6 @@ objfile(Base, St) ->
 
 tmpfile(Ofile) ->
     reverse([$#|tl(reverse(Ofile))]).
-
-%% pre_defs(Options)
-%% inc_paths(Options)
-%%  Extract the predefined macros and include paths from the option list.
-
-pre_defs([{d,M,V}|Opts]) ->
-    [{M,V}|pre_defs(Opts)];
-pre_defs([{d,M}|Opts]) ->
-    [M|pre_defs(Opts)];
-pre_defs([_|Opts]) ->
-    pre_defs(Opts);
-pre_defs([]) -> [].
-
-inc_paths(Opts) ->
-    [ P || {i,P} <- Opts, is_list(P) ].
 
 src_listing(Ext, Code, St) ->
     listing(fun (Lf, {_Mod,_Exp,Fs}) -> do_src_listing(Lf, Fs);

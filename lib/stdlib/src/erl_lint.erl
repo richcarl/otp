@@ -747,11 +747,10 @@ entries in the list of errors.
       SourceFile :: file:filename(),
       ErrorInfo :: error_info()).
 
-module(Forms, FileName, Opts0) ->
-    %% FIXME Hmm, this is not coherent with the semantics of features
-    %% We want the options given on the command line to take
-    %% precedence over options in the module.
+module(Forms, FileName, Opts0) when is_list(Opts0) ->
     Opts = Opts0 ++ compiler_options(Forms),
+    module(Forms, FileName, Opts);
+module(Forms, FileName, Opts) when is_map(Opts) ->
     St = forms(Forms, start(FileName, Opts)),
     return_status(St).
 
@@ -764,11 +763,26 @@ compiler_options(Forms) ->
 start() ->
     start("nofile", []).
 
-start(File, Opts) ->
-    Enabled0 = [Category || {Category,true} <- bool_options()],
-    Enabled1 = ordsets:from_list(Enabled0),
-    Enabled = parse_options(Opts, Enabled1),
-    Calls = case ordsets:is_element(unused_function, Enabled) of
+start(File, Opts) when is_list(Opts) ->
+    UFs = proplists:append_values(nowarn_unused_function, Opts),
+    BCs = proplists:append_values(nowarn_bif_clash, Opts),
+    DFs = proplists:append_values(nowarn_deprecated_function, Opts),
+    RFs = proplists:append_values(nowarn_removed, Opts),
+    AIs = proplists:append_values(no_auto_import, Opts),
+    start(File, Map#{nowarn_unused_function => UFs,
+                     nowarn_bif_clash => BCs,
+                     nowarn_deprecated_function => DFs,
+                     nowarn_removed => RFs,
+                     no_auto_import => AIs
+                    });
+start(File, Opts0) when is_map(Opts0) ->
+    %Enabled0 = [Category || {Category,true} <- bool_warnings()],
+    %Enabled1 = ordsets:from_list(Enabled0),
+    Opts = maps:merge(default_options(), Opts0),
+    %% FIXME: problem: order of warn/nowarn-prefixed options must be respected
+    Map = parse_options(Opts),
+    _ = maps:get(nowarn_bif_clash, Opts),
+    Calls = case opt_get_bool(unused_function, Opts) of
 		true ->
 		    #{{module_info,1} => pseudolocals()};
 		false ->
@@ -781,38 +795,28 @@ start(File, Opts) ->
           defined = gb_sets:from_list(pseudolocals()),
 	  called = [{F,0} || F <- pseudolocals()],
           usage = #usage{calls=Calls},
-          warn_format = value_option(warn_format, 1, warn_format, 1,
-				     nowarn_format, 0, Opts),
-	  enabled_warnings = Enabled,
-          nowarn_bif_clash = nowarn_function(nowarn_bif_clash, Opts),
+          %% warn_format = value_option(warn_format, 1, warn_format, 1,
+	  %%       		     nowarn_format, 0, Opts),
+          warn_format = maps:get(format, Opts),
+	  enabled_warnings = bool_warnings(),
+          nowarn_bif_clash = maps:get(nowarn_bif_clash, Opts),
           file = File
          }.
 
+opt_get_bool(Key, Opts) ->
+    case maps:find(Key, Opts) of
+        {ok, true} -> true;
+        {ok, false} -> false
+    end.
+
 parse_options([Opt0|Opts], Enabled0) when is_atom(Opt0) ->
-    {Opt2,Enable} = case atom_to_binary(Opt0) of
-                        <<"warn_",Opt1/binary>> ->
-                            {Opt1,true};
-                        <<"nowarn_",Opt1/binary>> ->
-                            {Opt1,false};
-                        _ ->
-                            {none,none}
-                    end,
-    Opt = try
-              binary_to_existing_atom(Opt2)
-          catch
-              _:_ ->
-                  []
-          end,
     Enabled =
         maybe
+            {BinOpt,Enable} ?= warn_to_opt(Opt0),
+            {ok, Opt} ?= existing_atom(BinOpt),
             true ?= is_atom(Opt),
-            true ?= lists:keymember(Opt, 1, bool_options()),
-            if
-                Enable ->
-                    ordsets:add_element(Opt, Enabled0);
-                not Enable ->
-                    ordsets:del_element(Opt, Enabled0)
-            end
+            true ?= maps:is_key(Opt, Enabled0),
+            Enabled0#{Opt => Enable}
         else
             _ ->
                 Enabled0
@@ -823,40 +827,70 @@ parse_options([_|Opts], Enabled) ->
 parse_options([], Enabled) ->
     Enabled.
 
-bool_options() ->
-    [{unused_vars,true},
-     {underscore_match,true},
-     {export_all,true},
-     {export_vars,false},
-     {shadow_vars,true},
-     {unused_import,false},
-     {unused_function,true},
-     {unused_type,true},
-     {bif_clash,true},
-     {unused_record,true},
-     {deprecated_function,true},
-     {deprecated_type,true},
-     {deprecated_callback,true},
-     {deprecated_catch,false},
-     {obsolete_guard,true},
-     {untyped_record,false},
-     {missing_spec,false},
-     {missing_spec_documented,false},
-     {missing_spec_all,false},
-     {removed,true},
-     {nif_inline,true},
-     {keywords,false},
-     {redefined_builtin_type,true},
-     {match_float_zero,true},
-     {update_literal,true},
-     {behaviours,true},
-     {conflicting_behaviours,true},
-     {undefined_behaviour_func,true},
-     {undefined_behaviour,true},
-     {undefined_behaviour_callbacks,true},
-     {ill_defined_behaviour_callbacks,true},
-     {ill_defined_optional_callbacks,true},
-     {unexported_function,true}].
+warn_to_opt(Opt0) ->
+    case atom_to_binary(Opt0) of
+        <<"warn_",Opt1/binary>> ->
+            {Opt1,true};
+        <<"nowarn_",Opt1/binary>> ->
+            {Opt1,false};
+        _ ->
+            error
+    end.
+
+existing_atom(BinOpt) ->
+    try
+        {ok, binary_to_existing_atom(BinOpt)}
+    catch
+        _:_ -> error
+    end.
+
+default_options() ->
+    #{
+     format => 0,
+     nowarn_unused_function => [],
+     nowarn_bif_clash => [],
+     nowarn_deprecated_function => [],
+     nowarn_removed => [],
+     no_auto_import => [],
+     }.
+
+%% must be prefixed with warn_ or nowarn_
+bool_warnings() ->
+    #{
+      behaviours => true,
+      bif_clash => true,
+      conflicting_behaviours => true,
+      deprecated_callback => true,
+      deprecated_catch => false,
+      deprecated_function => true,
+      deprecated_type => true,
+      export_all => true,
+      export_vars => false,
+      ill_defined_behaviour_callbacks => true,
+      ill_defined_optional_callbacks => true,
+      keywords => false,
+      match_float_zero => true,
+      missing_spec => false,
+      missing_spec_all => false,
+      missing_spec_documented => false,
+      nif_inline => true,
+      obsolete_guard => true,
+      redefined_builtin_type => true,
+      removed => true,
+      shadow_vars => true,
+      undefined_behaviour => true,
+      undefined_behaviour_callbacks => true,
+      undefined_behaviour_func => true,
+      underscore_match => true,
+      unexported_function => true,
+      untyped_record => false,
+      unused_function => true,
+      unused_import => false,
+      unused_record => true,
+      unused_type => true,
+      unused_vars => true,
+      update_literal => true
+     }.
 
 %% is_warn_enabled(Category, St) -> boolean().
 %%  Check whether a warning of category Category is enabled.
@@ -1187,9 +1221,7 @@ not_deprecated(Forms, #lint{compile=Opts}=St0) ->
                 {attribute, Anno, compile, Args} <- Forms,
                 {nowarn_deprecated_function, MFAs0} <- lists:flatten([Args]),
                 MFA <- lists:flatten([MFAs0])],
-    Nowarn = [MFA ||
-                 {nowarn_deprecated_function, MFAs0} <- Opts,
-                 MFA <- lists:flatten([MFAs0])],
+    Nowarn = maps:get(nowarn_deprecated_function, Opts),
     MAnno = [{M,Anno} || {{M,_F,_A},Anno} <- MFAsAnno, is_atom(M)],
     St1 = foldl(fun ({M,Anno}, St2) ->
                         check_module_name(M, Anno, St2)
@@ -1204,9 +1236,7 @@ not_removed(Forms, #lint{compile=Opts}=St0) ->
                 {attribute, Anno, compile, Args} <- Forms,
                 {nowarn_removed, MFAs0} <- lists:flatten([Args]),
                 MFA <- lists:flatten([MFAs0])],
-    Nowarn = [MFA ||
-                 {nowarn_removed, MFAs0} <- Opts,
-                 MFA <- lists:flatten([MFAs0])],
+    Nowarn = maps:get(nowarn_removed, Opts),
     St1 = foldl(fun ({{M, _F, _A}, Anno}, St2) ->
                         check_module_name(M, Anno, St2);
                     ({M,Anno}, St2) ->
@@ -1546,12 +1576,12 @@ check_unused_functions(Forms, St0) ->
     St1 = check_option_functions(Forms, nowarn_unused_function,
                                  bad_nowarn_unused_function, St0),
     Opts = St1#lint.compile,
-    case member(export_all, Opts) orelse
+    case maps:get(export_all, Opts) orelse
 	not is_warn_enabled(unused_function, St1) of
         true ->
             St1;
         false ->
-            Nowarn = nowarn_function(nowarn_unused_function, Opts),
+            Nowarn = maps:get(nowarn_unused_function, Opts),
             Usage = St1#lint.usage,
             Used = reached_functions(initially_reached(St1),
 				     Usage#usage.calls),
@@ -1660,10 +1690,10 @@ check_nifs(Forms, St0) ->
     DefFunctions1 = gb_sets:to_list(DefFunctions),
     func_location_error(undefined_nif, Bad, St1, DefFunctions1).
 
-nowarn_function(Tag, Opts) ->
-    ordsets:from_list([FA || {Tag1,FAs} <- Opts,
-                             Tag1 =:= Tag,
-                             FA <- lists:flatten([FAs])]).
+%% nowarn_function(Tag, Opts) ->
+%%     ordsets:from_list([FA || {Tag1,FAs} <- Opts,
+%%                              Tag1 =:= Tag,
+%%                              FA <- lists:flatten([FAs])]).
 
 func_location_warning(Type, Fs, St) ->
     foldl(fun ({F,Anno}, St0) -> add_warning(Anno, {Type,F}, St0) end, St, Fs).
@@ -1814,7 +1844,7 @@ export_type(Anno, ETs, #lint{exp_types = ETs0} = St0) ->
 -spec exports(lint_state()) -> gb_sets:set(fa()).
 
 exports(#lint{compile = Opts, defined = Defs, exports = Es}) ->
-    case lists:member(export_all, Opts) of
+    case maps:get(export_all, Opts) of
         true -> Defs;
         false -> Es
     end.
@@ -3038,7 +3068,7 @@ check_unexported_function(Anno, M, F, A,
                                 compile=Opts,
                                 exports=Es} = St) ->
     case (is_warn_enabled(unexported_function, St)
-          andalso (not lists:member(export_all, Opts))
+          andalso (not maps:get(export_all, Opts))
           andalso (not gb_sets:is_element({F, A}, Es))) of
         true -> add_warning(Anno, {unexported_function, {M, F, A}}, St);
         false -> St
@@ -5021,14 +5051,13 @@ is_imported_from_erlang(ImportSet,{Func,Arity}) ->
         _ -> false
     end.
 %% Build set of functions where auto-import is explicitly suppressed
-auto_import_suppressed(CompileFlags) ->
-    case lists:member(no_auto_import, CompileFlags) of
+auto_import_suppressed(#{no_auto_import := AIs}) ->
+    case lists:member(all, AIs) of
         true ->
             all;
-        false ->
-            L0 = [ X || {no_auto_import,X} <- CompileFlags ],
-            L1 = [ {Y,Z} || {Y,Z} <- lists:flatten(L0), is_atom(Y), is_integer(Z) ],
-            {set, gb_sets:from_list(L1)}
+        _ ->
+            L = [ {Y,Z} || {Y,Z} <- AIs, is_atom(Y), is_integer(Z) ],
+            {set, gb_sets:from_list(L)}
     end.
 %% Predicate to find out if autoimport is explicitly suppressed for a function
 is_autoimport_suppressed(all,{_Func,_Arity}) ->

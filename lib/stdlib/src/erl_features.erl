@@ -216,16 +216,16 @@ keywords(Ftr, Map) ->
 %% Utilities
 %% Returns list of enabled features and a new keywords function
 -doc false.
--spec keyword_fun([term()], fun((atom()) -> boolean())) ->
+-spec keyword_fun([{atom(),enable|disable}], fun((atom()) -> boolean())) ->
           {'ok', {[feature()], fun((atom()) -> boolean())}}
               | {'error', error()}.
-keyword_fun(Opts, KeywordFun) ->
-    %% Get items enabling or disabling features, preserving order.
-    IsFtr = fun({feature, _, enable}) -> true;
-               ({feature, _, disable}) -> true;
-               (_) -> false
-            end,
-    FeatureOps = lists:filter(IsFtr, Opts),
+keyword_fun(FeatureOps, KeywordFun) ->
+    %% %% Get items enabling or disabling features, preserving order.
+    %% IsFtr = fun({feature, _, enable}) -> true;
+    %%            ({feature, _, disable}) -> true;
+    %%            (_) -> false
+    %%         end,
+    %% FeatureOps = lists:filter(IsFtr, Opts),
     {AddFeatures, DelFeatures, RawFtrs} = collect_features(FeatureOps),
 
     case configurable_features(RawFtrs) of
@@ -389,9 +389,9 @@ init_features() ->
                 try
                     Atom = list_to_atom(String),
                     case is_configurable(Atom) of
-                        true -> {true, {feature, Atom, Cnv(Tag)}};
+                        true -> {true, {Atom, Cnv(Tag)}};
                         false when Atom == all ->
-                            {true, {feature, Atom, Cnv(Tag)}};
+                            {true, {Atom, Cnv(Tag)}};
                         false -> false
                     end
                 catch
@@ -500,18 +500,18 @@ collect_features(FOps) ->
 
 collect_features([], Add, Del, Raw) ->
     {Add, Del, Raw};
-collect_features([{feature, all, enable}| FOps], Add, _Del, Raw) ->
+collect_features([{all, enable}| FOps], Add, _Del, Raw) ->
     All = configurable(),
     Add1 = lists:foldl(fun add_ftr/2, Add, All),
     collect_features(FOps, Add1, [], Raw);
-collect_features([{feature, Feature, enable}| FOps], Add, Del, Raw) ->
+collect_features([{Feature, enable}| FOps], Add, Del, Raw) ->
     collect_features(FOps, add_ftr(Feature, Add), Del -- [Feature],
                      Raw ++ [Feature]);
-collect_features([{feature, all, disable}| FOps], _Add, Del, Raw) ->
+collect_features([{all, disable}| FOps], _Add, Del, Raw) ->
     %% Start over
     All = configurable(),
     collect_features(FOps, [], Del -- All, Raw);
-collect_features([{feature, Feature, disable}| FOps], Add, Del, Raw) ->
+collect_features([{Feature, disable}| FOps], Add, Del, Raw) ->
     collect_features(FOps, Add -- [Feature],
                      add_ftr(Feature, Del),
                     Raw ++ [Feature]).

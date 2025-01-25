@@ -204,7 +204,7 @@ module(Forms0, Opts) ->
 		   end, #imodule{}, Forms),
     #imodule{name=Mod,exports=Exp0,attrs=As0,
              defs=Kfs0,ws=Ws,load_nif=LoadNif,nifs=Nifs} = Module,
-    Exp = case member(export_all, Opts) of
+    Exp = case maps:get(export_all, Opts) of
 	      true -> defined_functions(Forms);
 	      false -> Exp0
 	  end,
@@ -272,7 +272,7 @@ function({function,_,Name,Arity,Cs0}, Module, Opts)
     #imodule{file=File, ws=Ws0, nifs=Nifs} = Module,
     try
         St0 = #core{vcount=0,function={Name,Arity},opts=Opts,
-                    dialyzer=member(dialyzer, Opts),
+                    dialyzer=maps:get(dialyzer, Opts),
                     ws=Ws0,file=[{file,File}]},
         {B0,St1} = body(Cs0, Name, Arity, St0),
         %% ok = function_dump(Name, Arity, "body:~n~p~n",[B0]),

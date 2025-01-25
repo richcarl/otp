@@ -55,12 +55,15 @@ module has no references to records, attributes, or code.
 
 %% Is is assumed that Fs is a valid list of forms. It should pass
 %% erl_lint without errors.
-module(Fs0, Opts0) ->
-    put(erl_expand_records_in_guard, false),
+module(Fs0, Opts0) when is_list(Opts0) ->
     Opts = Opts0 ++ compiler_options(Fs0),
-    St0 = #exprec{dialyzer = lists:member(dialyzer, Opts),
+    module(Fs0, #{dialyzer => lists:member(dialyzer, Opts),
+                  strict_record_tests => strict_record_tests(Opts)});
+module(Fs0, Opts) ->
+    put(erl_expand_records_in_guard, false),
+    St0 = #exprec{dialyzer = maps:get(dialyzer, Opts),
                   calltype = init_calltype(Fs0),
-                  strict_rec_tests = strict_record_tests(Opts)},
+                  strict_rec_tests = maps:get(strict_record_tests, Opts)},
     {Fs,_St} = forms(Fs0, St0),
     erase(erl_expand_records_in_guard),
     Fs.
