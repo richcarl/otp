@@ -442,7 +442,7 @@ info.
       Conf :: [agent_entry()].
 
 write_agent_config(Dir, Hdr, Conf)
-  when is_list(Dir) and is_list(Hdr) and is_list(Conf) ->
+  when is_list(Dir), is_list(Hdr), is_list(Conf) ->
     Order = fun snmp_framework_mib:order_agent/2,
     Check = fun snmp_framework_mib:check_agent/2,
     Write = fun (Fd, Entries) -> write_agent_conf(Fd, Hdr, Entries) end,
@@ -462,7 +462,7 @@ info.
       Conf :: [agent_entry()].
 
 append_agent_config(Dir, Conf)
-  when is_list(Dir) and is_list(Conf) ->
+  when is_list(Dir), is_list(Conf) ->
     Order = fun snmp_framework_mib:order_agent/2,
     Check = fun snmp_framework_mib:check_agent/2,
     Write = fun write_agent_conf/2,
@@ -572,7 +572,7 @@ See [Contexts](snmp_agent_config_files.md#context) for more info.
       Conf :: [context_entry()].
 
 write_context_config(Dir, Hdr, Conf) 
-  when is_list(Dir) and is_list(Hdr) and is_list(Conf) ->
+  when is_list(Dir), is_list(Hdr), is_list(Conf) ->
     Order = fun snmp_conf:no_order/2,
     Check = fun check_context/2,
     Write = fun (Fd, Entries) -> write_context_conf(Fd, Hdr, Entries) end,
@@ -591,7 +591,7 @@ See [Contexts](snmp_agent_config_files.md#context) for more info.
       Conf :: [context_entry()].
 
 append_context_config(Dir, Conf)
-  when is_list(Dir) and is_list(Conf) ->
+  when is_list(Dir), is_list(Conf) ->
     Order = fun snmp_conf:no_order/2,
     Check = fun check_context/2,
     Write = fun write_context_conf/2,
@@ -730,7 +730,7 @@ See [Community](snmp_agent_config_files.md#community) for more info.
       Conf :: [community_entry()].
 
 write_community_config(Dir, Hdr, Conf)
-  when is_list(Dir) and is_list(Hdr) and is_list(Conf) ->
+  when is_list(Dir), is_list(Hdr), is_list(Conf) ->
     Order = fun snmp_conf:no_order/2,
     Check = fun check_community/2,
     Write = fun (Fd, Entries) -> write_community_conf(Fd, Hdr, Entries) end,
@@ -749,7 +749,7 @@ See [Community](snmp_agent_config_files.md#community) for more info.
       Conf :: [community_entry()].
 
 append_community_config(Dir, Conf)
-  when is_list(Dir) and is_list(Conf) ->
+  when is_list(Dir), is_list(Conf) ->
     Order = fun snmp_conf:no_order/2,
     Check = fun check_community/2,
     Write = fun write_community_conf/2,
@@ -886,7 +886,7 @@ info.
       Conf :: [standard_entry()].
 
 write_standard_config(Dir, Hdr, Conf)
-  when is_list(Dir) and is_list(Hdr) and is_list(Conf) ->
+  when is_list(Dir), is_list(Hdr), is_list(Conf) ->
     Order = fun snmp_conf:no_order/2,
     Check = fun check_standard/2,
     Write = fun (Fd, Entries) -> write_standard_conf(Fd, Hdr, Entries) end,
@@ -906,7 +906,7 @@ info.
       Conf :: [standard_entry()].
 
 append_standard_config(Dir, Conf)
-  when is_list(Dir) and is_list(Conf) ->
+  when is_list(Dir), is_list(Conf) ->
     Order = fun snmp_conf:no_order/2,
     Check = fun check_standard/2,
     Write = fun write_standard_conf/2,
@@ -1242,7 +1242,7 @@ more info.
       Conf :: [target_addr_entry()].
 
 write_target_addr_config(Dir, Hdr, Conf)
-  when is_list(Dir) and is_list(Hdr) and is_list(Conf) ->
+  when is_list(Dir), is_list(Hdr), is_list(Conf) ->
     Order = fun snmp_conf:no_order/2,
     Check = fun check_target_addr/2,
     Write = fun (Fd, Entries) -> write_target_addr_conf(Fd, Hdr, Entries) end,
@@ -1262,7 +1262,7 @@ more info.
       Conf :: [target_addr_entry()].
 
 append_target_addr_config(Dir, Conf)
-  when is_list(Dir) and is_list(Conf) ->
+  when is_list(Dir), is_list(Conf) ->
     Order = fun snmp_conf:no_order/2,
     Check = fun check_target_addr/2,
     Write = fun write_target_addr_conf/2,
@@ -1474,7 +1474,7 @@ for more info.
       Conf :: [target_params_entry()].
 
 write_target_params_config(Dir, Hdr, Conf)
-  when is_list(Dir) and is_list(Hdr) and is_list(Conf) ->
+  when is_list(Dir), is_list(Hdr), is_list(Conf) ->
     Order = fun snmp_conf:no_order/2,
     Check = fun check_target_params/2,
     Write = fun (Fd, Entries) -> write_target_params_conf(Fd, Hdr, Entries) end,
@@ -1494,7 +1494,7 @@ for more info.
       Conf :: [target_params_entry()].
 
 append_target_params_config(Dir, Conf)
-  when is_list(Dir) and is_list(Conf) ->
+  when is_list(Dir), is_list(Conf) ->
     Order = fun snmp_conf:no_order/2,
     Check = fun check_target_params/2,
     Write = fun write_target_params_conf/2,
@@ -1600,7 +1600,7 @@ See [Notify Definitions](snmp_agent_config_files.md#notify) for more info.
       Conf :: [notify_entry()].
 
 write_notify_config(Dir, Hdr, Conf)
-  when is_list(Dir) and is_list(Hdr) and is_list(Conf) ->
+  when is_list(Dir), is_list(Hdr), is_list(Conf) ->
     Order = fun snmp_conf:no_order/2,
     Check = fun check_notify/2,
     Write = fun (Fd, Entries) -> write_notify_conf(Fd, Hdr, Entries) end,
@@ -1619,7 +1619,7 @@ See [Notify Definitions](snmp_agent_config_files.md#notify) for more info.
       Conf :: [notify_entry()].
 
 append_notify_config(Dir, Conf)
-  when is_list(Dir) and is_list(Conf) ->
+  when is_list(Dir), is_list(Conf) ->
     Order = fun snmp_conf:no_order/2,
     Check = fun check_notify/2,
     Write = fun write_notify_conf/2,
@@ -1779,7 +1779,7 @@ See [Security data for USM](snmp_agent_config_files.md#usm) for more info.
       Conf :: [usm_entry()].
 
 write_usm_config(Dir, Hdr, Conf)
-  when is_list(Dir) and is_list(Hdr) and is_list(Conf) ->
+  when is_list(Dir), is_list(Hdr), is_list(Conf) ->
     Order = fun snmp_conf:no_order/2,
     Check = fun check_usm/2,
     Write = fun (Fd, Entries) -> write_usm_conf(Fd, Hdr, Entries) end,
@@ -1798,7 +1798,7 @@ See [Security data for USM](snmp_agent_config_files.md#usm) for more info.
       Conf :: [usm_entry()].
 
 append_usm_config(Dir, Conf)
-  when is_list(Dir) and is_list(Conf) ->
+  when is_list(Dir), is_list(Conf) ->
     Order = fun snmp_conf:no_order/2,
     Check = fun check_usm/2,
     Write = fun write_usm_conf/2,
@@ -1986,7 +1986,7 @@ See [MIB Views for VACM](snmp_agent_config_files.md#vacm) for more info.
       Conf :: [vacm_entry()].
 
 write_vacm_config(Dir, Hdr, Conf)
-  when is_list(Dir) and is_list(Hdr) and is_list(Conf) ->
+  when is_list(Dir), is_list(Hdr), is_list(Conf) ->
     Order = fun snmp_conf:no_order/2,
     Check = fun check_vacm/2,
     Write = fun (Fd, Entries) -> write_vacm_conf(Fd, Hdr, Entries) end,
@@ -2005,7 +2005,7 @@ See [MIB Views for VACM](snmp_agent_config_files.md#vacm) for more info.
       Conf :: [vacm_entry()].
 
 append_vacm_config(Dir, Conf)
-  when is_list(Dir) and is_list(Conf) ->
+  when is_list(Dir), is_list(Conf) ->
     Order = fun snmp_conf:no_order/2,
     Check = fun check_vacm/2,
     Write = fun write_vacm_conf/2,
