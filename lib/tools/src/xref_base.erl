@@ -25,6 +25,7 @@
 
 %% Avoid warning for local function error/1 clashing with autoimported BIF.
 -compile({no_auto_import,[error/1]}).
+-compile(nowarn_unused_vars).
 -export([new/0, new/1, delete/1,
 	 add_directory/2, add_directory/3,
 	 add_module/2, add_module/3,
@@ -813,7 +814,40 @@ abst(File, Builtins, _Mode = functions) ->
 	    Forms = erl_internal:add_predefined_functions(Forms1),
 	    X = mfa_exports(X0, A, M),
             D = deprecated(A, X, M),
-	    xref_reader:module(M, Forms, Builtins, X, D);
+	    MD = xref_reader:module(M, Forms, Builtins, X, D),
+	    BD = xref_reader:beam(M, File),
+            {ok, M, {ZDefAt, ZLCallAt, ZXCallAt, ZLC, ZXC, ZX, ZDepr, ZOL}, U} = MD,
+            #{module := M,
+              on_load := OL,
+              def_at := DefAt,
+              l_call := LC,
+              l_call_at := _LCallAt,
+              x_call := XC,
+              x_call_at := _XCallAt
+             } = BD,
+            ZDefAt1 = ordsets:from_list(ZDefAt),
+            DefAt1 = ordsets:from_list([{MFA,L} || {MFA={_,F,_},{_,L}} <- DefAt, F =/= module_info]),
+            %% erlang:display({'OLD_DEFAT0',lists:keysort(1,ZDefAt)}),
+            %% erlang:display({'NEW_DEFAT0',lists:keysort(1,DefAt)}),
+            %% erlang:display({'OLD_DEFAT',ZDefAt1}),
+            %% erlang:display({'NEW_DEFAT',DefAt1}),
+            ZDefAt1 = DefAt1,
+            ZXC1 = ordsets:from_list(ZXC),
+            XC1 = ordsets:from_list([Edge || Edge={{_,F,_},_} <- XC, F =/= module_info]),
+            erlang:display({'OLD_X',ZXC1}),
+            erlang:display({'NEW_X',XC1}),
+            erlang:display({'NEW_X0',XC}),
+            ZXC1 = XC1,
+            ZLC1 = ordsets:from_list(ZLC),
+            LC1 = ordsets:from_list([Edge || Edge={_,{_,F,_}} <- LC, F =/= module_info]),
+            %% erlang:display({'OLD_L',ZLC1}),
+            %% erlang:display({'NEW_L',LC1}),
+            ZLC1 = LC1,
+            ZX = X,
+            ZOL = OL,
+            %% test notes: DefAt is not expected to contain module_info
+            %%{ok, M, {ZDefAt, ZLCallAt, ZXCallAt, ZLC1, ZXC1, X, ZDepr, OL}, U};
+            {ok, M, {ZDefAt, ZLCallAt, ZXCallAt, ZLC1, ZXC1, X, ZDepr, OL}, U};
 	Error when element(1, Error) =:= error ->
 	    Error
     end;
@@ -922,7 +956,7 @@ do_add_module(S, XMod, Unres, Data) ->
     {ok, Ms, Bad, NS}.
 
 prepare_module(_Mode = functions, XMod, Unres0, Data) ->
-    {DefAt0, LPreCAt0, XPreCAt0, LC0, XC0, X0, _, Depr, OL0} = Data,
+    {DefAt0, LPreCAt0, XPreCAt0, LC0, XC0, X0, Depr, OL0} = Data,
     FT = [tspec(func)],
     FET = [tspec(fun_edge)],
     PCA = [tspec(pre_call_at)],

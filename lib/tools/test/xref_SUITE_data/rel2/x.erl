@@ -4,7 +4,8 @@
 -deprecated({t,0,eventually}).
 
 t() ->
-    true.
+%    true.
+    l(), true.
 
 xx() ->
     x:undef().

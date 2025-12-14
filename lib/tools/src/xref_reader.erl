@@ -70,8 +70,7 @@ forms([], S) ->
              F ->
                  [{M, F, 0}]
          end,
-    Attrs = {[], [], []},
-    {ok, M, {DefAt, LCallAt, XCallAt, LC, XC, X, Attrs, Depr, OL}, U}.
+    {ok, M, {DefAt, LCallAt, XCallAt, LC, XC, X, Depr, OL}, U}.
 
 form({attribute, _, on_load, {F, 0}}, S) ->
     S#xrefr{on_load = F};
@@ -364,6 +363,7 @@ adjust_arity(_S, MFA) ->
 beam(_M, File) ->
     {beam_file, Module, Exports, Attributes, CompInfo, Code} =
         beam_disasm:file(File),
+    erlang:display({'CODE',Code}),
     scan_funcs(Code,
                #{module => Module,
                  exports => Exports,
