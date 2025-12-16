@@ -288,9 +288,8 @@ beam_disasm_code(<<_SS:32, % Sub-Size (length of information before code)
 		  _IS:32,  % Instruction Set Identifier (always 0)
 		  _OM:32,  % Opcode Max
 		  _L:32,_F:32,
-		  CodeBin/binary>>, Atoms, Imports,
+		  Code/binary>>, Atoms, Imports,
 		 Str, Lambdas, Literals, Types, M) ->
-    Code = binary_to_list(CodeBin),
     try disasm_code(Code, Atoms, Literals, Types) of
 	DisasmCode ->
 	    Functions = get_function_chunks(DisasmCode),
@@ -307,10 +306,10 @@ beam_disasm_code(<<_SS:32, % Sub-Size (length of information before code)
 
 %%-----------------------------------------------------------------------
 
-disasm_code([B|Bs], Atoms, Literals, Types) ->
+disasm_code(<<B, Bs/bytes>>, Atoms, Literals, Types) ->
     {Instr,RestBs} = disasm_instr(B, Bs, Atoms, Literals, Types),
     [Instr|disasm_code(RestBs, Atoms, Literals, Types)];
-disasm_code([], _, _, _) ->
+disasm_code(<<>>, _, _, _) ->
     [].
 
 %%-----------------------------------------------------------------------
@@ -391,7 +390,7 @@ local_labels_2(_, R, _) -> R.
 %% in a generic way; indexing instructions are handled separately.
 %%-----------------------------------------------------------------------
 
-disasm_instr(B, Bs, Atoms, Literals, Types) ->
+disasm_instr(B, Bs, Atoms, Literals, Types) when is_binary(Bs) ->
     {SymOp, Arity} = beam_opcodes:opname(B),
     case SymOp of
 	select_val ->
@@ -524,24 +523,9 @@ disasm_update_record(Bs1, Atoms, Literals, Types) ->
 %%   assign a type to it
 %%-----------------------------------------------------------------------
 
--spec decode_arg([byte(),...] | binary()) -> {{disasm_tag(),_}, [byte()]}.
+-spec decode_arg(binary()) -> {{disasm_tag(),_}, binary()}.
 
-decode_arg(BsL) when is_list(BsL) ->
-    %% TODO: remove exercising take_arg/1 later
-    Bs = list_to_binary(BsL),
-    {BA,_,_Bs0} = take_arg(Bs),
-    %BsL = (BA ++ ensure_list(_Bs0)),
-    {A,[]} = decode_arg1(BA),
-    {A1,Bs1} = decode_arg1(BsL),
-    A1 = A,
-    %Bs1 = ensure_list(Bs0),
-    {A,Bs1};
-decode_arg(Bs) ->
-    {BA,_,Bs0} = take_arg(Bs),
-    {A,[]} = decode_arg1(BA),
-    {A,Bs0}.
-
-decode_arg1([B|Bs]) ->
+decode_arg(<<B, Bs/bytes>>) ->
     Tag = decode_tag(B band 2#111),
     ?NO_DEBUG('Tag = ~p, B = ~p, Bs = ~p~n', [Tag, B, Bs]),
     case Tag of
@@ -552,31 +536,11 @@ decode_arg1([B|Bs]) ->
 	    decode_int(Tag, B, Bs)
     end.
 
--spec decode_arg([byte(),...] | binary(),
+-spec decode_arg(binary(),
                  gb_trees:tree(index(), _), literals(), types()) ->
-        {disasm_term(), [byte()]}.
+        {disasm_term(), binary()}.
 
-decode_arg(BsL, Atoms, Literals, Types) when is_list(BsL) ->
-    %% TODO: remove exercising take_arg/1 later
-    Bs = list_to_binary(BsL),
-    {BA,_,_Bs0} = take_arg(Bs),
-    %BsL = (BA ++ ensure_list(_Bs0)),
-    {A,[]} = decode_arg1(BA, Atoms, Literals, Types),
-    {A1,Bs1} = decode_arg1(BsL, Atoms, Literals, Types),
-    A1 = A,
-    %Bs1 = ensure_list(Bs0),
-    {A,Bs1};
-decode_arg(Bs, Atoms, Literals, Types) ->
-    {BA,_,Bs0} = take_arg(Bs),
-    {A,[]} = decode_arg1(BA, Atoms, Literals, Types),
-    {A,Bs0}.
-
-%% ensure_list(Bs) when is_list(Bs) ->
-%%     Bs;
-%% ensure_list(Bs) ->
-%%     binary_to_list(Bs).
-
-decode_arg1([B|Bs0], Atoms, Literals, Types) ->
+decode_arg(<<B, Bs0/bytes>>, Atoms, Literals, Types) ->
     Tag = decode_tag(B band 2#111),
     ?NO_DEBUG('Tag = ~p, B = ~p, Bs = ~p~n', [Tag, B, Bs0]),
     case Tag of
@@ -599,14 +563,9 @@ decode_arg1([B|Bs0], Atoms, Literals, Types) ->
 %% raw argument for convenience, as integer/float or {RegN,TypeN}.
 %% -----------------------------------------------------------------------
 
--spec take_arg([byte(),...] | binary()) -> {[byte()], [byte()]}.
+-spec take_arg(binary()) -> {[binary()|byte()], binary()}.
 
-take_arg([B|Bs]) ->
-    take_arg(B, Bs);
 take_arg(<<B, Bs/bytes>>) ->
-    take_arg(B, Bs).
-
-take_arg(B, Bs) ->
     Tag = B band 2#111,
     case Tag of
 	?tag_z ->
@@ -635,7 +594,7 @@ decode_int(Tag,B,Bs) when (B band 16#08) =:= 0 ->
     {{Tag,N},Bs};
 decode_int(Tag,B,Bs) when (B band 16#10) =:= 0 ->
     %% N < 2048 = 11 bits = 3:8 bits, NNN:01:TTT, NNNNNNNN
-    [B1|Bs1] = Bs,
+    <<B1, Bs1/bytes>> = Bs,
     Val0 = B band 2#11100000,
     N = (Val0 bsl 3) bor B1,
     ?NO_DEBUG('NNN:01:TTT, NNNNNNNN = ~n~p:01:~p, ~p = ~p~n', [Val0,Tag,B,N]),
@@ -644,12 +603,31 @@ decode_int(Tag,B,Bs) ->
     {Len,Bs1} = decode_int_length(B,Bs),
     {IntBs,RemBs} = take_bytes(Len,Bs1),
     N = build_arg(IntBs),
-    [F|_] = IntBs,
+    <<F,_/bytes>> = IntBs,
     Num = if F > 127, Tag =:= i -> decode_negative(N,Len);
 	     true -> N
 	  end,
     ?NO_DEBUG('Len = ~p, IntBs = ~p, Num = ~p~n', [Len,IntBs,Num]),
     {{Tag,Num},RemBs}.
+
+%% like decode_int() but returns the bytes together with the int value
+take_int(_Tag,B,Bs) when (B band 16#08) =:= 0 ->
+    N = B bsr 4,
+    {[B],N,Bs};
+take_int(_Tag,B,Bs) when (B band 16#10) =:= 0 ->
+    <<B1, Bs1/bytes>> = Bs,
+    Val0 = B band 2#11100000,
+    N = (Val0 bsl 3) bor B1,
+    {[B,B1],N,Bs1};
+take_int(Tag,B,Bs) ->
+    {BL,Len,Bs1} = take_int_length(B,Bs),
+    {IntBs,RemBs} = take_bytes(Len,Bs1),
+    N = build_arg(IntBs),
+    [F|_] = IntBs,
+    Num = if F > 127, Tag =:= ?tag_i -> decode_negative(N,Len);
+	     true -> N
+	  end,
+    {[B|(BL++IntBs)],Num,RemBs}.
 
 -spec decode_int_length(integer(), [byte()]) -> {integer(), [byte()]}.
 
@@ -682,29 +660,6 @@ take_int_length(B, Bs) ->
 
 decode_negative(N, Len) ->
     N - (1 bsl (Len*8)). % 8 is number of bits in a byte
-
-%% like decode_int() but returns the bytes together with the int value
-take_int(_Tag,B,Bs) when (B band 16#08) =:= 0 ->
-    N = B bsr 4,
-    {[B],N,Bs};
-take_int(_Tag,B,Bs) when (B band 16#10) =:= 0 ->
-    if is_list(Bs) ->
-            [B1|Bs1] = Bs;
-       true ->
-            <<B1, Bs1/bytes>> = Bs
-    end,
-    Val0 = B band 2#11100000,
-    N = (Val0 bsl 3) bor B1,
-    {[B,B1],N,Bs1};
-take_int(Tag,B,Bs) ->
-    {BL,Len,Bs1} = take_int_length(B,Bs),
-    {IntBs,RemBs} = take_bytes(Len,Bs1),
-    N = build_arg(IntBs),
-    [F|_] = IntBs,
-    Num = if F > 127, Tag =:= ?tag_i -> decode_negative(N,Len);
-	     true -> N
-	  end,
-    {[B|(BL++IntBs)],Num,RemBs}.
 
 %%-----------------------------------------------------------------------
 %% Decodes lists and floating point numbers.
@@ -820,37 +775,30 @@ take_alloc_list_1(N, Bs0, Acc, BAcc) ->
 %% take N bytes from a stream, return {Taken_bytes, Remaining_bytes}
 %%-----------------------------------------------------------------------
 
--spec take_bytes(non_neg_integer(), [byte()] | binary()) -> {[byte()], [byte()]}.
+-spec take_bytes(non_neg_integer(), binary()) -> {binary(), binary()}.
 
-take_bytes(N, Bs) when is_list(Bs) ->
-    take_bytes(N, Bs, []);
 take_bytes(N, Bs) ->
     <<TB:N/bytes, Bs1/bytes>> = Bs,
-    {binary_to_list(TB), Bs1}. %% TODO: return TB as binary
-
-take_bytes(N, [B|Bs], Acc) when N > 0 ->
-    take_bytes(N-1, Bs, [B|Acc]);
-take_bytes(0, Bs, Acc) ->
-    {lists:reverse(Acc), Bs}.
+    {TB, Bs1}.
 
 %%-----------------------------------------------------------------------
-%% from a list of bytes Bn,Bn-1,...,B1,B0
+%% from a binary <<Bn,Bn-1,...,B1,B0>>
 %% build  (Bn << 8*n) bor ... bor (B1 << 8) bor (B0 << 0)
 %%-----------------------------------------------------------------------
 
 build_arg(Bs) ->
     build_arg(Bs, 0).
 
-build_arg([B|Bs], N) ->
+build_arg(<<B,Bs/bytes>>, N) ->
     build_arg(Bs, (N bsl 8) bor B);
-build_arg([], N) ->
+build_arg(<<>>, N) ->
     N.
 
 %%-----------------------------------------------------------------------
 %% Decodes a bunch of arguments and returns them in a list
 %%-----------------------------------------------------------------------
 
-decode_n_args(N, Bs, Atoms, Literals, Types) when N >= 0 ->
+decode_n_args(N, Bs, Atoms, Literals, Types) when is_binary(Bs), N >= 0 ->
     decode_n_args(N, [], Bs, Atoms, Literals, Types).
 
 decode_n_args(N, Acc, Bs0, Atoms, Literals, Types) when N > 0 ->
