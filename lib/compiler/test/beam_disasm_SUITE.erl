@@ -26,12 +26,12 @@
 -export([all/0, suite/0,groups/0,init_per_suite/1, end_per_suite/1,
 	 init_per_group/2,end_per_group/2]).
 
--export([stripped/1]).
+-export([disasm_this/1,stripped/1]).
 
 suite() -> [{ct_hooks,[ts_install_cth]}].
 
 all() ->
-    [stripped].
+    [disasm_this, stripped].
 
 groups() ->
     [].
@@ -47,6 +47,14 @@ init_per_group(_GroupName, Config) ->
 
 end_per_group(_GroupName, Config) ->
     Config.
+
+disasm_this(Config) when is_list(Config) ->
+    {beam_file, ?MODULE, Exports, Attrs, CompileInfo, Code} =
+        beam_disasm:file(code:which(?MODULE)),
+    true = is_list(Exports),
+    true = is_list(Attrs),
+    true = is_list(CompileInfo),
+    true = is_list(Code).
 
 %% Check that stripped beam files can be disassembled.
 stripped(Config) when is_list(Config) ->
