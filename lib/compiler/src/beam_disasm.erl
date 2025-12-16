@@ -29,6 +29,7 @@
 -moduledoc false.
 
 -export([file/1]). %% the main function
+-export([take_arg/1]). %% for byte oriented decoding
 -export([function__code/1, format_error/1]).
 -ifdef(DEBUG_DISASM).
 -export([dfs/1, df/1, files/1, pp/1, pp/2]).
@@ -525,7 +526,17 @@ disasm_update_record(Bs1, Atoms, Literals, Types) ->
 
 -spec decode_arg([byte(),...]) -> {{disasm_tag(),_}, [byte()]}.
 
-decode_arg([B|Bs]) ->
+decode_arg(Bs) ->
+    %% TODO: remove exercising take_arg/1 later
+    {BA,_,Bs0} = take_arg(Bs),
+    Bs = (BA ++ Bs0),
+    {A,[]} = decode_arg1(BA),
+    {A1,Bs1} = decode_arg1(Bs),
+    A1 = A,
+    Bs1 = Bs0,
+    {A,Bs0}.
+
+decode_arg1([B|Bs]) ->
     Tag = decode_tag(B band 2#111),
     ?NO_DEBUG('Tag = ~p, B = ~p, Bs = ~p~n', [Tag, B, Bs]),
     case Tag of
@@ -540,7 +551,17 @@ decode_arg([B|Bs]) ->
                  gb_trees:tree(index(), _), literals(), types()) ->
         {disasm_term(), [byte()]}.
 
-decode_arg([B|Bs0], Atoms, Literals, Types) ->
+decode_arg(Bs, Atoms, Literals, Types) ->
+    %% TODO: remove exercising take_arg/1 later
+    {BA,_,Bs0} = take_arg(Bs),
+    Bs = (BA ++ Bs0),
+    {A,[]} = decode_arg1(BA, Atoms, Literals, Types),
+    {A1,Bs1} = decode_arg1(Bs, Atoms, Literals, Types),
+    A1 = A,
+    Bs1 = Bs0,
+    {A,Bs0}.
+
+decode_arg1([B|Bs0], Atoms, Literals, Types) ->
     Tag = decode_tag(B band 2#111),
     ?NO_DEBUG('Tag = ~p, B = ~p, Bs = ~p~n', [Tag, B, Bs0]),
     case Tag of
@@ -555,6 +576,23 @@ decode_arg([B|Bs0], Atoms, Literals, Types) ->
 	_ ->
 	    %% all other cases are handled as if they were integers
 	    decode_int(Tag, B, Bs0)
+    end.
+
+%%-----------------------------------------------------------------------
+%% Takes the bytes of a variable length argument. Like decode_arg() but
+%% does not convert the argument to symbolic form. Returns the decoded
+%% raw argument for convenience, as integer/float or {RegN,TypeN}.
+%% -----------------------------------------------------------------------
+
+-spec take_arg([byte(),...]) -> {[byte()], [byte()]}.
+
+take_arg([B|Bs]) ->
+    Tag = B band 2#111,
+    case Tag of
+	?tag_z ->
+	    take_z_tagged(B, Bs);
+	_ ->
+	    take_int(Tag, B, Bs)
     end.
 
 %%-----------------------------------------------------------------------
@@ -610,11 +648,39 @@ decode_int_length(B, Bs) ->
 	L ->
 	    {L+2,Bs}
     end.
-    
+
+take_int_length(B, Bs) ->
+    case B bsr 5 of
+	7 ->
+	    {BA,L,ArgBs} = take_arg(Bs),
+            {BA,L+9,ArgBs};
+	L ->
+	    {[],L+2,Bs}
+    end.
+
 -spec decode_negative(non_neg_integer(), non_neg_integer()) -> neg_integer().
 
 decode_negative(N, Len) ->
     N - (1 bsl (Len*8)). % 8 is number of bits in a byte
+
+%% like decode_int() but returns the bytes together with the int value
+take_int(_Tag,B,Bs) when (B band 16#08) =:= 0 ->
+    N = B bsr 4,
+    {[B],N,Bs};
+take_int(_Tag,B,Bs) when (B band 16#10) =:= 0 ->
+    [B1|Bs1] = Bs,
+    Val0 = B band 2#11100000,
+    N = (Val0 bsl 3) bor B1,
+    {[B,B1],N,Bs1};
+take_int(Tag,B,Bs) ->
+    {BL,Len,Bs1} = take_int_length(B,Bs),
+    {IntBs,RemBs} = take_bytes(Len,Bs1),
+    N = build_arg(IntBs),
+    [F|_] = IntBs,
+    Num = if F > 127, Tag =:= ?tag_i -> decode_negative(N,Len);
+	     true -> N
+	  end,
+    {[B|(BL++IntBs)],Num,RemBs}.
 
 %%-----------------------------------------------------------------------
 %% Decodes lists and floating point numbers.
@@ -646,6 +712,33 @@ decode_z_tagged(Tag,B,Bs,Literals,Types) when (B band 16#08) =:= 0 ->
     end;
 decode_z_tagged(_,B,_,_,_) ->
     ?exit({decode_z_tagged,{weird_value,B}}).
+
+take_z_tagged(B,Bs) when (B band 16#08) =:= 0 ->
+    N = B bsr 4,
+    case N of
+	0 -> % float
+            {FL,RestBs} = take_bytes(8,Bs),
+            <<Float:64/float>> = list_to_binary(FL),
+            {[B|FL],Float,RestBs};
+	1 -> % list
+	    {[B],N,Bs};
+	2 -> % fr
+            {FR,U,RestBs} = take_arg(Bs),
+            {[B|FR],U,RestBs};
+	3 -> % allocation list
+	    take_alloc_list(B,Bs);
+	4 -> % literal
+	    {LB,Index,RestBs} = take_arg(Bs),
+            {[B|LB],Index,RestBs};
+        5 -> % type-tagged register
+            {RB,Reg,RestBs0} = take_arg(Bs),
+            {TB,Type,RestBs} = take_arg(RestBs0),
+            {[B|(RB++TB)],{Reg,Type},RestBs};
+	_ ->
+	    ?exit({invalid_extended_tag,N})
+    end;
+take_z_tagged(B,_Bs) ->
+    ?exit({weird_value,B}).
 
 -spec decode_float([byte(),...]) -> {{'float', float()}, [byte()]}.
 
@@ -681,6 +774,23 @@ decode_alloc_list_1(N, Bs0, Acc) ->
               2 -> {funs,Val}
 	  end,
     decode_alloc_list_1(N-1, Bs, [Res|Acc]).
+
+take_alloc_list(B,Bs) ->
+    {BA,N,RestBs} = take_arg(Bs),
+    take_alloc_list_1(N, RestBs, [], lists:reverse(BA,[B])).
+
+take_alloc_list_1(0, RestBs, Acc, BAcc) ->
+    {lists:reverse(BAcc),Acc,RestBs};
+take_alloc_list_1(N, Bs0, Acc, BAcc) ->
+    {TB,Type,Bs1} = take_arg(Bs0),
+    {VB,Val,Bs} = take_arg(Bs1),
+    Res = case Type of
+	      0 -> {words,Val};
+	      1 -> {floats,Val};
+              2 -> {funs,Val}
+	  end,
+    BAcc1 = lists:reverse(VB, lists:reverse(TB, BAcc)),
+    take_alloc_list_1(N-1, Bs, [Res|Acc], BAcc1).
 
 %%-----------------------------------------------------------------------
 %% take N bytes from a stream, return {Taken_bytes, Remaining_bytes}
