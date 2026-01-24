@@ -22,7 +22,7 @@
 -module(xref_reader).
 -moduledoc false.
 
--export([module/5]).
+-export([module/5, beam/2]).
 
 -import(lists, [keysearch/3, member/2, reverse/1]).
 
@@ -360,3 +360,95 @@ adjust_arity(#xrefr{is_abstr = true, module = M}, {M, F, A} = MFA) ->
     end;
 adjust_arity(_S, MFA) ->
     MFA.
+
+beam(_M, File) ->
+    {beam_file, Module, Exports, Attributes, CompInfo, Code} =
+        beam_disasm:file(File),
+    scan_funcs(Code,
+               #{module => Module,
+                 exports => Exports,
+                 attributes => Attributes,
+                 comp_info => CompInfo,
+                 on_load => [],
+                 def_at => [],
+                 l_call => [],
+                 l_call_at => [],
+                 x_call => [],
+                 x_call_at => []
+                }).
+
+scan_funcs([{function,F,A,_Lbl,Ops} | Fs], #{module := M, def_at := Defs}=Map0) ->
+    L = func_line(Ops),
+    {Generated, F1, A1} = func_name(F, A),
+    Func = {M, F1, A1},
+    Map = case Generated of
+              true ->
+                  Map0;
+              false ->
+                  Map0#{def_at => [{Func,L} | Defs]}
+          end,
+    Map1 = scan_code(Ops, L, Func, Map),
+    scan_funcs(Fs, Map1);
+scan_funcs([], #{def_at := Defs}=Map) ->
+    Map#{def_at := lists:keysort(2, Defs)}.
+
+func_line([{label,_} | Ops]) -> func_line(Ops);
+func_line([{line,[]} | _]) -> 0;
+func_line([{line,[{location,F,L}]} | _]) -> {F,L};
+func_line(_) -> 0.
+
+func_name(F, A) ->
+    case re:run(atom_to_binary(F),
+                <<"^-(inlined-)?([^/]+)/([0-9]+)-.*$">>,
+                [{capture,all_but_first,binary}]) of
+        {match, [_,F1,A1]} ->
+            {true, F1, binary_to_integer(A1)};
+        _ ->
+            {false, F, A}
+    end.
+
+scan_code([{line,[{location,F,L}]} | Ops], _L, Func, #{module := M}=Map) ->
+    scan_code(Ops, {M,F,L}, Func, Map);
+scan_code([{line,_} | Ops], _L, Func, Map) ->
+    scan_code(Ops, 0, Func, Map);
+scan_code([{call,_Lbl,Dest} | Ops], L, Func, Map) ->
+    scan_code_local(Ops, L, Func, Map, Dest);
+scan_code([{call_only,_Lbl,Dest} | Ops], L, Func, Map) ->
+    scan_code_local(Ops, L, Func, Map, Dest);
+scan_code([{call_last,_Lbl,Dest,_} | Ops], L, Func, Map) ->
+    scan_code_local(Ops, L, Func, Map, Dest);
+scan_code([{make_fun3,Dest,_,_,_,_} | Ops], L, Func, Map) ->
+    scan_code_local(Ops, L, Func, Map, Dest);
+scan_code([{call_ext,_Lbl,Dest} | Ops], L, Func, Map) ->
+    scan_code_external(Ops, L, Func, Map, Dest);
+scan_code([{call_ext_only,_Lbl,Dest} | Ops], L, Func, Map) ->
+    scan_code_external(Ops, L, Func, Map, Dest);
+scan_code([{call_ext_last,_Lbl,Dest,_} | Ops], L, Func, Map) ->
+    scan_code_external(Ops, L, Func, Map, Dest);
+scan_code([on_load | Ops], L, Func, #{on_load := OnLoad}=Map0) ->
+    Map = Map0#{on_load => [Func | OnLoad]},
+    scan_code(Ops, L, Func, Map);
+scan_code([_Op | Ops], L, Func, Map) ->
+    scan_code(Ops, L, Func, Map);
+scan_code([], _L, _Func, Map) ->
+    Map.
+
+scan_code_local(Ops, L, Func, #{l_call := Calls, l_call_at := CallsAt}=Map,
+                {_, F, A}=Dest) ->
+    {Generated, _F1, _A1} = func_name(F, A),
+    case Generated of
+        true ->
+            scan_code(Ops, L, Func, Map);
+        false ->
+            Edge = {Func, Dest},
+            Map1 = Map#{l_call => [Edge | Calls],
+                        l_call_at => [{Edge,L} | CallsAt]},
+            scan_code(Ops, L, Func, Map1)
+    end.
+
+scan_code_external(Ops, L, Func, #{x_call := Calls, x_call_at := CallsAt}=Map,
+                   {extfunc, M, F, A}) ->
+    Edge = {Func, {M, F, A}},
+    Map1 = Map#{x_call => [Edge | Calls],
+                x_call_at => [{Edge,L} | CallsAt]},
+    scan_code(Ops, L, Func, Map1).
