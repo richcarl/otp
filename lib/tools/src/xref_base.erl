@@ -743,7 +743,7 @@ read_module(SplitName, AppName, Builtins, Verbose, Warnings, State) ->
 
 read_a_module({Dir, BaseName}, AppName, Builtins, Verbose, Warnings, Mode) ->
     File = filename:join(Dir, BaseName),
-    case abst(File, Builtins, Mode) of
+    case extract_xref(File, Builtins, Mode) of
 	{ok, M, Data, UnresCalls0}  ->
 	    message(Verbose, done_file, [File]),
             %% Remove duplicates. Identical unresolved calls on the
@@ -788,22 +788,37 @@ process_module(State) ->
             end
     end.
 
-abst(File, Builtins, _Mode = functions) ->
+extract_xref(File, Builtins, _Mode = functions) ->
     case beam_lib:chunks(File, [abstract_code, exports, attributes]) of
 	{ok, {M,[{abstract_code,NoA},_X,_A]}} when NoA =:= no_abstract_code ->
-            {ok, {_M, [{exports,X0}, {attributes,A}]}} =
-                beam_lib:chunks(File, [exports, attributes]),
-	    X = mfa_exports(X0, A, M),
-            D = deprecated(A, X, M),
-            Data = beam(File),
-            #{on_load := OL,
-              def_at := DefAt,
-              l_call := LC,
-              l_call_at := LCallAt,
-              x_call := XC,
-              x_call_at := XCallAt
-             } = Data,
-            {ok, M, {DefAt, LCallAt, XCallAt, LC, XC, X, {[],[],[]}, D, OL}, []};
+            case beam_lib:chunks(File, ["Xref", exports, attributes]) of
+                {ok, {M, [{"Xref", Data0}, {exports,X0}, {attributes,A}]}} ->
+                    X = mfa_exports(X0, A, M),
+                    D = deprecated(A, X, M),
+                    Data = binary_to_term(Data0),
+                    #{on_load := OL,
+                      def_at := DefAt,
+                      l_call := LC,
+                      l_call_at := LCallAt,
+                      x_call := XC,
+                      x_call_at := XCallAt
+                     } = Data,
+                    {ok, M, {DefAt, LCallAt, XCallAt, LC, XC, X, {[],[],[]}, D, OL}, []};
+                _ ->
+                    {ok, {_M, [{exports,X0}, {attributes,A}]}} =
+                        beam_lib:chunks(File, [exports, attributes]),
+                    X = mfa_exports(X0, A, M),
+                    D = deprecated(A, X, M),
+                    Data = beam(File),
+                    #{on_load := OL,
+                      def_at := DefAt,
+                      l_call := LC,
+                      l_call_at := LCallAt,
+                      x_call := XC,
+                      x_call_at := XCallAt
+                     } = Data,
+                    {ok, M, {DefAt, LCallAt, XCallAt, LC, XC, X, {[],[],[]}, D, OL}, []}
+            end;
 	{ok, {M, [{abstract_code, {raw_abstract_v1, Code}},
                   {exports,X0}, {attributes,A}]}} ->
 	    %% R9C-
@@ -816,7 +831,7 @@ abst(File, Builtins, _Mode = functions) ->
 	Error when element(1, Error) =:= error ->
 	    Error
     end;
-abst(File, Builtins, _Mode = modules) ->
+extract_xref(File, Builtins, _Mode = modules) ->
     case beam_lib:chunks(File, [exports, imports, attributes]) of
 	{ok, {Mod, [{exports,X0}, {imports,I0}, {attributes,At}]}} ->
 	    X1 = mfa_exports(X0, At, Mod),

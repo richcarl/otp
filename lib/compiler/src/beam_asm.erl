@@ -81,8 +81,11 @@ module(Code0, ExtraChunks, CompileInfo, CompilerOpts) ->
     {Asm,Attr} = on_load(Asm0, Attr0),
     Exp = sets:from_list(Exp0),
     {Code,Dict} = assemble(Asm, Exp, Dict3, []),
+    %% TODO: make a compact xref representation, rely on lines chunk for defs
+    Xref = xref(Mod, Asm),
+    ExtraChunks1 = [{<<"Xref">>,term_to_binary(Xref)} | ExtraChunks],
     Beam = build_file(Code, Attr, Dict, NumLabels, NumFuncs,
-                      ExtraChunks, CompileInfo, CompilerOpts),
+                      ExtraChunks1, CompileInfo, CompilerOpts),
     {ok,Beam}.
 
 reject_unsupported_versions(Dict) ->
