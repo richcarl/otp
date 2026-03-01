@@ -4171,11 +4171,16 @@ cexpr(#iprimop{anno=A,name=Name,args=Args}, _As, St) ->
     {#c_primop{anno=A#a.anno,name=Name,args=Args},[],A#a.us,St};
 cexpr(#iprotect{anno=A,body=Es}, _As, St0) ->
     {Ce,_,St1} = cexprs(Es, [], St0),
-    V = #c_var{name='Try'},		%The names are arbitrary
-    Vs = [#c_var{name='T'},#c_var{name='R'}],
-    {#c_try{anno=A#a.anno,arg=Ce,vars=[V],body=V,
-	    evars=Vs,handler=#c_literal{val=false}},
-     [],A#a.us,St1};
+    Ce1 = case member(protected_guards, St1#core.opts) of
+              true ->
+                  V = #c_var{name='Try'},		%The names are arbitrary
+                  Vs = [#c_var{name='T'},#c_var{name='R'}],
+                  #c_try{anno=A#a.anno,arg=Ce,vars=[V],body=V,
+                         evars=Vs,handler=#c_literal{val=false}};
+              false ->
+                  Ce
+          end,
+    {Ce1,[],A#a.us,St1};
 cexpr(#ibinary{anno=#a{anno=Anno,us=Us},segments=Segs}, _As, St) ->
     {#c_binary{anno=Anno,segments=Segs},[],Us,St};
 cexpr(#c_literal{}=Lit, _As, St) ->
