@@ -451,6 +451,19 @@ format_error_1(match_float_zero) ->
      matching on the float 0.0 will no longer also match -0.0 in OTP 27.
      If you specifically intend to match 0.0 alone, write +0.0 instead.
      """;
+format_error_1(length_in_guard) ->
+    ~"""
+     Calling length/1 in a guard is not recommended.
+     Note that `length(L)` scans the whole list `L` each time to count the elements.
+     This can lead to quadratic runtime complexity if done in a loop or a receive.
+     If possible, match on a list pattern instead, like this:
+         case L of
+           [] -> ...;                       % instead of length(L) =:= 0
+           [_] -> ...;                      % instead of length(L) =:= 1
+           [_X1, _X2, _X3] -> ...;          % instead of length(L) =:= 3
+           [_X1, _X2, _X3 | _Rest] -> ...;  % instead of length(L) >= 3
+     To suppress this warning, use compile directive 'nowarn_length_in_guard'.
+     """;
 %% --- maps ---
 format_error_1(illegal_map_construction) ->
     ~"only association operators '=>' are allowed in map construction";
@@ -929,6 +942,7 @@ bool_options() ->
      {redefined_builtin_type,true},
      {match_float_zero,true},
      {match_alias_pats,true},
+     {length_in_guard,true},
      {update_literal,true},
      {behaviours,true},
      {conflicting_behaviours,true},
@@ -2684,7 +2698,11 @@ gexpr({call,Anno,{atom,_Aa,F},As}, Vt, St0) ->
         true ->
 	    %% Assert that it is auto-imported.
 	    true = erl_internal:bif(F, A),
-	    {Asvt,St1};
+            if F =:= length, A =:= 1 ->
+                    {Asvt,maybe_add_warning(Anno, length_in_guard, St1)};
+               true ->
+                    {Asvt,St1}
+            end;
         false ->
 	    case is_local_function(St1#lint.locals,{F,A}) orelse
 		is_imported_function(St1#lint.imports,{F,A}) of
