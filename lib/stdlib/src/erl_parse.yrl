@@ -901,6 +901,8 @@ processed (see section [Error Information](#module-error-information)).
           {get_attributes,1,"erl_anno:{column,line,location,text}/1 instead"},
           {get_attribute,2,"erl_anno:{column,line,location,text}/1 instead"}]).
 
+-compile(nowarn_length_in_guard).
+
 %% Start of Abstract Format
 
 -type anno() :: erl_anno:anno().

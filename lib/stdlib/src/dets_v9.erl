@@ -24,6 +24,7 @@
 -compile([{nowarn_deprecated_function, [{erlang,phash,2}]}]).
 
 -compile(nowarn_deprecated_catch).
+-compile(nowarn_length_in_guard).
 
 %% Dets files, implementation part. This module handles version 9.
 %% To be called from dets.erl only.

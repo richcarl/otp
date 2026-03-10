@@ -71,6 +71,8 @@
 -module(sys_core_fold).
 -moduledoc false.
 
+-compile(nowarn_length_in_guard).
+
 -export([module/2,format_error/1]).
 
 -import(lists, [map/2,foldl/3,foldr/3,mapfoldl/3,all/2,any/2,

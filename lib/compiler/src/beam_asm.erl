@@ -35,6 +35,8 @@
 -include("beam_opcodes.hrl").
 -include("beam_asm.hrl").
 
+-compile(nowarn_length_in_guard).
+
 -define(BEAM_DEBUG_INFO_VERSION, 0).
 -define(BEAM_RECORD_VERSION, 0).
 

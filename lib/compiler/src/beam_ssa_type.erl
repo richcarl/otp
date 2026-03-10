@@ -32,6 +32,8 @@
 -moduledoc false.
 -export([opt_start/2, opt_continue/4, opt_finish/3, opt_ranges/1]).
 
+-compile(nowarn_length_in_guard).
+
 -include("beam_ssa_opt.hrl").
 -include("beam_types.hrl").
 

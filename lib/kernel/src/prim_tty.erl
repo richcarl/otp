@@ -21,6 +21,8 @@
 -module(prim_tty).
 -moduledoc false.
 
+-compile(nowarn_length_in_guard).
+
 %% Todo:
 %%  * Try to move buffer handling logic to Erlang
 %%    * This may not be possible for performance reasons, but should be tried

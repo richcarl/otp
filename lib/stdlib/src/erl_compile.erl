@@ -27,6 +27,8 @@
 
 -export([compile_cmdline/0, compile/2]).
 
+-compile(nowarn_length_in_guard).
+
 %% Mapping from extension to {M,F} to run the correct compiler.
 
 compiler(".erl") ->    {compile,         compile};

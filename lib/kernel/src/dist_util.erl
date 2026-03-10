@@ -28,6 +28,7 @@
 -module(dist_util).
 -moduledoc false.
 
+-compile(nowarn_length_in_guard).
 %%-compile(export_all).
 -export([handshake_we_started/1, handshake_other_started/1,
          strict_order_flags/0, rejectable_flags/0,

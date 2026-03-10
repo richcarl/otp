@@ -71,6 +71,7 @@ in the Erlang Reference Manual.
 """.
 
 -compile(nowarn_deprecated_catch).
+-compile(nowarn_length_in_guard).
 
 -behaviour(gen_server).
 

@@ -27,6 +27,8 @@
 -module(prim_inet).
 -moduledoc false.
 
+-compile(nowarn_length_in_guard).
+
 %% Primitive inet_drv interface
 
 -export([open/3, open/4, fdopen/4, fdopen/5, close/1]).

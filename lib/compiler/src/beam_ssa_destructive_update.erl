@@ -96,6 +96,8 @@
 
 -import(lists, [foldl/3, foldr/3, keysort/2, splitwith/2, reverse/1]).
 
+-compile(nowarn_length_in_guard).
+
 -include("beam_ssa_opt.hrl").
 -include("beam_types.hrl").
 

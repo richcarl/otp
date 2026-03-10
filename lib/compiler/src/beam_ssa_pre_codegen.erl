@@ -71,6 +71,8 @@
 
 -export([module/2]).
 
+-compile(nowarn_length_in_guard).
+
 -include("beam_ssa.hrl").
 -include("beam_asm.hrl").
 

@@ -30,6 +30,8 @@
 
 -export_type([ssa_register/0]).
 
+-compile(nowarn_length_in_guard).
+
 -include("beam_ssa.hrl").
 -include("beam_asm.hrl").
 

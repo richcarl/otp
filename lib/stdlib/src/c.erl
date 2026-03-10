@@ -37,6 +37,7 @@ commands.
 """.
 
 -compile(nowarn_deprecated_catch).
+-compile(nowarn_length_in_guard).
 
 -include_lib("kernel/include/eep48.hrl").
 

@@ -23,6 +23,8 @@
 -module(beam_call_types).
 -moduledoc false.
 
+-compile(nowarn_length_in_guard).
+
 -include("beam_types.hrl").
 
 -import(lists, [any/2,duplicate/2,foldl/3]).

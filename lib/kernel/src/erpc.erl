@@ -101,6 +101,8 @@ is available on the involved nodes.
 
 %%------------------------------------------------------------------------
 
+-compile(nowarn_length_in_guard).
+
 %% Nicer error stack trace...
 -compile({inline,[{result,4},{collection_result,6},{timeout_value,1}]}).
 

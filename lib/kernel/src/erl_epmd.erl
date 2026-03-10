@@ -30,6 +30,7 @@ To implement your own epmd module please see
 -moduledoc(#{since => "OTP R14B"}).
 
 -compile(nowarn_deprecated_catch).
+-compile(nowarn_length_in_guard).
 
 -behaviour(gen_server).
 

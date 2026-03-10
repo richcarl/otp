@@ -24,6 +24,8 @@
 
 -behaviour(gen_server).
 
+-compile(nowarn_length_in_guard).
+
 %% API
 -export([start_link/0, add_handler/3, remove_handler/1,
          add_filter/2, remove_filter/2,

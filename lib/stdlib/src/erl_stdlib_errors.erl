@@ -24,6 +24,8 @@
 -moduledoc false.
 -export([format_error/2]).
 
+-compile(nowarn_length_in_guard).
+
 -spec format_error(Reason, StackTrace) -> ErrorMap when
       Reason :: term(),
       StackTrace :: erlang:stacktrace(),

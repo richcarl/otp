@@ -21,6 +21,7 @@
 %%
 -module(edlin_context).
 -moduledoc false.
+-compile(nowarn_length_in_guard).
 %% description
 %%
 -export([get_context/1, get_context/2, odd_quotes/2]).

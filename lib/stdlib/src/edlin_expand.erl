@@ -33,6 +33,8 @@ This module provides an expand_fun for the erlang shell
 %% record fields and map keys and record field values.
 -include_lib("kernel/include/eep48.hrl").
 
+-compile(nowarn_length_in_guard).
+
 -export([expand/1, expand/2, expand/3, format_matches/2, number_matches/1, get_exports/1,
          shell_default_or_bif/1, bif/1, over_word/1]).
 -export([is_type/3, match_arguments1/3]).

@@ -59,6 +59,8 @@ code:load_abs("$PATH/user_default").
 `$PATH` is the directory where your `user_default` module can be found.
 """.
 
+-compile(nowarn_length_in_guard).
+
 -export([help/0,lc/1,c/1,c/2,c/3,nc/1,nl/1,l/1,i/0,pid/3,i/3,pi/1,pi/3,m/0,m/1,lm/0,mm/0,
          memory/0,memory/1,uptime/0,
          erlangrc/1,bi/1, regs/0, flush/0,pwd/0,ls/0,ls/1,cd/1,

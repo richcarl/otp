@@ -23,6 +23,7 @@
 -moduledoc false.
 
 -compile(nowarn_deprecated_catch).
+-compile(nowarn_length_in_guard).
 
 -include("inet_config.hrl").
 -include("inet.hrl").

@@ -256,6 +256,8 @@ A match specifications with excessive nesting will cause a
 -export_type([table/0, table_access/0, table_type/0,
               tid/0, match_spec/0, compiled_match_spec/0, match_pattern/0]).
 
+-compile(nowarn_length_in_guard).
+
 %%-----------------------------------------------------------------------------
 
 -type table_access()  :: public | protected | private.

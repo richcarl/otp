@@ -50,6 +50,8 @@
 -include("dist.hrl").
 -include("dist_util.hrl").
 
+-compile(nowarn_length_in_guard).
+
 -define(DRIVER, inet_tcp).
 -define(PROTOCOL, tcp).
 

@@ -26,6 +26,8 @@
 
 -behaviour(logger_handler).
 
+-compile(nowarn_length_in_guard).
+
 %% This module implements a simple handler for logger. It is the
 %% default used during system start.
 

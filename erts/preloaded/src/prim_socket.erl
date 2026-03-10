@@ -24,6 +24,7 @@
 -moduledoc false.
 
 -compile(no_native).
+-compile(nowarn_length_in_guard).
 
 -export([on_load/0, on_load/1, init/0]).
 

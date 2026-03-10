@@ -112,6 +112,8 @@ opens a tar file on a remote machine using an SFTP channel.
 -include_lib("kernel/include/file.hrl").
 -include("erl_tar.hrl").
 
+-compile(nowarn_length_in_guard).
+
 %% Converts the short error reason to a descriptive string.
 -doc "Converts an error reason term to a human-readable error message string.".
 -spec format_error(term()) -> string().

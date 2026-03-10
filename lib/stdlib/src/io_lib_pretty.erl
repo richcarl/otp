@@ -27,6 +27,8 @@
 %%% In this module "print" means the formatted printing while "write"
 %%% means just writing out onto one line.
 
+-compile(nowarn_length_in_guard).
+
 -export([print/1,print/2,print/3,print/4,print/5,print/6,
          print_bin/2]).
 

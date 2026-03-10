@@ -76,6 +76,8 @@
 -include("core_parse.hrl").
 -include("beam_ssa.hrl").
 
+-compile(nowarn_length_in_guard).
+
 %% Matches collapse max segment in v3_core.
 -define(EXPAND_MAX_SIZE_SEGMENT, 1024).
 
