@@ -30,6 +30,8 @@
 
 -include("dialyzer.hrl").
 
+-compile(nowarn_length_in_guard).
+
 %%-----------------------------------------------------------------------
 
 -spec build(Options) -> #options{} | {'error', string()} when

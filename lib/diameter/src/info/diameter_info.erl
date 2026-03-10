@@ -28,6 +28,8 @@
 -module(diameter_info).
 -moduledoc false.
 
+-compile(nowarn_length_in_guard).
+
 -export([usage/1,
          format/1,
          format/2,

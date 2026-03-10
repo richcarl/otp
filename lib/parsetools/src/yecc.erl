@@ -487,6 +487,8 @@ lib/parsetools/include/yeccpre.hrl
 * Kernighan & Pike: The UNIX programming environment, 1984.
 """.
 
+-compile(nowarn_length_in_guard).
+
 -export([compile/3, file/1, file/2, format_error/1]).
 
 -export_type([option/0, yecc_ret/0]).

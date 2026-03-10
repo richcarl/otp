@@ -31,6 +31,8 @@ Specifies the channel process to handle an SFTP subsystem.
 Specifies a channel process to handle an SFTP subsystem.
 """.
 
+-compile(nowarn_length_in_guard).
+
 -behaviour(ssh_server_channel).
 
 -include_lib("kernel/include/file.hrl").

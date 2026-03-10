@@ -24,6 +24,8 @@
 
 -behaviour(snmpa_network_interface).
 
+-compile(nowarn_length_in_guard).
+
 -export([start_link/4,
 	 info/1, 
 	 verbosity/2]).

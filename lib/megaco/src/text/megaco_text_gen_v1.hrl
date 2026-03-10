@@ -25,6 +25,8 @@
 %% Purpose: Encode Megaco/H.248 text messages from internal form
 %%----------------------------------------------------------------------
 
+-compile(nowarn_length_in_guard).
+
 -define(META_ENC(Type, Item), Item) .
 %% -define(META_ENC(Type, Item), megaco_meta_package:encode(text, Type, Item)).
 %% -define(META_DEC(Type, Item), megaco_meta_package:decode(text, Type, Item)).

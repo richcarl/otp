@@ -44,6 +44,7 @@
 -module(edoc_tags).
 
 -compile(nowarn_deprecated_catch).
+-compile(nowarn_length_in_guard).
 
 -export([tags/0, tags/1, tag_names/0, tag_parsers/0, scan_lines/2,
 	 filter_tags/2, filter_tags/3, check_tags/4, parse_tags/4,

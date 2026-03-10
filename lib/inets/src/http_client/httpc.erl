@@ -113,6 +113,7 @@ The client can be stopped using [`inets:stop(httpc, Pid)`](`inets:stop/2`) or
 	 stop_service/1, 
 	 services/0, service_info/1]).
 
+-compile(nowarn_length_in_guard).
 
 -include_lib("inets/src/http_lib/http_internal.hrl").
 -include("httpc_internal.hrl").

@@ -32,6 +32,8 @@
 %% - All IndAud stuff
 %%----------------------------------------------------------------------
 
+-compile(nowarn_length_in_guard).
+
 %% -define(d(F,A), io:format("~w:" ++ F ++ "~n", [?MODULE|A])).
 	       
 -define(META_ENC(Type, Item), Item) .

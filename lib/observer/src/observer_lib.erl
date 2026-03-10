@@ -22,6 +22,8 @@
 -module(observer_lib).
 -moduledoc false.
 
+-compile(nowarn_length_in_guard).
+
 -export([get_wx_parent/1,
 	 display_info_dialog/2, display_yes_no_dialog/1,
 	 display_progress_dialog/3,

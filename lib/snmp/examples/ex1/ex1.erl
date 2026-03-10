@@ -22,6 +22,8 @@
 
 -module(ex1).
 
+-compile(nowarn_length_in_guard).
+
 %% External exports
 -export([start/0, my_name/1, my_name/2, friends_table/3]).
 

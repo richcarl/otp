@@ -28,6 +28,8 @@
 -module(erl_bif_types).
 -moduledoc false.
 
+-compile(nowarn_length_in_guard).
+
 -define(BITS, 128). %This is only in bsl to convert answer to pos_inf/neg_inf.
 -export([type/3, type/4, arg_types/3,
 	 is_known/3, infinity_add/2]).

@@ -26,6 +26,8 @@
 -module(ssh_message).
 -moduledoc false.
 
+-compile(nowarn_length_in_guard).
+
 -include_lib("public_key/include/public_key.hrl").
 -include_lib("kernel/include/logger.hrl").
 

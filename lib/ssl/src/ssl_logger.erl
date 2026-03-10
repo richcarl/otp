@@ -23,6 +23,8 @@
 -module(ssl_logger).
 -moduledoc false.
 
+-compile(nowarn_length_in_guard).
+
 -export([log/4, 
          debug/4,
          format/2,

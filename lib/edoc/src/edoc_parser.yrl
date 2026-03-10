@@ -283,6 +283,8 @@ Header
 
 Erlang code.
 
+-compile(nowarn_length_in_guard).
+
 -export([parse_spec/2, parse_typedef/2, parse_throws/2, parse_ref/2,
 	 parse_see/2, parse_param/2]).
 

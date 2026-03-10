@@ -25,6 +25,8 @@
 -module(ssh_auth).
 -moduledoc false.
 
+-compile(nowarn_length_in_guard).
+
 -include_lib("public_key/include/public_key.hrl").
 
 -include("ssh.hrl").

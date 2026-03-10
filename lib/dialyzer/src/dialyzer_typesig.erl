@@ -32,6 +32,8 @@
 -module(dialyzer_typesig).
 -moduledoc false.
 
+-compile(nowarn_length_in_guard).
+
 -export([analyze_scc/7]).
 -export([get_safe_underapprox/2]).
 

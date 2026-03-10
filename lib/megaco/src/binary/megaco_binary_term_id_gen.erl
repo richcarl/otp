@@ -28,6 +28,7 @@
 -module(megaco_binary_term_id_gen).
 -moduledoc false.
 
+-compile(nowarn_length_in_guard).
 
 %%----------------------------------------------------------------------
 %% Include files

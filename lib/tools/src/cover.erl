@@ -105,6 +105,8 @@ alive during the disconnected period, cover data from before and during this
 period will be included in the analysis.
 """.
 
+-compile(nowarn_length_in_guard).
+
 %%
 %% This module implements the Erlang coverage tool.
 %%

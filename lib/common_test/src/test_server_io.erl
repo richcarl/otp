@@ -41,6 +41,8 @@
 
 -export([init/1,handle_call/3,handle_info/2,terminate/2]).
 
+-compile(nowarn_length_in_guard).
+
 -record(st, {fds,			    % Singleton fds (gb_tree)
 	     tags=[],                       % Known tag types   
 	     shared_gl :: pid(),	    % Shared group leader

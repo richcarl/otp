@@ -22,6 +22,8 @@
 -module(reltool_target).
 -moduledoc false.
 
+-compile(nowarn_length_in_guard).
+
 %% Public
 -export([
          gen_config/2,

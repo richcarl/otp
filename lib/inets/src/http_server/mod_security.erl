@@ -25,6 +25,8 @@
 Security Audit and Trailing Functionality
 """.
 
+-compile(nowarn_length_in_guard).
+
 %% Security Audit Functionality
 
 %% User API exports

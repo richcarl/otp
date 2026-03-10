@@ -27,6 +27,8 @@ The Report Browser (RB) tool is used to browse and format error reports written
 by the error logger handler `m:log_mf_h` in STDLIB.
 """.
 
+-compile(nowarn_length_in_guard).
+
 -behaviour(gen_server).
 
 %% External exports

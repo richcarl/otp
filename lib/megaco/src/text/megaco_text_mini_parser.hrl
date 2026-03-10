@@ -25,6 +25,7 @@
 %% Purpose : Define semantic text parser actions
 %%----------------------------------------------------------------------
 
+-compile(nowarn_length_in_guard).
 
 -include_lib("megaco/include/megaco.hrl").
 -include_lib("megaco/include/megaco_message_v2.hrl").

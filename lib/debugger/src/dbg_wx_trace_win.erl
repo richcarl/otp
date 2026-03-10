@@ -24,6 +24,8 @@
 -module(dbg_wx_trace_win).
 -moduledoc false.
 
+-compile(nowarn_length_in_guard).
+
 %% External exports
 -export([init/0, stop/1]).
 -export([create_win/4,

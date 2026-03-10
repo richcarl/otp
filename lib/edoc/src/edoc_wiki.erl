@@ -81,6 +81,7 @@
 -module(edoc_wiki).
 
 -compile(nowarn_deprecated_catch).
+-compile(nowarn_length_in_guard).
 
 -export([parse_xml/2, expand_text/2]).
 

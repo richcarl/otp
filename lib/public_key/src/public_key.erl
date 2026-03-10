@@ -43,6 +43,8 @@ macros described here and in the User's Guide:
 ```
 """.
 
+-compile(nowarn_length_in_guard).
+
 -include("public_key_internal.hrl").
 
 -export([pem_decode/1, pem_encode/1, 

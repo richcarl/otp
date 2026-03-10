@@ -25,6 +25,8 @@
 
 -behaviour(gen_server).
 
+-compile(nowarn_length_in_guard).
+
 -include_lib("inets/src/http_lib/http_internal.hrl").
 -include("httpc_internal.hrl").
 

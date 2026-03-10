@@ -71,6 +71,7 @@ The configuration files are described in the SNMP User's Manual.
 -include("snmpa_vacm.hrl").
 -include("snmpa_internal.hrl").
 
+-compile(nowarn_length_in_guard).
 
 -define(VMODULE,"VACM-MIB").
 -include("snmp_verbosity.hrl").

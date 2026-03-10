@@ -25,6 +25,7 @@
 
 -export([validate/2]).
 
+-compile(nowarn_length_in_guard).
 
 -include("xmerl.hrl").		% record def, macros
 -include("xmerl_internal.hrl").

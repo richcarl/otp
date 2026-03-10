@@ -51,6 +51,7 @@
 -module(edoc_layout_chunks).
 
 -compile(nowarn_deprecated_catch).
+-compile(nowarn_length_in_guard).
 
 % -behaviour(edoc_layout).
 -export([module/2, overview/2]).

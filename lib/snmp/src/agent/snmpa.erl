@@ -30,6 +30,8 @@ The module `snmpa` contains interface functions to the SNMP agent.
 %% This module contains the user interface to the snmp agent toolkit.
 %%----------------------------------------------------------------------
 
+-compile(nowarn_length_in_guard).
+
 -export([verbosity/2, 
 	 
 	 current_request_id/0, current_community/0, current_address/0,

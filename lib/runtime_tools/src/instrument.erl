@@ -37,6 +37,8 @@ Erlang runtime system. Currently, only the allocation of memory can be studied.
 [erts_alloc(3)](`e:erts:erts_alloc.md`), [erl(1)](`e:erts:erl_cmd.md`)
 """.
 
+-compile(nowarn_length_in_guard).
+
 -export([allocations/0, allocations/1,
          carriers/0, carriers/1]).
 

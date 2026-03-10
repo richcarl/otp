@@ -22,6 +22,8 @@
 -module(dbg_ieval).
 -moduledoc false.
 
+-compile(nowarn_length_in_guard).
+
 -export([eval/3,exit_info/5]).
 -export([eval_expr/3]).
 -export([check_exit_msg/3,exception/4]).

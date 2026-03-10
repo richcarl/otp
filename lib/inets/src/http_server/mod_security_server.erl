@@ -47,6 +47,8 @@
 -module(mod_security_server).
 -moduledoc false.
 
+-compile(nowarn_length_in_guard).
+
 -include("httpd.hrl").
 -include("httpd_internal.hrl").
 

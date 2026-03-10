@@ -39,6 +39,8 @@
 -export([init/1, handle_info/2, terminate/2, code_change/3, handle_call/3,
 	 handle_event/2, handle_sync_event/3, handle_cast/2]).
 
+-compile(nowarn_length_in_guard).
+
 -behaviour(wx_object).
 -include_lib("wx/include/wx.hrl").
 -include("observer_defs.hrl").

@@ -47,6 +47,7 @@ but as of 27.0 its also documented.
 -include_lib("megaco/include/megaco_message_v1.hrl").
 -include_lib("megaco/include/megaco_sdp.hrl").
 
+-compile(nowarn_length_in_guard).
 
 %%----------------------------------------------------------------------
 %% External exports

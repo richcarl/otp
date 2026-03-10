@@ -27,6 +27,8 @@
 -module(ct_groups).
 -moduledoc false.
 
+-compile(nowarn_length_in_guard).
+
 -export([find_groups/4]).
 -export([make_all_conf/3, make_all_conf/4, make_conf/5]).
 -export([delete_subs/2]).

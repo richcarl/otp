@@ -39,6 +39,7 @@ defined in the module `m:erl_syntax`.
 """.
 
 -compile(nowarn_deprecated_catch).
+-compile(nowarn_length_in_guard).
 
 -export([analyze_application/1, analyze_attribute/1,
          analyze_export_attribute/1, analyze_file_attribute/1,

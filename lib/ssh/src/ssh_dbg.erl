@@ -51,6 +51,8 @@
 -module(ssh_dbg).
 -moduledoc false.
 
+-compile(nowarn_length_in_guard).
+
 -export([start/0, start/1, 
          stop/0,
          start_server/0,

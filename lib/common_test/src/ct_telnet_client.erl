@@ -36,6 +36,8 @@
 -module(ct_telnet_client).
 -moduledoc false.
 
+-compile(nowarn_length_in_guard).
+
 %%-define(debug, true).
 
 -export([open/2, open/3, open/4, open/5, open/6, close/1]).

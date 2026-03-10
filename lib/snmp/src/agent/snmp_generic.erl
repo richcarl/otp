@@ -122,6 +122,8 @@ The `.funcs` file would look like:
 ```
 """.
 
+-compile(nowarn_length_in_guard).
+
 %% Avoid warning for local function error/1 clashing with autoimported BIF.
 -compile({no_auto_import,[error/1]}).
 -export([variable_func/2, variable_func/3, variable_get/1, variable_set/2]).

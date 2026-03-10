@@ -26,6 +26,7 @@
 %% Avoid warning for local functions error/2,3 clashing
 %% with autoimported BIFs.
 -compile({no_auto_import, [error/2, error/3]}).
+-compile(nowarn_length_in_guard).
 
 %% API.
 -export([test_father/4, make_ASN1type/1, import/1, makeInternalNode2/2,

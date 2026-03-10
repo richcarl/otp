@@ -28,6 +28,8 @@
 -module(megaco_trans_sender).
 -moduledoc false.
 
+-compile(nowarn_length_in_guard).
+
 -export([start_link/5, 
 	 stop/1,
 	 upgrade/2,

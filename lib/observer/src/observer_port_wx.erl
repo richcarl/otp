@@ -21,6 +21,8 @@
 -module(observer_port_wx).
 -moduledoc false.
 
+-compile(nowarn_length_in_guard).
+
 -export([start_link/3]).
 
 %% wx_object callbacks

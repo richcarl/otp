@@ -221,6 +221,8 @@
 
 -export_type([erl_type/0, type_table/0, var_table/0, cache/0]).
 
+-compile(nowarn_length_in_guard).
+
 %%-define(DEBUG, true).
 
 -ifdef(DEBUG).

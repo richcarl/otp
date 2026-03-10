@@ -36,6 +36,8 @@ See also the
 -vsn('0.20').
 -date('03-09-16').
 
+-compile(nowarn_length_in_guard).
+
 %% main API
 -export([string/1, string/2,
 	 file/1, file/2]).

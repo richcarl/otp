@@ -29,6 +29,8 @@
 -module(ct_util).
 -moduledoc false.
 
+-compile(nowarn_length_in_guard).
+
 -export([start/0, start/1, start/3, start/4,
 	 stop/1, update_last_run_index/0]).
 

@@ -27,6 +27,8 @@
 This module exports help functions for performing code coverage analysis.
 """.
 
+-compile(nowarn_length_in_guard).
+
 -export([get_spec/1, add_nodes/1, remove_nodes/1, cross_cover_analyse/2]).
 
 -include("ct_util.hrl").

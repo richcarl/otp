@@ -51,6 +51,7 @@ process.
 
 %% See RFC1155, RFC1157, RFC1901, RFC1902, RFC1905, RFC2272
 
+-compile(nowarn_length_in_guard).
 
 %% API
 -export([enc_message/1, enc_message_only/1, enc_pdu/1,

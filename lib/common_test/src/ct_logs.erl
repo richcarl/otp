@@ -30,6 +30,8 @@
 -module(ct_logs).
 -moduledoc false.
 
+-compile(nowarn_length_in_guard).
+
 -export([init/3, close/3, init_tc/1, end_tc/1]).
 -export([register_groupleader/2, unregister_groupleader/1]).
 -export([get_log_dir/0, get_log_dir/1]).

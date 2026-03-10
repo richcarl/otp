@@ -29,6 +29,8 @@
 -module(diameter_dict_util).
 -moduledoc false.
 
+-compile(nowarn_length_in_guard).
+
 -export([parse/2,
          format_error/1,
          format/1]).

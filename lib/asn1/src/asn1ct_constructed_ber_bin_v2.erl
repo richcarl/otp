@@ -23,6 +23,8 @@
 -module(asn1ct_constructed_ber_bin_v2).
 -moduledoc false.
 
+-compile(nowarn_length_in_guard).
+
 -export([gen_encode_sequence/3]).
 -export([gen_decode_sequence/3]).
 -export([gen_encode_set/3]).

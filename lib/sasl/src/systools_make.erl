@@ -22,6 +22,8 @@
 -module(systools_make).
 -moduledoc false.
 
+-compile(nowarn_length_in_guard).
+
 %% Purpose : Create start script. RelName.rel --> RelName.{script,boot}.
 %%           and create a tar file of a release (RelName.tar.gz)
 

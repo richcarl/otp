@@ -28,6 +28,8 @@
 -module(megaco_binary_transformer_v3).
 -moduledoc false.
 
+-compile(nowarn_length_in_guard).
+
 -include_lib("megaco/include/megaco.hrl").
 %% -include_lib("megaco/include/megaco_message.hrl").
 -include_lib("megaco/include/megaco_message_v3.hrl").

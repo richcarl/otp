@@ -36,6 +36,7 @@
 -include("xmerl_internal.hrl").
 -include("xmerl_xsd.hrl").
 
+-compile(nowarn_length_in_guard).
 
 -define(catch_exit(_Call_,_Value_,_ErrorCause_),
 	try (_Call_) of

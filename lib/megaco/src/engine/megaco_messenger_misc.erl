@@ -30,6 +30,8 @@
 -module(megaco_messenger_misc).
 -moduledoc false.
 
+-compile(nowarn_length_in_guard).
+
 %% Application internal export
 -export([encode_body/3,
 	 encode_trans_request/2,

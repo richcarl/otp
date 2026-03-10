@@ -32,6 +32,8 @@ databases, or Mnesia databases.
 `m:httpd`, `m:mod_alias`
 """.
 
+-compile(nowarn_length_in_guard).
+
 %% The functions that the webbserver call on startup stop
 %% and when the server traverse the modules.
 -export([do/1, store/2, remove/1]).

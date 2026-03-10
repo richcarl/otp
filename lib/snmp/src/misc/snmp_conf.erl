@@ -25,6 +25,7 @@
 -module(snmp_conf).
 -moduledoc false.
 
+-compile(nowarn_length_in_guard).
 
 %% External exports
 %% Avoid warning for local function error/1 clashing with autoimported BIF.

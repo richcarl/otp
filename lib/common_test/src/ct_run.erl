@@ -23,6 +23,8 @@
 -module(ct_run).
 -moduledoc false.
 
+-compile(nowarn_length_in_guard).
+
 %% Script interface
 -export([script_start/0,script_usage/0]).
 

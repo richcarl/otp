@@ -22,6 +22,8 @@
 -module(observer_tv_table).
 -moduledoc false.
 
+-compile(nowarn_length_in_guard).
+
 -export([start_link/2]).
 
 %% wx_object callbacks

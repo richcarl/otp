@@ -23,6 +23,7 @@
 -module(snmpa_mib_data_tttn).
 -moduledoc false.
 
+-compile(nowarn_length_in_guard).
 
 %%%-----------------------------------------------------------------
 %%% 

@@ -31,6 +31,8 @@ The module `snmpm` contains interface functions to the SNMP manager.
 %% This module implements a simple SNMP manager for Erlang.
 %%----------------------------------------------------------------------
 
+-compile(nowarn_length_in_guard).
+
 %% User interface
 %% Avoid warning for local function demonitor/1 clashing with autoimported BIF.
 -compile({no_auto_import,[demonitor/1]}).

@@ -20,6 +20,8 @@
 %% %CopyrightEnd%
 %%
 
+-compile(nowarn_length_in_guard).
+
 %%
 %%----------------------------------------------------------------------
 %% Purpose: Encode V3 Megaco/H.248 text messages from internal form

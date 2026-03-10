@@ -27,6 +27,8 @@
 %%         : find its way into the standard libraries
 %%         
 
+-compile(nowarn_length_in_guard).
+
 -export([file_term2binary/2, read_term/1, read_term_from_stream/2,
 	 get_dirs/1, get_path/1, werror/2]).
 

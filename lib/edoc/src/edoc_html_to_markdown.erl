@@ -40,6 +40,7 @@
 -include_lib("kernel/include/eep48.hrl").
 
 -compile(nowarn_deprecated_catch).
+-compile(nowarn_length_in_guard).
 
 -export([convert_html/2, convert_xml/2, convert_html/3, convert_xml/3]).
 

@@ -30,6 +30,7 @@
 -define(VMODULE,"MISC").
 -include("snmp_verbosity.hrl").
 
+-compile(nowarn_length_in_guard).
 
 -export([assq/2,
 	 bits_to_int/2,
