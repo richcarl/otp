@@ -452,6 +452,7 @@ A list of binaries. This datatype is useful to use together with
 -export([integer_to_binary/1, integer_to_list/1]).
 -export([iolist_size/1, iolist_to_binary/1, iolist_to_iovec/1]).
 -export([is_alive/0, is_builtin/3, is_map_key/2, is_process_alive/1, length/1]).
+-export([is_nonempty_list/1, length_at_most/2]).
 -export([link/1, link/2, list_to_atom/1, list_to_binary/1]).
 -export([list_to_bitstring/1, list_to_existing_atom/1, list_to_float/1]).
 -export([list_to_integer/1, list_to_integer/2]).
@@ -3813,6 +3814,63 @@ Returns the length of `List`.
       List :: [term()].
 length(_List) ->
     erlang:nif_error(undefined).
+
+%% scan only as much as needed
+%%   TODO
+%%   length_at_least(Min, L),
+%%   length_in_range(Min, Max, L) % compact and efficient in a guard
+%%   length_equals(Len, L)  % equivalent to length_in_range(L, Len, Len)
+%%   is_empty_list(L)  % maybe for completeness; could simply use L =:= []
+%% TODO
+%% scans whole list
+%%   is_proper_list/1
+
+-doc """
+Returns `true` if `List` is a list with at least one element, otherwise `false`.
+
+This is equivalent to returning `true` if and only if `List` matches the
+pattern `[Head | _]`.
+
+## Examples
+
+```erlang
+1> length_at_most(3, []).
+true
+2> length_at_most(10, [1,2,3,4,5]).
+true
+3> length_at_most(5, [1,2,3,4,5,6,7,8]).
+false
+```
+""".
+-spec length_at_most(Max, List) -> boolean() when
+      Max :: pos_integer(),
+      List :: [term()].
+
+length_at_most(_Max, _L) ->
+    erlang:nif_error(undef).
+
+-doc """
+Returns `true` if `List` is a list with at least one element, otherwise `false`.
+
+This is equivalent to returning `true` if and only if `List` matches the
+pattern `[Head | _]`.
+
+## Examples
+
+```erlang
+1> is_nonempty_list([]).
+false
+2> is_nonempty_list([1]).
+true
+3> is_nonempty_list([1,2]).
+true
+```
+""".
+-spec is_nonempty_list(List) -> boolean() when
+      List :: [term()].
+
+is_nonempty_list(_) ->
+    erlang:nif_error(undef).
 
 %% link/1
 -doc """

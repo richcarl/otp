@@ -42,11 +42,13 @@ extern Export *erts_convert_time_unit_trap;
 #define BIF_ALIST_2 BIF_ALIST
 #define BIF_ALIST_3 BIF_ALIST
 #define BIF_ALIST_4 BIF_ALIST
+#define BIF_ALIST_5 BIF_ALIST
 
 #define BIF_ARG_1  (BIF__ARGS[0])
 #define BIF_ARG_2  (BIF__ARGS[1])
 #define BIF_ARG_3  (BIF__ARGS[2])
 #define BIF_ARG_4  (BIF__ARGS[3])
+#define BIF_ARG_5  (BIF__ARGS[4])
 
 #define BIF_I A__I
 
@@ -380,6 +382,18 @@ extern ErtsCodePtr beam_bif_export_trap;
         (Ret) = THE_NON_VALUE;                                                \
     } while (0)
 
+#define ERTS_BIF_PREP_TRAP5(Ret, Trap, Proc, A0, A1, A2, A3, A4)              \
+    do {                                                                      \
+        Eterm* reg = erts_proc_sched_data((Proc))->registers->x_reg_array.d;  \
+        ERTS_BIF_PREP_TRAP((Trap), (Proc), 5);                                \
+        reg[0] = (Eterm) (A0);                                                \
+        reg[1] = (Eterm) (A1);                                                \
+        reg[2] = (Eterm) (A2);                                                \
+        reg[3] = (Eterm) (A3);                                                \
+        reg[4] = (Eterm) (A4);                                                \
+        (Ret) = THE_NON_VALUE;                                                \
+    } while (0)
+
 #define ERTS_BIF_PREP_TRAP3_NO_RET(Trap, Proc, A0, A1, A2)                    \
     do {                                                                      \
         Eterm* reg = erts_proc_sched_data((Proc))->registers->x_reg_array.d;  \
@@ -430,6 +444,18 @@ extern ErtsCodePtr beam_bif_export_trap;
         reg[1] = (A1);                                                        \
         reg[2] = (A2);                                                        \
         reg[3] = (A3);                                                        \
+        return THE_NON_VALUE;                                                 \
+    } while(0)
+
+#define BIF_TRAP5(Trap_, p, A0, A1, A2, A3, A4)                               \
+    do {                                                                      \
+        Eterm* reg = erts_proc_sched_data((p))->registers->x_reg_array.d;     \
+        ERTS_BIF_PREP_TRAP((Trap_), (p), 5);                                  \
+        reg[0] = (A0);                                                        \
+        reg[1] = (A1);                                                        \
+        reg[2] = (A2);                                                        \
+        reg[3] = (A3);                                                        \
+        reg[4] = (A4);                                                        \
         return THE_NON_VALUE;                                                 \
     } while(0)
 
@@ -492,6 +518,12 @@ do {									\
     ERTS_BIF_PREP_TRAP4(RET, (TRP), (P), (A0), (A1), (A2), (A3));       \
 } while (0)
 
+#define ERTS_BIF_PREP_YIELD5(RET, TRP, P, A0, A1, A2, A3, A4)           \
+do {									\
+    ERTS_VBUMP_ALL_REDS((P));						\
+    ERTS_BIF_PREP_TRAP5(RET, (TRP), (P), (A0), (A1), (A2), (A3), (A4)); \
+} while (0)
+
 #define ERTS_BIF_YIELD0(TRP, P)						\
 do {									\
     ERTS_VBUMP_ALL_REDS((P));						\
@@ -520,6 +552,12 @@ do {									\
 do {									\
     ERTS_VBUMP_ALL_REDS((P));						\
     BIF_TRAP4((TRP), (P), (A0), (A1), (A2), (A3));                      \
+} while (0)
+
+#define ERTS_BIF_YIELD5(TRP, P, A0, A1, A2, A3, A4)                     \
+do {									\
+    ERTS_VBUMP_ALL_REDS((P));						\
+    BIF_TRAP5((TRP), (P), (A0), (A1), (A2), (A3), (A4));                \
 } while (0)
 
 extern Export erts_bif_handle_signals_return_export;

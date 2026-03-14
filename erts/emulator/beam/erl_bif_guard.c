@@ -44,14 +44,21 @@
 #include "erl_map.h"
 
 static Eterm double_to_integer(Process* p, double x);
-static BIF_RETTYPE erlang_length_trap(BIF_ALIST_3);
+static BIF_RETTYPE erlang_length_trap(BIF_ALIST_4);
 static Export erlang_length_export;
+
+static BIF_RETTYPE erlang_length_at_most_trap(BIF_ALIST_5);
+static Export erlang_length_at_most_export;
 
 void erts_init_bif_guard(void)
 {
     erts_init_trap_export(&erlang_length_export,
-			  am_erlang, am_length, 3,
+			  am_erlang, am_length, 4,
 			  &erlang_length_trap);
+
+    erts_init_trap_export(&erlang_length_at_most_export,
+			  am_erlang, am_length_at_most, 5,
+			  &erlang_length_at_most_trap);
 }
 
 BIF_RETTYPE abs_1(BIF_ALIST_1)
@@ -209,21 +216,22 @@ BIF_RETTYPE round_1(BIF_ALIST_1)
 
 BIF_RETTYPE length_1(BIF_ALIST_1)
 {
-    Eterm args[3];
+    Eterm args[4];
 
     /*
      * Arrange argument registers the way expected by
      * erts_trapping_length_1(). We save the original argument in
-     * args[2] in case an error should signaled.
+     * args[3] in case an error should signaled.
      */
 
     args[0] = BIF_ARG_1;
-    args[1] = make_small(0);
-    args[2] = BIF_ARG_1;
+    args[1] = MAX_SMALL;
+    args[2] = make_small(0);
+    args[3] = BIF_ARG_1;
     return erlang_length_trap(BIF_P, args, A__I);
 }
 
-static BIF_RETTYPE erlang_length_trap(BIF_ALIST_3)
+static BIF_RETTYPE erlang_length_trap(BIF_ALIST_4)
 {
     Eterm res;
 
@@ -235,13 +243,14 @@ static BIF_RETTYPE erlang_length_trap(BIF_ALIST_3)
             /*
              * The available reductions were exceeded. Trap.
              */
-            BIF_TRAP3(&erlang_length_export, BIF_P, BIF_ARG_1, BIF_ARG_2, BIF_ARG_3);
+            BIF_TRAP4(&erlang_length_export, BIF_P,
+                      BIF_ARG_1, BIF_ARG_2, BIF_ARG_3, BIF_ARG_4);
         } else {
             /*
-             * Signal an error. The original argument was tucked away in BIF_ARG_3.
+             * Signal an error. The original argument is in BIF_ARG_4.
              */
             ERTS_BIF_ERROR_TRAPPED1(BIF_P, BIF_P->freason,
-                                    BIF_TRAP_EXPORT(BIF_length_1), BIF_ARG_3);
+                                    BIF_TRAP_EXPORT(BIF_length_1), BIF_ARG_4);
         }
     }
 }
@@ -253,7 +262,8 @@ static BIF_RETTYPE erlang_length_trap(BIF_ALIST_3)
  * follows:
  *
  *   args[0] = List to calculate length for.
- *   args[1] = Length accumulator (tagged integer).
+ *   args[1] = Maximum for length (tagged integer).
+ *   args[2] = Length accumulator (tagged integer).
  *
  * If the return value is a tagged integer, the length was calculated
  * successfully.
@@ -271,6 +281,7 @@ Eterm erts_trapping_length_1(Process* p, Eterm* args)
 {
     Eterm list;
     Uint i;
+    Uint max_len;
     Uint max_iter;
     Uint saved_max_iter;
 
@@ -283,13 +294,14 @@ Eterm erts_trapping_length_1(Process* p, Eterm* args)
     ASSERT(max_iter > 0);
 
     list = args[0];
-    i = unsigned_val(args[1]);
-    while (is_list(list) && max_iter != 0) {
+    max_len = unsigned_val(args[1]);
+    i = unsigned_val(args[2]);
+    while (i < max_len && is_list(list) && max_iter != 0) {
 	list = CDR(list_val(list));
 	i++, max_iter--;
     }
 
-    if (is_list(list)) {
+    if (i < max_len && is_list(list)) {
         /*
          * We have exceeded the allotted number of iterations.
          * Save the result so far and signal a trap.
@@ -299,17 +311,60 @@ Eterm erts_trapping_length_1(Process* p, Eterm* args)
         p->freason = TRAP;
         BUMP_ALL_REDS(p);
         return THE_NON_VALUE;
-    } else if (is_not_nil(list))  {
+    } else if (i < max_len && is_not_nil(list))  {
         /* Error. Should be NIL. */
 	BIF_ERROR(p, BADARG);
     }
 
     /*
-     * We reached the end of the list successfully. Bump reductions
-     * and return result.
+     * We reached the end of the list successfully, or hit the length limit.
+     * Bump reductions and return result.
      */
     BUMP_REDS(p, (saved_max_iter - max_iter) / 16);
     BIF_RET(make_small(i));
+}
+
+BIF_RETTYPE length_at_most_2(BIF_ALIST_2)
+{
+    Eterm args[5];
+
+    /*
+     * Arrange argument registers the way expected by
+     * erts_trapping_length_1(). We save the original arguments in
+     * args[3-4] in case an error should signaled.
+     */
+
+    args[0] = BIF_ARG_2;  /* the list */
+    args[1] = BIF_ARG_1;  /* the limit */
+    args[2] = make_small(0);
+    args[3] = BIF_ARG_1;
+    args[4] = BIF_ARG_2;
+    return erlang_length_at_most_trap(BIF_P, args, A__I);
+}
+
+static BIF_RETTYPE erlang_length_at_most_trap(BIF_ALIST_5)
+{
+    Eterm res;
+
+    res = erts_trapping_length_1(BIF_P, BIF__ARGS);
+    if (is_value(res)) {        /* Success. */
+        BIF_RET(res);
+    } else {                    /* Trap or error. */
+        if (BIF_P->freason == TRAP) {
+            /*
+             * The available reductions were exceeded. Trap.
+             */
+            BIF_TRAP5(&erlang_length_export, BIF_P,
+                      BIF_ARG_1, BIF_ARG_2, BIF_ARG_3, BIF_ARG_4, BIF_ARG_5);
+        } else {
+            /*
+             * Signal an error. The original arguments are in args 4-5
+             */
+            ERTS_BIF_ERROR_TRAPPED2(BIF_P, BIF_P->freason,
+                                    BIF_TRAP_EXPORT(BIF_length_1),
+                                    BIF_ARG_4, BIF_ARG_5);
+        }
+    }
 }
 
 /* returns the size of a tuple or a binary */
